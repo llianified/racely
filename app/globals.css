@@ -202,7 +202,7 @@
 .is-boosted .boost-button:disabled { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); border-top-color: var(--primary); }
 .is-boosted .boost-button:disabled svg { color: var(--primary-foreground); }
 
-/* ── hasil balapan ──────────────────────────────��──── */
+/* ── hasil balapan ──────────────────────────────���──── */
 .race-reward { position: relative; display: flex; align-items: center; gap: 10px; padding: 10px var(--gutter) 10px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); transition: border-color .25s; }
 .race-reward::before { content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; background: var(--secondary); transition: background .25s; }
 .reward-ready { border-color: color-mix(in srgb, var(--accent) 32%, transparent); }
@@ -232,16 +232,16 @@
 .garage-color-label { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .garage-color-label > span { font-size: 14px; color: var(--muted-foreground); }
 .garage-color-label > strong { font-size: 14px; font-weight: 600; }
-.garage-stats { display: flex; padding: 16px; border-top: 1px solid var(--border); background: color-mix(in srgb, var(--background) 25%, var(--card)); }
-.garage-stats > div { flex: 1; min-width: 0; }
+.garage-stats { display: flex; padding-inline: 16px; border-top: 1px solid var(--border); background: color-mix(in srgb, var(--background) 25%, var(--card)); }
+.garage-stats > div { flex: 1; min-width: 0; padding-block: 16px; }
 .garage-stats > div + div { padding-left: 16px; border-left: 1px solid var(--border); }
 .garage-stats dt { color: var(--muted-foreground); font-size: 14px; }
 .garage-stats dd { margin-top: 4px; font-size: 14px; color: var(--muted-foreground); }
 .garage-stats strong { color: var(--foreground); font-size: 22px; font-variant-numeric: tabular-nums; }
 .upgrade-panel .panel-heading { padding: 16px 16px 0; }
 .upgrade-panel .panel-heading h2 { font-size: 16px; }
-.upgrade-list { padding-inline: 16px; }
-.upgrade-row { display: flex; align-items: flex-end; gap: 12px; padding-block: 16px; border-bottom: 1px solid var(--border); }
+.upgrade-list { padding-inline: 0; }
+.upgrade-row { display: flex; align-items: flex-end; gap: 12px; padding: 16px; border-bottom: 1px solid var(--border); }
 .upgrade-row:last-child { border-bottom: none; }
 .upgrade-info { flex: 1 1 auto; min-width: 0; }
 .upgrade-name { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
