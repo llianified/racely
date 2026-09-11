@@ -1,12 +1,14 @@
 "use client";
 
-import Image from "next/image";
+import dynamic from "next/dynamic";
 import { memo } from "react";
 import { ArrowUp, BatteryMedium, Check, Cog, CircleDot } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InfoHint } from "./info-hint";
 import { lapReward, lapSeconds, totalLevel, upgradeCost, rupiah, type GameState, type Upgrade } from "@/lib/game";
+
+const CarPreviewScene = dynamic(() => import("./car-preview-scene"), { ssr: false });
 
 export const PARTS = [
   { key: "engine" as Upgrade, title: "Mesin", subtitle: "+15% tenaga dasar", icon: Cog },
@@ -18,8 +20,8 @@ export const GaragePanel = memo(function GaragePanel({ game }: { game: GameState
   return (
     <section className="panel garage-panel" aria-label="Mobil kamu">
       <div className="garage-summary">
-        <div className="car-showcase">
-          <Image src="/images/neo-falcon.png" sizes="144px" width={1024} height={1024} alt="Neo Falcon biru, foto katalog" className="car-image" />
+        <div className="car-showcase" role="img" aria-label={`Neo Falcon warna ${game.color}, model 3D yang sama dengan di lintasan`}>
+          <CarPreviewScene color={game.color} />
         </div>
         <div className="car-identity">
           <Badge variant="secondary">LV. {totalLevel(game)}</Badge>
@@ -30,7 +32,7 @@ export const GaragePanel = memo(function GaragePanel({ game }: { game: GameState
       <div className="garage-stats">
         <span><strong>{(192 / lapSeconds({ ...game, boostLeft: 0 })).toFixed(1)}</strong> km/j</span>
         <span><strong>{rupiah(lapReward(game))}</strong>/lap</span>
-        <InfoHint title="Mobil kamu">Kecepatan dasar ditampilkan tanpa boost. Foto katalog berwarna biru; warna pilihanmu terlihat di arena 3D.</InfoHint>
+        <InfoHint title="Mobil kamu">Kecepatan dasar ditampilkan tanpa boost. Model di atas persis mobil yang kamu pakai di lintasan, lengkap dengan warna pilihanmu.</InfoHint>
       </div>
     </section>
   );
