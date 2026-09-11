@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
-import { Camera, ChevronDown, Coins, Flag, Gauge, Maximize, RotateCcw, Timer, Zap } from "lucide-react";
+import { Camera, ChevronDown, Coins, Flag, Gauge, LoaderCircle, Maximize, RotateCcw, Timer, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { coins, formatCoins, lapReward, lapSeconds, type GameState } from "@/lib/game";
@@ -148,9 +148,9 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
       </div>
       <div className="race-actions">
         <Button variant="gold" size="lg" className="boost-button" onClick={onBoost} disabled={disabled || game.cooldown > 0} aria-busy={boosting} style={{ "--charge": `${(1 - game.cooldown / 35) * 100}%` } as CSSProperties}>
-          <Zap data-icon="inline-start" fill="currentColor" />
-          <span>{boosting ? "Menyalakan boost…" : boosted ? `Ngacir! ${Math.ceil(game.boostLeft)}s` : game.cooldown > 0 ? `Isi ulang ${Math.ceil(game.cooldown)}s` : "Gaspol 2×"}</span>
-          {game.cooldown === 0 && <small>10s</small>}
+          {boosting ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <Zap data-icon="inline-start" fill="currentColor" />}
+          <span>{boosting ? "Menyalakan boost…" : boosted ? "Ngacir!" : game.cooldown > 0 ? "Isi ulang" : "Gaspol 2×"}</span>
+          {!boosting && <small>{boosted ? `${Math.ceil(game.boostLeft)}s` : game.cooldown > 0 ? `${Math.ceil(game.cooldown)}s` : "10s"}</small>}
         </Button>
       </div>
     </section>

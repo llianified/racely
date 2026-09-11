@@ -3,6 +3,7 @@
 import { Check, Coins, Flag, Gift, LockKeyhole, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { InfoHint } from "./info-hint";
 import { cn } from "@/lib/utils";
 import {
   coins,
@@ -122,7 +123,13 @@ export function RewardsPanel({
             <Gift aria-hidden="true" />
             Rincian hadiah
           </h2>
-          <span>{game.missionsClaimed.length}/{MISSIONS.length} misi diklaim</span>
+          <div className="heading-aside">
+            <span>{game.missionsClaimed.length}/{MISSIONS.length} misi diklaim</span>
+            <InfoHint title="Tentang hadiah">
+              Semua hadiah berupa koin Racely. 1 koin setara {idr(1)} dan bisa
+              ditarik lewat tab Dompet setelah saldo cukup.
+            </InfoHint>
+          </div>
         </div>
         <ul className="reward-list">
           {rows.map((row) => (
@@ -183,11 +190,6 @@ export function RewardsPanel({
           ))}
         </ul>
       </section>
-
-      <p className="rewards-note">
-        Semua hadiah berupa koin Racely. 1 koin setara {idr(1)} dan bisa
-        ditarik lewat tab Dompet setelah saldo cukup.
-      </p>
     </div>
   );
 }
