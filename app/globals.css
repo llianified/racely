@@ -150,6 +150,8 @@
 .track-title { flex: 1; min-width: 0; }
 .circuit-number { display: grid; place-items: center; flex-shrink: 0; width: 30px; height: 30px; border: 1px solid var(--border); border-bottom: 2px solid var(--accent); border-radius: 3px; font-size: var(--fs-title); font-weight: 900; font-variant-numeric: tabular-nums; color: var(--foreground); background: var(--background); }
 .circuit-trigger { max-width: 100%; white-space: normal; text-align: left; padding-inline: 8px; font-size: var(--fs-body); font-weight: 800; }
+.live-tag { display: inline-flex; align-items: center; gap: 5px; color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: 800; letter-spacing: .12em; white-space: nowrap; }
+.live-tag::before { content: ''; width: 5px; height: 5px; flex-shrink: 0; border-radius: 50%; background: var(--accent); }
 .scene-wrap { height: clamp(150px, calc(100svh - 390px - var(--safe-top) - var(--safe-bottom)), min(62vw, 280px)); position: relative; background: var(--card); isolation: isolate; }
 .scene-wrap canvas { touch-action: none; }
 .scene-overlay { position: absolute; z-index: 2; pointer-events: none; }
@@ -273,6 +275,7 @@
 .panel:not(.circuit-panel) > .section-card-heading { margin-inline: calc(var(--section-divider-inset, var(--gutter)) * -1); padding: 0 var(--section-divider-inset, var(--gutter)) 10px; border-bottom: 1px solid var(--border); }
 .section-card-heading h2 { display: flex; align-items: center; gap: 7px; font-size: var(--fs-body); }
 .section-card-heading h2 svg { width: 14px; height: 14px; color: var(--accent); flex-shrink: 0; }
+.section-card-heading > span { font-size: var(--fs-nano); font-weight: 700; letter-spacing: .04em; color: var(--muted-foreground); }
 .mission-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .mission-card { display: flex; flex-direction: column; gap: 7px; padding: 9px 10px; border: 1px solid transparent; border-radius: calc(var(--radius) * .75); background: var(--secondary); }
 .mission-card.is-ready { border-color: color-mix(in srgb, var(--accent) 45%, transparent); background: color-mix(in srgb, var(--accent) 9%, var(--secondary)); }
@@ -303,6 +306,7 @@
 .rewards-list-panel .section-card-heading { flex-wrap: wrap; }
 .rewards-list-panel .section-card-heading h2 { font-size: 16px; }
 .rewards-list-panel .section-card-heading h2 svg { width: 16px; height: 16px; }
+.rewards-list-panel .section-card-heading > span { font-size: 14px; font-weight: 500; letter-spacing: 0; }
 .reward-list { display: flex; flex-direction: column; margin: 8px calc(var(--gutter) * -1) 0; }
 .reward-row { display: grid; grid-template-columns: 32px minmax(0, 1fr); column-gap: 12px; padding-inline: var(--gutter); border-bottom: 1px solid var(--border); }
 .reward-row > .reward-row-icon, .reward-row > .reward-row-copy { margin-top: 20px; }
@@ -340,6 +344,7 @@
 .wallet-layout .section-card-heading { flex-wrap: wrap; }
 .wallet-layout .section-card-heading h2 { font-size: 16px; }
 .wallet-layout .section-card-heading h2 svg { width: 16px; height: 16px; }
+.wallet-layout .section-card-heading > span { font-size: 14px; font-weight: 500; letter-spacing: 0; }
 .wallet-form { display: flex; flex-direction: column; gap: 16px; padding-top: 20px; }
 .wallet-field > label, .wallet-method-fieldset > legend { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--foreground); }
 .wallet-field > p { margin-top: 8px; font-size: 14px; line-height: 1.5; color: var(--muted-foreground); }
