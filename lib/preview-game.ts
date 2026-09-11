@@ -17,7 +17,7 @@ import {
   type GameState,
   type Upgrade,
   type WithdrawMethod,
-} from "@/lib/game";
+} from "./game";
 import { CAR_MODEL_IDS, isCarColor } from "./car-catalog";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
 
