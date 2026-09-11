@@ -204,6 +204,23 @@
 .track-stat-value small { display: inline; font-size: var(--fs-nano); font-weight: 600; color: var(--muted-foreground); letter-spacing: 0; }
 .reward-value { color: var(--accent); }
 .race-actions { padding: var(--space-md) var(--gutter); border-top: 1px solid var(--border); }
+.race-battery { padding: 12px; border-top: 1px solid var(--border); background: var(--background); color: var(--foreground); font-size: 14px; line-height: 1.5; }
+.battery-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.battery-title { display: flex; align-items: center; gap: 8px; }
+.battery-title > svg { color: var(--accent); flex-shrink: 0; }
+.battery-title strong { font-variant-numeric: tabular-nums; color: var(--accent); }
+.battery-meter { height: 8px; overflow: hidden; border-radius: 2px; background: var(--secondary); margin-block: 8px; }
+.battery-meter > div { width: 100%; height: 100%; background: var(--accent); transform-origin: left; transition: transform .1s linear; }
+.race-battery[data-phase='charging'] .battery-meter > div { background: var(--muted-foreground); }
+.battery-caption { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; font-variant-numeric: tabular-nums; }
+.battery-caption > :last-child, .battery-help { color: var(--muted-foreground); }
+.battery-help { margin-top: 8px; }
+.scene-wrap.is-inspecting { height: 300px; }
+.inspect-hud { top: 12px; left: 12px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; line-height: 1.5; }
+.inspect-hud strong { letter-spacing: .08em; }
+.inspect-hud span { color: var(--muted-foreground); }
+.inspect-hint { bottom: 56px; left: 12px; right: 12px; font-size: 14px; line-height: 1.5; color: var(--muted-foreground); text-align: center; }
+@media (prefers-reduced-motion: reduce) { .battery-meter > div { transition: none; } }
 
 /* ── tombol emas: satu bahasa visual ───────────────── */
 .gold-button { background: linear-gradient(60deg, transparent 9%, color-mix(in srgb, var(--foreground) 19%, transparent) 9%, color-mix(in srgb, var(--foreground) 19%, transparent) 18%, transparent 18%), linear-gradient(110deg, var(--accent), var(--warning)); color: var(--accent-foreground); border: 1px solid var(--accent); border-top: 2px solid var(--gold-highlight); box-shadow: 0 3px 0 var(--gold-shadow), inset 0 1px 0 var(--gold-highlight); font-weight: 850; letter-spacing: -.01em; }
