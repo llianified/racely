@@ -8,6 +8,7 @@ import {
   authenticateTelegramRequest,
   getOrCreatePreviewIdentity,
   PREVIEW_SESSION_COOKIE,
+  sessionCookieOptions,
   TelegramAuthError,
 } from "@/lib/telegram-auth";
 
@@ -25,13 +26,7 @@ export async function GET(request: Request) {
     const response = NextResponse.json(game, {
       headers: { "Cache-Control": "no-store" },
     });
-    const cookieOptions = {
-      httpOnly: true,
-      sameSite: "lax" as const,
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
-    };
+    const cookieOptions = sessionCookieOptions(request);
 
     if (preview?.isNew) {
       response.cookies.set(
