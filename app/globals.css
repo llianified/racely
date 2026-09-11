@@ -192,16 +192,19 @@
 .race-reward [data-slot='button'] { flex: 0 0 auto; }
 
 /* ── garasi ────────────────────────────────────────── */
-.garage-summary { display: flex; align-items: stretch; gap: 10px; padding: 10px var(--gutter) 0; }
-.car-showcase { flex: 0 0 96px; align-self: stretch; position: relative; overflow: hidden; border-radius: calc(var(--radius) * .75); background: radial-gradient(62% 62% at 50% 62%, color-mix(in srgb, var(--primary) 30%, transparent), transparent 72%), var(--secondary); }
-.car-showcase > div { position: absolute; inset: 0; }
-.car-showcase canvas { display: block; touch-action: none; }
-.car-identity { display: flex; flex-direction: column; justify-content: space-between; gap: 8px; min-height: 88px; min-width: 0; flex: 1 1 auto; }
-.car-identity-head { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.car-identity-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.car-stage { position: relative; height: 150px; margin: 10px var(--gutter) 0; overflow: hidden; border: 1px solid var(--border); border-radius: calc(var(--radius) * .75); background:
+  radial-gradient(78% 58% at 50% 4%, color-mix(in srgb, var(--primary) 26%, transparent), transparent 70%),
+  linear-gradient(180deg, var(--secondary), color-mix(in srgb, var(--background) 72%, var(--secondary))); }
+/* elliptical contact shadow so the car reads as standing on a floor */
+.car-stage::after { content: ''; position: absolute; left: 50%; bottom: 24px; width: 132px; height: 20px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(closest-side, rgb(0 0 0 / .5), transparent); pointer-events: none; }
+.car-stage > div { position: absolute; inset: 0; z-index: 1; }
+.car-stage canvas { display: block; touch-action: none; }
+.car-stage [data-slot='badge'] { position: absolute; z-index: 2; top: 8px; right: 8px; }
+.car-identity { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px var(--gutter) 0; }
+.car-identity-head { min-width: 0; }
 .car-identity h2 { font-size: var(--fs-display); line-height: 1.2; }
 .car-identity p { font-size: var(--fs-micro); color: var(--muted-foreground); }
-.garage-stats { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 8px var(--gutter) 8px; }
+.garage-stats { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 9px; padding: 8px var(--gutter); border-top: 1px solid var(--border); }
 .garage-stats > span { color: var(--muted-foreground); font-size: var(--fs-micro); }
 .garage-stats strong { color: var(--foreground); font-size: var(--fs-body); font-variant-numeric: tabular-nums; }
 .garage-stats > button { margin-left: auto; }
