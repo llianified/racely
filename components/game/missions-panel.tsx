@@ -1,24 +1,13 @@
 "use client";
 
-import {
-  Check,
-  ChevronRight,
-  Flag,
-  Gift,
-  Trophy,
-  LockKeyhole,
-  ArrowRight,
-} from "lucide-react";
+import { Check, ChevronRight, Flag, Gift, Trophy, LockKeyhole, ArrowRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { MISSIONS, missionValue, rupiah, type GameState } from "@/lib/game";
 
 export function MissionsPanel({
-  game,
-  onClaim,
-  compact = false,
-  onOpen,
-  disabled = false,
+  game, onClaim, compact = false, onOpen, disabled = false,
 }: {
   game: GameState;
   onClaim: (id: string) => void;
@@ -27,62 +16,40 @@ export function MissionsPanel({
   disabled?: boolean;
 }) {
   return (
-    <section className="panel p-5">
-      <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-2 font-semibold">
-          <Flag className="size-4 text-primary" />
-          Misi sesi ini
-        </h2>
-        {compact && (
+    <section className="panel mission-panel">
+      <div className="section-card-heading">
+        <h2><Flag aria-hidden="true" />Misi sesi ini</h2>
+        {compact && onOpen && (
           <button onClick={onOpen} aria-label="Lihat semua misi">
-            <ChevronRight className="size-4 text-muted-foreground" />
+            Semua<ChevronRight size={16} aria-hidden="true" />
           </button>
         )}
       </div>
-      <div className="flex flex-col divide-y divide-border">
+      <div className="mission-list">
         {(compact ? MISSIONS.slice(0, 1) : MISSIONS).map((m) => {
           const value = Math.min(m.target, missionValue(game, m.id));
           const claimed = game.missionsClaimed.includes(m.id);
+          const complete = value >= m.target;
           return (
-            <div key={m.id} className="py-4 last:pb-0">
-              <div className="flex items-center justify-between">
-                <h3 className="font-medium">{m.title}</h3>
-                <span className="text-sm font-medium text-accent">
-                  +{rupiah(m.reward)}
-                </span>
+            <div key={m.id} className="mission-card">
+              <div className="mission-title">
+                <h3>{m.title}</h3>
+                <span>+{rupiah(m.reward)}</span>
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {m.description}
-              </p>
-              <div className="flex items-center gap-4 pt-4">
-                <Progress
-                  value={(value / m.target) * 100}
-                  aria-label={m.description}
-                  className="flex-1"
-                />
-                <span className="font-mono text-sm text-muted-foreground">
-                  {value.toLocaleString("id-ID")}/
-                  {m.target.toLocaleString("id-ID")}
-                </span>
+              <p>{m.description}</p>
+              <div className="mission-progress">
+                <Progress value={(value / m.target) * 100} aria-label={m.description} className="flex-1" />
+                <span>{value.toLocaleString("id-ID")}/{m.target.toLocaleString("id-ID")}</span>
               </div>
-              {(value >= m.target || !compact) && (
-                <div className="pt-4">
-                  <Button
-                    className="w-full"
-                    variant={claimed ? "secondary" : "default"}
-                    disabled={disabled || claimed || value < m.target}
-                    onClick={() => onClaim(m.id)}
-                  >
-                    {claimed ? (
-                      <>
-                        <Check data-icon="inline-start" />
-                        Sudah diklaim
-                      </>
-                    ) : (
-                      "Klaim hadiah"
-                    )}
-                  </Button>
-                </div>
+              {(complete || !compact) && (
+                <Button
+                  className="mt-4 w-full"
+                  variant={complete && !claimed ? "gold" : "secondary"}
+                  disabled={disabled || claimed || !complete}
+                  onClick={() => onClaim(m.id)}
+                >
+                  {claimed ? <><Check data-icon="inline-start" />Sudah diklaim</> : complete ? "Klaim hadiah" : "Selesaikan misi"}
+                </Button>
               )}
             </div>
           );
@@ -92,98 +59,65 @@ export function MissionsPanel({
   );
 }
 
-export function StarterGift({
-  claimed,
-  onClaim,
-  disabled = false,
-}: {
+export function StarterGift({ claimed, onClaim, disabled = false }: {
   claimed: boolean;
   onClaim: () => void;
   disabled?: boolean;
 }) {
   return (
-    <div className="reward-ticket">
-      <div className="flex items-center gap-3">
-        <div className="flex size-10 items-center justify-center rounded-xl bg-accent/10 text-accent">
-          <Gift className="size-5" />
-        </div>
+    <section id="starter-gift" tabIndex={-1} className="reward-ticket" aria-label="Bonus starter">
+      <div className="gift-copy">
+        <div className="gift-icon"><Gift aria-hidden="true" /></div>
         <div>
-          <h3 className="font-semibold">Modal gas pertama</h3>
-          <p className="text-sm text-muted-foreground">
-            Bonus starter <span className="text-accent">Rp5.000 virtual</span>
-          </p>
+          <span className="eyebrow">RACER STARTER PACK</span>
+          <h3>Modal gas pertama.</h3>
+          <p>Racikan pertama, dari kami.<strong>Rp5.000 virtual</strong></p>
         </div>
       </div>
-      <button
-        onClick={onClaim}
-        disabled={disabled || claimed}
-        className="rounded-lg border border-accent/25 px-3 py-2 text-sm font-semibold text-accent disabled:opacity-50"
-      >
-        {claimed ? (
-          <Check className="size-4" aria-label="Sudah diklaim" />
-        ) : (
-          "Klaim"
-        )}
-      </button>
-    </div>
+      <Button variant={claimed ? "secondary" : "gold"} onClick={onClaim} disabled={disabled || claimed}>
+        {claimed ? <><Check data-icon="inline-start" />Sudah diklaim</> : <><Gift data-icon="inline-start" />Klaim bonus starter</>}
+      </Button>
+      <small>Bonus satu kali. Khusus koin virtual Racely.</small>
+    </section>
   );
 }
 
-export function CircuitPanel({
-  game,
-  onChoose,
-  compact = false,
-  disabled = false,
-}: {
+export function CircuitPanel({ game, onChoose, compact = false, disabled = false }: {
   game: GameState;
   onChoose: (circuit: number) => void;
   compact?: boolean;
   disabled?: boolean;
 }) {
   const unlocked = game.laps >= 25;
+  const active = game.circuit === 1;
   return (
-    <section className="panel p-5">
-      <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-2 font-semibold">
-          <Trophy className="size-4 text-accent" />
-          Tantangan berikutnya
-        </h2>
-        {!unlocked && <LockKeyhole className="size-4 text-muted-foreground" />}
+    <section className="panel circuit-panel">
+      <div className="section-card-heading">
+        <h2><Trophy aria-hidden="true" />{active ? "Sirkuit aktif" : "Sirkuit berikutnya"}</h2>
       </div>
-      <div className="pt-4">
-        <h3 className="font-semibold">Midnight Speedway</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          25 putaran untuk membuka sirkuit baru.
-        </p>
-        <div className="flex items-center gap-4 pt-4">
-          <Progress
-            value={Math.min((game.laps / 25) * 100, 100)}
-            aria-label="Buka Midnight Speedway"
-            className="flex-1"
-          />
-          <span className="font-mono text-sm text-muted-foreground">
-            {Math.min(game.laps, 25)}/25
-          </span>
-        </div>
-        {unlocked ? (
-          <div className="pt-4">
-            <Button
-              className="w-full"
-              disabled={disabled}
-              onClick={() => onChoose(game.circuit === 1 ? 0 : 1)}
-            >
-              {game.circuit === 1 ? "Kembali ke Jakarta" : "Gas ke Midnight"}
-              <ArrowRight data-icon="inline-end" />
-            </Button>
-          </div>
-        ) : (
-          !compact && (
-            <p className="mt-4 text-sm text-accent">
-              Bonus +Rp150 virtual setiap putaran di sirkuit ini.
-            </p>
-          )
-        )}
+      <div className="circuit-preview">
+        <Badge variant="secondary">
+          {!unlocked ? <LockKeyhole data-icon="inline-start" /> : active ? <Check data-icon="inline-start" /> : <Flag data-icon="inline-start" />}
+          {!unlocked ? "TERKUNCI" : active ? "AKTIF" : "TERBUKA"}
+        </Badge>
+        <Flag aria-hidden="true" />
+        <h3>Midnight<br />Speedway</h3>
+        <p>CIRCUIT 02 / NIGHT SERIES</p>
       </div>
+      <p className="circuit-description">
+        {unlocked ? "Lintasan baru. Ambisi lebih besar." : "Selesaikan 25 putaran untuk membuka sirkuit ini."}
+      </p>
+      <div className="mission-progress">
+        <Progress value={Math.min((game.laps / 25) * 100, 100)} aria-label="Buka Midnight Speedway" className="flex-1" />
+        <span>{Math.min(game.laps, 25)}/25</span>
+      </div>
+      {unlocked ? (
+        <Button className="mt-5 w-full" disabled={disabled} onClick={() => onChoose(active ? 0 : 1)}>
+          {active ? "Kembali ke Jakarta" : "Gas ke Midnight"}<ArrowRight data-icon="inline-end" />
+        </Button>
+      ) : !compact && (
+        <p className="mt-4 text-sm text-accent">Bonus +Rp150 virtual setiap putaran di sirkuit ini.</p>
+      )}
     </section>
   );
 }
