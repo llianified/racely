@@ -42,9 +42,14 @@ async function call(method, body = {}) {
 }
 
 try {
+  const expectedUsername = (process.env.TELEGRAM_BOT_USERNAME ?? "RacelyBot")
+    .replace(/^@/, "")
+    .toLowerCase();
   const bot = await call("getMe");
-  if (bot.username?.toLowerCase() !== "racelybot") {
-    throw new Error("The configured token does not belong to @RacelyBot.");
+  if (bot.username?.toLowerCase() !== expectedUsername) {
+    throw new Error(
+      `The configured token does not belong to @${expectedUsername}. Set TELEGRAM_BOT_USERNAME to override.`,
+    );
   }
 
   await call("setMyCommands", {
@@ -71,6 +76,10 @@ try {
 
   console.log("@RacelyBot commands, menu, and webhook are configured.");
 } catch (error) {
-  console.error(error instanceof Error ? error.message : "Telegram setup failed.");
+  // The API base embeds the bot token, so never let a raw message reach the log.
+  const detail = (error instanceof Error ? error.message : "Telegram setup failed.")
+    .split(token)
+    .join("[redacted-token]");
+  console.error(detail);
   process.exit(1);
 }
