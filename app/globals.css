@@ -64,7 +64,7 @@
 }
 @layer base {
   * { @apply border-border outline-ring/50; }
-  body { @apply bg-background text-foreground font-sans; font-size: 14px; line-height: 1.5; }
+  body { @apply bg-background text-foreground font-sans; font-size: 14px; font-weight: 500; line-height: 1.5; }
   button:not(:disabled), [role='button']:not(:disabled) { cursor: pointer; }
   button, a { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
   button:focus-visible, a:focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; }
