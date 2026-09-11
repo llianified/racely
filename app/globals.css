@@ -238,7 +238,7 @@
 .garage-stats dt { color: var(--muted-foreground); font-size: 14px; }
 .garage-stats dd { margin-top: 4px; font-size: 14px; color: var(--muted-foreground); }
 .garage-stats strong { color: var(--foreground); font-size: 22px; font-variant-numeric: tabular-nums; }
-.upgrade-panel .panel-heading { padding: 16px 16px 0; }
+.upgrade-panel .panel-heading { padding: 16px; border-bottom: 1px solid var(--border); }
 .upgrade-panel .panel-heading h2 { font-size: 16px; }
 .upgrade-list { padding-inline: 0; }
 .upgrade-row { display: flex; align-items: flex-end; gap: 12px; padding: 16px; border-bottom: 1px solid var(--border); }
@@ -271,6 +271,7 @@
 /* ── misi & sirkuit ────────────────────────────────── */
 .mission-panel, .circuit-panel { padding: 10px var(--gutter) 12px; }
 .section-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px; }
+.panel:not(.circuit-panel) > .section-card-heading { margin-inline: calc(var(--section-divider-inset, var(--gutter)) * -1); padding: 0 var(--section-divider-inset, var(--gutter)) 10px; border-bottom: 1px solid var(--border); }
 .section-card-heading h2 { display: flex; align-items: center; gap: 7px; font-size: var(--fs-body); }
 .section-card-heading h2 svg { width: 14px; height: 14px; color: var(--accent); flex-shrink: 0; }
 .section-card-heading > span { font-size: var(--fs-nano); font-weight: 700; letter-spacing: .04em; color: var(--muted-foreground); }
@@ -300,7 +301,7 @@
 .rewards-hero-copy .eyebrow { font-size: 14px; letter-spacing: .08em; }
 .rewards-hero-copy > strong { display: block; margin-top: 8px; font-size: 32px; font-weight: 900; line-height: 1.2; letter-spacing: -.035em; color: var(--accent); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .rewards-hero-copy > p { margin-top: 8px; font-size: 14px; line-height: 1.5; color: var(--muted-foreground); }
-.rewards-list-panel { padding: 16px; }
+.rewards-list-panel { --section-divider-inset: 16px; padding: 16px; }
 .rewards-list-panel .section-card-heading { flex-wrap: wrap; }
 .rewards-list-panel .section-card-heading h2 { font-size: 16px; }
 .rewards-list-panel .section-card-heading h2 svg { width: 16px; height: 16px; }
@@ -338,7 +339,7 @@
 .wallet-hero-side { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 1px solid var(--border); background: color-mix(in srgb, var(--background) 25%, var(--card)); }
 .wallet-pending { display: inline-flex; align-items: center; gap: 8px; color: var(--muted-foreground); font-size: 14px; font-variant-numeric: tabular-nums; }
 .wallet-pending svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--accent); }
-.wallet-form-panel, .wallet-history-panel { padding: 16px; }
+.wallet-form-panel, .wallet-history-panel { --section-divider-inset: 16px; padding: 16px; }
 .wallet-layout .section-card-heading { flex-wrap: wrap; }
 .wallet-layout .section-card-heading h2 { font-size: 16px; }
 .wallet-layout .section-card-heading h2 svg { width: 16px; height: 16px; }
