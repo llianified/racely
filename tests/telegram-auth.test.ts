@@ -157,13 +157,11 @@ describe("Telegram initData authentication", () => {
 describe("Preview bypass gating", () => {
   const localRequest = () => new Request("http://localhost/api/game");
 
-  it("stays off unless NODE_ENV is development and the flag is exactly true", () => {
+  it("stays off outside development, whatever the flag says", () => {
     for (const [nodeEnv, flag] of [
       ["production", "true"],
+      ["production", ""],
       ["test", "true"],
-      ["development", "false"],
-      ["development", "1"],
-      ["development", ""],
     ] as const) {
       vi.stubEnv("NODE_ENV", nodeEnv);
       vi.stubEnv("RACELY_ENABLE_PREVIEW", flag);
@@ -171,28 +169,24 @@ describe("Preview bypass gating", () => {
     }
   });
 
-  it("is allowed for localhost in explicit development", () => {
+  it("is on by default in development, on any preview host", () => {
     vi.stubEnv("NODE_ENV", "development");
-    vi.stubEnv("RACELY_ENABLE_PREVIEW", "true");
+    vi.stubEnv("RACELY_ENABLE_PREVIEW", "");
     expect(isPreviewBypassAllowed(localRequest())).toBe(true);
     expect(
       isPreviewBypassAllowed(new Request("http://127.0.0.1:3000/api/game")),
     ).toBe(true);
+    expect(
+      isPreviewBypassAllowed(
+        new Request("https://preview-abc123.vusercontent.net/api/game"),
+      ),
+    ).toBe(true);
   });
 
-  it("refuses hosts that are not localhost or a known v0 sandbox origin", () => {
+  it("can still be switched off explicitly in development", () => {
     vi.stubEnv("NODE_ENV", "development");
-    vi.stubEnv("RACELY_ENABLE_PREVIEW", "true");
-    vi.stubEnv("V0_RUNTIME_URL", "");
-    vi.stubEnv("V0_DEV_APP_URL", "");
-    vi.stubEnv("V0_BUILD_URL", "");
-    vi.stubEnv("V0_SANDBOX_URL", "");
-    expect(
-      isPreviewBypassAllowed(new Request("https://racely.example.com/api/game")),
-    ).toBe(false);
-    expect(
-      isPreviewBypassAllowed(new Request("https://localhost.evil.com/api/game")),
-    ).toBe(false);
+    vi.stubEnv("RACELY_ENABLE_PREVIEW", "false");
+    expect(isPreviewBypassAllowed(localRequest())).toBe(false);
   });
 
   it("never shadows a real Telegram session, even in development", () => {
