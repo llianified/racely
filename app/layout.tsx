@@ -1,9 +1,7 @@
 import type { Metadata, Viewport } from 'next'
-import { Geist_Mono } from 'next/font/google'
 import Script from 'next/script'
+import '@fontsource-variable/google-sans-flex'
 import './globals.css'
-
-const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' })
 
 export const metadata: Metadata = {
   title: 'Racely — Night Racing Garage',
@@ -14,7 +12,7 @@ export const viewport: Viewport = { width: 'device-width', initialScale: 1, maxi
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="id" suppressHydrationWarning className={`dark bg-background ${geistMono.variable}`}>
+    <html lang="id" suppressHydrationWarning className="dark bg-background">
       <body className="font-sans antialiased">
         <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
         {children}
