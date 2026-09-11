@@ -110,7 +110,7 @@ function GameGate({ error, onRetry }: { error?: Error; onRetry?: () => void }) {
               </p>
             </div>
             {onRetry ? (
-              <Button className="w-full" onClick={onRetry}>
+              <Button variant="gold" size="lg" className="w-full" onClick={onRetry}>
                 Coba sinkronkan lagi
               </Button>
             ) : (
@@ -118,7 +118,7 @@ function GameGate({ error, onRetry }: { error?: Error; onRetry?: () => void }) {
                 href="https://t.me/RacelyBot?startapp=play"
                 target="_blank"
                 rel="noreferrer"
-                className={buttonVariants({ className: "w-full" })}
+                className={buttonVariants({ variant: "gold", size: "lg", className: "w-full" })}
               >
                 Buka @RacelyBot
                 <ArrowUpRight data-icon="inline-end" />
@@ -392,7 +392,7 @@ export function GameDashboard() {
                   Mobil melaju otomatis melawan 2 bot latihan. GASPOL menggandakan kecepatan selama 10 detik, lalu isi ulang 25 detik. Geser arena untuk orbit, cubit untuk zoom, atau ketuk ikon kamera.
                 </InfoHint>
               )}
-              <Button variant="ghost" size="icon" onClick={() => setDialog("help")} aria-label="Cara bermain">
+              <Button variant="ghost" size="icon-sm" onClick={() => setDialog("help")} aria-label="Cara bermain">
                 <CircleHelp aria-hidden="true" />
               </Button>
             </div>
