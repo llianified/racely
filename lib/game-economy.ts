@@ -1,4 +1,4 @@
-import { lapReward, lapSeconds, type GameState } from "./game";
+import { lapReward, lapSeconds, roundCoins, type GameState } from "./game";
 
 export const HEARTBEAT_CAP_SECONDS = 30;
 
@@ -54,6 +54,7 @@ export function calculateRaceSettlement(
     missionsClaimed: [],
     color: "#4275ff",
     player: { name: "", username: null, photoUrl: null },
+    withdrawals: [],
   } satisfies GameState;
   const lapDurationMs = lapSeconds(economyState) * 1000;
   const accumulatedLaps =
@@ -62,7 +63,7 @@ export function calculateRaceSettlement(
 
   return {
     completedLaps,
-    income: completedLaps * lapReward(economyState),
+    income: roundCoins(completedLaps * lapReward(economyState)),
     progress: accumulatedLaps % 1,
     creditedSeconds: creditedMs / 1000,
   };

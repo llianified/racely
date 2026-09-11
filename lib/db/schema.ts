@@ -18,9 +18,9 @@ export const players = pgTable("racely_players", {
   telegramUsername: text("telegram_username"),
   displayName: text("display_name").notNull(),
   photoUrl: text("photo_url"),
-  balance: bigint("balance", { mode: "number" }).notNull().default(12500),
-  pending: bigint("pending", { mode: "number" }).notNull().default(0),
-  earned: bigint("earned", { mode: "number" }).notNull().default(0),
+  balance: bigint("balance", { mode: "number" }).notNull().default(10),
+  pending: doublePrecision("pending").notNull().default(0),
+  earned: doublePrecision("earned").notNull().default(0),
   laps: integer("laps").notNull().default(0),
   progress: doublePrecision("progress").notNull().default(0),
   engineLevel: integer("engine_level").notNull().default(1),
@@ -84,4 +84,31 @@ export const rewardClaims = pgTable(
   ],
 );
 
+export const withdrawals = pgTable(
+  "racely_withdrawals",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    userId: text("user_id").notNull(),
+    requestId: text("request_id").notNull(),
+    coins: bigint("coins", { mode: "number" }).notNull(),
+    amountIdr: bigint("amount_idr", { mode: "number" }).notNull(),
+    method: text("method").notNull(),
+    account: text("account").notNull(),
+    accountName: text("account_name").notNull(),
+    status: text("status").notNull().default("pending"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    processedAt: timestamp("processed_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("racely_withdrawals_user_idx").on(table.userId),
+    uniqueIndex("racely_withdrawals_request_uidx").on(
+      table.userId,
+      table.requestId,
+    ),
+  ],
+);
+
 export type PlayerRow = typeof players.$inferSelect;
+export type WithdrawalRow = typeof withdrawals.$inferSelect;
