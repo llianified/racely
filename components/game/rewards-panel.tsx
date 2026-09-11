@@ -122,13 +122,7 @@ export function RewardsPanel({
             <Gift aria-hidden="true" />
             Rincian hadiah
           </h2>
-          <div className="section-heading-meta">
-            <span>{game.missionsClaimed.length}/{MISSIONS.length} misi diklaim</span>
-            <InfoHint title="Nilai hadiah">
-              Semua hadiah berupa koin Racely. 1 koin setara {idr(1)} dan bisa
-              ditarik lewat tab Dompet setelah saldo cukup.
-            </InfoHint>
-          </div>
+          <span>{game.missionsClaimed.length}/{MISSIONS.length} misi diklaim</span>
         </div>
         <ul className="reward-list">
           {rows.map((row) => (
