@@ -113,24 +113,24 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
           </DialogTrigger>
         </div>
       </div>
-      <DialogContent className="max-h-[85dvh] overflow-y-auto font-sans" showCloseButton={!installing}>
-        <DialogHeader>
+      <DialogContent className="max-h-[85dvh] gap-0 overflow-y-auto p-0 font-sans" showCloseButton={!installing}>
+        <DialogHeader className="border-b border-border px-6 py-5 pr-12">
           <DialogTitle>Modifikasi {title.toLowerCase()}</DialogTitle>
           <DialogDescription>Pilih peningkatan permanen untuk mobilmu. Koin hanya dipotong setelah pemasangan berhasil.</DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col gap-4 text-[14px] leading-relaxed">
-          <div className="flex items-center gap-3 rounded-xl border border-border bg-background p-3 text-foreground">
+        <div className="flex flex-col text-[14px] leading-relaxed">
+          <div className="flex items-center gap-3 border-b border-border bg-background px-6 py-4 text-foreground">
             <Icon className="size-6 shrink-0 text-accent" aria-hidden="true" />
             <div className="min-w-0">
               <p className="font-bold">{preview.nextPart}</p>
               <p className="text-muted-foreground">Level {level} → {nextLevel} · {part.subtitle}</p>
             </div>
           </div>
-          <div className="rounded-xl border border-border bg-background text-foreground">
+          <div className="border-b border-border bg-background text-foreground">
             <div className="h-48" role="img" aria-label={`${showAfter ? "Setelah" : "Sebelum"} modifikasi ${title}, level ${showAfter ? nextLevel : level}${inspect ? ", bodi dilepas" : ""}`}>
               {open && <CarPreviewScene color={game.color} model={game.carSelection?.model ?? "neo-falcon"} levels={showAfter ? { ...game.levels, [key]: nextLevel } : game.levels} inspect={inspect} />}
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-2 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-6 py-3">
               <span aria-live="polite">{showAfter ? "Setelah" : "Sebelum"} · Lv. {showAfter ? nextLevel : level}</span>
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" size="sm" onClick={() => setShowAfter(value => !value)} aria-pressed={showAfter}>{showAfter ? "Lihat sebelum" : "Lihat setelah"}</Button>
@@ -138,33 +138,33 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
               </div>
             </div>
           </div>
-          <p className="text-muted-foreground">{key === "engine"
+          <p className="border-b border-border px-6 py-4 text-muted-foreground">{key === "engine"
             ? "Visual: heatsink motor belakang dengan sirip pendingin yang bertambah setiap level."
             : key === "tires"
               ? "Visual: ban lebih lebar, cincin velg emas, dan roller bertingkat."
               : "Visual: dudukan baterai dengan strip emas yang bertambah setiap level. Lepas bodi untuk melihat detail sel."}</p>
           <table className="w-full text-left tabular-nums">
-            <caption className="pb-2 text-left font-semibold">Simulasi performa tanpa boost</caption>
+            <caption className="px-6 pb-2 pt-4 text-left font-semibold">Simulasi performa tanpa boost</caption>
             <thead className="text-muted-foreground">
-              <tr><th scope="col" className="pb-2 font-normal">Performa</th><th scope="col" className="pb-2 text-right font-normal">Saat ini</th><th scope="col" className="pb-2 text-right font-normal">Setelah</th></tr>
+              <tr><th scope="col" className="px-6 pb-2 font-normal">Performa</th><th scope="col" className="pb-2 text-right font-normal">Saat ini</th><th scope="col" className="px-6 pb-2 text-right font-normal">Setelah</th></tr>
             </thead>
             <tbody>
-              <tr className="border-t border-border"><th scope="row" className="py-2 font-normal">Detik / putaran</th><td className="text-right">{seconds(preview.beforeSeconds)}</td><td className="text-right font-bold text-accent">{seconds(preview.afterSeconds)}</td></tr>
-              <tr className="border-t border-border"><th scope="row" className="py-2 font-normal">Koin / putaran</th><td className="text-right">{formatCoins(preview.beforeReward)}</td><td className="text-right font-bold text-accent">{formatCoins(preview.afterReward)}</td></tr>
+              <tr className="border-t border-border"><th scope="row" className="px-6 py-2 font-normal">Detik / putaran</th><td className="text-right">{seconds(preview.beforeSeconds)}</td><td className="px-6 text-right font-bold text-accent">{seconds(preview.afterSeconds)}</td></tr>
+              <tr className="border-y border-border"><th scope="row" className="px-6 py-2 font-normal">Koin / putaran</th><td className="text-right">{formatCoins(preview.beforeReward)}</td><td className="px-6 text-right font-bold text-accent">{formatCoins(preview.afterReward)}</td></tr>
             </tbody>
           </table>
-          <dl className="flex flex-col gap-2 border-t border-border pt-3">
+          <dl className="flex flex-col gap-2 border-b border-border px-6 py-4">
             <div className="flex justify-between gap-3"><dt>Biaya pemasangan</dt><dd className="font-bold">{coins(cost)}</dd></div>
             <div className="flex justify-between gap-3 text-muted-foreground"><dt>Saldo saat ini</dt><dd>{coins(game.balance)}</dd></div>
             {shortfall === 0 && <div className="flex justify-between gap-3 text-muted-foreground"><dt>Sisa saldo</dt><dd>{coins(game.balance - cost)}</dd></div>}
           </dl>
-          <p role="status" className="text-muted-foreground">
+          <p role="status" className="px-6 py-4 text-muted-foreground">
             {shortfall > 0
               ? `Kurang ${coins(shortfall)}. Klaim hasil balapan atau hadiah terlebih dahulu.`
               : "Part dan tampilan 3D berubah otomatis setelah pemasangan berhasil, di garasi maupun lintasan. Part tidak bisa dijual kembali."}
           </p>
         </div>
-        <DialogFooter>
+        <DialogFooter className="border-t border-border px-6 py-5">
           <DialogClose render={<Button variant="outline" disabled={installing} />}>Batal</DialogClose>
           <Button variant="gold" disabled={blocked || maxed || shortfall > 0} onClick={() => void install()} aria-busy={installing}>
             {installing ? <LoaderCircle className="animate-spin" data-icon="inline-start" /> : <ArrowUp data-icon="inline-start" />}
