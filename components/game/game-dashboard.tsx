@@ -423,7 +423,7 @@ export function GameDashboard() {
           </div>
           {raceMounted && (
             <div
-              className={cn("dashboard-grid", tab !== "race" ? "tab-offstage" : "section-enter")}
+              className={cn("dashboard-grid", tab !== "race" && "tab-offstage")}
               inert={tab !== "race"}
             >
               <div className="main-column">
