@@ -149,6 +149,7 @@ export function GameDashboard() {
   const [clientReady, setClientReady] = useState(false);
   const [initData, setInitData] = useState("");
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [raceMounted, setRaceMounted] = useState(false);
   const synced = useRef(false);
   const bootstrapped = useRef(false);
   const mutationLocked = useRef(false);
@@ -162,6 +163,17 @@ export function GameDashboard() {
     target?.focus({ preventScroll: true });
     if (targetId !== "page-title") target?.scrollIntoView({ block: "start" });
   }, [tab]);
+
+  useEffect(() => {
+    if (raceMounted) return;
+    if (tab === "race") {
+      setRaceMounted(true);
+      return;
+    }
+    // Warm the arena off-stage so the first switch to Balapan has nothing left to build.
+    const idle = window.setTimeout(() => setRaceMounted(true), 1500);
+    return () => window.clearTimeout(idle);
+  }, [tab, raceMounted]);
 
   const gameKey = clientReady ? (["/api/game", initData] as const) : null;
   const { data, error, isLoading, mutate } = useSWR<GameState>(
@@ -409,19 +421,15 @@ export function GameDashboard() {
               </Button>
             </div>
           </div>
-          {tab === "menu" ? (
-            <MenuPanel
-              onNavigate={navigate}
-              onCircuits={() => setDialog("circuits")}
-              onWallet={() => setDialog("wallet")}
-              onHelp={() => setDialog("help")}
-              giftAvailable={!game.rewardClaimed}
-            />
-          ) : tab === "race" ? (
-            <div className="dashboard-grid section-enter">
+          {raceMounted && (
+            <div
+              className={cn("dashboard-grid", tab !== "race" ? "tab-offstage" : "section-enter")}
+              inert={tab !== "race"}
+            >
               <div className="main-column">
                 <RacePanel
                   game={game}
+                  active={tab === "race"}
                   onBoost={boost}
                   onCircuits={() => setDialog("circuits")}
                   disabled={Boolean(busyAction)}
@@ -438,6 +446,15 @@ export function GameDashboard() {
                 />
               </div>
             </div>
+          )}
+          {tab === "race" ? null : tab === "menu" ? (
+            <MenuPanel
+              onNavigate={navigate}
+              onCircuits={() => setDialog("circuits")}
+              onWallet={() => setDialog("wallet")}
+              onHelp={() => setDialog("help")}
+              giftAvailable={!game.rewardClaimed}
+            />
           ) : tab === "garage" ? (
             <div className="garage-layout section-enter">
                 <GaragePanel game={game} onChooseColor={chooseColor} disabled={Boolean(busyAction)} />
