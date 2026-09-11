@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { memo, type CSSProperties } from "react";
-import { ArrowUp, BatteryMedium, Check, Cog, CircleDot, Lock } from "lucide-react";
+import { ArrowUp, BatteryMedium, Check, Cog, CircleDot, Lock, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -79,7 +79,7 @@ export function UpgradePanel({ game, onUpgrade, disabled = false }: { game: Game
   return (
     <section id="upgrades" tabIndex={-1} className="panel upgrade-panel">
       <div className="panel-heading">
-        <h2>Upgrade performa</h2>
+        <h2><Wrench aria-hidden="true" />Upgrade performa</h2>
         <InfoHint title="Tuning mobil">Mesin dan ban mempercepat putaran. Baterai menambah hasil koin. Upgrade langsung aktif, tersimpan, dan maksimal level 10.</InfoHint>
       </div>
       <div className="upgrade-list">
