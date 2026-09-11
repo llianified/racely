@@ -49,7 +49,7 @@ export function RacePanel({ game, onBoost, onCircuits, disabled = false }: {
     <section className={cn("panel track-panel", boosted && "is-boosted")} ref={panel} aria-label="Balapan otomatis">
       <div className="track-top">
         <h2 className="track-title">
-          <Button variant="ghost" className="circuit-trigger" onClick={openCircuits} aria-label="Pilih sirkuit" aria-haspopup="dialog">
+          <Button variant="ghost" className="circuit-trigger" onClick={openCircuits} aria-label={`Pilih sirkuit: ${game.circuit ? "Midnight Speedway" : "Jakarta Raceway"}`} aria-haspopup="dialog">
             {game.circuit ? "Midnight Speedway" : "Jakarta Raceway"}
             <ChevronDown data-icon="inline-end" />
           </Button>
