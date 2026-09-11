@@ -31,13 +31,16 @@ import { CircuitPanel } from "./circuit-panel";
 import { RacePanel, RaceReward } from "./race-panel";
 import { RewardsPanel, claimableTotal } from "./rewards-panel";
 import { MenuPanel } from "./menu-panel";
+import { WalletPanel, type WithdrawInput } from "./wallet-panel";
 import { InfoHint } from "./info-hint";
 import {
+  coins,
   gameReducer,
+  idr,
   INITIAL_GAME,
   MISSIONS,
   missionValue,
-  rupiah,
+  STARTER_GIFT,
   totalLevel,
   upgradeCost,
   type GameCommand,
@@ -69,6 +72,7 @@ const TITLES: Record<GameTab, string> = {
   race: "Balapan",
   garage: "Garasi",
   rewards: "Hadiah",
+  wallet: "Dompet",
 };
 
 function requestHeaders(initData: string) {
@@ -143,9 +147,7 @@ function GameGate({ error, onRetry }: { error: Error; onRetry?: () => void }) {
 export function GameDashboard() {
   const [game, dispatch] = useReducer(gameReducer, INITIAL_GAME);
   const [tab, setTab] = useState<GameTab>("race");
-  const [dialog, setDialog] = useState<"help" | "wallet" | "circuits" | null>(
-    null,
-  );
+  const [dialog, setDialog] = useState<"help" | "circuits" | null>(null);
   const [clientReady, setClientReady] = useState(false);
   const [initData, setInitData] = useState("");
   const [busyAction, setBusyAction] = useState<string | null>(null);
@@ -310,18 +312,18 @@ export function GameDashboard() {
       );
   };
   const claim = async () => {
-    if (game.pending <= 0) return;
-    const amount = game.pending;
+    const amount = Math.floor(game.pending);
+    if (amount <= 0) return;
     if (await runAction({ type: "claim" }))
-      toast.success(`+${rupiah(amount)} koin virtual diklaim`, {
-        description: "Tersimpan aman di garasimu.",
+      toast.success(`+${coins(amount)} masuk saldo`, {
+        description: `Setara ${idr(amount)} kalau ditarik.`,
         duration: 2200,
       });
   };
   const gift = async () => {
     if (game.rewardClaimed) return;
     if (await runAction({ type: "gift" }))
-      toast.success("Bonus Rp5.000 virtual diklaim!", {
+      toast.success(`Bonus starter ${coins(STARTER_GIFT)} diklaim!`, {
         description: "Bonus ini hanya bisa diklaim sekali.",
       });
   };
@@ -334,12 +336,13 @@ export function GameDashboard() {
     )
       return;
     if (await runAction({ type: "mission", id }))
-      toast.success(`Misi beres! +${rupiah(missionItem.reward)} virtual`);
+      toast.success(`Misi beres! +${coins(missionItem.reward)}`);
   };
   const claimAll = async () => {
     const total = claimableTotal(game);
     if (total <= 0) return;
-    if (game.pending > 0 && !(await runAction({ type: "claim" }))) return;
+    if (Math.floor(game.pending) > 0 && !(await runAction({ type: "claim" })))
+      return;
     if (!game.rewardClaimed && !(await runAction({ type: "gift" }))) return;
     for (const item of MISSIONS) {
       const ready =
@@ -347,10 +350,19 @@ export function GameDashboard() {
         missionValue(game, item.id) >= item.target;
       if (ready && !(await runAction({ type: "mission", id: item.id }))) return;
     }
-    toast.success(`+${rupiah(total)} koin virtual diklaim`, {
-      description: "Semua hadiah yang siap sudah masuk garasimu.",
+    toast.success(`+${coins(total)} diklaim`, {
+      description: "Semua hadiah yang siap sudah masuk saldomu.",
       duration: 2400,
     });
+  };
+  const withdraw = async (input: WithdrawInput) => {
+    const next = await runAction({ type: "withdraw", ...input }, "withdraw");
+    if (!next) return false;
+    toast.success(`Penarikan ${idr(input.coins)} diajukan`, {
+      description: "Kami verifikasi dulu, maksimal 3 hari kerja.",
+      duration: 2600,
+    });
+    return true;
   };
   const chooseCircuit = async (circuit: number) => {
     if ((circuit !== 0 && circuit !== 1) || (circuit === 1 && game.laps < 25))
@@ -404,7 +416,7 @@ export function GameDashboard() {
           balance={game.balance}
           level={totalLevel(game)}
           racerName={game.player.name}
-          onWallet={() => setDialog("wallet")}
+          onWallet={() => navigate("wallet")}
           onHelp={() => setDialog("help")}
         />
         <main className="page-content" aria-busy={Boolean(busyAction)}>
@@ -451,9 +463,15 @@ export function GameDashboard() {
             <MenuPanel
               onNavigate={navigate}
               onCircuits={() => setDialog("circuits")}
-              onWallet={() => setDialog("wallet")}
               onHelp={() => setDialog("help")}
               giftAvailable={!game.rewardClaimed}
+            />
+          ) : tab === "wallet" ? (
+            <WalletPanel
+              game={game}
+              onWithdraw={withdraw}
+              onOpenRewards={() => navigate("rewards")}
+              disabled={Boolean(busyAction)}
             />
           ) : tab === "garage" ? (
             <div className="garage-layout section-enter">
