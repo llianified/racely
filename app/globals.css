@@ -161,6 +161,7 @@
 .boost-hud svg { width: 12px; height: 12px; }
 .scene-controls { position: absolute; bottom: 8px; right: 8px; display: flex; gap: 4px; }
 .scene-controls [data-slot='button'] { background: color-mix(in srgb, var(--background) 85%, transparent); color: var(--foreground); }
+.scene-controls [data-slot='button'][aria-pressed='true'] { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--background) 88%, var(--accent)); }
 .lap-progress { height: 3px; background: var(--secondary); overflow: hidden; }
 .lap-progress > div { width: 100%; height: 100%; transform-origin: left; background: linear-gradient(90deg, var(--primary), var(--accent)); }
 .track-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding-block: 8px; }
