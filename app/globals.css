@@ -239,7 +239,8 @@
 .garage-stats dd { margin-top: 4px; font-size: 14px; color: var(--muted-foreground); }
 .garage-stats strong { color: var(--foreground); font-size: 22px; font-variant-numeric: tabular-nums; }
 .upgrade-panel .panel-heading { min-height: 48px; padding: 10px var(--gutter); border-bottom: 1px solid var(--border); }
-.upgrade-panel .panel-heading h2 { font-size: 16px; }
+.upgrade-panel .panel-heading h2 { display: flex; align-items: center; gap: 7px; font-size: 16px; }
+.upgrade-panel .panel-heading h2 svg { width: 16px; height: 16px; color: var(--accent); flex-shrink: 0; }
 .upgrade-list { padding-inline: 0; }
 .upgrade-row { display: flex; align-items: flex-end; gap: 12px; padding: 16px; border-bottom: 1px solid var(--border); }
 .upgrade-row:last-child { border-bottom: none; }
