@@ -216,8 +216,8 @@ export function GameDashboard() {
       app.expand();
       setInitData(app.initData ?? "");
       if (app.isVersionAtLeast("6.9")) {
-        app.setHeaderColor("#090f1a");
-        app.setBackgroundColor("#090f1a");
+        app.setHeaderColor("#090c1d");
+        app.setBackgroundColor("#090c1d");
       }
     }
     setClientReady(true);

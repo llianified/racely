@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   description: 'Mobil kecil, ambisi besar. Balapan mini 4WD 3D, kumpulkan koin virtual, dan rakit mobil impianmu bersama Racely.',
   applicationName: 'Racely',
 }
-export const viewport: Viewport = { width: 'device-width', initialScale: 1, maximumScale: 1, userScalable: false, themeColor: '#090f1a', colorScheme: 'dark', viewportFit: 'cover' }
+export const viewport: Viewport = { width: 'device-width', initialScale: 1, maximumScale: 1, userScalable: false, themeColor: '#090c1d', colorScheme: 'dark', viewportFit: 'cover' }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
