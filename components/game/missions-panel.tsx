@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Flag, Gift, Trophy, LockKeyhole, ArrowRight } from "lucide-react";
+import { Check, Flag, Trophy, LockKeyhole, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -36,18 +36,6 @@ export function MissionsPanel({ game, onClaim, disabled = false }: { game: GameS
             </div>
           );
         })}
-      </div>
-    </section>
-  );
-}
-
-export function StarterGift({ claimed, onClaim, disabled = false }: { claimed: boolean; onClaim: () => void; disabled?: boolean }) {
-  return (
-    <section id="starter-gift" tabIndex={-1} className="reward-ticket" aria-label="Bonus starter">
-      <div className="section-card-heading"><h2><Gift aria-hidden="true" />Bonus starter</h2><InfoHint title="Bonus starter">Bonus satu kali per akun, hanya untuk koin virtual Racely. Gunakan untuk upgrade mobil; tidak bisa ditukar uang.</InfoHint></div>
-      <div className="gift-bottom">
-        <strong>Rp5.000</strong>
-        {claimed ? <span className="mission-status"><Check size={16} aria-hidden="true" />Diklaim</span> : <Button variant="gold" onClick={onClaim} disabled={disabled} aria-label="Klaim bonus starter">Klaim bonus</Button>}
       </div>
     </section>
   );
