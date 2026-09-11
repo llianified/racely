@@ -34,6 +34,7 @@ import { GameNavigation, Topbar, type GameTab } from "./game-navigation";
 import { GaragePanel, UpgradePanel } from "./garage-panel";
 import { CircuitPanel, MissionsPanel, StarterGift } from "./missions-panel";
 import { RacePanel, RaceReward } from "./race-panel";
+import { MenuPanel } from "./menu-panel";
 import {
   gameReducer,
   INITIAL_GAME,
@@ -70,6 +71,11 @@ const TITLES: Record<
   GameTab,
   { title: string; subtitle: string; label: string }
 > = {
+  menu: {
+    title: "Mau ngegas ke mana?",
+    subtitle: "Lintasan, racikan, dan hadiah. Semua di sini.",
+    label: "EXPLORE RACELY",
+  },
   race: {
     title: "Malam ini, kita ngegas.",
     subtitle: "Mobil kecil. Ambisi besar. Balapan tanpa henti.",
@@ -174,6 +180,16 @@ export function GameDashboard() {
   const synced = useRef(false);
   const bootstrapped = useRef(false);
   const mutationLocked = useRef(false);
+  const navigationTarget = useRef<string | null>(null);
+
+  useEffect(() => {
+    const targetId = navigationTarget.current;
+    if (!targetId) return;
+    navigationTarget.current = null;
+    const target = document.getElementById(targetId);
+    target?.focus({ preventScroll: true });
+    if (targetId !== "page-title") target?.scrollIntoView({ block: "start" });
+  }, [tab]);
 
   const gameKey = clientReady ? (["/api/game", initData] as const) : null;
   const { data, error, isLoading, mutate } = useSWR<GameState>(
@@ -240,7 +256,8 @@ export function GameDashboard() {
     return () => clearInterval(id);
   }, []);
 
-  const navigate = (next: GameTab) => {
+  const navigate = (next: GameTab, target?: string) => {
+    navigationTarget.current = target ?? "page-title";
     setTab(next);
     window.scrollTo({ top: 0, behavior: "instant" });
   };
@@ -392,7 +409,7 @@ export function GameDashboard() {
                 <span />
                 {TITLES[tab].label}
               </p>
-              <h1>{TITLES[tab].title}</h1>
+              <h1 id="page-title" tabIndex={-1}>{TITLES[tab].title}</h1>
               <p className="page-subtitle">{TITLES[tab].subtitle}</p>
             </div>
             <div className="session-badge">
@@ -414,7 +431,15 @@ export function GameDashboard() {
               <CircleHelp size={20} />
             </button>
           </div>
-          {tab === "race" ? (
+          {tab === "menu" ? (
+            <MenuPanel
+              onNavigate={navigate}
+              onCircuits={() => setDialog("circuits")}
+              onWallet={() => setDialog("wallet")}
+              onHelp={() => setDialog("help")}
+              giftAvailable={!game.rewardClaimed}
+            />
+          ) : tab === "race" ? (
             <div className="dashboard-grid section-enter">
               <div className="main-column">
                 <RacePanel
@@ -467,7 +492,7 @@ export function GameDashboard() {
             <div className="garage-layout section-enter">
               <div className="flex flex-col gap-4">
                 <GaragePanel game={game} />
-                <section className="panel p-5">
+                <section id="body-colors" tabIndex={-1} className="panel p-5">
                   <div className="flex items-center justify-between">
                     <h2 className="font-semibold">Warna bodi</h2>
                     <span className="eyebrow">GRATIS</span>

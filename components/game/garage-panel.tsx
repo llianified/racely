@@ -132,7 +132,7 @@ export function UpgradePanel({
 }) {
   const baseSeconds = lapSeconds({ ...game, boostLeft: 0 });
   return (
-    <section className="panel upgrade-panel">
+    <section id="upgrades" tabIndex={-1} className="panel upgrade-panel">
       <div className="panel-heading">
         <h2>Upgrade performa</h2>
         <span className="eyebrow">PIT STOP</span>
