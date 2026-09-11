@@ -1,26 +1,41 @@
 import "server-only";
 
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import {
   actionReceipts,
   players,
   rewardClaims,
+  withdrawals,
   type PlayerRow,
+  type WithdrawalRow,
 } from "@/lib/db/schema";
 import { calculateRaceSettlement } from "@/lib/game-economy";
 import {
+  accountPattern,
+  COIN_TO_IDR,
+  MIN_WITHDRAW_COINS,
   MISSIONS,
   missionValue,
+  roundCoins,
+  STARTER_GIFT,
   upgradeCost,
+  WITHDRAW_METHODS,
   type GameState,
   type Upgrade,
+  type WithdrawalRecord,
+  type WithdrawMethod,
+  type WithdrawStatus,
 } from "@/lib/game";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
 
-const STARTER_GIFT = 5000;
 const ALLOWED_COLORS = ["#4275ff", "#f4b65b", "#e9eef7"] as const;
+const METHOD_IDS = WITHDRAW_METHODS.map((method) => method.id) as [
+  WithdrawMethod,
+  ...WithdrawMethod[],
+];
+const HISTORY_LIMIT = 8;
 
 const commandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("sync") }).strict(),
@@ -46,6 +61,15 @@ const commandSchema = z.discriminatedUnion("type", [
     .object({
       type: z.literal("circuit"),
       circuit: z.union([z.literal(0), z.literal(1)]),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("withdraw"),
+      method: z.enum(METHOD_IDS),
+      account: z.string().trim().regex(/^\d{8,18}$/),
+      accountName: z.string().trim().min(2).max(60),
+      coins: z.number().int().min(MIN_WITHDRAW_COINS).max(1_000_000),
     })
     .strict(),
 ]);
@@ -74,8 +98,25 @@ function getDatabase() {
   return db;
 }
 
-function stateFromRow(row: PlayerRow, now: Date): GameState {
+function withdrawalRecord(row: WithdrawalRow): WithdrawalRecord {
   return {
+    id: String(row.id),
+    coins: row.coins,
+    method: row.method as WithdrawMethod,
+    account: row.account,
+    accountName: row.accountName,
+    status: row.status as WithdrawStatus,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+function stateFromRow(
+  row: PlayerRow,
+  now: Date,
+  history: WithdrawalRow[] = [],
+): GameState {
+  return {
+    withdrawals: history.map(withdrawalRecord),
     balance: row.balance,
     pending: row.pending,
     earned: row.earned,
@@ -124,8 +165,8 @@ export function settlePlayerRow(row: PlayerRow, now: Date): PlayerRow {
 
   return {
     ...row,
-    pending: row.pending + settlement.income,
-    earned: row.earned + settlement.income,
+    pending: roundCoins(row.pending + settlement.income),
+    earned: roundCoins(row.earned + settlement.income),
     laps: row.laps + settlement.completedLaps,
     progress: settlement.progress,
     lastSettledAt: now,
@@ -156,7 +197,7 @@ function applyUpgrade(row: PlayerRow, key: Upgrade) {
 
   const cost = upgradeCost(key, level);
   if (row.balance < cost) {
-    throw new GameRuleError("Koin virtual belum cukup untuk upgrade ini.");
+    throw new GameRuleError("Koin belum cukup untuk upgrade ini.");
   }
 
   return {
@@ -199,7 +240,14 @@ export async function getGameState(
       .where(eq(players.userId, locked.userId))
       .returning();
 
-    return stateFromRow(saved, now);
+    const history = await tx
+      .select()
+      .from(withdrawals)
+      .where(eq(withdrawals.userId, identity.userId))
+      .orderBy(desc(withdrawals.createdAt))
+      .limit(HISTORY_LIMIT);
+
+    return stateFromRow(saved, now, history);
   });
 }
 
@@ -257,16 +305,45 @@ export async function performGameAction(
           })
           .where(eq(players.userId, identity.userId))
           .returning();
-        return stateFromRow(saved, now);
+        const replayHistory = await tx
+          .select()
+          .from(withdrawals)
+          .where(eq(withdrawals.userId, identity.userId))
+          .orderBy(desc(withdrawals.createdAt))
+          .limit(HISTORY_LIMIT);
+        return stateFromRow(saved, now, replayHistory);
       }
     }
 
     if (action.type === "upgrade") {
       next = applyUpgrade(next, action.key);
     } else if (action.type === "claim") {
-      if (next.pending > 0) {
-        next = { ...next, balance: next.balance + next.pending, pending: 0 };
+      // Only whole coins move into the withdrawable balance; the remainder keeps accruing.
+      const settled = Math.floor(next.pending);
+      if (settled > 0) {
+        next = {
+          ...next,
+          balance: next.balance + settled,
+          pending: roundCoins(next.pending - settled),
+        };
       }
+    } else if (action.type === "withdraw") {
+      if (next.balance < action.coins) {
+        throw new GameRuleError("Saldo koin tidak cukup untuk penarikan ini.");
+      }
+      if (!accountPattern(action.method).test(action.account)) {
+        throw new GameRuleError("Nomor tujuan tidak valid untuk metode ini.");
+      }
+      await tx.insert(withdrawals).values({
+        userId: identity.userId,
+        requestId,
+        coins: action.coins,
+        amountIdr: action.coins * COIN_TO_IDR,
+        method: action.method,
+        account: action.account,
+        accountName: action.accountName,
+      });
+      next = { ...next, balance: next.balance - action.coins };
     } else if (action.type === "boost") {
       if ((next.cooldownEndsAt?.getTime() ?? 0) > now.getTime()) {
         throw new GameRuleError("Boost masih mengisi ulang.");
@@ -353,7 +430,13 @@ export async function performGameAction(
       .where(eq(players.userId, identity.userId))
       .returning();
 
-    const response = stateFromRow(saved, now);
+    const history = await tx
+      .select()
+      .from(withdrawals)
+      .where(eq(withdrawals.userId, identity.userId))
+      .orderBy(desc(withdrawals.createdAt))
+      .limit(HISTORY_LIMIT);
+    const response = stateFromRow(saved, now, history);
     if (action.type !== "sync") {
       await tx.insert(actionReceipts).values({
         userId: identity.userId,
