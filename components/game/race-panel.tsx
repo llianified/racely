@@ -106,7 +106,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
         <div className="scene-overlay lap-hud">
           <span>Lap</span><strong>{String(game.laps + 1).padStart(3, "0")}</strong>
         </div>
-        <RaceScene progress={game.progress} seconds={seconds} color={game.color} boosted={boosted} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} />
+        <RaceScene model={game.carSelection?.model ?? 'neo-falcon'} progress={game.progress} seconds={seconds} color={game.color} boosted={boosted} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} />
         <div className={cn("scene-overlay boost-hud", boosted && "boost-hud-active")} aria-hidden={!boosted}>
           <Zap aria-hidden="true" /><strong>2×</strong><span>GASPOL</span>
           <i style={{ transform: `scaleX(${Math.max(0, Math.min(1, game.boostLeft / 10))})` }} />

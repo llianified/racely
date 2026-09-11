@@ -108,6 +108,23 @@
   html { scroll-padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + 12px); }
 }
 
+.car-selection { width: 100%; max-width: var(--app-width); margin-inline: auto; padding: 20px 16px calc(20px + var(--safe-bottom)); display: flex; flex-direction: column; gap: 16px; font-size: 14px; line-height: 1.5; }
+.car-selection h1 { font-size: 24px; }
+.car-selection h2 { font-size: 20px; }
+.car-model-options { display: flex; gap: 8px; }
+.car-model-option { flex: 1; min-height: 48px; padding-inline: 12px; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border); border-radius: 12px; background: var(--card); color: var(--card-foreground); font-weight: 700; }
+.car-model-option[data-pressed] { border-color: var(--ring); background: var(--secondary); color: var(--secondary-foreground); }
+.selection-check { visibility: hidden; }
+.car-model-option[data-pressed] .selection-check { visibility: visible; }
+.selection-showcase { overflow: hidden; }
+.selection-stage { height: 164px; }
+.selection-details { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 8px; }
+.car-selection .garage-customize { padding: 0; }
+.car-selection .garage-color-label { font-size: 14px; }
+.car-selection .color-swatch { width: 44px; height: 44px; }
+.car-selection [data-slot='button'] { font-size: 14px; }
+.car-model-option:disabled { opacity: .65; }
+
 /* ── shell ─────────────────────────────────────────── */
 .game-shell { width: 100%; max-width: var(--app-width); min-height: 100dvh; margin-inline: auto; padding-top: var(--safe-top); }
 .main-shell { min-width: 0; }
