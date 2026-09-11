@@ -12,6 +12,7 @@ import {
   type WithdrawalRow,
 } from "@/lib/db/schema";
 import { calculateRaceSettlement } from "@/lib/game-economy";
+import { CAR_MODEL_IDS, isCarColor } from "@/lib/car-catalog";
 import {
   accountPattern,
   COIN_TO_IDR,
@@ -30,7 +31,7 @@ import {
 } from "@/lib/game";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
 
-const ALLOWED_COLORS = ["#4275ff", "#f4b65b", "#e9eef7"] as const;
+const carColorSchema = z.string().regex(/^#[0-9a-f]{6}$/i);
 const METHOD_IDS = WITHDRAW_METHODS.map((method) => method.id) as [
   WithdrawMethod,
   ...WithdrawMethod[],
@@ -55,7 +56,14 @@ const commandSchema = z.discriminatedUnion("type", [
     })
     .strict(),
   z
-    .object({ type: z.literal("color"), color: z.enum(ALLOWED_COLORS) })
+    .object({
+      type: z.literal("select-car"),
+      model: z.enum(CAR_MODEL_IDS),
+      color: carColorSchema,
+    })
+    .strict(),
+  z
+    .object({ type: z.literal("color"), color: carColorSchema })
     .strict(),
   z
     .object({
@@ -110,12 +118,33 @@ function withdrawalRecord(row: WithdrawalRow): WithdrawalRecord {
   };
 }
 
+function hasExistingProgress(row: PlayerRow, history: WithdrawalRow[]) {
+  return (
+    row.balance !== 10 ||
+    row.pending > 0 ||
+    row.earned > 0 ||
+    row.laps > 0 ||
+    row.engineLevel > 1 ||
+    row.tiresLevel > 1 ||
+    row.batteryLevel > 1 ||
+    row.rewardClaimed ||
+    row.missionsClaimed.length > 0 ||
+    history.length > 0
+  );
+}
+
 function stateFromRow(
   row: PlayerRow,
   now: Date,
   history: WithdrawalRow[] = [],
 ): GameState {
   return {
+    developmentPreview: false,
+    carSelection: {
+      model: row.carModel,
+      returningPlayer:
+        row.carModel === null && hasExistingProgress(row, history),
+    },
     withdrawals: history.map(withdrawalRecord),
     balance: row.balance,
     pending: row.pending,
@@ -148,6 +177,10 @@ function stateFromRow(
 }
 
 export function settlePlayerRow(row: PlayerRow, now: Date): PlayerRow {
+  if (row.carModel === null) {
+    return { ...row, lastSettledAt: now, updatedAt: now };
+  }
+
   const settlement = calculateRaceSettlement(
     {
       progress: row.progress,
@@ -234,9 +267,17 @@ export async function getGameState(
       .where(eq(players.userId, identity.userId))
       .for("update");
 
+    const settled = settlePlayerRow(locked, now);
     const [saved] = await tx
       .update(players)
-      .set({ lastSettledAt: now, updatedAt: now })
+      .set({
+        pending: settled.pending,
+        earned: settled.earned,
+        laps: settled.laps,
+        progress: settled.progress,
+        lastSettledAt: settled.lastSettledAt,
+        updatedAt: now,
+      })
       .where(eq(players.userId, locked.userId))
       .returning();
 
@@ -315,7 +356,25 @@ export async function performGameAction(
       }
     }
 
-    if (action.type === "upgrade") {
+    if (
+      next.carModel === null &&
+      action.type !== "sync" &&
+      action.type !== "select-car"
+    ) {
+      throw new GameRuleError("Pilih mobilmu sebelum mulai bermain.");
+    }
+
+    if (action.type === "select-car") {
+      if (next.carModel !== null) {
+        throw new GameRuleError(
+          "Model sudah dikonfirmasi dan tidak dapat diganti.",
+        );
+      }
+      if (!isCarColor(action.model, action.color)) {
+        throw new GameRuleError("Model atau warna mobil tidak valid.", 400);
+      }
+      next = { ...next, carModel: action.model, color: action.color };
+    } else if (action.type === "upgrade") {
       next = applyUpgrade(next, action.key);
     } else if (action.type === "claim") {
       // Only whole coins move into the withdrawable balance; the remainder keeps accruing.
@@ -396,6 +455,9 @@ export async function performGameAction(
         };
       }
     } else if (action.type === "color") {
+      if (!next.carModel || !isCarColor(next.carModel, action.color)) {
+        throw new GameRuleError("Warna ini tidak tersedia untuk mobilmu.", 400);
+      }
       next = { ...next, color: action.color };
     } else if (action.type === "circuit") {
       if (action.circuit === 1 && next.laps < 25) {
@@ -421,6 +483,7 @@ export async function performGameAction(
         cooldownEndsAt: next.cooldownEndsAt,
         rewardClaimed: next.rewardClaimed,
         missionsClaimed: next.missionsClaimed,
+        carModel: next.carModel,
         color: next.color,
         circuit: next.circuit,
         lastSettledAt: next.lastSettledAt,
