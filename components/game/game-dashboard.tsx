@@ -15,8 +15,6 @@ import {
   Flag,
   Gift,
   LoaderCircle,
-  Moon,
-  ShieldCheck,
   Zap,
 } from "lucide-react";
 import useSWR from "swr";
@@ -35,6 +33,7 @@ import { GaragePanel, UpgradePanel } from "./garage-panel";
 import { CircuitPanel, MissionsPanel, StarterGift } from "./missions-panel";
 import { RacePanel, RaceReward } from "./race-panel";
 import { MenuPanel } from "./menu-panel";
+import { InfoHint } from "./info-hint";
 import {
   gameReducer,
   INITIAL_GAME,
@@ -67,35 +66,12 @@ declare global {
 
 type GameKey = readonly [url: string, initData: string];
 
-const TITLES: Record<
-  GameTab,
-  { title: string; subtitle: string; label: string }
-> = {
-  menu: {
-    title: "Mau ngegas ke mana?",
-    subtitle: "Lintasan, racikan, dan hadiah. Semua di sini.",
-    label: "EXPLORE RACELY",
-  },
-  race: {
-    title: "Malam ini, kita ngegas.",
-    subtitle: "Mobil kecil. Ambisi besar. Balapan tanpa henti.",
-    label: "THE NIGHT SESSION",
-  },
-  garage: {
-    title: "Racikan kamu. Aturan kamu.",
-    subtitle: "Upgrade langsung terpasang. Balapan tetap jalan.",
-    label: "YOUR PERSONAL GARAGE",
-  },
-  missions: {
-    title: "Satu lap lebih dekat.",
-    subtitle: "Tuntaskan tantangan. Buka potensi mobilmu.",
-    label: "RACING OBJECTIVES",
-  },
-  rewards: {
-    title: "Hasil kerja si kecil.",
-    subtitle: "Klaim koin virtual untuk racikan berikutnya.",
-    label: "RACER REWARDS",
-  },
+const TITLES: Record<GameTab, string> = {
+  menu: "Menu",
+  race: "Balapan",
+  garage: "Garasi",
+  missions: "Misi",
+  rewards: "Hadiah",
 };
 
 function requestHeaders(initData: string) {
@@ -389,8 +365,6 @@ export function GameDashboard() {
       <GameNavigation
         tab={tab}
         onTab={navigate}
-        onHelp={() => setDialog("help")}
-        onWallet={() => setDialog("wallet")}
         giftAvailable={!game.rewardClaimed}
       />
       <div className="main-shell">
@@ -404,32 +378,17 @@ export function GameDashboard() {
         />
         <main className="page-content">
           <div className="page-heading">
-            <div>
-              <p className="eyebrow session-label">
-                <span />
-                {TITLES[tab].label}
-              </p>
-              <h1 id="page-title" tabIndex={-1}>{TITLES[tab].title}</h1>
-              <p className="page-subtitle">{TITLES[tab].subtitle}</p>
+            <h1 id="page-title" tabIndex={-1} className="text-balance">{TITLES[tab]}</h1>
+            <div className="flex items-center gap-1">
+              {tab === "race" && (
+                <InfoHint title="Balapan & kamera">
+                  Mobil melaju otomatis melawan 2 bot latihan. GASPOL menggandakan kecepatan selama 10 detik, lalu isi ulang 25 detik. Geser arena untuk orbit, cubit untuk zoom, atau ketuk ikon kamera.
+                </InfoHint>
+              )}
+              <Button variant="ghost" size="icon" onClick={() => setDialog("help")} aria-label="Cara bermain">
+                <CircleHelp aria-hidden="true" />
+              </Button>
             </div>
-            <div className="session-badge">
-              <Moon size={16} />
-              <span>
-                NIGHT GARAGE
-                <small>
-                  {game.player.username === "preview"
-                    ? "Mode preview · progres uji tersimpan"
-                    : "Tersinkron via Telegram · Jakarta, ID"}
-                </small>
-              </span>
-            </div>
-            <button
-              className="mobile-help"
-              onClick={() => setDialog("help")}
-              aria-label="Cara bermain"
-            >
-              <CircleHelp size={20} />
-            </button>
           </div>
           {tab === "menu" ? (
             <MenuPanel
@@ -445,6 +404,7 @@ export function GameDashboard() {
                 <RacePanel
                   game={game}
                   onBoost={boost}
+                  onCircuits={() => setDialog("circuits")}
                   disabled={Boolean(busyAction)}
                 />
                 <RaceReward
@@ -453,54 +413,18 @@ export function GameDashboard() {
                   disabled={Boolean(busyAction)}
                 />
               </div>
-              <div className="right-column">
-                <GaragePanel game={game} onOpen={() => navigate("garage")} />
-                <UpgradePanel
-                  game={game}
-                  onUpgrade={upgrade}
-                  disabled={Boolean(busyAction)}
-                />
-              </div>
-              <div className="race-extras">
-                <MissionsPanel
-                  game={game}
-                  onClaim={mission}
-                  compact
-                  onOpen={() => navigate("missions")}
-                  disabled={Boolean(busyAction)}
-                />
-                <CircuitPanel
-                  game={game}
-                  onChoose={chooseCircuit}
-                  compact
-                  disabled={Boolean(busyAction)}
-                />
-                <StarterGift
-                  claimed={game.rewardClaimed}
-                  onClaim={gift}
-                  disabled={Boolean(busyAction)}
-                />
-              </div>
-              <button
-                className="circuit-link"
-                onClick={() => setDialog("circuits")}
-              >
-                Lihat semua sirkuit <ArrowUpRight size={14} />
-              </button>
+
             </div>
           ) : tab === "garage" ? (
             <div className="garage-layout section-enter">
-              <div className="flex flex-col gap-4">
                 <GaragePanel game={game} />
-                <section id="body-colors" tabIndex={-1} className="panel p-5">
-                  <div className="flex items-center justify-between">
-                    <h2 className="font-semibold">Warna bodi</h2>
-                    <span className="eyebrow">GRATIS</span>
+                <UpgradePanel game={game} onUpgrade={upgrade} disabled={Boolean(busyAction)} />
+                <section id="body-colors" tabIndex={-1} className="panel color-panel">
+                  <div className="panel-heading">
+                    <h2>Warna bodi</h2>
+                    <InfoHint title="Warna bodi">Gratis. Warna pilihan langsung aktif di arena 3D dan tersimpan. Foto katalog tetap Electric Blue.</InfoHint>
                   </div>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Warna pilihanmu langsung aktif dan tersimpan.
-                  </p>
-                  <div className="flex items-center gap-5 py-5">
+                  <div className="body-colors" role="group" aria-label="Pilihan warna bodi">
                     {(
                       [
                         { color: "#4275ff", name: "Electric Blue" },
@@ -524,41 +448,7 @@ export function GameDashboard() {
                       </button>
                     ))}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Foto katalog: Electric Blue. Lihat warna aktif di arena 3D.
-                  </p>
                 </section>
-              </div>
-              <div className="flex flex-col gap-4">
-                <UpgradePanel
-                  game={game}
-                  onUpgrade={upgrade}
-                  disabled={Boolean(busyAction)}
-                />
-                <RaceReward
-                  pending={game.pending}
-                  onClaim={claim}
-                  disabled={Boolean(busyAction)}
-                />
-                <section className="panel p-5">
-                  <span className="eyebrow">TUNING NOTES</span>
-                  <h2 className="mt-2 text-xl font-semibold">
-                    Kecil-kecil, bikin kaget.
-                  </h2>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    Mesin untuk tenaga, ban untuk kecepatan, baterai untuk hasil
-                    lebih besar. Semua upgrade langsung aktif tanpa menghentikan
-                    balapan.
-                  </p>
-                  <Button
-                    className="mt-5 w-full"
-                    onClick={() => navigate("race")}
-                  >
-                    Kembali ke lintasan
-                    <Flag data-icon="inline-end" />
-                  </Button>
-                </section>
-              </div>
             </div>
           ) : tab === "missions" ? (
             <div className="garage-layout section-enter">
@@ -585,23 +475,14 @@ export function GameDashboard() {
                 onClaim={gift}
                 disabled={Boolean(busyAction)}
               />
-              <MissionsPanel
-                game={game}
-                onClaim={mission}
-                disabled={Boolean(busyAction)}
-              />
+              <Button variant="menuDirect" onClick={() => navigate("missions")}>
+                <Gift data-icon="inline-start" />
+                Hadiah misi
+                <span className="ml-auto">{MISSIONS.filter((item) => !game.missionsClaimed.includes(item.id) && missionValue(game, item.id) >= item.target).length} siap</span>
+                <ArrowUpRight data-icon="inline-end" />
+              </Button>
             </div>
           )}
-          <footer className="game-footer">
-            <button onClick={() => setDialog("wallet")}>
-              <ShieldCheck size={13} />
-              Koin virtual. Bukan uang sungguhan.
-            </button>
-            <span>
-              Progres tersimpan otomatis · aktif saat aplikasi terbuka
-            </span>
-            <span className="footer-edition">RACELY / NIGHT GARAGE</span>
-          </footer>
         </main>
       </div>
       <Dialog
@@ -646,8 +527,7 @@ export function GameDashboard() {
           ) : dialog === "circuits" ? (
             <div className="flex flex-col gap-3">
               <Button
-                variant="secondary"
-                className="h-12 justify-between"
+                variant="circuit"
                 disabled={Boolean(busyAction)}
                 onClick={() => chooseCircuit(0)}
               >
@@ -655,14 +535,13 @@ export function GameDashboard() {
                 {game.circuit === 0 && <Check data-icon="inline-end" />}
               </Button>
               <Button
-                variant="secondary"
-                className="h-12 justify-between"
+                variant="circuit"
                 disabled={Boolean(busyAction) || game.laps < 25}
                 onClick={() => chooseCircuit(1)}
               >
                 Midnight Speedway
                 <span>
-                  {game.laps >= 25 ? "Terbuka" : `${game.laps}/25 putaran`}
+                  {game.circuit === 1 ? "Aktif" : game.laps >= 25 ? "Terbuka" : `${game.laps}/25 putaran`}
                 </span>
               </Button>
             </div>

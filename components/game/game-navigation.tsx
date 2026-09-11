@@ -5,9 +5,7 @@ import {
   Warehouse,
   ClipboardList,
   Gift,
-  CircleHelp,
   Coins,
-  Zap,
   ChevronDown,
   Menu,
 } from "lucide-react";
