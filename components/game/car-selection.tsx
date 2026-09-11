@@ -12,7 +12,8 @@ import { CarColorPicker } from "./car-color-picker";
 
 const CarPreviewScene = dynamic(() => import("./car-preview-scene"), { ssr: false });
 
-export function CarSelection({ returningPlayer, initialColor, saving, onConfirm }: {
+export function CarSelection({ developmentPreview, returningPlayer, initialColor, saving, onConfirm }: {
+  developmentPreview: boolean;
   returningPlayer: boolean;
   initialColor: string;
   saving: boolean;
@@ -29,7 +30,7 @@ export function CarSelection({ returningPlayer, initialColor, saving, onConfirm 
       <header className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <span className="brand-word">RACELY</span>
-          <Badge variant="secondary">Mode preview</Badge>
+          {developmentPreview && <Badge variant="secondary">Mode development</Badge>}
         </div>
         <div>
           <h1 className="text-balance">{returningPlayer ? "Pilih mobilmu" : "Pilih mobil pertamamu"}</h1>
@@ -87,7 +88,11 @@ export function CarSelection({ returningPlayer, initialColor, saving, onConfirm 
           {saving ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <Flag data-icon="inline-start" />}
           {saving ? "Menyimpan pilihan…" : `Pilih ${car.name} & mulai`}
         </Button>
-        <p className="text-center text-muted-foreground">Tersimpan di cookie preview, belum ke akun Telegram.</p>
+        <p className="text-center text-muted-foreground">
+          {developmentPreview
+            ? "Mode development menyimpan progres secara lokal di browser ini."
+            : "Pilihan tersimpan aman ke akun Telegram kamu."}
+        </p>
       </footer>
     </main>
   );

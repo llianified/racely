@@ -23,31 +23,41 @@ export type PlayerIdentity = {
 
 export const PREVIEW_SESSION_COOKIE = "racely-preview-session";
 
-function normalizedHost(value: string | undefined) {
+function normalizedHostname(value: string | undefined) {
   if (!value) return null;
   try {
-    return new URL(value.includes("://") ? value : `https://${value}`).host;
+    return new URL(value.includes("://") ? value : `https://${value}`)
+      .hostname
+      .toLowerCase();
   } catch {
     return null;
   }
 }
 
 export function isPreviewBypassAllowed(request: Request) {
-  if (process.env.NODE_ENV === "development") return true;
   if (
-    process.env.VERCEL_ENV !== "preview" &&
-    process.env.VERCEL_ENV !== "production"
+    process.env.NODE_ENV !== "development" ||
+    process.env.RACELY_ENABLE_PREVIEW !== "true"
   ) {
     return false;
   }
 
-  const requestHost = normalizedHost(request.url);
-  const deploymentHosts = new Set(
-    [process.env.VERCEL_URL, process.env.VERCEL_PROJECT_PRODUCTION_URL]
-      .map(normalizedHost)
+  const requestHost = normalizedHostname(request.url);
+  const allowedHosts = new Set(
+    [
+      "localhost",
+      "127.0.0.1",
+      "[::1]",
+      process.env.V0_RUNTIME_URL,
+      process.env.V0_DEV_APP_URL,
+      process.env.V0_BUILD_URL,
+      process.env.V0_SANDBOX_URL,
+    ]
+      .map(normalizedHostname)
       .filter((host): host is string => Boolean(host)),
   );
-  return requestHost !== null && deploymentHosts.has(requestHost);
+
+  return requestHost !== null && allowedHosts.has(requestHost);
 }
 
 function getPreviewSessionId(request: Request) {
