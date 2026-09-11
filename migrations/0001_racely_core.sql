@@ -26,6 +26,17 @@ CREATE TABLE IF NOT EXISTS racely_players (
 --> statement-breakpoint
 ALTER TABLE racely_players ADD COLUMN IF NOT EXISTS car_model text;
 --> statement-breakpoint
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'racely_players_car_model_check'
+  ) THEN
+    ALTER TABLE racely_players
+      ADD CONSTRAINT racely_players_car_model_check
+      CHECK (car_model IS NULL OR car_model IN ('neo-falcon', 'luna-gt'));
+  END IF;
+END $$;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS racely_action_receipts (
   user_id text NOT NULL REFERENCES racely_players(user_id) ON DELETE CASCADE,
   request_id text NOT NULL,
