@@ -34,31 +34,29 @@ export const GaragePanel = memo(function GaragePanel({
 }) {
   return (
     <section id="body-colors" tabIndex={-1} className="panel garage-panel" aria-label="Mobil kamu">
-      <div className="garage-summary">
-        <div className="car-showcase" role="img" aria-label={`Neo Falcon warna ${game.color}, model 3D yang sama dengan di lintasan`}>
-          <CarPreviewScene color={game.color} />
-        </div>
-        <div className="car-identity">
-          <div className="car-identity-top">
-            <h2>Neo Falcon</h2>
-            <Badge variant="secondary">LV. {totalLevel(game)}</Badge>
-          </div>
+      <div className="car-stage" role="img" aria-label={`Neo Falcon warna ${game.color}, model 3D yang sama dengan di lintasan`}>
+        <CarPreviewScene color={game.color} />
+        <Badge variant="secondary">LV. {totalLevel(game)}</Badge>
+      </div>
+      <div className="car-identity">
+        <div className="car-identity-head">
+          <h2>Neo Falcon</h2>
           <p>Super-II · Mini 4WD</p>
-          <div className="body-colors" role="group" aria-label="Warna bodi">
-            {BODY_COLORS.map((choice) => (
-              <button
-                key={choice.color}
-                style={{ "--swatch": choice.color } as CSSProperties}
-                className={cn("color-swatch", game.color === choice.color && "selected")}
-                aria-label={`Warna ${choice.name}`}
-                aria-pressed={game.color === choice.color}
-                disabled={disabled}
-                onClick={() => onChooseColor(choice.color, choice.name)}
-              >
-                {game.color === choice.color && <Check aria-hidden="true" />}
-              </button>
-            ))}
-          </div>
+        </div>
+        <div className="body-colors" role="group" aria-label="Warna bodi">
+          {BODY_COLORS.map((choice) => (
+            <button
+              key={choice.color}
+              style={{ "--swatch": choice.color } as CSSProperties}
+              className={cn("color-swatch", game.color === choice.color && "selected")}
+              aria-label={`Warna ${choice.name}`}
+              aria-pressed={game.color === choice.color}
+              disabled={disabled}
+              onClick={() => onChooseColor(choice.color, choice.name)}
+            >
+              {game.color === choice.color && <Check aria-hidden="true" />}
+            </button>
+          ))}
         </div>
       </div>
       <div className="garage-stats">
