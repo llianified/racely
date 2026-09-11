@@ -70,7 +70,7 @@ export function RewardsPanel({
       id: "gift",
       icon: Gift,
       label: "Bonus starter",
-      note: "Sekali per akun, langsung masuk saldo.",
+      note: game.rewardClaimed ? "Bonus sudah masuk ke saldo kamu." : "Hadiah pertamamu. Sekali klaim, langsung masuk saldo.",
       amount: GIFT_AMOUNT,
       state: game.rewardClaimed ? "claimed" : "ready",
       onClaim: onClaimGift,
@@ -93,7 +93,7 @@ export function RewardsPanel({
   const readyCount = rows.filter((row) => row.state === "ready").length;
 
   return (
-    <div className="section-enter flex flex-col gap-2.5">
+    <div className="rewards-layout section-enter flex flex-col gap-4">
       <section className="rewards-hero" aria-label="Total hadiah siap diklaim">
         <div className="rewards-hero-copy">
           <span className="eyebrow">Siap diklaim</span>
@@ -157,7 +157,7 @@ export function RewardsPanel({
                 )}
               </div>
               <div className="reward-row-action">
-                <strong>{formatCoins(row.amount)}</strong>
+                <strong>{formatCoins(row.amount)} <span>koin</span></strong>
                 {row.state === "claimed" ? (
                   <span className="mission-status">
                     <Check size={14} aria-hidden="true" />
