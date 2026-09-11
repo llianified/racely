@@ -202,7 +202,7 @@
 .is-boosted .boost-button:disabled { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); border-top-color: var(--primary); }
 .is-boosted .boost-button:disabled svg { color: var(--primary-foreground); }
 
-/* ── hasil balapan ──────────────────────────────���──── */
+/* ── hasil balapan ──────────────────────────────����──── */
 .race-reward { position: relative; display: flex; align-items: center; gap: 10px; padding: 10px var(--gutter) 10px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); transition: border-color .25s; }
 .race-reward::before { content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; background: var(--secondary); transition: background .25s; }
 .reward-ready { border-color: color-mix(in srgb, var(--accent) 32%, transparent); }
@@ -305,8 +305,8 @@
 .rewards-list-panel .section-card-heading h2 { font-size: 16px; }
 .rewards-list-panel .section-card-heading h2 svg { width: 16px; height: 16px; }
 .rewards-list-panel .section-card-heading > span { font-size: 14px; font-weight: 500; letter-spacing: 0; }
-.reward-list { display: flex; flex-direction: column; margin-top: 8px; }
-.reward-row { display: grid; grid-template-columns: 32px minmax(0, 1fr); column-gap: 12px; border-bottom: 1px solid var(--border); }
+.reward-list { display: flex; flex-direction: column; margin: 8px -16px 0; }
+.reward-row { display: grid; grid-template-columns: 32px minmax(0, 1fr); column-gap: 12px; padding-inline: 16px; border-bottom: 1px solid var(--border); }
 .reward-row > .reward-row-icon, .reward-row > .reward-row-copy { margin-top: 20px; }
 .reward-row:last-child { border-bottom: none; }
 .reward-row.is-claimed h3 { color: var(--muted-foreground); }
@@ -362,8 +362,8 @@
 .wallet-error { padding: 12px; border: 1px solid color-mix(in srgb, var(--destructive) 45%, transparent); border-radius: calc(var(--radius) * .7); color: var(--destructive); font-size: 14px; font-weight: 600; line-height: 1.5; }
 .wallet-note { font-size: 14px; line-height: 1.6; color: var(--muted-foreground); }
 .wallet-empty { margin-top: 16px; padding: 20px 16px; border-radius: calc(var(--radius) * .7); background: color-mix(in srgb, var(--background) 25%, var(--card)); font-size: 14px; line-height: 1.6; text-align: center; color: var(--muted-foreground); }
-.wallet-history { display: flex; flex-direction: column; margin-top: 8px; }
-.wallet-history-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-block: 16px; border-bottom: 1px solid var(--border); }
+.wallet-history { display: flex; flex-direction: column; margin: 8px -16px 0; }
+.wallet-history-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px; border-bottom: 1px solid var(--border); }
 .wallet-history-row > div { min-width: 0; }
 .wallet-history-row:last-child { border-bottom: none; padding-bottom: 0; }
 .wallet-history-row h3 { font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; }
@@ -375,7 +375,7 @@
 .boot-bar { width: min(220px, 62vw); height: 4px; border-radius: 999px; background: var(--secondary); overflow: hidden; }
 .boot-bar > span { display: block; width: 42%; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--primary), var(--accent)); animation: boot-slide 1.15s ease-in-out infinite; }
 @keyframes boot-slide { 0% { transform: translateX(-105%); } 100% { transform: translateX(240%); } }
-.circuit-preview { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 12px 0; border-block: 1px dashed var(--border); color: var(--foreground); }
+.circuit-preview { display: flex; align-items: center; gap: 12px; margin: 10px calc(var(--gutter) * -1) 0; padding: 12px var(--gutter); border-block: 1px dashed var(--border); color: var(--foreground); }
 .circuit-ticket-number { flex-shrink: 0; align-self: stretch; display: flex; align-items: center; padding-right: 12px; border-right: 1px solid var(--border); color: var(--subtle-foreground); font-size: 30px; font-style: italic; font-weight: 900; letter-spacing: -.06em; line-height: 1; }
 .circuit-ticket-flag { width: 20px; height: 20px; flex-shrink: 0; color: var(--subtle-foreground); margin-left: auto; }
 .circuit-panel { border-radius: 10px; }
