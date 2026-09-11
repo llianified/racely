@@ -87,9 +87,20 @@ describe("Withdrawals stay a manual, pending-only queue", () => {
 
   it("keeps the server writer free of any payout or status mutation", () => {
     expect(gameServerSource).toContain("insert(withdrawals)");
-    expect(gameServerSource).not.toMatch(/status\s*:/);
-    expect(gameServerSource).not.toMatch(/processedAt/);
+
+    // The insert payload must never carry a status or a processed timestamp:
+    // the column default (`pending`) is the only value the app is allowed to write.
+    const insertStart = gameServerSource.indexOf("insert(withdrawals).values({");
+    expect(insertStart).toBeGreaterThan(-1);
+    const insertPayload = gameServerSource.slice(
+      insertStart,
+      gameServerSource.indexOf("});", insertStart),
+    );
+    expect(insertPayload).not.toMatch(/status\s*:/);
+    expect(insertPayload).not.toMatch(/processedAt/);
+
     expect(gameServerSource).not.toMatch(/update\(withdrawals\)/);
+    expect(gameServerSource).not.toMatch(/delete\(withdrawals\)/);
     expect(gameServerSource).not.toMatch(/disburse|payout|transfer/i);
   });
 
