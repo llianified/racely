@@ -1,7 +1,10 @@
 import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
+import { Racing_Sans_One } from 'next/font/google'
 import '@fontsource-variable/google-sans-flex'
 import './globals.css'
+
+const racingSansOne = Racing_Sans_One({ weight: '400', subsets: ['latin'], display: 'swap', variable: '--font-racing' })
 
 export const metadata: Metadata = {
   title: 'Racely — Night Racing Garage',
@@ -12,7 +15,7 @@ export const viewport: Viewport = { width: 'device-width', initialScale: 1, user
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="id" suppressHydrationWarning className="dark bg-background">
+    <html lang="id" suppressHydrationWarning className={`dark bg-background ${racingSansOne.variable}`}>
       <body className="font-sans antialiased">
         <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
         {children}
