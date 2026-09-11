@@ -42,6 +42,7 @@ const previewGameSchema = z.object({
   updatedAt: z.number().int().nonnegative(),
   receipts: z.array(z.string().uuid()).max(MAX_RECEIPTS),
   state: z.object({
+    developmentPreview: z.boolean().default(true),
     carSelection: z.object({
       model: z.enum(CAR_MODEL_IDS).nullable(),
       returningPlayer: z.boolean(),
@@ -106,6 +107,7 @@ function initialPreviewGame(identity: PlayerIdentity, now: number): PreviewGame 
     receipts: [],
     state: {
       ...INITIAL_GAME,
+      developmentPreview: true,
       carSelection: { model: null, returningPlayer: false },
       levels: { ...INITIAL_GAME.levels },
       missionsClaimed: [],

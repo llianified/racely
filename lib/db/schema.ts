@@ -12,6 +12,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import type { CarModelId } from "@/lib/car-catalog";
 
 export const players = pgTable("racely_players", {
   userId: text("user_id").primaryKey(),
@@ -33,6 +34,7 @@ export const players = pgTable("racely_players", {
     .$type<string[]>()
     .notNull()
     .default([]),
+  carModel: text("car_model").$type<CarModelId>(),
   color: text("color").notNull().default("#4275ff"),
   circuit: integer("circuit").notNull().default(0),
   lastSettledAt: timestamp("last_settled_at", { withTimezone: true })
@@ -50,7 +52,9 @@ export const players = pgTable("racely_players", {
 export const actionReceipts = pgTable(
   "racely_action_receipts",
   {
-    userId: text("user_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => players.userId, { onDelete: "cascade" }),
     requestId: text("request_id").notNull(),
     actionType: text("action_type").notNull(),
     response: jsonb("response").notNull(),
@@ -68,7 +72,9 @@ export const rewardClaims = pgTable(
   "racely_reward_claims",
   {
     id: bigserial("id", { mode: "number" }).primaryKey(),
-    userId: text("user_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => players.userId, { onDelete: "cascade" }),
     rewardKey: text("reward_key").notNull(),
     amount: bigint("amount", { mode: "number" }).notNull(),
     claimedAt: timestamp("claimed_at", { withTimezone: true })
@@ -88,7 +94,9 @@ export const withdrawals = pgTable(
   "racely_withdrawals",
   {
     id: bigserial("id", { mode: "number" }).primaryKey(),
-    userId: text("user_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => players.userId, { onDelete: "cascade" }),
     requestId: text("request_id").notNull(),
     coins: bigint("coins", { mode: "number" }).notNull(),
     amountIdr: bigint("amount_idr", { mode: "number" }).notNull(),

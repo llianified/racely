@@ -44,6 +44,7 @@ export function calculateRaceSettlement(
   const normalMs = creditedMs - boostedMs;
   const economyState = {
     ...state,
+    developmentPreview: false,
     balance: 0,
     pending: 0,
     earned: 0,
