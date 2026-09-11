@@ -5,7 +5,7 @@ import { useRef, useState, type CSSProperties } from "react";
 import { Camera, ChevronDown, Coins, Flag, Gauge, Maximize, RotateCcw, Timer, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { coins, formatCoins, lapReward, lapSeconds, type GameState } from "@/lib/game";
+import { lapReward, lapSeconds, rupiah, type GameState } from "@/lib/game";
 import { cn } from "@/lib/utils";
 
 const RaceScene = dynamic(() => import("./race-scene"), {
@@ -80,7 +80,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
           </Button>
         </div>
         <div key={game.laps} className="lap-pop" aria-hidden="true">
-          {game.laps > 0 && <>+{formatCoins(lapReward(game))}<span>PUTARAN SELESAI</span></>}
+          {game.laps > 0 && <>+{rupiah(lapReward(game))}<span>PUTARAN SELESAI</span></>}
         </div>
       </div>
       <div className="lap-progress" role="progressbar" aria-label="Progres putaran saat ini" aria-valuenow={Math.round(game.progress * 100)} aria-valuemin={0} aria-valuemax={100}>
@@ -97,7 +97,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
         </div>
         <div className="track-stat">
           <div className="track-stat-label"><Coins aria-hidden="true" />Koin/lap</div>
-          <div className="track-stat-value reward-value">{formatCoins(lapReward(game))} <small>koin</small></div>
+          <div className="track-stat-value reward-value">{rupiah(lapReward(game))}</div>
         </div>
       </div>
       <div className="race-actions">
@@ -112,15 +112,13 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
 }
 
 export function RaceReward({ pending, onClaim, disabled = false }: { pending: number; onClaim: () => void; disabled?: boolean }) {
-  // Only whole coins can be moved into the balance, so the button waits for the first full coin.
-  const ready = Math.floor(pending) > 0;
   return (
-    <section className={cn("race-reward", ready && "reward-ready")} aria-label="Hasil balapan">
+    <section className={cn("race-reward", pending > 0 && "reward-ready")} aria-label="Hasil balapan">
       <div className="reward-copy">
         <span>Hasil balapan</span>
-        <strong>{coins(pending)}</strong>
+        <strong>{rupiah(pending)}</strong>
       </div>
-      <Button variant={ready ? "gold" : "secondary"} disabled={disabled || !ready} onClick={onClaim}>
+      <Button variant={pending > 0 ? "gold" : "secondary"} disabled={disabled || pending <= 0} onClick={onClaim}>
         <Coins data-icon="inline-start" />Klaim
       </Button>
     </section>
