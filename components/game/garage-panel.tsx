@@ -43,6 +43,13 @@ export const GaragePanel = memo(function GaragePanel({
           <h2>Neo Falcon</h2>
           <p>Super-II · Mini 4WD</p>
         </div>
+        <InfoHint title="Mobil kamu">Kecepatan dasar tanpa boost. Model 3D ini sama dengan mobil di lintasan. Ganti warna bodi gratis dan langsung aktif.</InfoHint>
+      </div>
+      <div className="garage-customize">
+        <div className="garage-color-label">
+          <span>Warna bodi</span>
+          <strong>{BODY_COLORS.find((choice) => choice.color === game.color)?.name ?? "Warna pilihan"}</strong>
+        </div>
         <div className="body-colors" role="group" aria-label="Warna bodi">
           {BODY_COLORS.map((choice) => (
             <button
@@ -59,11 +66,10 @@ export const GaragePanel = memo(function GaragePanel({
           ))}
         </div>
       </div>
-      <div className="garage-stats">
-        <span><strong>{(192 / lapSeconds({ ...game, boostLeft: 0 })).toFixed(1)}</strong> km/j</span>
-        <span><strong>{formatCoins(lapReward(game))}</strong> koin/lap</span>
-        <InfoHint title="Mobil kamu">Kecepatan dasar tanpa boost. Model 3D di samping persis mobil yang kamu pakai di lintasan; ganti warna bodi lewat lingkaran di bawah namanya, gratis dan langsung aktif.</InfoHint>
-      </div>
+      <dl className="garage-stats">
+        <div><dt>Kecepatan dasar</dt><dd><strong>{(192 / lapSeconds({ ...game, boostLeft: 0 })).toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</strong> km/j</dd></div>
+        <div><dt>Hasil per putaran</dt><dd><strong>{formatCoins(lapReward(game))}</strong> koin</dd></div>
+      </dl>
     </section>
   );
 }, (a, b) => a.game.levels === b.game.levels && a.game.color === b.game.color && a.game.circuit === b.game.circuit);
@@ -85,7 +91,7 @@ export function UpgradePanel({ game, onUpgrade, disabled = false }: { game: Game
           const next = { ...game, boostLeft: 0, levels: { ...game.levels, [key]: level + 1 } };
           const benefit = key === "battery"
             ? `${formatCoins(lapReward(game))} → ${formatCoins(lapReward(next))} koin/lap`
-            : `${baseSeconds.toFixed(2)} → ${lapSeconds(next).toFixed(2)} d/lap`;
+            : `${baseSeconds.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} → ${lapSeconds(next).toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} dtk/lap`;
           return (
             <div key={key} className="upgrade-row">
               <div className="upgrade-info">
@@ -98,7 +104,7 @@ export function UpgradePanel({ game, onUpgrade, disabled = false }: { game: Game
               <div className="upgrade-action">
                 <Button variant="gold" size="sm" className="upgrade-buy" onClick={() => onUpgrade(key)} disabled={disabled || max || !affordable} aria-label={max ? `${title} level maksimal` : `Upgrade ${title}, ${coins(cost)}`}>
                   {max ? <Check data-icon="inline-start" /> : <ArrowUp data-icon="inline-start" />}
-                  {max ? "MAX" : formatCoins(cost)}
+                  {max ? "MAX" : `${formatCoins(cost)} koin`}
                 </Button>
                 {!max && !affordable && <span>Kurang {formatCoins(cost - Math.floor(game.balance))}</span>}
               </div>
