@@ -152,7 +152,6 @@ export function GameDashboard() {
   const [initData, setInitData] = useState("");
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [raceMounted, setRaceMounted] = useState(false);
-  const [garageMounted, setGarageMounted] = useState(false);
   const synced = useRef(false);
   const bootstrapped = useRef(false);
   const mutationLocked = useRef(false);
@@ -177,12 +176,6 @@ export function GameDashboard() {
     const idle = window.setTimeout(() => setRaceMounted(true), 1500);
     return () => window.clearTimeout(idle);
   }, [tab, raceMounted]);
-
-  // Once Garasi has been opened it stays mounted off-stage, so its WebGL
-  // preview is never torn down and rebuilt when the tab is revisited.
-  useEffect(() => {
-    if (tab === "garage") setGarageMounted(true);
-  }, [tab]);
 
   const gameKey = clientReady ? (["/api/game", initData] as const) : null;
   const { data, error, isLoading, mutate } = useSWR<GameState>(
@@ -465,21 +458,7 @@ export function GameDashboard() {
               </div>
             </div>
           )}
-          {garageMounted && (
-            <div
-              className={cn("garage-layout", tab !== "garage" ? "tab-offstage" : "section-enter")}
-              inert={tab !== "garage"}
-            >
-              <GaragePanel
-                game={game}
-                active={tab === "garage"}
-                onChooseColor={chooseColor}
-                disabled={Boolean(busyAction)}
-              />
-              <UpgradePanel game={game} onUpgrade={upgrade} disabled={Boolean(busyAction)} />
-            </div>
-          )}
-          {tab === "race" || tab === "garage" ? null : tab === "menu" ? (
+          {tab === "race" ? null : tab === "menu" ? (
             <MenuPanel
               onNavigate={navigate}
               onCircuits={() => setDialog("circuits")}
@@ -487,6 +466,11 @@ export function GameDashboard() {
               onHelp={() => setDialog("help")}
               giftAvailable={!game.rewardClaimed}
             />
+          ) : tab === "garage" ? (
+            <div className="garage-layout section-enter">
+                <GaragePanel game={game} onChooseColor={chooseColor} disabled={Boolean(busyAction)} />
+                <UpgradePanel game={game} onUpgrade={upgrade} disabled={Boolean(busyAction)} />
+            </div>
           ) : tab === "wallet" ? (
             <WalletPanel
               game={game}
