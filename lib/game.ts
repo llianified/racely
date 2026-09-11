@@ -113,6 +113,39 @@ export const lapSeconds = (s: GameState) =>
   8 /
   (1 + (s.levels.engine - 1) * 0.15 + (s.levels.tires - 1) * 0.1) /
   (s.boostLeft > 0 ? 2 : 1);
+export const MODIFICATION_PARTS: Record<Upgrade, readonly string[]> = {
+  engine: ["Motor standar", "Motor sport", "Motor racing", "Motor pro"],
+  tires: ["Ban & roller standar", "Ban low-friction", "Roller bearing", "Ban & roller pro"],
+  battery: ["Baterai standar", "Sel sport", "Sel racing", "Sel pro"],
+};
+
+export function modificationPartName(key: Upgrade, level: number) {
+  const tier = level <= 1 ? 0 : level <= 4 ? 1 : level <= 7 ? 2 : 3;
+  return MODIFICATION_PARTS[key][tier];
+}
+
+export function modificationPreview(game: GameState, key: Upgrade) {
+  const level = game.levels[key];
+  const maxed = level >= 10;
+  const nextLevel = Math.min(10, level + 1);
+  const before = { ...game, boostLeft: 0 };
+  const after = { ...before, levels: { ...game.levels, [key]: nextLevel } };
+  const cost = maxed ? 0 : upgradeCost(key, level);
+  return {
+    level,
+    nextLevel,
+    maxed,
+    cost,
+    shortfall: roundCoins(Math.max(0, cost - game.balance)),
+    currentPart: modificationPartName(key, level),
+    nextPart: modificationPartName(key, nextLevel),
+    beforeSeconds: lapSeconds(before),
+    afterSeconds: lapSeconds(after),
+    beforeReward: lapReward(before),
+    afterReward: lapReward(after),
+  };
+}
+
 export const BOOST_DURATION_SECONDS = 10;
 export const BATTERY_RECHARGE_SECONDS = 25;
 

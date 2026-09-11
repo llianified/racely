@@ -317,7 +317,7 @@ export function GameDashboard() {
       game.levels[key] >= 10 ||
       game.balance < upgradeCost(key, game.levels[key])
     )
-      return;
+      return false;
     const next = await runAction({ type: "upgrade", key }, `upgrade:${key}`);
     if (next)
       toast.success(
@@ -327,6 +327,7 @@ export function GameDashboard() {
           duration: 2200,
         },
       );
+    return Boolean(next);
   };
   const claim = async () => {
     const amount = Math.floor(game.pending);
