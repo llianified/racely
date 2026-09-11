@@ -1,4 +1,3 @@
-@import url('https://api.fontshare.com/v2/css?f[]=excon@400,500,700,900&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
@@ -32,8 +31,8 @@
   --radius: .8rem;
 }
 @theme inline {
-  --font-sans: 'Excon', 'Roboto', sans-serif;
-  --font-mono: var(--font-geist-mono);
+  --font-sans: 'Google Sans Flex Variable', sans-serif;
+  --font-mono: 'Google Sans Flex Variable', sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -125,7 +124,7 @@
 .track-panel.is-boosted { border-color: #7841ee99; box-shadow: 0 0 30px #7841ee18; }
 .track-top { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); background: #2c285266; }
 .track-title { display: flex; align-items: center; gap: 12px; }
-.circuit-number { border: 1px solid #7b6cb930; border-radius: 6px; height: 34px; width: 34px; display: grid; place-items: center; font-family: var(--font-geist-mono); font-size: 13px; color: var(--muted-foreground); }
+.circuit-number { border: 1px solid #7b6cb930; border-radius: 6px; height: 34px; width: 34px; display: grid; place-items: center; font-family: var(--font-sans); font-size: 13px; color: var(--muted-foreground); }
 .track-title .eyebrow { font-size: 8px; letter-spacing: 1.6px; }
 .track-title h2 { font-size: 14px; font-weight: 600; line-height: 1.4; }
 .live-tag { display: inline-flex; align-items: center; gap: 7px; color: #a37ef2; font-size: 9px; letter-spacing: 1px; font-weight: 600; padding: 6px 9px; background: #7841ee0d; border: 1px solid #7841ee20; border-radius: 4px; white-space: nowrap; }
@@ -135,7 +134,7 @@
 .scene-overlay { position: absolute; z-index: 2; pointer-events: none; }
 .lap-hud { left: 20px; top: 18px; display: flex; align-items: center; gap: 14px; }
 .lap-hud > div { display: flex; flex-direction: column; gap: 3px; }
-.lap-hud strong { font-family: var(--font-geist-mono); font-size: 22px; font-weight: 500; line-height: 1.2; }
+.lap-hud strong { font-family: var(--font-sans); font-size: 22px; font-weight: 500; line-height: 1.2; }
 .lap-divider { width: 1px; height: 30px; background: var(--border); }
 .hud-car { display: flex; align-items: center; gap: 5px; font-size: 11px; }
 .hud-car i { width: 5px; height: 5px; border-radius: 50%; }
@@ -181,7 +180,7 @@
 .equipped-tag { position: absolute; bottom: 10px; left: 18px; display: flex; align-items: center; gap: 5px; color: #d9d1f4; background: #090c1dcc; border: 1px solid #7841ee35; border-radius: 4px; padding: 3px 6px; font-size: 7px; letter-spacing: 1px; }
 .car-identity { display: flex; justify-content: space-between; align-items: center; padding: 0 18px; }
 .car-identity h3 { font-size: 24px; font-weight: 650; letter-spacing: -.8px; line-height: 1.2; }
-.car-identity h3 > span { font-size: 11px; vertical-align: super; color: var(--muted-foreground); margin-left: 5px; font-family: var(--font-geist-mono); font-weight: 400; }
+.car-identity h3 > span { font-size: 11px; vertical-align: super; color: var(--muted-foreground); margin-left: 5px; font-family: var(--font-sans); font-weight: 400; }
 .car-identity p { font-size: 10px; color: var(--muted-foreground); margin-top: 3px; }
 .garage-stats { display: flex; align-items: center; gap: 17px; margin: 15px 18px 0; padding: 12px 0 15px; border-top: 1px solid var(--border); }
 .garage-stats > span:not(.active-color) { display: flex; align-items: center; gap: 4px; color: var(--muted-foreground); font-size: 10px; }
