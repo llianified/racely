@@ -13,6 +13,7 @@ import {
   authenticateTelegramRequest,
   TelegramAuthError,
 } from "@/lib/telegram-auth";
+import { consumeRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,6 +28,21 @@ export async function POST(request: Request) {
       );
 
     const identity = authenticateTelegramRequest(request);
+
+    // This endpoint mutates balances, so throttle per authenticated player.
+    const limit = consumeRateLimit(identity.userId);
+    if (!limit.allowed)
+      return NextResponse.json(
+        { error: "Terlalu banyak aksi. Tunggu sebentar." },
+        {
+          status: 429,
+          headers: {
+            "Cache-Control": "no-store",
+            "Retry-After": String(limit.retryAfterSeconds),
+          },
+        },
+      );
+
     const payload: unknown = await request.json();
     const isCookiePreview = identity.userId.startsWith("preview:");
     const body = gameActionSchema.safeParse(payload);
