@@ -24,14 +24,14 @@ const buttonVariants = cva(
         circuit: 'justify-between whitespace-normal bg-secondary text-left text-secondary-foreground hover:bg-secondary/80 [&>span]:shrink-0 [&>span]:text-sm [&>span]:text-muted-foreground',
       },
       size: {
-        default: 'min-h-11 gap-2 px-4 py-2',
-        xs: 'min-h-11 gap-1 px-2 py-2 text-sm',
-        sm: 'min-h-11 gap-1.5 px-3 py-2 text-sm',
-        lg: 'min-h-12 gap-2 px-4 py-3 text-sm',
-        icon: 'size-11',
-        'icon-xs': 'size-11',
-        'icon-sm': 'size-11',
-        'icon-lg': 'size-12',
+        default: 'min-h-10 gap-2 px-3.5 py-2',
+        xs: "min-h-7 gap-1 px-2 py-1 text-xs [&_svg:not([class*='size-'])]:size-3.5",
+        sm: "min-h-8 gap-1.5 px-2.5 py-1 text-xs [&_svg:not([class*='size-'])]:size-3.5",
+        lg: 'min-h-12 gap-2 px-4 py-3 text-base',
+        icon: 'size-9',
+        'icon-xs': 'size-7',
+        'icon-sm': 'size-8',
+        'icon-lg': 'size-11',
       },
     },
     defaultVariants: {
@@ -50,6 +50,7 @@ function Button({
   return (
     <ButtonPrimitive
       data-slot="button"
+      data-size={size}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />

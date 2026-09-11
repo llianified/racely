@@ -49,7 +49,7 @@ export function RacePanel({ game, onBoost, onCircuits, disabled = false }: {
     <section className={cn("panel track-panel", boosted && "is-boosted")} ref={panel} aria-label="Balapan otomatis">
       <div className="track-top">
         <h2 className="track-title">
-          <Button variant="ghost" className="circuit-trigger" onClick={openCircuits} aria-label={`Pilih sirkuit: ${game.circuit ? "Midnight Speedway" : "Jakarta Raceway"}`} aria-haspopup="dialog">
+          <Button variant="ghost" size="sm" className="circuit-trigger" onClick={openCircuits} aria-label={`Pilih sirkuit: ${game.circuit ? "Midnight Speedway" : "Jakarta Raceway"}`} aria-haspopup="dialog">
             {game.circuit ? "Midnight Speedway" : "Jakarta Raceway"}
             <ChevronDown data-icon="inline-end" />
           </Button>
@@ -63,13 +63,13 @@ export function RacePanel({ game, onBoost, onCircuits, disabled = false }: {
         <RaceScene progress={game.progress} seconds={seconds} color={game.color} boosted={boosted} cameraMode={cameraMode} resetKey={resetKey} circuit={game.circuit} />
         {boosted && <div className="scene-overlay boost-hud"><Zap size={16} aria-hidden="true" />2× AKTIF</div>}
         <div className="scene-controls">
-          <Button variant="outline" size="icon" onClick={() => setCameraMode((v) => (v + 1) % 3)} aria-label="Ganti sudut kamera">
+          <Button variant="outline" size="icon-sm" onClick={() => setCameraMode((v) => (v + 1) % 3)} aria-label="Ganti sudut kamera">
             <Camera aria-hidden="true" />
           </Button>
-          <Button variant="outline" size="icon" onClick={() => { setCameraMode(0); setResetKey((v) => v + 1); }} aria-label="Reset kamera">
+          <Button variant="outline" size="icon-sm" onClick={() => { setCameraMode(0); setResetKey((v) => v + 1); }} aria-label="Reset kamera">
             <RotateCcw aria-hidden="true" />
           </Button>
-          <Button variant="outline" size="icon" onClick={fullscreen} aria-label="Layar penuh">
+          <Button variant="outline" size="icon-sm" onClick={fullscreen} aria-label="Layar penuh">
             <Maximize aria-hidden="true" />
           </Button>
         </div>
@@ -95,7 +95,7 @@ export function RacePanel({ game, onBoost, onCircuits, disabled = false }: {
         </div>
       </div>
       <div className="race-actions">
-        <Button variant="gold" className="boost-button" onClick={onBoost} disabled={disabled || game.cooldown > 0} style={{ "--charge": `${(1 - game.cooldown / 35) * 100}%` } as CSSProperties}>
+        <Button variant="gold" size="lg" className="boost-button" onClick={onBoost} disabled={disabled || game.cooldown > 0} style={{ "--charge": `${(1 - game.cooldown / 35) * 100}%` } as CSSProperties}>
           <Zap data-icon="inline-start" fill="currentColor" />
           <span>{boosted ? `NGACIR! ${Math.ceil(game.boostLeft)}s` : game.cooldown > 0 ? `Isi ulang ${Math.ceil(game.cooldown)}s` : "GASPOL 2×"}</span>
           {game.cooldown === 0 && <small>10s</small>}
