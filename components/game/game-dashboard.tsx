@@ -343,7 +343,7 @@ export function GameDashboard() {
   const boost = async () => {
     if (game.cooldown > 0) return;
     if (await runAction({ type: "boost" }))
-      toast.success("GASPOL! Kecepatan 2× selama 10 detik.", {
+      toast.success("Gaspol! Kecepatan 2× selama 10 detik.", {
         duration: 1800,
       });
   };
@@ -388,7 +388,7 @@ export function GameDashboard() {
             <div className="flex items-center gap-1">
               {tab === "race" && (
                 <InfoHint title="Balapan & kamera">
-                  Mobil melaju otomatis melawan 2 bot latihan. GASPOL menggandakan kecepatan selama 10 detik, lalu isi ulang 25 detik. Geser arena untuk orbit, cubit untuk zoom, atau ketuk ikon kamera.
+                  Mobil melaju otomatis melawan 2 bot latihan. Gaspol menggandakan kecepatan selama 10 detik, lalu isi ulang 25 detik. Geser arena untuk orbit, cubit untuk zoom, atau ketuk ikon kamera.
                 </InfoHint>
               )}
               <Button variant="ghost" size="icon-sm" onClick={() => setDialog("help")} aria-label="Cara bermain">
@@ -538,7 +538,7 @@ export function GameDashboard() {
                 <p>
                   <strong>Boost, klaim, lalu upgrade.</strong>
                   <span>
-                    GASPOL 2× selama 10 detik, lalu isi ulang selama 25 detik.
+                    Gaspol 2× selama 10 detik, lalu isi ulang selama 25 detik.
                   </span>
                 </p>
               </div>

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { InfoHint } from "./info-hint";
+import { cn } from "@/lib/utils";
 import { MISSIONS, missionValue, rupiah, type GameState } from "@/lib/game";
 
 export function MissionsPanel({ game, onClaim, disabled = false }: { game: GameState; onClaim: (id: string) => void; disabled?: boolean }) {
@@ -17,15 +18,19 @@ export function MissionsPanel({ game, onClaim, disabled = false }: { game: GameS
           const claimed = game.missionsClaimed.includes(m.id);
           const complete = value >= m.target;
           return (
-            <div key={m.id} className="mission-card">
-              <div className="mission-title"><h3>{m.title}</h3><InfoHint title={m.title}>{m.description}</InfoHint></div>
-              <div className="mission-progress"><Progress value={(value / m.target) * 100} aria-label={m.description} className="flex-1" /><span>{value.toLocaleString("id-ID")}/{m.target.toLocaleString("id-ID")}</span></div>
-              <div className="mission-bottom">
-                <strong>+{rupiah(m.reward)}</strong>
-                {complete && !claimed ? (
-                  <Button variant="gold" size="sm" disabled={disabled} onClick={() => onClaim(m.id)} aria-label={`Klaim hadiah ${m.title}`}>Klaim</Button>
-                ) : (
-                  <span className="mission-status">{claimed ? <><Check size={16} aria-hidden="true" />Diklaim</> : "Berlangsung"}</span>
+            <div key={m.id} className={cn("mission-card", complete && !claimed && "is-ready", claimed && "is-claimed")}>
+              <div className="mission-top">
+                <h3>{m.title}</h3>
+                <span className="mission-reward">
+                  {claimed ? <><Check aria-hidden="true" />Diklaim</> : `+${rupiah(m.reward)}`}
+                </span>
+                <InfoHint title={m.title}>{m.description}</InfoHint>
+              </div>
+              <div className="mission-progress">
+                <Progress value={(value / m.target) * 100} aria-label={m.description} className="flex-1" />
+                <span>{value.toLocaleString("id-ID")}/{m.target.toLocaleString("id-ID")}</span>
+                {complete && !claimed && (
+                  <Button variant="gold" size="sm" className="mission-claim" disabled={disabled} onClick={() => onClaim(m.id)} aria-label={`Klaim hadiah ${m.title}`}>Klaim</Button>
                 )}
               </div>
             </div>
@@ -60,7 +65,7 @@ export function CircuitPanel({ game, onChoose, disabled = false }: { game: GameS
       <div className="circuit-preview"><h3>Midnight Speedway</h3><p>Bonus +Rp150/lap</p></div>
       {!unlocked && <>
         <p className="circuit-description">Buka dengan 25 putaran.</p>
-        <div className="mission-progress"><Progress value={Math.min((game.laps / 25) * 100, 100)} aria-label="Buka Midnight Speedway" className="flex-1" /><span>{Math.min(game.laps, 25)}/25</span></div>
+        <div className="mission-progress circuit-progress"><Progress value={Math.min((game.laps / 25) * 100, 100)} aria-label="Buka Midnight Speedway" className="flex-1" /><span>{Math.min(game.laps, 25)}/25</span></div>
       </>}
       {unlocked && <Button className="mt-3 w-full" disabled={disabled} onClick={() => onChoose(active ? 0 : 1)}>{active ? "Kembali ke Jakarta" : "Gas ke Midnight"}<ArrowRight data-icon="inline-end" /></Button>}
     </section>
