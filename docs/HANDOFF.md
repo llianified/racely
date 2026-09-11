@@ -12,6 +12,7 @@ Item tersisa ditulis sebagai checklist `[ ]`.
 **Stack:** Next.js 16 (App Router, `output: "standalone"`), TypeScript,
 Drizzle ORM, Neon Postgres, Vitest, PM2 di AWS EC2.
 **Runbook operasional:** `docs/RUNBOOK.md`.
+**Tutorial manual dari nol sampai live:** `docs/SETUP-MANUAL.md`.
 
 ### Keputusan final yang TIDAK boleh diubah
 
