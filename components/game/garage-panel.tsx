@@ -1,11 +1,12 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { memo, type CSSProperties } from "react";
+import { memo } from "react";
 import { ArrowUp, BatteryMedium, Check, Cog, CircleDot, Lock, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { CAR_CATALOG, type CarColor } from "@/lib/car-catalog";
+import { CarColorPicker } from "./car-color-picker";
 import { InfoHint } from "./info-hint";
 import { coins, formatCoins, lapReward, lapSeconds, totalLevel, upgradeCost, type GameState, type Upgrade } from "@/lib/game";
 
@@ -17,11 +18,7 @@ export const PARTS = [
   { key: "battery" as Upgrade, title: "Baterai", subtitle: "+0,01 koin / putaran", icon: BatteryMedium },
 ];
 
-export const BODY_COLORS = [
-  { color: "#4275ff", name: "Electric Blue" },
-  { color: "#f4b65b", name: "Champagne Gold" },
-  { color: "#e9eef7", name: "Arctic White" },
-] as const;
+export const BODY_COLORS = CAR_CATALOG["neo-falcon"].colors;
 
 export const GaragePanel = memo(function GaragePanel({
   game,
@@ -29,50 +26,34 @@ export const GaragePanel = memo(function GaragePanel({
   disabled = false,
 }: {
   game: GameState;
-  onChooseColor: (color: (typeof BODY_COLORS)[number]["color"], name: string) => void;
+  onChooseColor: (color: CarColor, name: string) => void;
   disabled?: boolean;
 }) {
+  const model = game.carSelection?.model ?? "neo-falcon";
+  const car = CAR_CATALOG[model];
+  const colorName = car.colors.find((choice) => choice.color === game.color)?.name ?? "pilihan";
   return (
     <section id="body-colors" tabIndex={-1} className="panel garage-panel" aria-label="Mobil kamu">
-      <div className="car-stage" role="img" aria-label={`Neo Falcon warna ${game.color}, model 3D yang sama dengan di lintasan`}>
-        <CarPreviewScene color={game.color} />
+      <div className="car-stage" role="img" aria-label={`${car.name} warna ${colorName}, model 3D yang sama dengan di lintasan`}>
+        <CarPreviewScene color={game.color} model={model} />
         <Badge variant="secondary">LV. {totalLevel(game)}</Badge>
       </div>
       <div className="car-identity">
         <div className="car-identity-head">
-          <h2>Neo Falcon</h2>
-          <p>Super-II · Mini 4WD</p>
+          <h2>{car.name}</h2>
+          <p>{car.chassis}</p>
+          <p>{car.description}</p>
         </div>
         <InfoHint title="Mobil kamu">Kecepatan dasar tanpa boost. Model 3D ini sama dengan mobil di lintasan. Ganti warna bodi gratis dan langsung aktif.</InfoHint>
       </div>
-      <div className="garage-customize">
-        <div className="garage-color-label">
-          <span>Warna bodi</span>
-          <strong>{BODY_COLORS.find((choice) => choice.color === game.color)?.name ?? "Warna pilihan"}</strong>
-        </div>
-        <div className="body-colors" role="group" aria-label="Warna bodi">
-          {BODY_COLORS.map((choice) => (
-            <button
-              key={choice.color}
-              style={{ "--swatch": choice.color } as CSSProperties}
-              className={cn("color-swatch", game.color === choice.color && "selected")}
-              aria-label={`Warna ${choice.name}`}
-              aria-pressed={game.color === choice.color}
-              disabled={disabled}
-              onClick={() => onChooseColor(choice.color, choice.name)}
-            >
-              {game.color === choice.color && <Check aria-hidden="true" />}
-            </button>
-          ))}
-        </div>
-      </div>
+      <CarColorPicker model={model} color={game.color} disabled={disabled} onChoose={onChooseColor} />
       <dl className="garage-stats">
         <div><dt>Kecepatan dasar</dt><dd><strong>{(192 / lapSeconds({ ...game, boostLeft: 0 })).toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</strong> km/j</dd></div>
         <div><dt>Hasil per putaran</dt><dd><strong>{formatCoins(lapReward(game))}</strong> koin</dd></div>
       </dl>
     </section>
   );
-}, (a, b) => a.game.levels === b.game.levels && a.game.color === b.game.color && a.game.circuit === b.game.circuit);
+});
 
 export function UpgradePanel({ game, onUpgrade, disabled = false }: { game: GameState; onUpgrade: (key: Upgrade) => void; disabled?: boolean }) {
   const baseSeconds = lapSeconds({ ...game, boostLeft: 0 });
