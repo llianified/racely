@@ -79,6 +79,27 @@ export function getOrCreatePreviewIdentity(request: Request) {
   };
 }
 
+// Racely always runs inside an iframe (the v0 preview proxy and Telegram Web),
+// so a SameSite=lax cookie is never sent back and every request would look like
+// a brand new session. Over HTTPS we therefore need SameSite=None; Secure.
+export function sessionCookieOptions(request: Request) {
+  const forwardedProto = request.headers
+    .get("x-forwarded-proto")
+    ?.split(",")[0]
+    ?.trim();
+  const isHttps =
+    (forwardedProto ?? new URL(request.url).protocol.replace(":", "")) ===
+    "https";
+
+  return {
+    httpOnly: true,
+    sameSite: isHttps ? ("none" as const) : ("lax" as const),
+    secure: isHttps,
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7,
+  };
+}
+
 export class TelegramAuthError extends Error {
   constructor(message = "Buka Racely melalui @RacelyBot untuk bermain.") {
     super(message);

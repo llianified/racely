@@ -11,6 +11,9 @@ import {
 } from "@/lib/preview-game";
 import {
   authenticateTelegramRequest,
+  getOrCreatePreviewIdentity,
+  PREVIEW_SESSION_COOKIE,
+  sessionCookieOptions,
   TelegramAuthError,
 } from "@/lib/telegram-auth";
 import { consumeRateLimit } from "@/lib/rate-limit";
@@ -27,7 +30,10 @@ export async function POST(request: Request) {
         { status: 413 },
       );
 
-    const identity = authenticateTelegramRequest(request);
+    // Mirrors GET /api/game: a preview visitor may not have a session cookie yet
+    // (first mutation of the session), so mint one instead of failing auth.
+    const preview = getOrCreatePreviewIdentity(request);
+    const identity = preview?.identity ?? authenticateTelegramRequest(request);
 
     // This endpoint mutates balances, so throttle per authenticated player.
     const limit = consumeRateLimit(identity.userId);
@@ -71,14 +77,19 @@ export async function POST(request: Request) {
     const response = NextResponse.json(game, {
       headers: { "Cache-Control": "no-store" },
     });
+    if (preview?.isNew) {
+      response.cookies.set(
+        PREVIEW_SESSION_COOKIE,
+        preview.sessionId,
+        sessionCookieOptions(request),
+      );
+    }
     if (previewGame) {
-      response.cookies.set(PREVIEW_GAME_COOKIE, previewGame.cookieValue, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-        maxAge: 60 * 60 * 24 * 7,
-      });
+      response.cookies.set(
+        PREVIEW_GAME_COOKIE,
+        previewGame.cookieValue,
+        sessionCookieOptions(request),
+      );
     }
     return response;
   } catch (error) {

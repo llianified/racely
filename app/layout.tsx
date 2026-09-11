@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     title: 'Racely — Night Racing Garage',
     description,
     locale: 'id_ID',
-    images: [{ url: '/racely-logo.png', width: 1244, height: 1244, alt: 'Logo Racely: bendera balap kotak-kotak kuning dan ungu' }],
+    images: [{ url: '/racely-logo.png', width: 1254, height: 1254, alt: 'Logo Racely: bendera balap kotak-kotak kuning dan ungu' }],
   },
   twitter: {
     card: 'summary',
