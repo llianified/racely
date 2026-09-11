@@ -117,8 +117,8 @@ export function RewardsPanel({
           {rows.map((row) => (
             <li
               key={row.id}
-              id={row.id === "gift" ? "starter-gift" : undefined}
-              tabIndex={row.id === "gift" ? -1 : undefined}
+              id={row.id === "gift" ? "starter-gift" : `reward-${row.id}`}
+              tabIndex={-1}
               className={cn(
                 "reward-row",
                 row.state === "ready" && "is-ready",
