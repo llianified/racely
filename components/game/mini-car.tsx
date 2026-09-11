@@ -1,6 +1,7 @@
 'use client'
 
-import { memo } from 'react'
+import { memo, useRef } from 'react'
+import { useFrame } from '@react-three/fiber'
 import type { CarModelId } from '@/lib/car-catalog'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
@@ -92,6 +93,10 @@ function createCarGeometry(model: CarModelId) {
   const parts: Record<Finish, THREE.BufferGeometry[]> = {
     body: [], chassis: [], rubber: [], alloy: [], gold: [], livery: [], glass: [],
   }
+  const internalParts: Partial<Record<Finish, THREE.BufferGeometry[]>> = {}
+  let internal = false
+  const wheels: { position: Position; parts: Partial<Record<Finish, THREE.BufferGeometry[]>> }[] = []
+  let currentWheel: (typeof wheels)[number] | null = null
   const add = (finish: Finish, geometry: THREE.BufferGeometry, position: Position = [0, 0, 0], rotation: Position = [0, 0, 0]) => {
     geometry.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(...rotation)))
     geometry.translate(...position)
@@ -100,7 +105,15 @@ function createCarGeometry(model: CarModelId) {
     for (const name of Object.keys(triangles.attributes)) {
       if (name !== 'position' && name !== 'normal') triangles.deleteAttribute(name)
     }
-    parts[finish].push(triangles)
+    if (currentWheel) {
+      const [x, y, z] = currentWheel.position
+      triangles.translate(-x, -y, -z)
+      const wheelFinish = currentWheel.parts[finish] ??= []
+      wheelFinish.push(triangles)
+    } else if (internal) {
+      const internalFinish = internalParts[finish] ??= []
+      internalFinish.push(triangles)
+    } else parts[finish].push(triangles)
   }
   const cylinder = (radius: number, height: number, segments = 32) => new THREE.CylinderGeometry(radius, radius, height, segments)
   const ring = (radius: number, tube: number) => new THREE.TorusGeometry(radius, tube, 8, 48)
@@ -148,7 +161,7 @@ function createCarGeometry(model: CarModelId) {
       [.30, .012, .174, .002, side * .037],
       [.379, .014, .145, .002, side * .040],
     ], 24, 8))
-    add('gold', sculptedShell([
+    add('livery', sculptedShell([
       [-.15, .002, .285, .002, side * .059],
       [-.045, .003, .290, .002, side * .062],
       [.055, .002, .253, .002, side * .048],
@@ -217,6 +230,8 @@ function createCarGeometry(model: CarModelId) {
     add('alloy', cylinder(.010, .565, 16), [0, .124, z], [0, 0, Math.PI / 2])
     for (const side of SIDES) {
       const x = side * .255
+      currentWheel = { position: [x, .124, z], parts: {} }
+      wheels.push(currentWheel)
       add('rubber', turned([
         [.077, -.057], [.104, -.057], [.114, -.053], [.120, -.045],
         [.122, -.031], [.122, .031], [.120, .045], [.114, .053],
@@ -239,8 +254,17 @@ function createCarGeometry(model: CarModelId) {
         spokeGeometry.rotateX(Math.PI / 2)
         spokeGeometry.rotateZ(angle)
         spokeGeometry.rotateY(Math.PI / 2)
-        add('body', spokeGeometry, [faceX, .124, z])
+        add('alloy', spokeGeometry, [faceX, .124, z])
       }
+      for (const offset of [-.028, 0, .028]) {
+        add('chassis', ring(.122, .0012), [x + offset, .124, z], [0, Math.PI / 2, 0])
+      }
+      for (let mark = 0; mark < 2; mark++) {
+        const angle = mark * Math.PI
+        add('livery', new THREE.BoxGeometry(.001, .012, .022),
+          [x + side * .0575, .124 + Math.cos(angle) * .099, z + Math.sin(angle) * .099], [angle, 0, 0])
+      }
+      currentWheel = null
     }
   }
 
@@ -311,40 +335,73 @@ function createCarGeometry(model: CarModelId) {
     add('livery', new THREE.BoxGeometry(.25, .003, .009), [0, .258, -.327])
   }
 
-  return Object.fromEntries(Object.entries(parts).map(([finish, geometries]) => {
-    const merged = mergeGeometries(geometries)!
-    geometries.forEach(geometry => geometry.dispose())
-    merged.computeBoundingSphere()
-    return [finish, merged]
-  })) as Record<Finish, THREE.BufferGeometry>
+  internal = true
+  add('alloy', cylinder(.037, .15), [0, .158, -.225], [0, 0, Math.PI / 2])
+  for (const side of SIDES) {
+    add('chassis', cylinder(.039, .018), [side * .074, .158, -.225], [0, 0, Math.PI / 2])
+    add('gold', cylinder(.044, .30), [side * .061, .154, .026], [Math.PI / 2, 0, 0])
+    for (const end of SIDES) {
+      add('alloy', cylinder(.043, .012), [side * .061, .154, .026 + end * .153], [Math.PI / 2, 0, 0])
+      add('alloy', cylinder(.014, .006), [side * .061, .154, .026 + end * .163], [Math.PI / 2, 0, 0])
+    }
+    add('chassis', new THREE.BoxGeometry(.019, .014, .27), [side * .061, .195, .026])
+  }
+  for (const z of [-.05, .10]) {
+    add('chassis', new THREE.BoxGeometry(.23, .014, .022), [0, .201, z])
+    for (const side of SIDES) add('alloy', cylinder(.007, .006, 6), [side * .108, .212, z])
+  }
+
+  const merge = (groups: Partial<Record<Finish, THREE.BufferGeometry[]>>) =>
+    Object.fromEntries(Object.entries(groups).filter(([, geometries]) => geometries.length).map(([finish, geometries]) => {
+      const merged = mergeGeometries(geometries)!
+      geometries.forEach(geometry => geometry.dispose())
+      merged.computeBoundingSphere()
+      return [finish, merged]
+    })) as Partial<Record<Finish, THREE.BufferGeometry>>
+  return { shell: merge(parts), internals: merge(internalParts), wheels: wheels.map(wheel => ({ position: wheel.position, parts: merge(wheel.parts) })) }
 }
 
 // Both canvases share immutable geometry; batch details by finish instead of drawing each bolt separately.
-const GEOMETRY_CACHE: Partial<Record<CarModelId, Record<Finish, THREE.BufferGeometry>>> = {}
+const GEOMETRY_CACHE: Partial<Record<CarModelId, ReturnType<typeof createCarGeometry>>> = {}
 
-export const MiniCar = memo(function MiniCar({ color, model = 'neo-falcon', scale = 1 }: { color: string; model?: CarModelId; scale?: number }) {
-  const CAR_GEOMETRY = GEOMETRY_CACHE[model] ?? (GEOMETRY_CACHE[model] = createCarGeometry(model))
+function CarSurfaces({ parts, color, model, inspect = false }: {
+  parts: Partial<Record<Finish, THREE.BufferGeometry>>; color: string; model: CarModelId; inspect?: boolean
+}) {
+  return <>{(Object.entries(parts) as [Finish, THREE.BufferGeometry][]).map(([finish, geometry]) => {
+    if (inspect && ['body', 'glass', 'livery'].includes(finish)) return null
+    return <mesh key={finish} geometry={geometry} dispose={null} castShadow receiveShadow>
+      {finish === 'body' ? <meshPhysicalMaterial color={color} roughness={.24} metalness={.35} clearcoat={1} clearcoatRoughness={.12} />
+        : finish === 'glass' ? <meshPhysicalMaterial color={COLORS.navy} roughness={.08} metalness={.15} clearcoat={1} clearcoatRoughness={.04} />
+        : <meshStandardMaterial
+          color={finish === 'gold' ? (model === 'luna-gt' ? COLORS.white : COLORS.gold) : ['alloy', 'livery'].includes(finish) ? COLORS.white : COLORS.navy}
+          roughness={finish === 'rubber' ? .96 : finish === 'chassis' ? .68 : .3}
+          metalness={['alloy', 'gold'].includes(finish) ? .85 : finish === 'chassis' ? .15 : 0}
+        />}
+    </mesh>
+  })}</>
+}
+
+function RollingWheel({ wheel, color, model, speed }: {
+  wheel: ReturnType<typeof createCarGeometry>['wheels'][number]; color: string; model: CarModelId; speed: number
+}) {
+  const group = useRef<THREE.Group>(null)
+  useFrame((_, delta) => {
+    if (group.current && !document.hidden) group.current.rotation.x = (group.current.rotation.x + Math.min(delta, .05) * speed / .122) % (Math.PI * 2)
+  })
+  return <group ref={group} position={wheel.position}><CarSurfaces parts={wheel.parts} color={color} model={model} /></group>
+}
+
+export const MiniCar = memo(function MiniCar({ color, model = 'neo-falcon', scale = 1, speed = 0, inspect = false, charge = 1 }: {
+  color: string; model?: CarModelId; scale?: number; speed?: number; inspect?: boolean; charge?: number
+}) {
+  const geometry = GEOMETRY_CACHE[model] ?? (GEOMETRY_CACHE[model] = createCarGeometry(model))
   return <group scale={scale}>
-    <mesh geometry={CAR_GEOMETRY.body} dispose={null} castShadow receiveShadow>
-      <meshPhysicalMaterial color={color} roughness={.27} metalness={.16} clearcoat={.85} clearcoatRoughness={.19} />
-    </mesh>
-    <mesh geometry={CAR_GEOMETRY.chassis} dispose={null} castShadow receiveShadow>
-      <meshStandardMaterial color={COLORS.navy} roughness={.54} metalness={.18} />
-    </mesh>
-    <mesh geometry={CAR_GEOMETRY.rubber} dispose={null} castShadow receiveShadow>
-      <meshStandardMaterial color={COLORS.navy} roughness={.94} />
-    </mesh>
-    <mesh geometry={CAR_GEOMETRY.alloy} dispose={null} castShadow>
-      <meshStandardMaterial color={COLORS.white} roughness={.29} metalness={.72} />
-    </mesh>
-    <mesh geometry={CAR_GEOMETRY.gold} dispose={null} castShadow>
-      <meshStandardMaterial color={model === 'luna-gt' ? COLORS.white : COLORS.gold} roughness={.28} metalness={.65} />
-    </mesh>
-    <mesh geometry={CAR_GEOMETRY.livery} dispose={null}>
-      <meshStandardMaterial color={COLORS.white} roughness={.36} metalness={.08} />
-    </mesh>
-    <mesh geometry={CAR_GEOMETRY.glass} dispose={null} castShadow>
-      <meshPhysicalMaterial color={COLORS.navy} roughness={.13} metalness={.25} clearcoat={1} clearcoatRoughness={.08} />
-    </mesh>
+    <CarSurfaces parts={geometry.shell} color={color} model={model} inspect={inspect} />
+    {inspect && <CarSurfaces parts={geometry.internals} color={color} model={model} />}
+    {geometry.wheels.map((wheel, index) => <RollingWheel key={index} wheel={wheel} color={color} model={model} speed={speed} />)}
+    {inspect && Array.from({ length: 5 }, (_, index) => <mesh key={index} position={[(index - 2) * .023, .216, -.157]}>
+      <boxGeometry args={[.016, .008, .018]} />
+      <meshStandardMaterial color={COLORS.navy} emissive={COLORS.gold} emissiveIntensity={charge > index / 5 ? 1.8 : 0} />
+    </mesh>)}
   </group>
 })
