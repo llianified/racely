@@ -9,12 +9,14 @@ import {
   Coins,
   Zap,
   ChevronDown,
+  Menu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { rupiah } from "@/lib/game";
 
-export type GameTab = "race" | "garage" | "missions" | "rewards";
+export type GameTab = "menu" | "race" | "garage" | "missions" | "rewards";
 export const NAV_ITEMS = [
+  { id: "menu" as const, label: "Menu", icon: Menu },
   { id: "race" as const, label: "Balapan", icon: Flag },
   { id: "garage" as const, label: "Garasi", icon: Warehouse },
   { id: "missions" as const, label: "Misi", icon: ClipboardList },
@@ -55,7 +57,7 @@ export function GameNavigation({
       <span className="nav-icon">
         <Icon />
         {id === "rewards" && giftAvailable && (
-          <span className="notification-dot" />
+          <><span className="notification-dot" aria-hidden="true" /><span className="sr-only">Bonus tersedia</span></>
         )}
       </span>
       <span>{label}</span>
