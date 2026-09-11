@@ -101,7 +101,10 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
             <ChevronDown data-icon="inline-end" />
           </Button>
         </h2>
-        <Badge variant="secondary">AUTO</Badge>
+        <Badge variant="secondary">
+          <Zap data-icon="inline-start" />
+          AUTO
+        </Badge>
       </div>
       <div className="scene-wrap">
         <div className="scene-overlay lap-hud">
