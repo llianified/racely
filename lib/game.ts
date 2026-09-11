@@ -1,3 +1,5 @@
+import type { CarColor, CarModelId } from "./car-catalog";
+
 export type Upgrade = "engine" | "tires" | "battery";
 export type PlayerProfile = {
   name: string;
@@ -49,6 +51,8 @@ export const accountPattern = (id: WithdrawMethod) =>
     : /^08\d{8,12}$/;
 
 export type GameState = {
+  // Absent on the unchanged Telegram/database path; null means preview onboarding.
+  carSelection?: { model: CarModelId | null; returningPlayer: boolean };
   balance: number;
   pending: number;
   earned: number;
@@ -141,7 +145,8 @@ export type GameCommand =
   | { type: "upgrade"; key: Upgrade }
   | { type: "claim" | "boost" | "gift" }
   | { type: "mission"; id: string }
-  | { type: "color"; color: "#4275ff" | "#f4b65b" | "#e9eef7" }
+  | { type: "select-car"; model: CarModelId; color: CarColor }
+  | { type: "color"; color: CarColor }
   | { type: "circuit"; circuit: 0 | 1 }
   | {
       type: "withdraw";
@@ -156,6 +161,7 @@ export type GameAction =
 
 export function gameReducer(s: GameState, action: GameAction): GameState {
   if (action.type === "hydrate") return action.state;
+  if (s.carSelection?.model === null) return s;
   const delta = Math.max(0, Math.min(action.delta, 0.5));
   const progress = s.progress + delta / lapSeconds(s);
   const completed = Math.floor(progress);

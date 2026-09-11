@@ -6,9 +6,10 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid, OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import * as THREE from 'three'
 import { COLORS, MiniCar } from './mini-car'
+import type { CarModelId } from '@/lib/car-catalog'
 
 const HALF = 3.35
-export type SceneProps = { progress: number; seconds: number; color: string; boosted: boolean; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean }
+export type SceneProps = { model?: CarModelId; progress: number; seconds: number; color: string; boosted: boolean; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean }
 
 function trackPoint(t: number, radius: number) {
   const straight = HALF * 2
@@ -43,7 +44,7 @@ function Ribbon({ inner, outer, height = .12, color, y = 0, glow = false }: { in
   </mesh>
 }
 
-function Racer({ lane, color, progress, seconds, boosted, playerRef }: { lane: number; color: string; progress: number; seconds: number; boosted: boolean; playerRef?: RefObject<THREE.Group | null> }) {
+function Racer({ lane, color, model, progress, seconds, boosted, playerRef }: { model?: CarModelId; lane: number; color: string; progress: number; seconds: number; boosted: boolean; playerRef?: RefObject<THREE.Group | null> }) {
   const ownRef = useRef<THREE.Group>(null)
   const group = playerRef ?? ownRef
   const phase = useRef(lane === 0 ? progress : lane * .32)
@@ -58,7 +59,7 @@ function Racer({ lane, color, progress, seconds, boosted, playerRef }: { lane: n
     group.current.rotation.y = p.angle
   }, -2)
   return <group ref={group}>
-    <MiniCar color={color} scale={.85} />
+    <MiniCar color={color} model={model} scale={.85} />
     {lane === 0 && boosted && <pointLight color={COLORS.blue} intensity={3} distance={1.6} position={[0, .1, -.35]} />}
   </group>
 }
@@ -289,7 +290,7 @@ export default function RaceScene(props: SceneProps) {
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -.16, 0]} receiveShadow><planeGeometry args={[80, 80]} /><meshStandardMaterial color="#090c1d" roughness={.85} /></mesh>
       <Grid position={[0, -.145, 0]} args={[36, 36]} cellSize={1} cellThickness={.35} cellColor="#2c2852" sectionSize={5} sectionThickness={.6} sectionColor="#463e7a" fadeDistance={23} fadeStrength={3} />
       <Circuit circuit={props.circuit} />
-      {[0, 1, 2].map(lane => <Racer key={lane} lane={lane} playerRef={lane === 0 ? playerRef : undefined} color={lane === 0 ? props.color : lane === 1 ? COLORS.gold : COLORS.white} progress={props.progress} seconds={props.seconds} boosted={props.boosted} />)}
+      {[0, 1, 2].map(lane => <Racer key={lane} lane={lane} model={lane === 0 ? props.model : 'neo-falcon'} playerRef={lane === 0 ? playerRef : undefined} color={lane === 0 ? props.color : lane === 1 ? COLORS.gold : COLORS.white} progress={props.progress} seconds={props.seconds} boosted={props.boosted} />)}
       <CameraRig mode={props.cameraMode} follow={follow} resetKey={props.resetKey} playerRef={playerRef} active={visible && props.active !== false} boosted={props.boosted} reducedMotion={props.reducedMotion ?? false} />
       <ContextMonitor onLost={() => setLost(true)} />
     </Canvas>
