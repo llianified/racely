@@ -185,17 +185,22 @@
 .race-actions { padding: 10px var(--gutter) 12px; border-top: 1px solid var(--border); }
 
 /* ── tombol emas: satu bahasa visual ───────────────── */
-.gold-button { background: linear-gradient(60deg, transparent 9%, color-mix(in srgb, var(--foreground) 14%, transparent) 9%, color-mix(in srgb, var(--foreground) 14%, transparent) 18%, transparent 18%), linear-gradient(110deg, var(--accent), var(--warning)); color: var(--accent-foreground); border: 1px solid var(--accent); border-top: 2px solid var(--gold-highlight); box-shadow: 0 3px 0 var(--gold-shadow), inset 0 1px 0 var(--gold-highlight); font-weight: 850; letter-spacing: -.01em; }
+.gold-button { background: linear-gradient(60deg, transparent 9%, color-mix(in srgb, var(--foreground) 19%, transparent) 9%, color-mix(in srgb, var(--foreground) 19%, transparent) 18%, transparent 18%), linear-gradient(110deg, var(--accent), var(--warning)); color: var(--accent-foreground); border: 1px solid var(--accent); border-top: 2px solid var(--gold-highlight); box-shadow: 0 3px 0 var(--gold-shadow), inset 0 1px 0 var(--gold-highlight); font-weight: 850; letter-spacing: -.01em; }
 .gold-button:hover:not(:disabled) { filter: brightness(1.08); }
 .gold-button:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 var(--gold-shadow); }
-.gold-button:disabled { background: var(--secondary); color: var(--muted-foreground); border-color: var(--border); border-top-color: var(--border); box-shadow: none; opacity: 1; }
+
+/* satu bahasa disabled untuk semua tombol: rata, solid, tanpa peredupan opacity */
+[data-slot='button']:disabled, .gold-button:disabled, .wallet-chip:disabled, .color-swatch:disabled { background: var(--secondary); color: var(--muted-foreground); border-color: var(--border); border-top-color: var(--border); box-shadow: none; opacity: 1; filter: none; cursor: not-allowed; }
+[data-slot='button']:disabled svg, .wallet-chip:disabled svg { color: var(--muted-foreground); }
 /* varian kecil: bevel lebih tipis biar proporsional */
 .gold-button[data-size='sm'], .gold-button[data-size='xs'] { box-shadow: 0 2px 0 var(--gold-shadow), inset 0 1px 0 var(--gold-highlight); }
 .gold-button[data-size='sm']:active:not(:disabled), .gold-button[data-size='xs']:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 1px 0 var(--gold-shadow); }
 .boost-button { width: 100%; position: relative; overflow: hidden; }
 .boost-button small { padding-inline: 5px; background: color-mix(in srgb, var(--accent-foreground) 10%, transparent); border-radius: 4px; font-size: var(--fs-nano); font-weight: 800; }
+/* boost punya status sendiri (isi ulang & sedang ngacir), jadi tetap berwarna walau disabled */
 .boost-button:disabled::after { content: ''; position: absolute; bottom: 0; height: 3px; width: var(--charge); background: var(--primary); left: 0; }
-.is-boosted .boost-button:disabled { background: var(--primary); color: var(--primary-foreground); }
+.is-boosted .boost-button:disabled { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); border-top-color: var(--primary); }
+.is-boosted .boost-button:disabled svg { color: var(--primary-foreground); }
 
 /* ── hasil balapan ─────────────────────────────────── */
 .race-reward { position: relative; display: flex; align-items: center; gap: 10px; padding: 10px var(--gutter) 10px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); transition: border-color .25s; }
@@ -255,7 +260,6 @@
 .color-swatch svg { width: 16px; height: 16px; stroke-width: 3; }
 .color-swatch.selected { box-shadow: inset 0 0 0 2px var(--card), 0 0 0 2px var(--accent); }
 .color-swatch:focus-visible { outline: 2px solid var(--foreground); outline-offset: 3px; }
-.color-swatch:disabled { opacity: .5; }
 @media (max-width: 359px) {
   .garage-customize { flex-direction: column; align-items: flex-start; }
   .garage-customize .body-colors { margin-top: 12px; }
@@ -352,9 +356,8 @@
 .wallet-methods { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .wallet-method { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; border: 1px solid var(--border); border-radius: calc(var(--radius) * .7); background: var(--secondary); color: var(--muted-foreground); font-size: 14px; font-weight: 600; cursor: pointer; }
 .wallet-method svg { width: 16px; height: 16px; flex-shrink: 0; }
-.wallet-chip.is-active, .wallet-method:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: color-mix(in srgb, var(--accent) 12%, var(--secondary)); color: var(--accent); }
+.wallet-chip.is-active:not(:disabled), .wallet-method:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: color-mix(in srgb, var(--accent) 12%, var(--secondary)); color: var(--accent); }
 .wallet-chip:not(:disabled):hover, .wallet-method:hover { border-color: var(--accent); }
-.wallet-chip:disabled { opacity: .45; cursor: not-allowed; }
 .wallet-error { padding: 12px; border: 1px solid color-mix(in srgb, var(--destructive) 45%, transparent); border-radius: calc(var(--radius) * .7); color: var(--destructive); font-size: 14px; font-weight: 600; line-height: 1.5; }
 .wallet-note { font-size: 14px; line-height: 1.6; color: var(--muted-foreground); }
 .wallet-empty { margin-top: 16px; padding: 20px 16px; border-radius: calc(var(--radius) * .7); background: color-mix(in srgb, var(--background) 25%, var(--card)); font-size: 14px; line-height: 1.6; text-align: center; color: var(--muted-foreground); }
