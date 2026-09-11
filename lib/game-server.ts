@@ -69,6 +69,11 @@ export class GameRuleError extends Error {
   }
 }
 
+function getDatabase() {
+  if (!db) throw new Error("DATABASE_URL is not configured");
+  return db;
+}
+
 function stateFromRow(row: PlayerRow, now: Date): GameState {
   return {
     balance: row.balance,
@@ -168,7 +173,7 @@ export async function getGameState(
 ): Promise<GameState> {
   const now = new Date();
 
-  return db.transaction(async (tx) => {
+  return getDatabase().transaction(async (tx) => {
     await tx
       .insert(players)
       .values(playerValues(identity))
@@ -205,7 +210,7 @@ export async function performGameAction(
 ): Promise<GameState> {
   const now = new Date();
 
-  return db.transaction(async (tx) => {
+  return getDatabase().transaction(async (tx) => {
     await tx
       .insert(players)
       .values(playerValues(identity))
