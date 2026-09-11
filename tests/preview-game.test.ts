@@ -16,6 +16,22 @@ const selectLuna = { type: "select-car", model: "luna-gt", color: "#b9a1ed" } as
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(now); });
 afterEach(() => vi.useRealTimers());
 
+describe("Workshop installation", () => {
+  it("installs a part once, deducts its cost, and preserves it on reload", () => {
+    const fresh = getPreviewGameState(request(), identity);
+    const selected = action(fresh.cookieValue, selectLuna);
+    const funded = action(selected.cookieValue, { type: "gift" });
+    const id = randomUUID();
+    const installed = action(funded.cookieValue, { type: "upgrade", key: "engine" }, id);
+    expect(installed.state.balance).toBe(0);
+    expect(installed.state.levels).toEqual({ engine: 2, tires: 1, battery: 1 });
+    expect(installed.state.color).toBe(selectLuna.color);
+    expect(action(installed.cookieValue, { type: "upgrade", key: "engine" }, id).state).toEqual(installed.state);
+    expect(getPreviewGameState(request(installed.cookieValue), identity).state.levels).toEqual(installed.state.levels);
+    expect(() => action(installed.cookieValue, { type: "upgrade", key: "tires" })).toThrow("Koin belum cukup");
+  });
+});
+
 describe("Preview car selection", () => {
   it("accepts all catalog colors only for their models", () => {
     for (const model of CAR_MODEL_IDS) {

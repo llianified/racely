@@ -1,14 +1,15 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { memo } from "react";
-import { ArrowUp, BatteryMedium, Check, Cog, CircleDot, Lock, Wrench } from "lucide-react";
+import { memo, useRef, useState } from "react";
+import { ArrowUp, BatteryMedium, Check, Cog, CircleDot, LoaderCircle, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { CAR_CATALOG, type CarColor } from "@/lib/car-catalog";
 import { CarColorPicker } from "./car-color-picker";
 import { InfoHint } from "./info-hint";
-import { coins, formatCoins, lapReward, lapSeconds, totalLevel, upgradeCost, type GameState, type Upgrade } from "@/lib/game";
+import { coins, formatCoins, lapReward, lapSeconds, modificationPreview, totalLevel, type GameState, type Upgrade } from "@/lib/game";
 
 const CarPreviewScene = dynamic(() => import("./car-preview-scene"), { ssr: false });
 
@@ -35,7 +36,7 @@ export const GaragePanel = memo(function GaragePanel({
   return (
     <section id="body-colors" tabIndex={-1} className="panel garage-panel" aria-label="Mobil kamu">
       <div className="car-stage" role="img" aria-label={`${car.name} warna ${colorName}, model 3D yang sama dengan di lintasan`}>
-        <CarPreviewScene color={game.color} model={model} />
+        <CarPreviewScene color={game.color} model={model} levels={game.levels} />
       </div>
       <div className="car-identity">
         <div className="car-identity-head">
@@ -57,49 +58,136 @@ export const GaragePanel = memo(function GaragePanel({
   );
 });
 
-export function UpgradePanel({ game, onUpgrade, disabled = false }: { game: GameState; onUpgrade: (key: Upgrade) => void; disabled?: boolean }) {
-  const baseSeconds = lapSeconds({ ...game, boostLeft: 0 });
+type UpgradePanelProps = {
+  game: GameState;
+  onUpgrade: (key: Upgrade) => Promise<boolean>;
+  disabled?: boolean;
+};
+
+const seconds = (value: number) => value.toLocaleString("id-ID", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps & { part: (typeof PARTS)[number] }) {
+  const [open, setOpen] = useState(false);
+  const [installing, setInstalling] = useState(false);
+  const [showAfter, setShowAfter] = useState(true);
+  const [inspect, setInspect] = useState(false);
+  const installLock = useRef(false);
+  const { key, title, icon: Icon } = part;
+  const preview = modificationPreview(game, key);
+  const { level, nextLevel, maxed, cost, shortfall } = preview;
+  const blocked = disabled || installing;
+  const benefit = key === "battery"
+    ? `+${formatCoins(preview.afterReward - preview.beforeReward)} koin / putaran`
+    : `${seconds(preview.beforeSeconds - preview.afterSeconds)} dtk lebih cepat / putaran`;
+
+  const install = async () => {
+    if (installLock.current || blocked || maxed || shortfall > 0) return;
+    installLock.current = true;
+    setInstalling(true);
+    try {
+      if (await onUpgrade(key)) setOpen(false);
+    } finally {
+      installLock.current = false;
+      setInstalling(false);
+    }
+  };
+
   return (
-    <section id="upgrades" tabIndex={-1} className="panel upgrade-panel">
-      <div className="panel-heading">
-        <h2><Wrench aria-hidden="true" />Upgrade performa</h2>
-        <InfoHint title="Tuning mobil">Mesin dan ban mempercepat putaran. Baterai menambah hasil koin. Upgrade langsung aktif, tersimpan, dan maksimal level 10.</InfoHint>
+    <Dialog open={open} onOpenChange={(value) => { if (!installLock.current) setOpen(value); }}>
+      <div className="upgrade-row">
+        <div className="upgrade-info">
+          <div className="upgrade-name"><Icon size={16} aria-hidden="true" /><h3>{title}</h3><span className="level-label">Lv. {level}</span></div>
+          <p>{preview.currentPart} · Terpasang</p>
+          <p>{maxed ? "Modifikasi maksimal" : benefit}</p>
+          <div className="level-segments" aria-label={`Level ${level} dari 10`}>
+            {Array.from({ length: 10 }, (_, i) => <span key={i} className={i < level ? "filled" : undefined} />)}
+          </div>
+        </div>
+        <div className="upgrade-action">
+          <DialogTrigger render={<Button variant="gold" className="upgrade-buy" disabled={blocked || maxed} />} aria-label={maxed ? `${title} level maksimal` : `Modifikasi ${title}`}>
+            {maxed ? <Check data-icon="inline-start" /> : <Wrench data-icon="inline-start" />}
+            {maxed ? "MAX" : "Modif"}
+          </DialogTrigger>
+        </div>
       </div>
-      <div className="upgrade-list">
-        {PARTS.map(({ key, title, icon: Icon }) => {
-          const level = game.levels[key];
-          const max = level >= 10;
-          const cost = upgradeCost(key, level);
-          const affordable = game.balance >= cost;
-          const next = { ...game, boostLeft: 0, levels: { ...game.levels, [key]: level + 1 } };
-          const benefit = key === "battery"
-            ? `${formatCoins(lapReward(game))} → ${formatCoins(lapReward(next))} koin/lap`
-            : `${baseSeconds.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} → ${lapSeconds(next).toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} dtk/lap`;
-          return (
-            <div key={key} className="upgrade-row">
-              <div className="upgrade-info">
-                <div className="upgrade-name"><Icon size={16} aria-hidden="true" /><h3>{title}</h3><span className="level-label">Lv. {level}</span></div>
-                <p>{max ? "Performa maksimal" : benefit}</p>
-                <div className="level-segments" aria-label={`Level ${level} dari 10`}>
-                  {Array.from({ length: 10 }, (_, i) => <span key={i} className={i < level ? "filled" : undefined} />)}
+      <DialogContent className="max-h-[85dvh] gap-0 overflow-y-auto p-0 font-sans" showCloseButton={!installing}>
+        <DialogHeader className="border-b border-border px-6 py-5 pr-12">
+          <DialogTitle>Modifikasi {title.toLowerCase()}</DialogTitle>
+          <DialogDescription>Pilih peningkatan permanen untuk mobilmu. Koin hanya dipotong setelah pemasangan berhasil.</DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col text-[14px] leading-relaxed">
+          <div className="flex items-center gap-3 border-b border-border bg-background px-6 py-4 text-foreground">
+            <Icon className="size-6 shrink-0 text-accent" aria-hidden="true" />
+            <div className="min-w-0">
+              <p className="font-bold">{preview.nextPart}</p>
+              <p className="text-muted-foreground">Level {level} → {nextLevel} · {part.subtitle}</p>
+            </div>
+          </div>
+          <div className="border-b border-border bg-background px-6 py-4 text-foreground">
+            <div className="overflow-hidden rounded-xl border border-border">
+              <div className="h-48" role="img" aria-label={`${showAfter ? "Setelah" : "Sebelum"} modifikasi ${title}, level ${showAfter ? nextLevel : level}${inspect ? ", bodi dilepas" : ""}`}>
+                {open && <CarPreviewScene color={game.color} model={game.carSelection?.model ?? "neo-falcon"} levels={showAfter ? { ...game.levels, [key]: nextLevel } : game.levels} inspect={inspect} />}
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border p-3">
+                <span aria-live="polite">{showAfter ? "Setelah" : "Sebelum"} · Lv. {showAfter ? nextLevel : level}</span>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setShowAfter(value => !value)} aria-pressed={showAfter}>{showAfter ? "Lihat sebelum" : "Lihat setelah"}</Button>
+                  <Button variant="outline" size="sm" onClick={() => setInspect(value => !value)} aria-pressed={inspect}>{inspect ? "Pasang bodi" : "Lepas bodi"}</Button>
                 </div>
               </div>
-              <div className="upgrade-action">
-                <Button
-                  variant="gold"
-                  className="upgrade-buy"
-                  data-short={!max && !affordable ? "" : undefined}
-                  onClick={() => onUpgrade(key)}
-                  disabled={disabled || max || !affordable}
-                  aria-label={max ? `${title} level maksimal` : affordable ? `Upgrade ${title}, ${coins(cost)}` : `Upgrade ${title} butuh ${coins(cost)}, kurang ${coins(cost - Math.floor(game.balance))}`}
-                >
-                  {max ? <Check data-icon="inline-start" /> : affordable ? <ArrowUp data-icon="inline-start" /> : <Lock data-icon="inline-start" />}
-                  {max ? "MAX" : affordable ? `${formatCoins(cost)} koin` : `Kurang ${formatCoins(cost - Math.floor(game.balance))}`}
-                </Button>
-              </div>
             </div>
-          );
-        })}
+          </div>
+          <p className="border-b border-border px-6 py-4 text-muted-foreground">{key === "engine"
+            ? "Visual: heatsink motor belakang dengan sirip pendingin yang bertambah setiap level."
+            : key === "tires"
+              ? "Visual: ban lebih lebar, cincin velg emas, dan roller bertingkat."
+              : "Visual: dudukan baterai dengan strip emas yang bertambah setiap level. Lepas bodi untuk melihat detail sel."}</p>
+          <table className="w-full text-left tabular-nums">
+            <caption className="px-6 pb-2 pt-4 text-left font-semibold">Simulasi performa tanpa boost</caption>
+            <thead className="text-muted-foreground">
+              <tr><th scope="col" className="px-6 pb-2 font-normal">Performa</th><th scope="col" className="pb-2 text-right font-normal">Saat ini</th><th scope="col" className="px-6 pb-2 text-right font-normal">Setelah</th></tr>
+            </thead>
+            <tbody>
+              <tr className="border-t border-border"><th scope="row" className="px-6 py-2 font-normal">Detik / putaran</th><td className="text-right">{seconds(preview.beforeSeconds)}</td><td className="px-6 text-right font-bold text-accent">{seconds(preview.afterSeconds)}</td></tr>
+              <tr className="border-y border-border"><th scope="row" className="px-6 py-2 font-normal">Koin / putaran</th><td className="text-right">{formatCoins(preview.beforeReward)}</td><td className="px-6 text-right font-bold text-accent">{formatCoins(preview.afterReward)}</td></tr>
+            </tbody>
+          </table>
+          <dl className="flex flex-col gap-2 border-b border-border px-6 py-4">
+            <div className="flex justify-between gap-3"><dt>Biaya pemasangan</dt><dd className="font-bold">{coins(cost)}</dd></div>
+            <div className="flex justify-between gap-3 text-muted-foreground"><dt>Saldo saat ini</dt><dd>{coins(game.balance)}</dd></div>
+            {shortfall === 0 && <div className="flex justify-between gap-3 text-muted-foreground"><dt>Sisa saldo</dt><dd>{coins(game.balance - cost)}</dd></div>}
+          </dl>
+          <p role="status" className="px-6 py-4 text-muted-foreground">
+            {shortfall > 0
+              ? `Kurang ${coins(shortfall)}. Klaim hasil balapan atau hadiah terlebih dahulu.`
+              : "Part dan tampilan 3D berubah otomatis setelah pemasangan berhasil, di garasi maupun lintasan. Part tidak bisa dijual kembali."}
+          </p>
+        </div>
+        <DialogFooter className="border-t border-border px-6 py-5">
+          <DialogClose render={<Button variant="outline" disabled={installing} />}>Batal</DialogClose>
+          <Button variant="gold" disabled={blocked || maxed || shortfall > 0} onClick={() => void install()} aria-busy={installing}>
+            {installing ? <LoaderCircle className="animate-spin" data-icon="inline-start" /> : <ArrowUp data-icon="inline-start" />}
+            {installing ? "Memasang…" : maxed ? "Level maksimal" : `Pasang · ${coins(cost)}`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function UpgradePanel({ game, onUpgrade, disabled = false }: UpgradePanelProps) {
+  return (
+    <section id="upgrades" tabIndex={-1} className="panel upgrade-panel" aria-label="Bengkel modifikasi">
+      <div className="panel-heading">
+        <h2><Wrench aria-hidden="true" />Bengkel modifikasi</h2>
+        <InfoHint title="Modifikasi mobil">Pilih part, cek perubahan performa, lalu konfirmasi pemasangan. Mesin dan ban mempercepat putaran; baterai menambah hasil koin. Setiap pemasangan menaikkan satu level, maksimal level 10.</InfoHint>
+      </div>
+      <p className="px-4 pt-3 text-[14px] leading-relaxed text-muted-foreground">Rakit performamu. Cek simulasi sebelum pasang.</p>
+      <div className="upgrade-list">
+        {PARTS.map((part) => <ModificationSlot key={part.key} part={part} game={game} onUpgrade={onUpgrade} disabled={disabled} />)}
       </div>
     </section>
   );
