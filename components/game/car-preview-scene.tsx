@@ -4,6 +4,7 @@ import { useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import type * as THREE from 'three'
 import { COLORS, MiniCar } from './mini-car'
+import { CarLighting } from './car-lighting'
 import type { CarModelId } from '@/lib/car-catalog'
 
 type CarPreviewProps = { color: string; model?: CarModelId }
@@ -24,10 +25,11 @@ export default function CarPreviewScene({ color, model }: CarPreviewProps) {
       camera={{ position: [1.6, 1.1, 1.9], zoom: 112, near: .1, far: 40 }}
       gl={{ antialias: true, alpha: true, powerPreference: 'default' }}
     >
-      <ambientLight intensity={1.1} />
-      <hemisphereLight args={[COLORS.white, COLORS.navy, 1.2]} />
-      <directionalLight position={[2, 5, 3]} intensity={2.4} />
-      <directionalLight position={[-3, 2, -2]} intensity={1.4} color={COLORS.blue} />
+      <CarLighting />
+      <ambientLight intensity={.35} />
+      <hemisphereLight args={[COLORS.white, COLORS.navy, .65]} />
+      <directionalLight position={[2, 5, 3]} intensity={2.2} />
+      <directionalLight position={[-3, 2, -2]} intensity={.9} color={COLORS.white} />
       <group position={[0, -.12, 0]}>
         <Turntable color={color} model={model} />
       </group>
