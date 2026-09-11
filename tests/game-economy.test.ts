@@ -21,12 +21,12 @@ function settlementInput(
 }
 
 describe("Racely economy", () => {
-  it("keeps the original lap time, rewards, and upgrade costs", () => {
+  it("keeps the base lap time, coin rewards, and upgrade costs", () => {
     expect(lapSeconds(INITIAL_GAME)).toBe(8);
-    expect(lapReward(INITIAL_GAME)).toBe(250);
-    expect(upgradeCost("engine", 1)).toBe(2500);
-    expect(upgradeCost("tires", 1)).toBe(1500);
-    expect(upgradeCost("battery", 1)).toBe(2000);
+    expect(lapReward(INITIAL_GAME)).toBe(0.05);
+    expect(upgradeCost("engine", 1)).toBe(25);
+    expect(upgradeCost("tires", 1)).toBe(15);
+    expect(upgradeCost("battery", 1)).toBe(20);
   });
 
   it("settles completed laps and carries fractional progress", () => {
@@ -36,7 +36,7 @@ describe("Racely economy", () => {
     );
 
     expect(result.completedLaps).toBe(2);
-    expect(result.income).toBe(500);
+    expect(result.income).toBe(0.1);
     expect(result.progress).toBeCloseTo(0);
   });
 
@@ -58,6 +58,6 @@ describe("Racely economy", () => {
 
     expect(result.creditedSeconds).toBe(HEARTBEAT_CAP_SECONDS);
     expect(result.completedLaps).toBe(3);
-    expect(result.income).toBe(750);
+    expect(result.income).toBe(0.15);
   });
 });
