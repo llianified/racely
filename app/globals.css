@@ -244,9 +244,11 @@
 .car-stage canvas { display: block; touch-action: none; }
 .garage-layout { gap: var(--space-lg); }
 .garage-panel, .upgrade-panel, .rewards-layout { --fs-nano: 14px; --fs-micro: 14px; --fs-small: 14px; --fs-body: 14px; }
-.car-identity { display: flex; align-items: center; justify-content: space-between; padding: var(--space-lg) var(--space-lg) 0; }
+.car-identity { padding: var(--space-lg) var(--space-lg) 0; }
 .car-identity-head { min-width: 0; }
-.car-identity-title { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-sm); min-width: 0; }
+.car-identity-title { display: flex; align-items: center; gap: var(--space-sm); min-width: 0; }
+.car-identity-title h2 { min-width: 0; overflow-wrap: anywhere; }
+.car-identity-title [data-slot='button'] { flex-shrink: 0; margin-left: auto; margin-right: -6px; }
 .car-level-chip { flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .car-identity h2 { font-size: 22px; line-height: 1.2; letter-spacing: -.025em; }
 .car-identity p { margin-top: 4px; font-size: 14px; color: var(--muted-foreground); }
