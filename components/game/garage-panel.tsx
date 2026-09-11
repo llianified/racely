@@ -1,10 +1,11 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { memo } from "react";
+import { memo, type CSSProperties } from "react";
 import { ArrowUp, BatteryMedium, Check, Cog, CircleDot } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { InfoHint } from "./info-hint";
 import { lapReward, lapSeconds, totalLevel, upgradeCost, rupiah, type GameState, type Upgrade } from "@/lib/game";
 
@@ -16,23 +17,54 @@ export const PARTS = [
   { key: "battery" as Upgrade, title: "Baterai", subtitle: "+Rp100 / putaran", icon: BatteryMedium },
 ];
 
-export const GaragePanel = memo(function GaragePanel({ game }: { game: GameState }) {
+export const BODY_COLORS = [
+  { color: "#4275ff", name: "Electric Blue" },
+  { color: "#f4b65b", name: "Champagne Gold" },
+  { color: "#e9eef7", name: "Arctic White" },
+] as const;
+
+export const GaragePanel = memo(function GaragePanel({
+  game,
+  onChooseColor,
+  disabled = false,
+}: {
+  game: GameState;
+  onChooseColor: (color: string, name: string) => void;
+  disabled?: boolean;
+}) {
   return (
-    <section className="panel garage-panel" aria-label="Mobil kamu">
+    <section id="body-colors" tabIndex={-1} className="panel garage-panel" aria-label="Mobil kamu">
       <div className="garage-summary">
         <div className="car-showcase" role="img" aria-label={`Neo Falcon warna ${game.color}, model 3D yang sama dengan di lintasan`}>
           <CarPreviewScene color={game.color} />
         </div>
         <div className="car-identity">
-          <Badge variant="secondary">LV. {totalLevel(game)}</Badge>
-          <h2>Neo Falcon</h2>
+          <div className="car-identity-top">
+            <h2>Neo Falcon</h2>
+            <Badge variant="secondary">LV. {totalLevel(game)}</Badge>
+          </div>
           <p>Super-II · Mini 4WD</p>
+          <div className="body-colors" role="group" aria-label="Warna bodi">
+            {BODY_COLORS.map((choice) => (
+              <button
+                key={choice.color}
+                style={{ "--swatch": choice.color } as CSSProperties}
+                className={cn("color-swatch", game.color === choice.color && "selected")}
+                aria-label={`Warna ${choice.name}`}
+                aria-pressed={game.color === choice.color}
+                disabled={disabled}
+                onClick={() => onChooseColor(choice.color, choice.name)}
+              >
+                {game.color === choice.color && <Check aria-hidden="true" />}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       <div className="garage-stats">
         <span><strong>{(192 / lapSeconds({ ...game, boostLeft: 0 })).toFixed(1)}</strong> km/j</span>
         <span><strong>{rupiah(lapReward(game))}</strong>/lap</span>
-        <InfoHint title="Mobil kamu">Kecepatan dasar ditampilkan tanpa boost. Model di atas persis mobil yang kamu pakai di lintasan, lengkap dengan warna pilihanmu.</InfoHint>
+        <InfoHint title="Mobil kamu">Kecepatan dasar tanpa boost. Model 3D di samping persis mobil yang kamu pakai di lintasan; ganti warna bodi lewat lingkaran di bawah namanya, gratis dan langsung aktif.</InfoHint>
       </div>
     </section>
   );
