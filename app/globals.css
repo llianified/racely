@@ -117,7 +117,7 @@
 .brand { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
 .brand-mark { width: 26px; height: 26px; color: var(--accent); display: grid; place-items: center; border: 1.5px solid color-mix(in srgb, var(--accent) 60%, transparent); border-radius: 50%; }
 .brand-mark svg { width: 13px; height: 13px; }
-.brand-word { font-family: var(--font-racing), sans-serif; font-size: calc(var(--fs-title) + 1px); font-weight: 400; letter-spacing: .015em; line-height: 1; transform: skewX(-11deg); transform-origin: 0 100%; padding-right: 3px; }
+.brand-word { font-size: var(--fs-title); font-weight: 950; letter-spacing: -.01em; line-height: 1; }
 .brand-sub { display: none; }
 .racer-avatar { position: relative; display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; background: var(--secondary); border: 1px solid var(--border); color: var(--foreground); font-size: var(--fs-small); font-weight: 850; }
 .racer-avatar:hover { background: var(--menu-header); }
