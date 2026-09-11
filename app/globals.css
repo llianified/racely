@@ -148,7 +148,7 @@
 .track-panel.is-boosted { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
 .track-top { display: flex; align-items: center; gap: 4px; min-height: 48px; padding: 6px 12px 6px 10px; border-bottom: 1px solid var(--border); }
 .track-title { flex: 1; min-width: 0; }
-.circuit-number { display: grid; place-items: center; flex-shrink: 0; width: 30px; height: 30px; border: 1px solid var(--border); border-bottom: 2px solid var(--accent); border-radius: 3px; font-size: var(--fs-title); font-weight: 900; font-style: italic; font-variant-numeric: tabular-nums; color: var(--foreground); background: var(--background); }
+.circuit-number { display: grid; place-items: center; flex-shrink: 0; width: 30px; height: 30px; border: 1px solid var(--border); border-bottom: 2px solid var(--accent); border-radius: 3px; font-size: var(--fs-title); font-weight: 900; font-variant-numeric: tabular-nums; color: var(--foreground); background: var(--background); }
 .circuit-trigger { max-width: 100%; white-space: normal; text-align: left; padding-inline: 8px; font-size: var(--fs-body); font-weight: 800; }
 .live-tag { display: inline-flex; align-items: center; gap: 5px; color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: 800; letter-spacing: .12em; white-space: nowrap; }
 .live-tag::before { content: ''; width: 5px; height: 5px; flex-shrink: 0; border-radius: 50%; background: var(--accent); }
@@ -376,7 +376,7 @@
 .boot-bar > span { display: block; width: 42%; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--primary), var(--accent)); animation: boot-slide 1.15s ease-in-out infinite; }
 @keyframes boot-slide { 0% { transform: translateX(-105%); } 100% { transform: translateX(240%); } }
 .circuit-preview { display: flex; align-items: center; gap: 12px; margin: 10px calc(var(--gutter) * -1) 0; padding: 12px var(--gutter); border-block: 1px dashed var(--border); color: var(--foreground); }
-.circuit-ticket-number { flex-shrink: 0; align-self: stretch; display: flex; align-items: center; margin-block: -12px; padding: 12px 12px 12px 0; border-right: 1px solid var(--border); color: var(--subtle-foreground); font-size: 30px; font-style: italic; font-weight: 900; letter-spacing: -.06em; line-height: 1; }
+.circuit-ticket-number { flex-shrink: 0; align-self: stretch; display: flex; align-items: center; margin-block: -12px; padding: 12px 12px 12px 0; border-right: 1px solid var(--border); color: var(--subtle-foreground); font-size: 30px; font-weight: 900; letter-spacing: -.06em; line-height: 1; }
 .circuit-ticket-flag { width: 20px; height: 20px; flex-shrink: 0; color: var(--subtle-foreground); margin-left: auto; }
 .circuit-panel { border-radius: 10px; }
 .circuit-panel .circuit-progress [data-slot='progress-track'] { height: 4px; }
