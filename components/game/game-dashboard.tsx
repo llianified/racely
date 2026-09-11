@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { GameNavigation, Topbar, type GameTab } from "./game-navigation";
 import { GaragePanel, UpgradePanel } from "./garage-panel";
-import { CircuitPanel, MissionsPanel } from "./missions-panel";
+import { CircuitPanel } from "./circuit-panel";
 import { RacePanel, RaceReward } from "./race-panel";
 import { RewardsPanel, claimableTotal } from "./rewards-panel";
 import { MenuPanel } from "./menu-panel";
@@ -68,7 +68,6 @@ const TITLES: Record<GameTab, string> = {
   menu: "Menu",
   race: "Balapan",
   garage: "Garasi",
-  missions: "Misi",
   rewards: "Hadiah",
 };
 
@@ -432,26 +431,17 @@ export function GameDashboard() {
                   onClaim={claim}
                   disabled={Boolean(busyAction)}
                 />
+                <CircuitPanel
+                  game={game}
+                  onChoose={chooseCircuit}
+                  disabled={Boolean(busyAction)}
+                />
               </div>
-
             </div>
           ) : tab === "garage" ? (
             <div className="garage-layout section-enter">
                 <GaragePanel game={game} onChooseColor={chooseColor} disabled={Boolean(busyAction)} />
                 <UpgradePanel game={game} onUpgrade={upgrade} disabled={Boolean(busyAction)} />
-            </div>
-          ) : tab === "missions" ? (
-            <div className="garage-layout section-enter">
-              <MissionsPanel
-                game={game}
-                onClaim={mission}
-                disabled={Boolean(busyAction)}
-              />
-              <CircuitPanel
-                game={game}
-                onChoose={chooseCircuit}
-                disabled={Boolean(busyAction)}
-              />
             </div>
           ) : (
             <RewardsPanel
