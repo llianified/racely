@@ -1,0 +1,87 @@
+import {
+  bigint,
+  bigserial,
+  boolean,
+  doublePrecision,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
+
+export const players = pgTable("racely_players", {
+  userId: text("user_id").primaryKey(),
+  telegramUsername: text("telegram_username"),
+  displayName: text("display_name").notNull(),
+  photoUrl: text("photo_url"),
+  balance: bigint("balance", { mode: "number" }).notNull().default(12500),
+  pending: bigint("pending", { mode: "number" }).notNull().default(0),
+  earned: bigint("earned", { mode: "number" }).notNull().default(0),
+  laps: integer("laps").notNull().default(0),
+  progress: doublePrecision("progress").notNull().default(0),
+  engineLevel: integer("engine_level").notNull().default(1),
+  tiresLevel: integer("tires_level").notNull().default(1),
+  batteryLevel: integer("battery_level").notNull().default(1),
+  boostEndsAt: timestamp("boost_ends_at", { withTimezone: true }),
+  cooldownEndsAt: timestamp("cooldown_ends_at", { withTimezone: true }),
+  rewardClaimed: boolean("reward_claimed").notNull().default(false),
+  missionsClaimed: jsonb("missions_claimed")
+    .$type<string[]>()
+    .notNull()
+    .default([]),
+  color: text("color").notNull().default("#4275ff"),
+  circuit: integer("circuit").notNull().default(0),
+  lastSettledAt: timestamp("last_settled_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  version: integer("version").notNull().default(1),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const actionReceipts = pgTable(
+  "racely_action_receipts",
+  {
+    userId: text("user_id").notNull(),
+    requestId: text("request_id").notNull(),
+    actionType: text("action_type").notNull(),
+    response: jsonb("response").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.requestId] }),
+    index("racely_action_receipts_user_idx").on(table.userId),
+  ],
+);
+
+export const rewardClaims = pgTable(
+  "racely_reward_claims",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    userId: text("user_id").notNull(),
+    rewardKey: text("reward_key").notNull(),
+    amount: bigint("amount", { mode: "number" }).notNull(),
+    claimedAt: timestamp("claimed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("racely_reward_claims_user_idx").on(table.userId),
+    uniqueIndex("racely_reward_claims_key_uidx").on(
+      table.userId,
+      table.rewardKey,
+    ),
+  ],
+);
+
+export type PlayerRow = typeof players.$inferSelect;
