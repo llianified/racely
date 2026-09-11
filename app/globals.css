@@ -318,7 +318,7 @@
 .reward-row-copy p { margin-top: 4px; font-size: 14px; line-height: 1.5; color: var(--muted-foreground); }
 .reward-row-copy .mission-progress { margin-top: 12px; }
 .reward-row-copy [data-slot='progress-track'] { background: var(--background); height: 5px; }
-.reward-row-action { grid-column: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; margin: 12px 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: calc(var(--radius) * .75); background: var(--secondary); }
+.reward-row-action { grid-column: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; margin: 12px 0 20px; padding: 10px 12px; border: 1px solid var(--border); border-radius: calc(var(--radius) * .75); background: var(--secondary); }
 .reward-row-action > strong { font-size: 16px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .reward-row-action > strong > span { font-size: 14px; font-weight: 500; color: var(--muted-foreground); }
 .reward-row-action > button { min-width: 80px; min-height: 40px; }
