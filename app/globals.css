@@ -280,6 +280,34 @@
 .reward-row.is-claimed .reward-row-action > strong { color: var(--muted-foreground); }
 .rewards-note { font-size: var(--fs-nano); line-height: 1.6; color: var(--muted-foreground); padding-inline: 2px; }
 
+/* ── dompet ────────────────────────────────────────── */
+.wallet-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 12px var(--gutter) 13px; border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: var(--radius); background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 12%, var(--card)), var(--card) 62%); }
+.wallet-hero strong { display: block; margin-top: 3px; font-size: 30px; font-weight: 900; line-height: 1.1; letter-spacing: -.035em; color: var(--accent); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.wallet-hero p { margin-top: 3px; font-size: var(--fs-micro); color: var(--muted-foreground); }
+.wallet-hero-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: 0 0 auto; }
+.wallet-pending { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 999px; background: var(--secondary); color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: 700; text-align: right; }
+.wallet-pending svg { width: 12px; height: 12px; flex-shrink: 0; color: var(--accent); }
+.wallet-form-panel, .wallet-history-panel { padding: 10px var(--gutter) 12px; }
+.wallet-form { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.wallet-field > label, .wallet-field > span { display: block; margin-bottom: 4px; font-size: var(--fs-nano); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted-foreground); }
+.wallet-field > p { margin-top: 4px; font-size: var(--fs-micro); color: var(--muted-foreground); }
+.wallet-input { width: 100%; min-height: 42px; padding: 8px 12px; border: 1px solid var(--border); border-radius: calc(var(--radius) * .7); background: var(--secondary); color: var(--foreground); font-size: var(--fs-body); font-weight: 700; font-variant-numeric: tabular-nums; }
+.wallet-input::placeholder { color: var(--muted-foreground); font-weight: 500; }
+.wallet-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.wallet-chips, .wallet-methods { display: flex; flex-wrap: wrap; gap: 6px; }
+.wallet-chip, .wallet-method { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--secondary); color: var(--muted-foreground); font-size: var(--fs-micro); font-weight: 700; font-variant-numeric: tabular-nums; }
+.wallet-method svg { width: 13px; height: 13px; flex-shrink: 0; }
+.wallet-chip.is-active, .wallet-method.is-active { border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: color-mix(in srgb, var(--accent) 16%, var(--secondary)); color: var(--foreground); }
+.wallet-chip:disabled { opacity: .45; }
+.wallet-error { padding: 8px 10px; border: 1px solid color-mix(in srgb, var(--destructive) 45%, transparent); border-radius: calc(var(--radius) * .7); color: var(--destructive); font-size: var(--fs-micro); font-weight: 600; }
+.wallet-note { font-size: var(--fs-nano); line-height: 1.6; color: var(--muted-foreground); }
+.wallet-empty { margin-top: 10px; font-size: var(--fs-micro); color: var(--muted-foreground); }
+.wallet-history { display: flex; flex-direction: column; margin-top: 4px; }
+.wallet-history-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-block: 10px; border-bottom: 1px solid var(--border); }
+.wallet-history-row:last-child { border-bottom: none; }
+.wallet-history-row h3 { font-size: var(--fs-body); font-weight: 850; font-variant-numeric: tabular-nums; }
+.wallet-history-row p { margin-top: 2px; font-size: var(--fs-micro); color: var(--muted-foreground); overflow-wrap: anywhere; }
+
 /* ── boot ──────────────────────────────────────────── */
 .boot-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; min-height: 100dvh; padding: 24px; background: var(--background); }
 .boot-word { font-size: 34px; font-weight: 950; letter-spacing: -.03em; line-height: 1; color: var(--foreground); }
@@ -291,7 +319,7 @@
 .circuit-preview p { color: var(--accent); font-size: var(--fs-micro); font-weight: 700; margin-top: 2px; }
 .circuit-description { font-size: var(--fs-micro); color: var(--muted-foreground); margin-top: 8px; }
 
-/* ── menu ──────────────────────────────────────────── */
+/* ── menu ─────────────────────────────���────────────── */
 .menu-panel { padding: 10px var(--gutter) 12px; }
 .menu-groups { display: flex; flex-direction: column; gap: 6px; }
 .menu-group { background: var(--secondary); border-radius: calc(var(--radius) * .75); overflow: hidden; }
@@ -314,8 +342,9 @@
 .help-step p span { display: block; color: var(--muted-foreground); margin-top: 2px; font-size: var(--fs-micro); line-height: 1.5; }
 
 /* ── bottom nav ────────────────────────────────────── */
-.mobile-nav { display: flex; position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: var(--app-width); z-index: 30; border-top: 1px solid var(--border); background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(14px); padding: 4px 6px calc(4px + var(--safe-bottom)); }
-.nav-item { position: relative; display: flex; flex: 1; min-width: 0; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: calc(var(--nav-height) - 10px); border-radius: 10px; color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: 800; letter-spacing: .02em; }
+.mobile-nav { display: flex; position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: var(--app-width); z-index: 30; border-top: 1px solid var(--border); background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(14px); padding: 4px 4px calc(4px + var(--safe-bottom)); }
+.nav-item { position: relative; display: flex; flex: 1; min-width: 0; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: calc(var(--nav-height) - 10px); padding-inline: 2px; border-radius: 10px; color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: 800; letter-spacing: 0; }
+.nav-item > span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nav-item.active { color: var(--foreground); }
 .nav-item.active .nav-icon { color: var(--accent); }
 .nav-icon { position: relative; display: flex; }

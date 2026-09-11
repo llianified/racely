@@ -31,13 +31,16 @@ import { CircuitPanel } from "./circuit-panel";
 import { RacePanel, RaceReward } from "./race-panel";
 import { RewardsPanel, claimableTotal } from "./rewards-panel";
 import { MenuPanel } from "./menu-panel";
+import { WalletPanel, type WithdrawPayload } from "./wallet-panel";
 import { InfoHint } from "./info-hint";
 import {
+  coins,
   gameReducer,
+  idr,
   INITIAL_GAME,
   MISSIONS,
   missionValue,
-  rupiah,
+  STARTER_GIFT,
   totalLevel,
   upgradeCost,
   type GameCommand,
@@ -69,6 +72,7 @@ const TITLES: Record<GameTab, string> = {
   race: "Balapan",
   garage: "Garasi",
   rewards: "Hadiah",
+  wallet: "Dompet",
 };
 
 function requestHeaders(initData: string) {
@@ -143,9 +147,7 @@ function GameGate({ error, onRetry }: { error: Error; onRetry?: () => void }) {
 export function GameDashboard() {
   const [game, dispatch] = useReducer(gameReducer, INITIAL_GAME);
   const [tab, setTab] = useState<GameTab>("race");
-  const [dialog, setDialog] = useState<"help" | "wallet" | "circuits" | null>(
-    null,
-  );
+  const [dialog, setDialog] = useState<"help" | "circuits" | null>(null);
   const [clientReady, setClientReady] = useState(false);
   const [initData, setInitData] = useState("");
   const [busyAction, setBusyAction] = useState<string | null>(null);
@@ -310,18 +312,18 @@ export function GameDashboard() {
       );
   };
   const claim = async () => {
-    if (game.pending <= 0) return;
-    const amount = game.pending;
+    const amount = Math.floor(game.pending);
+    if (amount < 1) return;
     if (await runAction({ type: "claim" }))
-      toast.success(`+${rupiah(amount)} koin virtual diklaim`, {
-        description: "Tersimpan aman di garasimu.",
+      toast.success(`+${coins(amount)} masuk saldo`, {
+        description: `Setara ${idr(amount)} dan siap ditarik lewat Dompet.`,
         duration: 2200,
       });
   };
   const gift = async () => {
     if (game.rewardClaimed) return;
     if (await runAction({ type: "gift" }))
-      toast.success("Bonus Rp5.000 virtual diklaim!", {
+      toast.success(`Bonus starter ${coins(STARTER_GIFT)} diklaim!`, {
         description: "Bonus ini hanya bisa diklaim sekali.",
       });
   };
@@ -334,12 +336,12 @@ export function GameDashboard() {
     )
       return;
     if (await runAction({ type: "mission", id }))
-      toast.success(`Misi beres! +${rupiah(missionItem.reward)} virtual`);
+      toast.success(`Misi beres! +${coins(missionItem.reward)}`);
   };
   const claimAll = async () => {
     const total = claimableTotal(game);
     if (total <= 0) return;
-    if (game.pending > 0 && !(await runAction({ type: "claim" }))) return;
+    if (game.pending >= 1 && !(await runAction({ type: "claim" }))) return;
     if (!game.rewardClaimed && !(await runAction({ type: "gift" }))) return;
     for (const item of MISSIONS) {
       const ready =
@@ -347,10 +349,19 @@ export function GameDashboard() {
         missionValue(game, item.id) >= item.target;
       if (ready && !(await runAction({ type: "mission", id: item.id }))) return;
     }
-    toast.success(`+${rupiah(total)} koin virtual diklaim`, {
-      description: "Semua hadiah yang siap sudah masuk garasimu.",
+    toast.success(`+${coins(total)} diklaim`, {
+      description: "Semua hadiah yang siap sudah masuk saldomu.",
       duration: 2400,
     });
+  };
+  const withdraw = async (payload: WithdrawPayload) => {
+    const next = await runAction({ type: "withdraw", ...payload }, "withdraw");
+    if (!next) return false;
+    toast.success(`Penarikan ${idr(payload.coins)} dikirim`, {
+      description: "Tim Racely memverifikasi dalam 1×24 jam kerja.",
+      duration: 2600,
+    });
+    return true;
   };
   const chooseCircuit = async (circuit: number) => {
     if ((circuit !== 0 && circuit !== 1) || (circuit === 1 && game.laps < 25))
@@ -404,7 +415,7 @@ export function GameDashboard() {
           balance={game.balance}
           level={totalLevel(game)}
           racerName={game.player.name}
-          onWallet={() => setDialog("wallet")}
+          onWallet={() => navigate("wallet")}
           onHelp={() => setDialog("help")}
         />
         <main className="page-content" aria-busy={Boolean(busyAction)}>
@@ -451,7 +462,7 @@ export function GameDashboard() {
             <MenuPanel
               onNavigate={navigate}
               onCircuits={() => setDialog("circuits")}
-              onWallet={() => setDialog("wallet")}
+              onWallet={() => navigate("wallet")}
               onHelp={() => setDialog("help")}
               giftAvailable={!game.rewardClaimed}
             />
@@ -460,6 +471,12 @@ export function GameDashboard() {
                 <GaragePanel game={game} onChooseColor={chooseColor} disabled={Boolean(busyAction)} />
                 <UpgradePanel game={game} onUpgrade={upgrade} disabled={Boolean(busyAction)} />
             </div>
+          ) : tab === "wallet" ? (
+            <WalletPanel
+              game={game}
+              onWithdraw={withdraw}
+              disabled={Boolean(busyAction)}
+            />
           ) : (
             <RewardsPanel
               game={game}
@@ -481,37 +498,17 @@ export function GameDashboard() {
         <DialogContent className="max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {dialog === "wallet"
-                ? "Koin untuk racikan berikutnya."
-                : dialog === "circuits"
-                  ? "Pilih tempat ngegas"
-                  : "Mobil kecil. Langsung jalan."}
+              {dialog === "circuits"
+                ? "Pilih tempat ngegas"
+                : "Mobil kecil. Langsung jalan."}
             </DialogTitle>
             <DialogDescription>
-              {dialog === "wallet"
-                ? "1 koin ditampilkan sebagai Rp1 virtual. Tidak bisa ditarik, ditukar uang, atau ditransfer."
-                : dialog === "circuits"
-                  ? "Selesaikan putaran untuk membuka lintasan baru."
-                  : "Racely adalah game mini 4WD 3D independen dan tidak berafiliasi dengan produsen kendaraan atau mainan mana pun."}
+              {dialog === "circuits"
+                ? "Selesaikan putaran untuk membuka lintasan baru."
+                : "Racely adalah game mini 4WD 3D independen dan tidak berafiliasi dengan produsen kendaraan atau mainan mana pun."}
             </DialogDescription>
           </DialogHeader>
-          {dialog === "wallet" ? (
-            <div>
-              <div className="rounded-xl border border-border bg-secondary p-4">
-                <p className="text-sm text-muted-foreground">
-                  Koin virtual tersedia
-                </p>
-                <p className="mt-1 text-3xl font-bold">
-                  {rupiah(game.balance)}
-                </p>
-              </div>
-              <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                Gunakan koin untuk upgrade mobil. Progresmu tersimpan per akun
-                Telegram. Balapan menghasilkan koin selama Mini App terbuka dan
-                terlihat di layar.
-              </p>
-            </div>
-          ) : dialog === "circuits" ? (
+          {dialog === "circuits" ? (
             <div className="flex flex-col gap-3">
               <Button
                 variant="circuit"

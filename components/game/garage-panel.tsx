@@ -7,14 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { InfoHint } from "./info-hint";
-import { lapReward, lapSeconds, totalLevel, upgradeCost, rupiah, type GameState, type Upgrade } from "@/lib/game";
+import { coins, formatCoins, lapReward, lapSeconds, totalLevel, upgradeCost, type GameState, type Upgrade } from "@/lib/game";
 
 const CarPreviewScene = dynamic(() => import("./car-preview-scene"), { ssr: false });
 
 export const PARTS = [
   { key: "engine" as Upgrade, title: "Mesin", subtitle: "+15% tenaga dasar", icon: Cog },
   { key: "tires" as Upgrade, title: "Ban & roller", subtitle: "+10% tenaga dasar", icon: CircleDot },
-  { key: "battery" as Upgrade, title: "Baterai", subtitle: "+Rp100 / putaran", icon: BatteryMedium },
+  { key: "battery" as Upgrade, title: "Baterai", subtitle: "+0,01 koin / putaran", icon: BatteryMedium },
 ];
 
 export const BODY_COLORS = [
@@ -61,7 +61,7 @@ export const GaragePanel = memo(function GaragePanel({
       </div>
       <div className="garage-stats">
         <span><strong>{(192 / lapSeconds({ ...game, boostLeft: 0 })).toFixed(1)}</strong> km/j</span>
-        <span><strong>{rupiah(lapReward(game))}</strong>/lap</span>
+        <span><strong>{formatCoins(lapReward(game))}</strong> koin/lap</span>
         <InfoHint title="Mobil kamu">Kecepatan dasar tanpa boost. Model 3D di samping persis mobil yang kamu pakai di lintasan; ganti warna bodi lewat lingkaran di bawah namanya, gratis dan langsung aktif.</InfoHint>
       </div>
     </section>
@@ -84,7 +84,7 @@ export function UpgradePanel({ game, onUpgrade, disabled = false }: { game: Game
           const affordable = game.balance >= cost;
           const next = { ...game, boostLeft: 0, levels: { ...game.levels, [key]: level + 1 } };
           const benefit = key === "battery"
-            ? `${rupiah(lapReward(game))} → ${rupiah(lapReward(next))}/lap`
+            ? `${formatCoins(lapReward(game))} → ${formatCoins(lapReward(next))} koin/lap`
             : `${baseSeconds.toFixed(2)} → ${lapSeconds(next).toFixed(2)} d/lap`;
           return (
             <div key={key} className="upgrade-row">
@@ -96,11 +96,11 @@ export function UpgradePanel({ game, onUpgrade, disabled = false }: { game: Game
                 </div>
               </div>
               <div className="upgrade-action">
-                <Button variant="gold" size="sm" className="upgrade-buy" onClick={() => onUpgrade(key)} disabled={disabled || max || !affordable} aria-label={max ? `${title} level maksimal` : `Upgrade ${title}, ${rupiah(cost)} virtual`}>
+                <Button variant="gold" size="sm" className="upgrade-buy" onClick={() => onUpgrade(key)} disabled={disabled || max || !affordable} aria-label={max ? `${title} level maksimal` : `Upgrade ${title}, ${coins(cost)}`}>
                   {max ? <Check data-icon="inline-start" /> : <ArrowUp data-icon="inline-start" />}
-                  {max ? "MAX" : rupiah(cost)}
+                  {max ? "MAX" : formatCoins(cost)}
                 </Button>
-                {!max && !affordable && <span>Kurang {rupiah(cost - game.balance)}</span>}
+                {!max && !affordable && <span>Kurang {formatCoins(cost - Math.floor(game.balance))}</span>}
               </div>
             </div>
           );
