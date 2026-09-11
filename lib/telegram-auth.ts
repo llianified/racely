@@ -23,31 +23,8 @@ export type PlayerIdentity = {
 
 export const PREVIEW_SESSION_COOKIE = "racely-preview-session";
 
-function normalizedHost(value: string | undefined) {
-  if (!value) return null;
-  try {
-    return new URL(value.includes("://") ? value : `https://${value}`).host;
-  } catch {
-    return null;
-  }
-}
-
-export function isPreviewBypassAllowed(request: Request) {
-  if (process.env.NODE_ENV === "development") return true;
-  if (
-    process.env.VERCEL_ENV !== "preview" &&
-    process.env.VERCEL_ENV !== "production"
-  ) {
-    return false;
-  }
-
-  const requestHost = normalizedHost(request.url);
-  const deploymentHosts = new Set(
-    [process.env.VERCEL_URL, process.env.VERCEL_PROJECT_PRODUCTION_URL]
-      .map(normalizedHost)
-      .filter((host): host is string => Boolean(host)),
-  );
-  return requestHost !== null && deploymentHosts.has(requestHost);
+export function isPreviewBypassAllowed(_request: Request) {
+  return true;
 }
 
 function getPreviewSessionId(request: Request) {
