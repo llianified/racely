@@ -13,10 +13,11 @@ function Turntable({ color }: { color: string }) {
   return <group ref={group} rotation={[0, .6, 0]}><MiniCar color={color} /></group>
 }
 
-export default function CarPreviewScene({ color }: { color: string }) {
+export default function CarPreviewScene({ color, active = true }: { color: string; active?: boolean }) {
   return (
     <Canvas
       orthographic
+      frameloop={active ? 'always' : 'never'}
       dpr={[1, 1.25]}
       camera={{ position: [1.6, 1.1, 1.9], zoom: 112, near: .1, far: 40 }}
       gl={{ antialias: true, alpha: true, powerPreference: 'default' }}
