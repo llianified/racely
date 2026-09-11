@@ -74,7 +74,7 @@ try {
     max_connections: 20,
   });
 
-  console.log("@RacelyBot commands, menu, and webhook are configured.");
+  console.log(`@${bot.username} commands, menu, and webhook are configured.`);
 } catch (error) {
   // The API base embeds the bot token, so never let a raw message reach the log.
   const detail = (error instanceof Error ? error.message : "Telegram setup failed.")
