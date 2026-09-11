@@ -442,11 +442,13 @@ export function GameDashboard() {
                   game={game}
                   active={tab === "race"}
                   onBoost={boost}
+                  boosting={busyAction === "boost"}
                   onCircuits={() => setDialog("circuits")}
                   disabled={Boolean(busyAction)}
                 />
                 <RaceReward
                   pending={game.pending}
+                  claiming={busyAction === "claim"}
                   onClaim={claim}
                   disabled={Boolean(busyAction)}
                 />
