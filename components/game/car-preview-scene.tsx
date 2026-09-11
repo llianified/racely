@@ -18,14 +18,14 @@ export default function CarPreviewScene({ color }: { color: string }) {
     <Canvas
       orthographic
       dpr={[1, 1.25]}
-      camera={{ position: [1.6, 1.1, 1.9], zoom: 66, near: .1, far: 40 }}
+      camera={{ position: [1.6, 1.1, 1.9], zoom: 112, near: .1, far: 40 }}
       gl={{ antialias: true, alpha: true, powerPreference: 'default' }}
     >
       <ambientLight intensity={1.1} />
       <hemisphereLight args={[COLORS.white, COLORS.navy, 1.2]} />
       <directionalLight position={[2, 5, 3]} intensity={2.4} />
       <directionalLight position={[-3, 2, -2]} intensity={1.4} color={COLORS.blue} />
-      <group position={[0, -.2, 0]}>
+      <group position={[0, -.12, 0]}>
         <Turntable color={color} />
       </group>
     </Canvas>
