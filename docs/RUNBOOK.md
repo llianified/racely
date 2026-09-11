@@ -3,6 +3,10 @@
 Target: Node.js standalone (`output: "standalone"`) dijalankan PM2 di EC2.
 Bukan serverless. Semua secret hidup di luar repo.
 
+> Belum pernah deploy Racely sama sekali? Mulai dari `docs/SETUP-MANUAL.md`
+> (buat bot, database, EC2, domain, TLS). Runbook ini untuk server yang sudah
+> berjalan.
+
 ## 0. Prasyarat instance
 
 - Node.js 20+, `pnpm`, dan `pm2` terpasang global.
