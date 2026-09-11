@@ -191,7 +191,9 @@ export function RacePanel({
             2 bot latihan · tanpa perlu menekan start
           </p>
         </div>
-        <button
+        <Button
+          variant="gold"
+          size="lg"
           className="boost-button"
           onClick={onBoost}
           disabled={disabled || game.cooldown > 0}
@@ -201,7 +203,7 @@ export function RacePanel({
             } as CSSProperties
           }
         >
-          <Zap size={17} fill="currentColor" />
+          <Zap data-icon="inline-start" fill="currentColor" />
           <span>
             {boosted
               ? `NGACIR! ${Math.ceil(game.boostLeft)}s`
@@ -210,7 +212,7 @@ export function RacePanel({
                 : "GASPOL 2×"}
           </span>
           {game.cooldown === 0 && <small>10s</small>}
-        </button>
+        </Button>
       </div>
     </section>
   );
@@ -248,6 +250,7 @@ export function RaceReward({
         </strong>
       </div>
       <Button
+        variant={pending > 0 ? "gold" : "secondary"}
         disabled={disabled || pending <= 0}
         onClick={() => {
           onClaim();
