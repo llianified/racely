@@ -8,7 +8,7 @@ import * as THREE from 'three'
 import { COLORS, MiniCar } from './mini-car'
 
 const HALF = 3.35
-export type SceneProps = { progress: number; seconds: number; color: string; boosted: boolean; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean }
+export type SceneProps = { progress: number; seconds: number; color: string; boosted: boolean; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean }
 
 function trackPoint(t: number, radius: number) {
   const straight = HALF * 2
@@ -39,7 +39,7 @@ function Ribbon({ inner, outer, height = .12, color, y = 0, glow = false }: { in
   }, [inner, outer])
   return <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, y, 0]} receiveShadow castShadow>
     <extrudeGeometry args={[shape, { depth: height, bevelEnabled: true, bevelSegments: 1, steps: 1, bevelSize: .018, bevelThickness: .018, curveSegments: 48 }]} />
-    <meshStandardMaterial color={color} roughness={.42} metalness={.25} emissive={glow ? color : '#000000'} emissiveIntensity={glow ? 2.2 : 0} toneMapped={!glow} />
+    <meshStandardMaterial color={color} roughness={.72} metalness={.14} emissive={glow ? color : '#000000'} emissiveIntensity={glow ? .75 : 0} toneMapped={!glow} />
   </mesh>
 }
 
@@ -68,14 +68,66 @@ function TrackBrand() {
     const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 256
     const ctx = canvas.getContext('2d')!
     ctx.clearRect(0, 0, 1024, 256)
-    ctx.fillStyle = '#9789cd'; ctx.globalAlpha = .32; ctx.textAlign = 'center'
-    ctx.font = '900 116px Arial'; ctx.letterSpacing = '6px'; ctx.fillText('RACELY', 512, 145)
-    ctx.font = '25px Arial'; ctx.fillText('N I G H T   R A C I N G   C L U B', 512, 205)
-    return new THREE.CanvasTexture(canvas)
+    ctx.fillStyle = '#b2a5d9'; ctx.globalAlpha = .65; ctx.textAlign = 'center'
+    ctx.font = 'italic 900 116px Arial'; ctx.letterSpacing = '6px'; ctx.fillText('RACELY', 512, 145)
+    ctx.font = '22px Arial'; ctx.fillText('M I N I   4 W D   /   R A C I N G   C L U B', 512, 205)
+    ctx.fillStyle = '#ffce00'; ctx.fillRect(345, 235, 334, 3)
+    const texture = new THREE.CanvasTexture(canvas)
+    texture.colorSpace = THREE.SRGBColorSpace
+    return texture
   }, [])
   useEffect(() => () => texture.dispose(), [texture])
   return <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, .023, 0]}><planeGeometry args={[5.6, 1.4]} /><meshBasicMaterial map={texture} transparent depthWrite={false} /></mesh>
 }
+
+const TrackMarkings = memo(function TrackMarkings() {
+  const curbs = useRef<THREE.InstancedMesh>(null)
+  const texture = useMemo(() => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 512; canvas.height = 768
+    const ctx = canvas.getContext('2d')!
+    ctx.fillStyle = '#e3ddf4'
+    ctx.font = 'italic 800 80px Arial'; ctx.textAlign = 'center'
+    for (let lane = 0; lane < 3; lane++) {
+      const y = lane * 256
+      ctx.globalAlpha = .75
+      ctx.fillText(`0${lane + 1}`, 250, y + 158)
+      ctx.fillRect(100, y + 28, 310, 6)
+      ctx.fillRect(100, y + 28, 6, 46)
+      ctx.fillRect(404, y + 28, 6, 46)
+    }
+    const result = new THREE.CanvasTexture(canvas)
+    result.colorSpace = THREE.SRGBColorSpace
+    return result
+  }, [])
+  useEffect(() => () => texture.dispose(), [texture])
+  useLayoutEffect(() => {
+    if (!curbs.current) return
+    const transform = new THREE.Object3D()
+    const color = new THREE.Color()
+    for (let i = 0; i < 128; i++) {
+      const p = trackPoint((i % 64) / 64, i < 64 ? 4.035 : 1.765)
+      transform.position.set(p.x, .035, p.z)
+      transform.rotation.y = p.angle
+      transform.updateMatrix()
+      curbs.current.setMatrixAt(i, transform.matrix)
+      curbs.current.setColorAt(i, color.set(i % 2 ? '#463e7a' : '#b2a5d9'))
+    }
+    curbs.current.instanceMatrix.needsUpdate = true
+    if (curbs.current.instanceColor) curbs.current.instanceColor.needsUpdate = true
+    curbs.current.computeBoundingSphere()
+  }, [])
+  return <>
+    <instancedMesh ref={curbs} args={[undefined, undefined, 128]} receiveShadow>
+      <boxGeometry args={[.16, .045, .32]} />
+      <meshStandardMaterial roughness={.85} />
+    </instancedMesh>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-2.55, .132, -2.92]}>
+      <planeGeometry args={[1.2, 2.04]} />
+      <meshBasicMaterial map={texture} transparent depthWrite={false} polygonOffset polygonOffsetFactor={-1} />
+    </mesh>
+  </>
+})
 
 const Circuit = memo(function Circuit({ circuit }: { circuit: number }) {
   return <group>
@@ -85,6 +137,7 @@ const Circuit = memo(function Circuit({ circuit }: { circuit: number }) {
     {[1.88, 2.56, 3.24, 3.92].map((r, i) => <Ribbon key={r} inner={r} outer={r + .055} height={i === 0 || i === 3 ? .28 : .2} color={i === 0 || i === 3 ? '#5027a7' : '#9789cd'} />)}
     {[1.88, 3.92].map(r => <Ribbon key={r} inner={r} outer={r + .06} height={.018} y={.28} glow color={circuit ? COLORS.gold : '#a37ef2'} />)}
     <TrackBrand />
+    <TrackMarkings />
     <group position={[-1.55, 0, -2.95]}>
       {[-1.12, 1.12].map(z => <mesh key={z} position={[0, .85, z]} castShadow><boxGeometry args={[.16, 1.7, .16]} /><meshStandardMaterial color={COLORS.blue} /></mesh>)}
       <mesh position={[0, 1.75, 0]} castShadow><boxGeometry args={[.22, .32, 2.48]} /><meshStandardMaterial color={COLORS.navy} /></mesh>
@@ -102,12 +155,16 @@ const Circuit = memo(function Circuit({ circuit }: { circuit: number }) {
   </group>
 })
 
-function CameraRig({ mode, follow, resetKey, playerRef, active, boosted }: { mode: number; follow: boolean; resetKey: number; playerRef: RefObject<THREE.Group | null>; active: boolean; boosted: boolean }) {
+function CameraRig({ mode, follow, resetKey, playerRef, active, boosted, reducedMotion }: { mode: number; follow: boolean; resetKey: number; playerRef: RefObject<THREE.Group | null>; active: boolean; boosted: boolean; reducedMotion: boolean }) {
   const { camera, size } = useThree()
   const [overviewCamera] = useState(() => camera)
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null)
   const chaseCamera = useRef<THREE.PerspectiveCamera>(null)
   const initialize = useRef(true)
+  const overviewReady = useRef(false)
+  const transitioning = useRef(false)
+  const overviewTarget = useMemo(() => new THREE.Vector3(), [])
+  const overviewZoom = useRef(30)
   const pose = useMemo(() => ({
     position: new THREE.Vector3(),
     rotation: new THREE.Quaternion(),
@@ -123,19 +180,42 @@ function CameraRig({ mode, follow, resetKey, playerRef, active, boosted }: { mod
   useLayoutEffect(() => {
     if (follow) return
     const [x, y, z] = mode === 1 ? [0, 20, .01] : mode === 2 ? [12, 6.5, 10] : [9, 12.5, 12]
-    overviewCamera.position.set(x, y, z)
-    overviewCamera.lookAt(0, 0, 0)
-    if (overviewCamera instanceof THREE.OrthographicCamera) {
-      overviewCamera.zoom = Math.min(size.width / 18.5, size.height / 11.5)
-      overviewCamera.updateProjectionMatrix()
+    overviewTarget.set(x, y, z)
+    overviewZoom.current = Math.min(size.width / 18.5, size.height / 11.5)
+    transitioning.current = overviewReady.current && !reducedMotion
+    if (!transitioning.current) {
+      overviewCamera.position.copy(overviewTarget)
+      overviewCamera.lookAt(0, 0, 0)
+      if (overviewCamera instanceof THREE.OrthographicCamera) {
+        overviewCamera.zoom = overviewZoom.current
+        overviewCamera.updateProjectionMatrix()
+      }
     }
+    overviewReady.current = true
     controls.current?.target.set(0, 0, 0)
     controls.current?.update()
-  }, [overviewCamera, follow, mode, resetKey, size.width, size.height])
+  }, [overviewCamera, overviewTarget, follow, mode, resetKey, size.width, size.height, reducedMotion])
 
   // Racer runs at -2; negative priorities preserve Fiber's automatic render.
   useFrame((_, delta) => {
-    if (!follow || !active || document.hidden || !playerRef.current || !chaseCamera.current) return
+    if (!active || document.hidden) return
+    const damping = 1 - Math.exp(-9 * Math.min(delta, .1))
+    if (!follow && transitioning.current) {
+      overviewCamera.position.lerp(overviewTarget, damping)
+      overviewCamera.lookAt(0, 0, 0)
+      if (overviewCamera instanceof THREE.OrthographicCamera) {
+        overviewCamera.zoom = THREE.MathUtils.lerp(overviewCamera.zoom, overviewZoom.current, damping)
+        overviewCamera.updateProjectionMatrix()
+      }
+      controls.current?.update()
+      if (overviewCamera.position.distanceToSquared(overviewTarget) < .0001) transitioning.current = false
+    }
+    if (!follow || !playerRef.current || !chaseCamera.current) return
+    const nextFov = THREE.MathUtils.lerp(chaseCamera.current.fov, boosted && !reducedMotion ? 46 : 42, damping)
+    if (Math.abs(chaseCamera.current.fov - nextFov) > .001) {
+      chaseCamera.current.fov = nextFov
+      chaseCamera.current.updateProjectionMatrix()
+    }
     playerRef.current.getWorldPosition(pose.position)
     playerRef.current.getWorldQuaternion(pose.rotation)
     if (initialize.current || delta > .25) {
@@ -155,7 +235,7 @@ function CameraRig({ mode, follow, resetKey, playerRef, active, boosted }: { mod
 
   return <>
     {follow && <PerspectiveCamera ref={chaseCamera} makeDefault fov={42} near={.05} far={100} />}
-    {!follow && <OrbitControls ref={controls} camera={overviewCamera} enablePan={false} minZoom={12} maxZoom={95} minPolarAngle={.01} maxPolarAngle={Math.PI / 2.35} enableDamping dampingFactor={.08} />}
+    {!follow && <OrbitControls ref={controls} camera={overviewCamera} onStart={() => { transitioning.current = false }} enablePan={false} minZoom={12} maxZoom={95} minPolarAngle={.001} maxPolarAngle={Math.PI / 2.35} enableDamping={!reducedMotion} dampingFactor={.08} />}
   </>
 }
 
@@ -210,7 +290,7 @@ export default function RaceScene(props: SceneProps) {
       <Grid position={[0, -.145, 0]} args={[36, 36]} cellSize={1} cellThickness={.35} cellColor="#2c2852" sectionSize={5} sectionThickness={.6} sectionColor="#463e7a" fadeDistance={23} fadeStrength={3} />
       <Circuit circuit={props.circuit} />
       {[0, 1, 2].map(lane => <Racer key={lane} lane={lane} playerRef={lane === 0 ? playerRef : undefined} color={lane === 0 ? props.color : lane === 1 ? COLORS.gold : COLORS.white} progress={props.progress} seconds={props.seconds} boosted={props.boosted} />)}
-      <CameraRig mode={props.cameraMode} follow={follow} resetKey={props.resetKey} playerRef={playerRef} active={visible && props.active !== false} boosted={props.boosted} />
+      <CameraRig mode={props.cameraMode} follow={follow} resetKey={props.resetKey} playerRef={playerRef} active={visible && props.active !== false} boosted={props.boosted} reducedMotion={props.reducedMotion ?? false} />
       <ContextMonitor onLost={() => setLost(true)} />
     </Canvas>
   </SceneBoundary>
