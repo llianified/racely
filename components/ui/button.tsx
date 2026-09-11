@@ -20,7 +20,7 @@ const buttonVariants = cva(
           'bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40',
         link: 'text-primary underline-offset-4 hover:underline',
         menu: 'justify-start whitespace-normal text-left font-semibold text-secondary-foreground hover:bg-menu-header [&_svg]:text-muted-foreground',
-        menuDirect: 'justify-start whitespace-normal bg-secondary text-left text-secondary-foreground hover:bg-menu-header [&_svg]:text-muted-foreground [&_svg:last-child]:ml-auto',
+        menuDirect: 'menu-direct justify-start whitespace-normal text-left [&_svg:last-child]:ml-auto',
         circuit: 'justify-between whitespace-normal bg-secondary text-left text-secondary-foreground hover:bg-secondary/80 [&>span]:shrink-0 [&>span]:text-sm [&>span]:text-muted-foreground',
       },
       size: {

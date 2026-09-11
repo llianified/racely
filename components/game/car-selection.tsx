@@ -34,7 +34,10 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
         </div>
         <div>
           <h1 className="text-balance">{returningPlayer ? "Pilih mobilmu" : "Pilih mobil pertamamu"}</h1>
-          <p className="text-muted-foreground">Dua karakter. Performa setara. Semua gratis.</p>
+          <p className="text-muted-foreground">
+            Model hanya dipilih sekali. Warna bisa diganti di garasi.
+            {returningPlayer && " Koin, upgrade, dan progresmu tetap aman."}
+          </p>
         </div>
       </header>
       <ToggleGroup
@@ -71,10 +74,6 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
         </div>
       </section>
       <footer className="flex flex-col gap-3">
-        <p className="text-muted-foreground">
-          Model hanya dipilih sekali. Warna bisa diganti di garasi.
-          {returningPlayer && " Koin, upgrade, dan progresmu tetap aman."}
-        </p>
         {failed && <p role="alert">Belum tersimpan. Pilihanmu tetap di sini; coba lagi.</p>}
         <Button
           variant="gold"

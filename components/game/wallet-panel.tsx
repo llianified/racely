@@ -113,7 +113,14 @@ export function WalletPanel({
             <Send aria-hidden="true" />
             Tarik saldo
           </h2>
-          <span>Min. {coins(MIN_WITHDRAW_COINS)}</span>
+          <div className="heading-aside">
+            <span>Min. {coins(MIN_WITHDRAW_COINS)}</span>
+            <InfoHint title="Proses penarikan">
+              Penarikan diverifikasi manual oleh tim Racely dalam 1×24 jam
+              kerja. Pastikan nomor dan nama tujuan benar; dana yang salah
+              kirim tidak bisa ditarik kembali.
+            </InfoHint>
+          </div>
         </div>
         <form className="wallet-form" onSubmit={submit}>
           <div className="wallet-field">
@@ -241,11 +248,6 @@ export function WalletPanel({
               ? `Kumpulkan ${coins(MIN_WITHDRAW_COINS - balance)} lagi`
               : `Tarik ${idr(requested)}`}
           </Button>
-          <p className="wallet-note">
-            Penarikan diverifikasi manual oleh tim Racely dalam 1×24 jam kerja.
-            Pastikan nomor dan nama tujuan benar; dana yang salah kirim tidak
-            bisa ditarik kembali.
-          </p>
         </form>
       </section>
 
