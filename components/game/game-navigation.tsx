@@ -8,6 +8,7 @@ import {
   Menu,
   Wallet,
 } from "lucide-react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { formatCoins } from "@/lib/game";
 
@@ -22,9 +23,14 @@ export const NAV_ITEMS = [
 export function Brand() {
   return (
     <div className="brand">
-      <div className="brand-mark">
-        <Flag size={13} fill="currentColor" />
-      </div>
+      <Image
+        src="/racely-logo.png"
+        alt=""
+        width={26}
+        height={26}
+        priority
+        className="brand-mark"
+      />
       <div>
         <div className="brand-word">RACELY</div>
         <div className="brand-sub">SMALL SCALE. BIG AMBITION.</div>
