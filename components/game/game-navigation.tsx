@@ -6,7 +6,6 @@ import {
   ClipboardList,
   Gift,
   Coins,
-  ChevronDown,
   Menu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,7 +23,7 @@ export function Brand() {
   return (
     <div className="brand">
       <div className="brand-mark">
-        <Flag size={22} fill="currentColor" />
+        <Flag size={13} fill="currentColor" />
       </div>
       <div>
         <div className="brand-word">RACELY</div>
@@ -96,18 +95,11 @@ export function Topbar({
         </button>
         <button
           onClick={onHelp}
-          className="racer-profile"
+          className="racer-avatar"
           aria-label={`${racerName}, level ${level}. Cara bermain`}
         >
-          <div className="racer-avatar">
-            {initial}
-            <span>{level}</span>
-          </div>
-          <span className="profile-name">
-            {racerName}
-            <small>Level {level} · Racely racer</small>
-          </span>
-          <ChevronDown size={14} />
+          <span aria-hidden="true">{initial}</span>
+          <small aria-hidden="true">{level}</small>
         </button>
       </div>
     </header>
