@@ -141,7 +141,7 @@
 .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px var(--gutter) 0; }
 .panel-heading h2 { min-width: 0; font-size: var(--fs-body); font-weight: 800; }
 
-/* ── track ───���─────────────────────────────────────── */
+/* ── track ───�����─────────────────────────────────────── */
 .track-panel { position: relative; transition: border-color .3s; }
 .track-panel.is-boosted { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
 .track-top { display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 4px 10px 4px 4px; }
@@ -192,9 +192,10 @@
 .race-reward [data-slot='button'] { flex: 0 0 auto; }
 
 /* ── garasi ────────────────────────────────────────── */
-.garage-summary { display: flex; align-items: stretch; gap: 10px; padding: 10px var(--gutter) 0; }
-.car-showcase { width: 104px; align-self: stretch; min-height: 84px; flex-shrink: 0; overflow: hidden; border-radius: calc(var(--radius) * .75); background: radial-gradient(62% 62% at 50% 62%, color-mix(in srgb, var(--primary) 30%, transparent), transparent 72%), var(--secondary); }
-.car-showcase canvas { touch-action: none; }
+.garage-summary { display: flex; align-items: center; gap: 10px; padding: 10px var(--gutter) 0; }
+.car-showcase { width: 96px; height: 88px; flex: 0 0 auto; position: relative; overflow: hidden; border-radius: calc(var(--radius) * .75); background: radial-gradient(62% 62% at 50% 62%, color-mix(in srgb, var(--primary) 30%, transparent), transparent 72%), var(--secondary); }
+.car-showcase > div { position: absolute; inset: 0; }
+.car-showcase canvas { display: block; touch-action: none; }
 .car-identity { display: flex; flex-direction: column; justify-content: center; gap: 1px; min-width: 0; flex: 1 1 auto; }
 .car-identity-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .car-identity h2 { font-size: var(--fs-display); line-height: 1.2; }
