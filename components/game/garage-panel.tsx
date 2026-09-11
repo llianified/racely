@@ -36,7 +36,7 @@ export const GaragePanel = memo(function GaragePanel({
   return (
     <section id="body-colors" tabIndex={-1} className="panel garage-panel" aria-label="Mobil kamu">
       <div className="car-stage" role="img" aria-label={`${car.name} warna ${colorName}, model 3D yang sama dengan di lintasan`}>
-        <CarPreviewScene color={game.color} model={model} />
+        <CarPreviewScene color={game.color} model={model} levels={game.levels} />
       </div>
       <div className="car-identity">
         <div className="car-identity-head">
@@ -72,6 +72,8 @@ const seconds = (value: number) => value.toLocaleString("id-ID", {
 function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps & { part: (typeof PARTS)[number] }) {
   const [open, setOpen] = useState(false);
   const [installing, setInstalling] = useState(false);
+  const [showAfter, setShowAfter] = useState(true);
+  const [inspect, setInspect] = useState(false);
   const installLock = useRef(false);
   const { key, title, icon: Icon } = part;
   const preview = modificationPreview(game, key);
@@ -124,6 +126,23 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
               <p className="text-muted-foreground">Level {level} → {nextLevel} · {part.subtitle}</p>
             </div>
           </div>
+          <div className="rounded-xl border border-border bg-background text-foreground">
+            <div className="h-48" role="img" aria-label={`${showAfter ? "Setelah" : "Sebelum"} modifikasi ${title}, level ${showAfter ? nextLevel : level}${inspect ? ", bodi dilepas" : ""}`}>
+              {open && <CarPreviewScene color={game.color} model={game.carSelection?.model ?? "neo-falcon"} levels={showAfter ? { ...game.levels, [key]: nextLevel } : game.levels} inspect={inspect} />}
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 p-3">
+              <span aria-live="polite">{showAfter ? "Setelah" : "Sebelum"} · Lv. {showAfter ? nextLevel : level}</span>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={() => setShowAfter(value => !value)} aria-pressed={showAfter}>{showAfter ? "Lihat sebelum" : "Lihat setelah"}</Button>
+                <Button variant="outline" size="sm" onClick={() => setInspect(value => !value)} aria-pressed={inspect}>{inspect ? "Pasang bodi" : "Lepas bodi"}</Button>
+              </div>
+            </div>
+          </div>
+          <p className="text-muted-foreground">{key === "engine"
+            ? "Visual: heatsink motor belakang dengan sirip pendingin yang bertambah setiap level."
+            : key === "tires"
+              ? "Visual: ban lebih lebar, cincin velg emas, dan roller bertingkat."
+              : "Visual: dudukan baterai dengan strip emas yang bertambah setiap level. Lepas bodi untuk melihat detail sel."}</p>
           <table className="w-full text-left tabular-nums">
             <caption className="pb-2 text-left font-semibold">Simulasi performa tanpa boost</caption>
             <thead className="text-muted-foreground">
@@ -142,7 +161,7 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
           <p role="status" className="text-muted-foreground">
             {shortfall > 0
               ? `Kurang ${coins(shortfall)}. Klaim hasil balapan atau hadiah terlebih dahulu.`
-              : "Part terpasang otomatis setelah dibeli. Tidak mengubah tampilan bodi dan tidak bisa dijual kembali."}
+              : "Part dan tampilan 3D berubah otomatis setelah pemasangan berhasil, di garasi maupun lintasan. Part tidak bisa dijual kembali."}
           </p>
         </div>
         <DialogFooter>
