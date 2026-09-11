@@ -4,16 +4,19 @@ import { useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import type * as THREE from 'three'
 import { COLORS, MiniCar } from './mini-car'
+import type { CarModelId } from '@/lib/car-catalog'
 
-function Turntable({ color }: { color: string }) {
+type CarPreviewProps = { color: string; model?: CarModelId }
+
+function Turntable({ color, model }: CarPreviewProps) {
   const group = useRef<THREE.Group>(null)
   useFrame((_, delta) => {
     if (group.current && !document.hidden) group.current.rotation.y += delta * .45
   })
-  return <group ref={group} rotation={[0, .6, 0]}><MiniCar color={color} /></group>
+  return <group ref={group} rotation={[0, .6, 0]}><MiniCar color={color} model={model} /></group>
 }
 
-export default function CarPreviewScene({ color }: { color: string }) {
+export default function CarPreviewScene({ color, model }: CarPreviewProps) {
   return (
     <Canvas
       orthographic
@@ -26,7 +29,7 @@ export default function CarPreviewScene({ color }: { color: string }) {
       <directionalLight position={[2, 5, 3]} intensity={2.4} />
       <directionalLight position={[-3, 2, -2]} intensity={1.4} color={COLORS.blue} />
       <group position={[0, -.12, 0]}>
-        <Turntable color={color} />
+        <Turntable color={color} model={model} />
       </group>
     </Canvas>
   )

@@ -48,6 +48,8 @@ import {
   type Upgrade,
 } from "@/lib/game";
 import { cn } from "@/lib/utils";
+import type { CarColor } from "@/lib/car-catalog";
+import { CarSelection } from "./car-selection";
 
 type TelegramWebApp = {
   ready: () => void;
@@ -204,9 +206,10 @@ export function GameDashboard() {
       return next;
     },
     {
-      refreshInterval: 5000,
+      refreshInterval: (latest) => latest?.carSelection?.model === null || mutationLocked.current ? 0 : 5000,
       refreshWhenHidden: false,
-      revalidateOnFocus: true,
+      revalidateOnFocus: game.carSelection?.model !== null,
+      isPaused: () => mutationLocked.current,
       dedupingInterval: 1000,
     },
   );
@@ -270,6 +273,7 @@ export function GameDashboard() {
     try {
       const response = await fetch("/api/game/action", {
         method: "POST",
+        signal: AbortSignal.timeout(15000),
         headers: {
           "Content-Type": "application/json",
           ...requestHeaders(initData),
@@ -384,7 +388,7 @@ export function GameDashboard() {
       });
   };
   const chooseColor = async (
-    color: "#4275ff" | "#f4b65b" | "#e9eef7",
+    color: CarColor,
     name: string,
   ) => {
     if (await runAction({ type: "color", color }, `color:${color}`))
@@ -398,6 +402,21 @@ export function GameDashboard() {
         error={error}
         onRetry={initData ? () => void mutate() : undefined}
       />
+    );
+  }
+
+  if (!data || !synced.current) return <BootScreen />;
+  if (game.carSelection?.model === null) {
+    return (
+      <>
+        <Toaster theme="dark" position="top-center" />
+        <CarSelection
+          returningPlayer={game.carSelection.returningPlayer}
+          initialColor={game.color}
+          saving={busyAction === "select-car"}
+          onConfirm={async (model, color) => Boolean(await runAction({ type: "select-car", model, color }))}
+        />
+      </>
     );
   }
 
