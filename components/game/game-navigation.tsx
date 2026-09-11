@@ -38,13 +38,10 @@ export function Brand() {
 export function GameNavigation({
   tab,
   onTab,
-  onHelp,
   giftAvailable,
 }: {
   tab: GameTab;
   onTab: (tab: GameTab) => void;
-  onHelp: () => void;
-  onWallet: () => void;
   giftAvailable: boolean;
 }) {
   const items = NAV_ITEMS.map(({ id, label, icon: Icon }) => (
@@ -64,31 +61,9 @@ export function GameNavigation({
     </button>
   ));
   return (
-    <>
-      <aside className="sidebar">
-        <button
-          className="rail-mark"
-          onClick={() => onTab("race")}
-          aria-label="Racely, kembali ke balapan"
-        >
-          <Zap fill="currentColor" />
-        </button>
-        <nav aria-label="Navigasi utama" className="side-nav">
-          {items}
-        </nav>
-        <button
-          className="rail-help"
-          onClick={onHelp}
-          aria-label="Cara bermain"
-        >
-          <CircleHelp />
-        </button>
-        <span className="rail-edition">MINI 4WD</span>
-      </aside>
-      <nav className="mobile-nav" aria-label="Navigasi mobile">
-        {items}
-      </nav>
-    </>
+    <nav className="mobile-nav" aria-label="Navigasi mobile">
+      {items}
+    </nav>
   );
 }
 export function Topbar({
