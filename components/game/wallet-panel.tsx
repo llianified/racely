@@ -68,7 +68,7 @@ export function WalletPanel({
       return;
     }
     if (accountName.trim().length < 2) {
-      setError("Isi nama pemilik rekening sesuai buku tabungan.");
+      setError(isBank ? "Isi nama pemilik rekening sesuai buku tabungan." : "Isi nama pemilik sesuai akun e-wallet.");
       return;
     }
     setError(null);
@@ -86,14 +86,13 @@ export function WalletPanel({
   };
 
   return (
-    <div className="section-enter flex flex-col gap-2.5">
+    <div className="wallet-layout section-enter flex flex-col gap-4">
       <section className="wallet-hero" aria-label="Saldo koin">
-        <div>
-          <span className="eyebrow">Saldo koin</span>
-          <strong>{formatCoins(balance)}</strong>
-          <p>
-            Setara {idr(balance)} · 1 koin = {idr(1)}
-          </p>
+        <div className="wallet-balance">
+          <span className="eyebrow">Saldo tersedia</span>
+          <strong>{formatCoins(balance)} <span>koin</span></strong>
+          <p>Setara {idr(balance)}</p>
+          <span className="wallet-rate">1 koin = {idr(1)}</span>
         </div>
         <div className="wallet-hero-side">
           <span className="wallet-pending">
@@ -144,6 +143,8 @@ export function WalletPanel({
                   "wallet-chip",
                   requested === value && "is-active",
                 )}
+                aria-pressed={requested === value}
+                aria-label={`${formatCoins(value)} koin`}
                 disabled={value > balance}
                 onClick={() => setAmount(String(value))}
               >
@@ -160,35 +161,36 @@ export function WalletPanel({
             </button>
           </div>
 
-          <div className="wallet-field">
-            <span id="withdraw-method-label">Metode</span>
-            <div
-              className="wallet-methods"
-              role="radiogroup"
-              aria-labelledby="withdraw-method-label"
-            >
-              {WITHDRAW_METHODS.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={method === item.id}
-                  className={cn(
-                    "wallet-method",
-                    method === item.id && "is-active",
-                  )}
-                  onClick={() => setMethod(item.id)}
-                >
-                  {item.kind === "bank" ? (
-                    <Banknote aria-hidden="true" />
-                  ) : (
-                    <Wallet aria-hidden="true" />
-                  )}
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <fieldset className="wallet-method-fieldset">
+            <legend>Metode penarikan</legend>
+            {(["ewallet", "bank"] as const).map((kind) => (
+              <div className="wallet-method-group" key={kind}>
+                <p>{kind === "bank" ? "Transfer bank" : "E-wallet"}</p>
+                <div className="wallet-methods">
+                  {WITHDRAW_METHODS.filter((item) =>
+                    kind === "bank" ? item.kind === "bank" : item.kind !== "bank",
+                  ).map((item) => (
+                    <label key={item.id} className="wallet-method">
+                      <input
+                        type="radio"
+                        name="withdraw-method"
+                        value={item.id}
+                        checked={method === item.id}
+                        onChange={() => setMethod(item.id)}
+                        className="sr-only"
+                      />
+                      {item.kind === "bank" ? (
+                        <Banknote aria-hidden="true" />
+                      ) : (
+                        <Wallet aria-hidden="true" />
+                      )}
+                      {item.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </fieldset>
 
           <div className="wallet-field">
             <label htmlFor="withdraw-account">
@@ -212,7 +214,7 @@ export function WalletPanel({
             <input
               id="withdraw-name"
               autoComplete="name"
-              placeholder="Nama sesuai rekening"
+              placeholder={isBank ? "Nama sesuai rekening" : "Nama sesuai akun e-wallet"}
               value={accountName}
               onChange={(event) =>
                 setAccountName(event.target.value.slice(0, 60))
@@ -266,13 +268,17 @@ export function WalletPanel({
                 <div>
                   <h3>{idr(item.coins)}</h3>
                   <p>
-                    {methodLabel(item.method)} · {item.account} ·{" "}
-                    {new Date(item.createdAt).toLocaleDateString("id-ID", {
-                      day: "numeric",
-                      month: "short",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {methodLabel(item.method)} · {item.account}
+                  </p>
+                  <p>
+                    <time dateTime={new Date(item.createdAt).toISOString()}>
+                      {new Date(item.createdAt).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </time>
                   </p>
                 </div>
                 <Badge variant="secondary">
