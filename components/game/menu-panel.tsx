@@ -37,8 +37,8 @@ export function MenuPanel({
     {
       title: "Hadiah & Misi", icon: Trophy,
       items: [
-        { label: "Misi sesi ini", icon: ClipboardList, action: () => onNavigate("missions") },
-        { label: "Hasil balapan", icon: Coins, action: () => onNavigate("rewards") },
+        { label: "Semua hadiah & misi", icon: ClipboardList, action: () => onNavigate("rewards") },
+        { label: "Hasil balapan", icon: Coins, action: () => onNavigate("rewards", "reward-race") },
         { label: "Bonus starter", icon: Gift, action: () => onNavigate("rewards", "starter-gift"), badge: giftAvailable ? "KLAIM" : "DIKLAIM" },
       ],
     },

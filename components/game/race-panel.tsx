@@ -18,10 +18,11 @@ const RaceScene = dynamic(() => import("./race-scene"), {
   ),
 });
 
-export function RacePanel({ game, onBoost, onCircuits, disabled = false }: {
+export function RacePanel({ game, onBoost, onCircuits, active = true, disabled = false }: {
   game: GameState;
   onBoost: () => void;
   onCircuits: () => void;
+  active?: boolean;
   disabled?: boolean;
 }) {
   const [cameraMode, setCameraMode] = useState(0);
@@ -60,7 +61,7 @@ export function RacePanel({ game, onBoost, onCircuits, disabled = false }: {
         <div className="scene-overlay lap-hud">
           <span>Lap <strong>{String(game.laps + 1).padStart(3, "0")}</strong></span>
         </div>
-        <RaceScene progress={game.progress} seconds={seconds} color={game.color} boosted={boosted} cameraMode={cameraMode} resetKey={resetKey} circuit={game.circuit} />
+        <RaceScene progress={game.progress} seconds={seconds} color={game.color} boosted={boosted} cameraMode={cameraMode} resetKey={resetKey} circuit={game.circuit} active={active} />
         {boosted && <div className="scene-overlay boost-hud"><Zap size={16} aria-hidden="true" />2× AKTIF</div>}
         <div className="scene-controls">
           <Button variant="outline" size="icon-sm" onClick={() => setCameraMode((v) => (v + 1) % 3)} aria-label="Ganti sudut kamera">

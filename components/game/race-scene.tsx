@@ -8,7 +8,7 @@ import * as THREE from 'three'
 import { COLORS, MiniCar } from './mini-car'
 
 const HALF = 3.35
-export type SceneProps = { progress: number; seconds: number; color: string; boosted: boolean; cameraMode: number; resetKey: number; circuit: number }
+export type SceneProps = { progress: number; seconds: number; color: string; boosted: boolean; cameraMode: number; resetKey: number; circuit: number; active?: boolean }
 
 function trackPoint(t: number, radius: number) {
   const straight = HALF * 2
@@ -153,7 +153,7 @@ export default function RaceScene(props: SceneProps) {
   if (lost) return <SceneError onRetry={retry} />
   return <SceneBoundary key={attempt} onRetry={retry}>
     {!ready && <div className="scene-loading absolute inset-0" role="status"><Flag /><strong>Menyalakan lampu sirkuit.</strong><span>Menyiapkan lintasan 3D…</span></div>}
-    <Canvas orthographic dpr={[1, 1.25]} frameloop={visible ? 'always' : 'never'} shadows="percentage" camera={{ position: [9, 12.5, 12], zoom: 30, near: .1, far: 100 }} gl={{ antialias: true, alpha: false, powerPreference: 'default' }} fallback={<SceneError onRetry={retry} />} onCreated={() => setReady(true)} aria-label="Arena mini 4WD 3D. Geser untuk memutar, cubit untuk zoom.">
+    <Canvas orthographic dpr={[1, 1.25]} frameloop={visible && props.active !== false ? 'always' : 'never'} shadows="percentage" camera={{ position: [9, 12.5, 12], zoom: 30, near: .1, far: 100 }} gl={{ antialias: true, alpha: false, powerPreference: 'default' }} fallback={<SceneError onRetry={retry} />} onCreated={() => setReady(true)} aria-label="Arena mini 4WD 3D. Geser untuk memutar, cubit untuk zoom.">
       <color attach="background" args={['#191939']} />
       <ambientLight intensity={.9} />
       <hemisphereLight args={[COLORS.white, COLORS.navy, 1.1]} />
