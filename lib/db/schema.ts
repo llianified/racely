@@ -118,5 +118,18 @@ export const withdrawals = pgTable(
   ],
 );
 
+export const telegramUpdates = pgTable(
+  "racely_telegram_updates",
+  {
+    updateId: bigint("update_id", { mode: "number" }).primaryKey(),
+    receivedAt: timestamp("received_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("racely_telegram_updates_received_idx").on(table.receivedAt),
+  ],
+);
+
 export type PlayerRow = typeof players.$inferSelect;
 export type WithdrawalRow = typeof withdrawals.$inferSelect;

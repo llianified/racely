@@ -7,6 +7,10 @@ import {
   sendTelegramReply,
   telegramUpdateSchema,
 } from "@/lib/telegram-bot";
+import {
+  claimTelegramUpdate,
+  releaseTelegramUpdate,
+} from "@/lib/telegram-updates";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -60,21 +64,39 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!telegramUpdateSchema.safeParse(payload).success) {
+  const update = telegramUpdateSchema.safeParse(payload);
+  if (!update.success) {
     return NextResponse.json(
       { error: "Update tidak valid." },
       { status: 400, headers: noStoreHeaders },
     );
   }
 
+  let publicAppUrl: string;
   try {
-    const reply = buildTelegramReply(payload, parsePublicAppUrl());
-    if (reply) await sendTelegramReply(reply);
+    publicAppUrl = parsePublicAppUrl();
+  } catch {
     return NextResponse.json(
-      { ok: true },
+      { error: "Webhook belum dikonfigurasi." },
+      { status: 503, headers: noStoreHeaders },
+    );
+  }
+
+  const updateId = update.data.update_id;
+  if (!(await claimTelegramUpdate(updateId))) {
+    return NextResponse.json(
+      { ok: true, duplicate: true },
       { headers: noStoreHeaders },
     );
+  }
+
+  try {
+    const reply = buildTelegramReply(update.data, publicAppUrl);
+    if (reply) await sendTelegramReply(reply);
+    return NextResponse.json({ ok: true }, { headers: noStoreHeaders });
   } catch {
+    // Hand the claim back so Telegram's retry is not silently swallowed.
+    await releaseTelegramUpdate(updateId);
     return NextResponse.json(
       { error: "Bot belum bisa memproses update." },
       { status: 500, headers: noStoreHeaders },

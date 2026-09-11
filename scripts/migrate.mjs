@@ -75,8 +75,12 @@ try {
   }
 
   console.log("Database schema is up to date.");
-} catch {
-  console.error("Database migration failed. Verify the connection and migration SQL.");
+} catch (error) {
+  // Postgres errors can echo back the DSN, so scrub anything URL-shaped before printing.
+  const detail = (error instanceof Error ? error.message : String(error))
+    .replace(/[a-z+]+:\/\/\S+/gi, "[redacted-url]")
+    .replace(/\b(password|sslmode|user)=\S+/gi, "$1=[redacted]");
+  console.error(`Database migration failed: ${detail}`);
   process.exitCode = 1;
 } finally {
   if (client) {
