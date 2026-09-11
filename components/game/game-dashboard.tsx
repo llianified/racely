@@ -12,8 +12,6 @@ import {
   Check,
   CircleHelp,
   Flag,
-  Gift,
-  LoaderCircle,
   Zap,
 } from "lucide-react";
 import useSWR from "swr";
@@ -29,8 +27,9 @@ import {
 } from "@/components/ui/dialog";
 import { GameNavigation, Topbar, type GameTab } from "./game-navigation";
 import { GaragePanel, UpgradePanel } from "./garage-panel";
-import { CircuitPanel, MissionsPanel, StarterGift } from "./missions-panel";
+import { CircuitPanel, MissionsPanel } from "./missions-panel";
 import { RacePanel, RaceReward } from "./race-panel";
+import { RewardsPanel, claimableTotal } from "./rewards-panel";
 import { MenuPanel } from "./menu-panel";
 import { InfoHint } from "./info-hint";
 import {
@@ -89,7 +88,23 @@ async function readGameResponse(response: Response): Promise<GameState> {
   return result as GameState;
 }
 
-function GameGate({ error, onRetry }: { error?: Error; onRetry?: () => void }) {
+function BootScreen() {
+  return (
+    <main className="boot-screen">
+      <h1 className="boot-word">RACELY</h1>
+      <div
+        className="boot-bar"
+        role="progressbar"
+        aria-label="Memuat Racely"
+        aria-busy="true"
+      >
+        <span />
+      </div>
+    </main>
+  );
+}
+
+function GameGate({ error, onRetry }: { error: Error; onRetry?: () => void }) {
   return (
     <main className="flex min-h-dvh items-center justify-center bg-background px-6 text-center text-foreground">
       <Toaster theme="dark" position="top-center" />
@@ -97,46 +112,29 @@ function GameGate({ error, onRetry }: { error?: Error; onRetry?: () => void }) {
         <div className="brand-mark flex size-14 items-center justify-center rounded-2xl bg-primary/10">
           <Flag />
         </div>
-        {error ? (
-          <>
-            <div>
-              <p className="eyebrow">RACELY TELEGRAM MINI APP</p>
-              <h1 className="mt-2 text-2xl font-semibold">
-                Start your engine in Telegram.
-              </h1>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                {error.message}
-              </p>
-            </div>
-            {onRetry ? (
-              <Button variant="gold" size="lg" className="w-full" onClick={onRetry}>
-                Coba sinkronkan lagi
-              </Button>
-            ) : (
-              <a
-                href="https://t.me/RacelyBot?startapp=play"
-                target="_blank"
-                rel="noreferrer"
-                className={buttonVariants({ variant: "gold", size: "lg", className: "w-full" })}
-              >
-                Buka @RacelyBot
-                <ArrowUpRight data-icon="inline-end" />
-              </a>
-            )}
-          </>
+        <div>
+          <p className="eyebrow">RACELY TELEGRAM MINI APP</p>
+          <h1 className="mt-2 text-2xl font-semibold">
+            Start your engine in Telegram.
+          </h1>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            {error.message}
+          </p>
+        </div>
+        {onRetry ? (
+          <Button variant="gold" size="lg" className="w-full" onClick={onRetry}>
+            Coba sinkronkan lagi
+          </Button>
         ) : (
-          <>
-            <LoaderCircle
-              className="size-6 animate-spin text-primary"
-              aria-hidden="true"
-            />
-            <div>
-              <h1 className="text-xl font-semibold">Menyiapkan garasimu.</h1>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Menyinkronkan progres Racely…
-              </p>
-            </div>
-          </>
+          <a
+            href="https://t.me/RacelyBot?startapp=play"
+            target="_blank"
+            rel="noreferrer"
+            className={buttonVariants({ variant: "gold", size: "lg", className: "w-full" })}
+          >
+            Buka @RacelyBot
+            <ArrowUpRight data-icon="inline-end" />
+          </a>
         )}
       </section>
     </main>
@@ -327,6 +325,22 @@ export function GameDashboard() {
     if (await runAction({ type: "mission", id }))
       toast.success(`Misi beres! +${rupiah(missionItem.reward)} virtual`);
   };
+  const claimAll = async () => {
+    const total = claimableTotal(game);
+    if (total <= 0) return;
+    if (game.pending > 0 && !(await runAction({ type: "claim" }))) return;
+    if (!game.rewardClaimed && !(await runAction({ type: "gift" }))) return;
+    for (const item of MISSIONS) {
+      const ready =
+        !game.missionsClaimed.includes(item.id) &&
+        missionValue(game, item.id) >= item.target;
+      if (ready && !(await runAction({ type: "mission", id: item.id }))) return;
+    }
+    toast.success(`+${rupiah(total)} koin virtual diklaim`, {
+      description: "Semua hadiah yang siap sudah masuk garasimu.",
+      duration: 2400,
+    });
+  };
   const chooseCircuit = async (circuit: number) => {
     if ((circuit !== 0 && circuit !== 1) || (circuit === 1 && game.laps < 25))
       return;
@@ -355,7 +369,7 @@ export function GameDashboard() {
       toast.success(`Bodi ${name} terpasang dan tersimpan`);
   };
 
-  if (!clientReady || (isLoading && !data)) return <GameGate />;
+  if (!clientReady || (isLoading && !data)) return <BootScreen />;
   if (error && !data) {
     return (
       <GameGate
@@ -440,24 +454,14 @@ export function GameDashboard() {
               />
             </div>
           ) : (
-            <div className="section-enter flex max-w-3xl flex-col gap-4">
-              <RaceReward
-                pending={game.pending}
-                onClaim={claim}
-                disabled={Boolean(busyAction)}
-              />
-              <StarterGift
-                claimed={game.rewardClaimed}
-                onClaim={gift}
-                disabled={Boolean(busyAction)}
-              />
-              <Button variant="menuDirect" onClick={() => navigate("missions")}>
-                <Gift data-icon="inline-start" />
-                Hadiah misi
-                <span className="ml-auto">{MISSIONS.filter((item) => !game.missionsClaimed.includes(item.id) && missionValue(game, item.id) >= item.target).length} siap</span>
-                <ArrowUpRight data-icon="inline-end" />
-              </Button>
-            </div>
+            <RewardsPanel
+              game={game}
+              onClaimRace={claim}
+              onClaimGift={gift}
+              onClaimMission={mission}
+              onClaimAll={claimAll}
+              disabled={Boolean(busyAction)}
+            />
           )}
         </main>
       </div>
