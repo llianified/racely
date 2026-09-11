@@ -134,10 +134,9 @@
 .page-content { position: relative; padding: 10px var(--gutter) calc(var(--nav-height) + var(--safe-bottom) + 14px); }
 /* Keeps the 3D arena mounted and correctly sized while another tab is on screen,
    so returning to Balapan never rebuilds the WebGL context. */
-.tab-offstage { position: absolute; inset-inline: var(--gutter); top: 0; visibility: hidden; opacity: 0; pointer-events: none; z-index: -1; }
+.dashboard-grid.tab-offstage { position: absolute; inset-inline: var(--gutter); top: 0; width: auto; visibility: hidden; opacity: 0; pointer-events: none; z-index: -1; }
 .page-heading { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-bottom: 8px; min-height: 32px; }
-.page-heading h1 { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: var(--fs-micro); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--subtle-foreground); }
-.page-heading h1::before { content: ''; width: 14px; height: 3px; flex-shrink: 0; border-radius: 2px; background: var(--accent); }
+.page-heading h1 { min-width: 0; font-size: var(--fs-micro); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--subtle-foreground); }
 .eyebrow { font-size: var(--fs-nano); font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--subtle-foreground); }
 .dashboard-grid, .main-column, .garage-layout { display: flex; flex-direction: column; gap: 10px; min-width: 0; width: 100%; }
 .panel { border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); overflow: hidden; min-width: 0; }
@@ -161,6 +160,7 @@
 .boost-hud svg { width: 12px; height: 12px; }
 .scene-controls { position: absolute; bottom: 8px; right: 8px; display: flex; gap: 4px; }
 .scene-controls [data-slot='button'] { background: color-mix(in srgb, var(--background) 85%, transparent); color: var(--foreground); }
+.scene-controls [data-slot='button'][aria-pressed='true'] { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--background) 88%, var(--accent)); }
 .lap-progress { height: 3px; background: var(--secondary); overflow: hidden; }
 .lap-progress > div { width: 100%; height: 100%; transform-origin: left; background: linear-gradient(90deg, var(--primary), var(--accent)); }
 .track-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding-block: 8px; }

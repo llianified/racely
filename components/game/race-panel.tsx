@@ -26,6 +26,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
   disabled?: boolean;
 }) {
   const [cameraMode, setCameraMode] = useState(0);
+  const [followCamera, setFollowCamera] = useState(true);
   const [resetKey, setResetKey] = useState(0);
   const panel = useRef<HTMLElement>(null);
   const seconds = lapSeconds(game);
@@ -61,13 +62,17 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
         <div className="scene-overlay lap-hud">
           <span>Lap <strong>{String(game.laps + 1).padStart(3, "0")}</strong></span>
         </div>
-        <RaceScene progress={game.progress} seconds={seconds} color={game.color} boosted={boosted} cameraMode={cameraMode} resetKey={resetKey} circuit={game.circuit} active={active} />
+        <RaceScene progress={game.progress} seconds={seconds} color={game.color} boosted={boosted} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} />
         {boosted && <div className="scene-overlay boost-hud"><Zap size={16} aria-hidden="true" />2× AKTIF</div>}
         <div className="scene-controls">
-          <Button variant="outline" size="icon-sm" onClick={() => setCameraMode((v) => (v + 1) % 3)} aria-label="Ganti sudut kamera">
-            <Camera aria-hidden="true" />
+          <Button variant="outline" size="sm" onClick={() => setFollowCamera((v) => !v)} aria-pressed={!followCamera} aria-label={followCamera ? "Aktifkan kamera overview" : "Kembali ke kamera follow mobil"} title={followCamera ? "Lihat seluruh lintasan" : "Kembali mengikuti mobil"}>
+            <Camera data-icon="inline-start" aria-hidden="true" />
+            Overview
           </Button>
-          <Button variant="outline" size="icon-sm" onClick={() => { setCameraMode(0); setResetKey((v) => v + 1); }} aria-label="Reset kamera">
+          {!followCamera && <Button variant="outline" size="icon-sm" onClick={() => setCameraMode((v) => (v + 1) % 3)} aria-label={`Ganti sudut overview, preset ${cameraMode + 1} dari 3`} title={`Sudut overview ${cameraMode + 1}/3`}>
+            <span aria-hidden="true">{cameraMode + 1}/3</span>
+          </Button>}
+          <Button variant="outline" size="icon-sm" onClick={() => { setFollowCamera(true); setResetKey((v) => v + 1); }} aria-label="Reset kamera ke follow mobil">
             <RotateCcw aria-hidden="true" />
           </Button>
           <Button variant="outline" size="icon-sm" onClick={fullscreen} aria-label="Layar penuh">
