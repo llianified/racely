@@ -57,7 +57,7 @@ export function MenuPanel({
             <div className="menu-items">
               {items.map(({ label, icon: ItemIcon, action, badge }) => (
                 <Button variant="menu" key={label} onClick={action}>
-                  <ItemIcon aria-hidden="true" />
+                  <ItemIcon data-icon="inline-start" aria-hidden="true" />
                   <span>{label}</span>
                   {badge ? <Badge variant="secondary">{badge}</Badge> : <ChevronRight className="menu-item-arrow" aria-hidden="true" />}
                 </Button>
