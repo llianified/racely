@@ -6,6 +6,7 @@ import {
 } from "@/lib/game-server";
 import {
   performPreviewGameAction,
+  previewCarActionSchema,
   PREVIEW_GAME_COOKIE,
   PreviewGameRuleError,
 } from "@/lib/preview-game";
@@ -27,7 +28,11 @@ export async function POST(request: Request) {
       );
 
     const identity = authenticateTelegramRequest(request);
-    const body = gameActionSchema.safeParse(await request.json());
+    const payload: unknown = await request.json();
+    const isCookiePreview = identity.userId.startsWith("preview:") && !process.env.DATABASE_URL;
+    const body = (isCookiePreview
+      ? gameActionSchema.or(previewCarActionSchema)
+      : gameActionSchema).safeParse(payload);
     if (!body.success)
       return NextResponse.json(
         { error: "Aksi game tidak valid." },
@@ -35,7 +40,7 @@ export async function POST(request: Request) {
       );
 
     const previewGame =
-      identity.userId.startsWith("preview:") && !process.env.DATABASE_URL
+      isCookiePreview
         ? performPreviewGameAction(
             request,
             identity,
@@ -48,7 +53,7 @@ export async function POST(request: Request) {
       (await performGameAction(
         identity,
         body.data.requestId,
-        body.data.action,
+        gameActionSchema.parse(payload).action,
       ));
     const response = NextResponse.json(game, {
       headers: { "Cache-Control": "no-store" },

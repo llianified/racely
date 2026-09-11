@@ -18,7 +18,16 @@ import {
   type Upgrade,
   type WithdrawMethod,
 } from "@/lib/game";
+import { CAR_MODEL_IDS, isCarColor } from "./car-catalog";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
+
+export const previewCarActionSchema = z.object({
+  requestId: z.string().uuid(),
+  action: z.discriminatedUnion("type", [
+    z.object({ type: z.literal("select-car"), model: z.enum(CAR_MODEL_IDS), color: z.string().max(7) }).strict(),
+    z.object({ type: z.literal("color"), color: z.string().max(7) }).strict(),
+  ]),
+}).strict();
 
 const MAX_OFFLINE_SECONDS = 24 * 60 * 60;
 const MAX_RECEIPTS = 12;
@@ -33,6 +42,10 @@ const previewGameSchema = z.object({
   updatedAt: z.number().int().nonnegative(),
   receipts: z.array(z.string().uuid()).max(MAX_RECEIPTS),
   state: z.object({
+    carSelection: z.object({
+      model: z.enum(CAR_MODEL_IDS).nullable(),
+      returningPlayer: z.boolean(),
+    }).optional(),
     balance: z.number().nonnegative(),
     pending: z.number().nonnegative(),
     earned: z.number().nonnegative(),
@@ -93,6 +106,7 @@ function initialPreviewGame(identity: PlayerIdentity, now: number): PreviewGame 
     receipts: [],
     state: {
       ...INITIAL_GAME,
+      carSelection: { model: null, returningPlayer: false },
       levels: { ...INITIAL_GAME.levels },
       missionsClaimed: [],
       withdrawals: [],
@@ -125,6 +139,14 @@ function readPreviewGame(request: Request, identity: PlayerIdentity) {
     if (!parsed.success || parsed.data.userId !== identity.userId) {
       return initialPreviewGame(identity, Date.now());
     }
+    if (!parsed.data.state.carSelection) {
+      // Credit time owed before the offer, then freeze without resetting progress.
+      const settled = settlePreviewGame(parsed.data, Date.now());
+      return {
+        ...settled,
+        state: { ...settled.state, carSelection: { model: null, returningPlayer: true } },
+      };
+    }
     return parsed.data;
   } catch {
     return initialPreviewGame(identity, Date.now());
@@ -132,6 +154,7 @@ function readPreviewGame(request: Request, identity: PlayerIdentity) {
 }
 
 function settlePreviewGame(game: PreviewGame, now: number): PreviewGame {
+  if (game.state.carSelection?.model === null) return { ...game, updatedAt: now };
   const elapsed = Math.min(
     MAX_OFFLINE_SECONDS,
     Math.max(0, (now - game.updatedAt) / 1000),
@@ -201,17 +224,42 @@ export function performPreviewGameAction(
   request: Request,
   identity: PlayerIdentity,
   requestId: string,
-  action: GameCommand,
+  action: GameCommand | z.infer<typeof previewCarActionSchema>["action"],
 ) {
   const now = Date.now();
   let game = settlePreviewGame(readPreviewGame(request, identity), now);
+  const selection = game.state.carSelection;
+
+  if (action.type === "select-car") {
+    if (!CAR_MODEL_IDS.includes(action.model) || !isCarColor(action.model, action.color)) {
+      throw new PreviewGameRuleError("Model atau warna mobil tidak valid.", 400);
+    }
+    if (selection?.model) {
+      if (selection.model !== action.model) {
+        throw new PreviewGameRuleError("Model sudah dikonfirmasi dan tidak dapat diganti.");
+      }
+      // A retry must not reset a later garage color or grant any progress.
+      return { state: game.state, cookieValue: serializePreviewGame(game) };
+    }
+  } else if (selection?.model === null && action.type !== "sync") {
+    throw new PreviewGameRuleError("Pilih mobilmu sebelum mulai bermain.");
+  }
+  if (action.type === "color" && !isCarColor(selection?.model ?? "neo-falcon", action.color)) {
+    throw new PreviewGameRuleError("Warna ini tidak tersedia untuk mobilmu.", 400);
+  }
 
   if (action.type !== "sync" && game.receipts.includes(requestId)) {
     return { state: game.state, cookieValue: serializePreviewGame(game) };
   }
 
   let state = game.state;
-  if (action.type === "upgrade") {
+  if (action.type === "select-car") {
+    state = {
+      ...state,
+      carSelection: { model: action.model, returningPlayer: selection?.returningPlayer ?? false },
+      color: action.color,
+    };
+  } else if (action.type === "upgrade") {
     state = applyUpgrade(state, action.key);
   } else if (action.type === "claim" && Math.floor(state.pending) > 0) {
     const settled = Math.floor(state.pending);
