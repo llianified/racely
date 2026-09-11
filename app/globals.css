@@ -136,8 +136,7 @@
    so returning to Balapan never rebuilds the WebGL context. */
 .dashboard-grid.tab-offstage { position: absolute; inset-inline: var(--gutter); top: 0; width: auto; visibility: hidden; opacity: 0; pointer-events: none; z-index: -1; }
 .page-heading { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-bottom: 8px; min-height: 32px; }
-.page-heading h1 { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: var(--fs-micro); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--subtle-foreground); }
-.page-heading h1::before { content: ''; width: 14px; height: 3px; flex-shrink: 0; border-radius: 2px; background: var(--accent); }
+.page-heading h1 { min-width: 0; font-size: var(--fs-micro); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--subtle-foreground); }
 .eyebrow { font-size: var(--fs-nano); font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--subtle-foreground); }
 .dashboard-grid, .main-column, .garage-layout { display: flex; flex-direction: column; gap: 10px; min-width: 0; width: 100%; }
 .panel { border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); overflow: hidden; min-width: 0; }
