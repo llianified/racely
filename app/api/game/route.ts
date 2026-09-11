@@ -18,10 +18,9 @@ export async function GET(request: Request) {
   try {
     const preview = getOrCreatePreviewIdentity(request);
     const identity = preview?.identity ?? authenticateTelegramRequest(request);
-    const previewGame =
-      preview && !process.env.DATABASE_URL
-        ? getPreviewGameState(request, identity)
-        : null;
+    const previewGame = preview
+      ? getPreviewGameState(request, identity)
+      : null;
     const game = previewGame?.state ?? (await getGameState(identity));
     const response = NextResponse.json(game, {
       headers: { "Cache-Control": "no-store" },

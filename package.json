@@ -4,8 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "db:migrate": "node scripts/migrate.mjs",
     "build": "next build",
+    "build:standalone": "pnpm run build && node scripts/prepare-standalone.mjs",
     "start": "next start",
+    "start:standalone": "node .next/standalone/server.js",
+    "bot:setup": "node scripts/setup-telegram-bot.mjs",
+    "pm2:start": "pm2 start ecosystem.config.cjs --update-env",
+    "pm2:reload": "pm2 reload ecosystem.config.cjs --update-env",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
@@ -23,6 +30,7 @@
     "next": "16.3.3",
     "next-themes": "^0.4.6",
     "pg": "^8.23.0",
+    "pm2": "^7.0.4",
     "react": "^19",
     "react-dom": "^19",
     "shadcn": "^4.11.0",
