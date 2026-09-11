@@ -33,7 +33,6 @@ import { RacePanel, RaceReward } from "./race-panel";
 import { RewardsPanel, claimableTotal } from "./rewards-panel";
 import { MenuPanel } from "./menu-panel";
 import { WalletPanel, type WithdrawPayload } from "./wallet-panel";
-import { InfoHint } from "./info-hint";
 import {
   coins,
   gameReducer,
@@ -455,16 +454,9 @@ export function GameDashboard() {
         <main className="page-content" aria-busy={Boolean(busyAction)}>
           <div className="page-heading">
             <h1 id="page-title" tabIndex={-1} className="text-balance">{TITLES[tab]}</h1>
-            <div className="flex items-center gap-1">
-              {tab === "race" && (
-                <InfoHint title="Balapan & kamera">
-                  Mobil melaju otomatis melawan 2 bot latihan. Gaspol menggandakan kecepatan selama 10 detik, lalu isi ulang 25 detik. Geser arena untuk orbit, cubit untuk zoom, atau ketuk ikon kamera.
-                </InfoHint>
-              )}
-              <Button variant="ghost" size="icon-sm" onClick={() => setDialog("help")} aria-label="Cara bermain">
-                <CircleHelp aria-hidden="true" />
-              </Button>
-            </div>
+            <Button variant="ghost" size="icon-sm" onClick={() => setDialog("help")} aria-label="Cara bermain">
+              <CircleHelp aria-hidden="true" />
+            </Button>
           </div>
           {raceMounted && (
             <div
