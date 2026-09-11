@@ -15,7 +15,7 @@ export function CircuitPanel({ game, onChoose, disabled = false }: { game: GameS
         <h2><Trophy aria-hidden="true" />{active ? "Sirkuit aktif" : "Sirkuit berikutnya"}</h2>
         <Badge variant="secondary">{!unlocked ? <LockKeyhole data-icon="inline-start" /> : active ? <Check data-icon="inline-start" /> : <Flag data-icon="inline-start" />}{!unlocked ? "Terkunci" : active ? "Aktif" : "Terbuka"}</Badge>
       </div>
-      <div className="circuit-preview"><h3>Midnight Speedway</h3><p>Bonus +0,02 koin/lap</p></div>
+      <div className="circuit-preview"><h3>Midnight Speedway</h3><p>Bonus +Rp150/lap</p></div>
       {!unlocked && <>
         <p className="circuit-description">Buka dengan 25 putaran.</p>
         <div className="mission-progress circuit-progress"><Progress value={Math.min((game.laps / 25) * 100, 100)} aria-label="Buka Midnight Speedway" className="flex-1" /><span>{Math.min(game.laps, 25)}/25</span></div>
