@@ -166,7 +166,6 @@ export function RewardsPanel({
                 ) : row.state === "ready" ? (
                   <Button
                     variant="gold"
-                    size="sm"
                     disabled={disabled}
                     onClick={row.onClaim}
                     aria-label={`Klaim ${row.label}`}
