@@ -4,6 +4,13 @@ import { useState, type FormEvent } from "react";
 import { Banknote, Clock, Coins, Send, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { InfoHint } from "./info-hint";
 import { cn } from "@/lib/utils";
 import {
@@ -42,6 +49,7 @@ export function WalletPanel({
   const [account, setAccount] = useState("");
   const [accountName, setAccountName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
 
   const balance = Math.floor(game.balance);
   const requested = Number.parseInt(amount, 10) || 0;
@@ -82,6 +90,7 @@ export function WalletPanel({
       setAmount(String(MIN_WITHDRAW_COINS));
       setAccount("");
       setAccountName("");
+      setOpen(false);
     }
   };
 
@@ -91,9 +100,20 @@ export function WalletPanel({
         <div className="wallet-balance">
           <span className="eyebrow">Saldo tersedia</span>
           <strong>{formatCoins(balance)} <span>koin</span></strong>
-          <p>Setara {idr(balance)}</p>
-          <span className="wallet-rate">1 koin = {idr(1)}</span>
+          <p>~ {idr(balance)}</p>
         </div>
+        <Button
+          variant="gold"
+          size="lg"
+          className="w-full"
+          disabled={disabled || balance < MIN_WITHDRAW_COINS}
+          onClick={() => setOpen(true)}
+        >
+          <Send data-icon="inline-start" />
+          {balance < MIN_WITHDRAW_COINS
+            ? `Kumpulkan ${coins(MIN_WITHDRAW_COINS - balance)} lagi`
+            : "Tarik saldo"}
+        </Button>
         <div className="wallet-hero-side">
           <span className="wallet-pending">
             <Coins aria-hidden="true" />
@@ -107,14 +127,22 @@ export function WalletPanel({
         </div>
       </section>
 
-      <section className="panel wallet-form-panel" aria-label="Tarik koin">
-        <div className="section-card-heading">
-          <h2>
-            <Send aria-hidden="true" />
-            Tarik saldo
-          </h2>
-          <span>Min. {coins(MIN_WITHDRAW_COINS)}</span>
-        </div>
+      <Dialog open={open} onOpenChange={(next) => { setOpen(next); if (!next) setError(null); }}>
+        <DialogContent className="wallet-dialog max-h-[85dvh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              <Send aria-hidden="true" />
+              Tarik saldo
+            </DialogTitle>
+            <DialogDescription>
+              Saldo {formatCoins(balance)} koin · minimal {coins(MIN_WITHDRAW_COINS)} per penarikan.
+            </DialogDescription>
+          </DialogHeader>
+          <p className="wallet-dialog-note">
+            Penarikan diverifikasi manual oleh tim Racely dalam 1×24 jam kerja.
+            Pastikan nomor dan nama tujuan benar; dana yang salah kirim tidak
+            bisa ditarik kembali.
+          </p>
         <form className="wallet-form" onSubmit={submit}>
           <div className="wallet-field">
             <label htmlFor="withdraw-amount">Jumlah koin</label>
@@ -241,13 +269,9 @@ export function WalletPanel({
               ? `Kumpulkan ${coins(MIN_WITHDRAW_COINS - balance)} lagi`
               : `Tarik ${idr(requested)}`}
           </Button>
-          <p className="wallet-note">
-            Penarikan diverifikasi manual oleh tim Racely dalam 1×24 jam kerja.
-            Pastikan nomor dan nama tujuan benar; dana yang salah kirim tidak
-            bisa ditarik kembali.
-          </p>
         </form>
-      </section>
+        </DialogContent>
+      </Dialog>
 
       <section className="panel wallet-history-panel" aria-label="Riwayat penarikan">
         <div className="section-card-heading">
