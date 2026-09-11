@@ -123,7 +123,10 @@ export function RewardsPanel({
             <Gift aria-hidden="true" />
             Rincian hadiah
           </h2>
-          <Badge variant="secondary">{game.missionsClaimed.length}/{MISSIONS.length} misi diklaim</Badge>
+          <Badge variant="secondary">
+            <Check data-icon="inline-start" />
+            {game.missionsClaimed.length}/{MISSIONS.length} misi diklaim
+          </Badge>
         </div>
         <ul className="reward-list">
           {rows.map((row) => (
