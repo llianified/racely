@@ -1,6 +1,7 @@
 'use client'
 
 import { memo } from 'react'
+import type { CarModelId } from '@/lib/car-catalog'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 
@@ -87,7 +88,7 @@ function turned(profile: Point[], segments = 48) {
   return new THREE.LatheGeometry(profile.map(([radius, y]) => new THREE.Vector2(radius, y)), segments)
 }
 
-function createCarGeometry() {
+function createCarGeometry(model: CarModelId) {
   const parts: Record<Finish, THREE.BufferGeometry[]> = {
     body: [], chassis: [], rubber: [], alloy: [], gold: [], livery: [], glass: [],
   }
@@ -111,6 +112,7 @@ function createCarGeometry() {
     [.145, -.14], [.184, -.20], [.184, -.29], [.115, -.36],
   ], .035), [0, .082, 0])
 
+  if (model === 'neo-falcon') {
   add('body', sculptedShell([
     [-.355, .053, .151, .013], [-.29, .101, .173, .046],
     [-.19, .114, .190, .058], [-.075, .104, .190, .061],
@@ -166,6 +168,49 @@ function createCarGeometry() {
     add('chassis', plate([
       [-.037, -.22], [.025, -.17], [.025, .15], [-.027, .21], [-.037, .12],
     ].map(([x, z]) => [x * side, z] as Point), .013), [side * .165, .099, 0])
+  }
+
+  } else {
+    add('body', sculptedShell([
+      [-.35, .095, .153, .018], [-.28, .15, .176, .046],
+      [-.13, .172, .184, .055], [.045, .163, .179, .048],
+      [.19, .145, .158, .036], [.31, .135, .146, .029],
+      [.38, .083, .139, .010],
+    ]))
+    add('glass', sculptedShell([
+      [-.24, .060, .217, .009], [-.16, .108, .231, .065],
+      [-.055, .112, .229, .085], [.06, .092, .219, .064],
+      [.17, .038, .189, .013], [.19, .002, .181, .002],
+    ], 36, 40))
+    add('body', sculptedShell([
+      [-.165, .015, .289, .002], [-.12, .074, .297, .010],
+      [-.055, .087, .305, .010], [.015, .062, .295, .008],
+      [.04, .006, .277, .002],
+    ], 24, 32))
+    for (const side of SIDES) {
+      add('body', sculptedShell([
+        [-.32, .010, .156, .006, side * .13],
+        [-.24, .042, .177, .040, side * .161],
+        [-.05, .032, .165, .035, side * .178],
+        [.17, .035, .15, .028, side * .159],
+        [.32, .008, .139, .009, side * .115],
+      ]))
+      add('livery', sculptedShell([
+        [-.29, .003, .143, .003, side * .159],
+        [-.14, .004, .148, .004, side * .188],
+        [.08, .004, .14, .004, side * .184],
+        [.26, .002, .128, .003, side * .148],
+      ], 24, 12))
+      const lamp = new THREE.SphereGeometry(1, 24, 12)
+      lamp.scale(.034, .012, .018)
+      add('livery', lamp, [side * .091, .173, .316], [-.25, side * -.25, 0])
+      const rearLamp = new THREE.SphereGeometry(1, 16, 8)
+      rearLamp.scale(.029, .007, .008)
+      add('livery', rearLamp, [side * .088, .169, -.341])
+    }
+    add('chassis', sculptedShell([
+      [.34, .06, .127, .008], [.369, .066, .126, .009], [.387, .04, .125, .003],
+    ], 12, 16))
   }
 
   for (const z of AXLES) {
@@ -232,6 +277,7 @@ function createCarGeometry() {
     }
   }
 
+  if (model === 'neo-falcon') {
   for (const side of SIDES) {
     add('chassis', plate([
       [-.010, -.054], [.010, -.050], [.009, .045], [-.005, .046],
@@ -254,6 +300,17 @@ function createCarGeometry() {
     add('alloy', cylinder(.003, .132, 8), [0, .195 - i * .009, -.336], [0, 0, Math.PI / 2])
   }
 
+  } else {
+    for (const side of SIDES) {
+      add('chassis', new THREE.BoxGeometry(.015, .05, .025), [side * .09, .214, -.29])
+    }
+    add('body', sculptedShell([
+      [-.18, .016, 0, .004], [-.14, .035, .003, .009],
+      [0, .038, .009, .011], [.14, .035, .003, .009], [.18, .016, 0, .004],
+    ], 32, 20), [0, .249, -.299], [0, Math.PI / 2, 0])
+    add('livery', new THREE.BoxGeometry(.25, .003, .009), [0, .258, -.327])
+  }
+
   return Object.fromEntries(Object.entries(parts).map(([finish, geometries]) => {
     const merged = mergeGeometries(geometries)!
     geometries.forEach(geometry => geometry.dispose())
@@ -263,9 +320,10 @@ function createCarGeometry() {
 }
 
 // Both canvases share immutable geometry; batch details by finish instead of drawing each bolt separately.
-const CAR_GEOMETRY = createCarGeometry()
+const GEOMETRY_CACHE: Partial<Record<CarModelId, Record<Finish, THREE.BufferGeometry>>> = {}
 
-export const MiniCar = memo(function MiniCar({ color, scale = 1 }: { color: string; scale?: number }) {
+export const MiniCar = memo(function MiniCar({ color, model = 'neo-falcon', scale = 1 }: { color: string; model?: CarModelId; scale?: number }) {
+  const CAR_GEOMETRY = GEOMETRY_CACHE[model] ?? (GEOMETRY_CACHE[model] = createCarGeometry(model))
   return <group scale={scale}>
     <mesh geometry={CAR_GEOMETRY.body} dispose={null} castShadow receiveShadow>
       <meshPhysicalMaterial color={color} roughness={.27} metalness={.16} clearcoat={.85} clearcoatRoughness={.19} />
@@ -280,7 +338,7 @@ export const MiniCar = memo(function MiniCar({ color, scale = 1 }: { color: stri
       <meshStandardMaterial color={COLORS.white} roughness={.29} metalness={.72} />
     </mesh>
     <mesh geometry={CAR_GEOMETRY.gold} dispose={null} castShadow>
-      <meshStandardMaterial color={COLORS.gold} roughness={.28} metalness={.65} />
+      <meshStandardMaterial color={model === 'luna-gt' ? COLORS.white : COLORS.gold} roughness={.28} metalness={.65} />
     </mesh>
     <mesh geometry={CAR_GEOMETRY.livery} dispose={null}>
       <meshStandardMaterial color={COLORS.white} roughness={.36} metalness={.08} />
