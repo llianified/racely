@@ -29,7 +29,7 @@ export const GaragePanel = memo(function GaragePanel({
   disabled = false,
 }: {
   game: GameState;
-  onChooseColor: (color: string, name: string) => void;
+  onChooseColor: (color: (typeof BODY_COLORS)[number]["color"], name: string) => void;
   disabled?: boolean;
 }) {
   return (
