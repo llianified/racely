@@ -1,14 +1,14 @@
 'use client'
 
-import { Component, memo, useEffect, useMemo, useRef, useState, type ReactNode, type ComponentRef } from 'react'
+import { Component, memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type ComponentRef, type RefObject } from 'react'
 import { Flag, RotateCcw } from 'lucide-react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Grid, OrbitControls } from '@react-three/drei'
+import { Grid, OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import * as THREE from 'three'
 import { COLORS, MiniCar } from './mini-car'
 
 const HALF = 3.35
-export type SceneProps = { progress: number; seconds: number; color: string; boosted: boolean; cameraMode: number; resetKey: number; circuit: number; active?: boolean }
+export type SceneProps = { progress: number; seconds: number; color: string; boosted: boolean; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean }
 
 function trackPoint(t: number, radius: number) {
   const straight = HALF * 2
@@ -43,8 +43,9 @@ function Ribbon({ inner, outer, height = .12, color, y = 0, glow = false }: { in
   </mesh>
 }
 
-function Racer({ lane, color, progress, seconds, boosted }: { lane: number; color: string; progress: number; seconds: number; boosted: boolean }) {
-  const group = useRef<THREE.Group>(null)
+function Racer({ lane, color, progress, seconds, boosted, playerRef }: { lane: number; color: string; progress: number; seconds: number; boosted: boolean; playerRef?: RefObject<THREE.Group | null> }) {
+  const ownRef = useRef<THREE.Group>(null)
+  const group = playerRef ?? ownRef
   const phase = useRef(lane === 0 ? progress : lane * .32)
   useFrame((_, delta) => {
     if (!group.current || document.hidden) return
@@ -55,7 +56,7 @@ function Racer({ lane, color, progress, seconds, boosted }: { lane: number; colo
     const p = trackPoint(phase.current, 2.24 + lane * .68)
     group.current.position.set(p.x, .14, p.z)
     group.current.rotation.y = p.angle
-  })
+  }, -2)
   return <group ref={group}>
     <MiniCar color={color} scale={.85} />
     {lane === 0 && boosted && <pointLight color={COLORS.blue} intensity={3} distance={1.6} position={[0, .1, -.35]} />}
@@ -101,17 +102,61 @@ const Circuit = memo(function Circuit({ circuit }: { circuit: number }) {
   </group>
 })
 
-function CameraRig({ mode, resetKey }: { mode: number; resetKey: number }) {
+function CameraRig({ mode, follow, resetKey, playerRef, active, boosted }: { mode: number; follow: boolean; resetKey: number; playerRef: RefObject<THREE.Group | null>; active: boolean; boosted: boolean }) {
   const { camera, size } = useThree()
+  const [overviewCamera] = useState(() => camera)
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null)
-  useEffect(() => {
+  const chaseCamera = useRef<THREE.PerspectiveCamera>(null)
+  const initialize = useRef(true)
+  const pose = useMemo(() => ({
+    position: new THREE.Vector3(),
+    rotation: new THREE.Quaternion(),
+    heading: new THREE.Quaternion(),
+    offset: new THREE.Vector3(),
+    target: new THREE.Vector3(),
+  }), [])
+
+  useLayoutEffect(() => {
+    initialize.current = true
+  }, [follow, resetKey, active, size.width, size.height])
+
+  useLayoutEffect(() => {
+    if (follow) return
     const [x, y, z] = mode === 1 ? [0, 20, .01] : mode === 2 ? [12, 6.5, 10] : [9, 12.5, 12]
-    camera.position.set(x, y, z)
-    camera.lookAt(0, 0, 0)
-    if (camera instanceof THREE.OrthographicCamera) { camera.zoom = Math.min(size.width / 18.5, size.height / 11.5); camera.updateProjectionMatrix() }
-    controls.current?.target.set(0, 0, 0); controls.current?.update()
-  }, [camera, mode, resetKey, size.width, size.height])
-  return <OrbitControls ref={controls} enablePan={false} minZoom={12} maxZoom={95} minPolarAngle={.01} maxPolarAngle={Math.PI / 2.35} enableDamping dampingFactor={.08} />
+    overviewCamera.position.set(x, y, z)
+    overviewCamera.lookAt(0, 0, 0)
+    if (overviewCamera instanceof THREE.OrthographicCamera) {
+      overviewCamera.zoom = Math.min(size.width / 18.5, size.height / 11.5)
+      overviewCamera.updateProjectionMatrix()
+    }
+    controls.current?.target.set(0, 0, 0)
+    controls.current?.update()
+  }, [overviewCamera, follow, mode, resetKey, size.width, size.height])
+
+  // Racer runs at -2; negative priorities preserve Fiber's automatic render.
+  useFrame((_, delta) => {
+    if (!follow || !active || document.hidden || !playerRef.current || !chaseCamera.current) return
+    playerRef.current.getWorldPosition(pose.position)
+    playerRef.current.getWorldQuaternion(pose.rotation)
+    if (initialize.current || delta > .25) {
+      pose.heading.copy(pose.rotation)
+      initialize.current = false
+    } else {
+      pose.heading.slerp(pose.rotation, 1 - Math.exp(-(boosted ? 22 : 16) * delta))
+    }
+
+    // Anchor translation to the actual car: damp only heading, so boost cannot leave it behind.
+    // Stay above the 1.91-unit gate and lane walls, including the near clipping plane.
+    pose.offset.set(-.55, 2.15, -2.35).applyQuaternion(pose.heading)
+    pose.target.set(0, .12, .65).applyQuaternion(pose.heading).add(pose.position)
+    chaseCamera.current.position.copy(pose.position).add(pose.offset)
+    chaseCamera.current.lookAt(pose.target)
+  }, -.5)
+
+  return <>
+    {follow && <PerspectiveCamera ref={chaseCamera} makeDefault fov={42} near={.05} far={100} />}
+    {!follow && <OrbitControls ref={controls} camera={overviewCamera} enablePan={false} minZoom={12} maxZoom={95} minPolarAngle={.01} maxPolarAngle={Math.PI / 2.35} enableDamping dampingFactor={.08} />}
+  </>
 }
 
 function SceneError({ onRetry }: { onRetry: () => void }) {
@@ -139,6 +184,8 @@ function ContextMonitor({ onLost }: { onLost: () => void }) {
 }
 
 export default function RaceScene(props: SceneProps) {
+  const playerRef = useRef<THREE.Group>(null)
+  const follow = props.followCamera !== false
   const [attempt, setAttempt] = useState(0)
   const [lost, setLost] = useState(false)
   const [visible, setVisible] = useState(true)
@@ -153,7 +200,7 @@ export default function RaceScene(props: SceneProps) {
   if (lost) return <SceneError onRetry={retry} />
   return <SceneBoundary key={attempt} onRetry={retry}>
     {!ready && <div className="scene-loading absolute inset-0" role="status"><Flag /><strong>Menyalakan lampu sirkuit.</strong><span>Menyiapkan lintasan 3D…</span></div>}
-    <Canvas orthographic dpr={[1, 1.25]} frameloop={visible && props.active !== false ? 'always' : 'never'} shadows="percentage" camera={{ position: [9, 12.5, 12], zoom: 30, near: .1, far: 100 }} gl={{ antialias: true, alpha: false, powerPreference: 'default' }} fallback={<SceneError onRetry={retry} />} onCreated={() => setReady(true)} aria-label="Arena mini 4WD 3D. Geser untuk memutar, cubit untuk zoom.">
+    <Canvas orthographic dpr={[1, 1.25]} frameloop={visible && props.active !== false ? 'always' : 'never'} shadows="percentage" camera={{ position: [9, 12.5, 12], zoom: 30, near: .1, far: 100 }} gl={{ antialias: true, alpha: false, powerPreference: 'default' }} fallback={<SceneError onRetry={retry} />} onCreated={() => setReady(true)} aria-label={follow ? 'Arena mini 4WD 3D. Kamera mengikuti mobilmu. Pilih Overview untuk melihat seluruh lintasan.' : 'Arena mini 4WD 3D. Kamera overview. Geser untuk memutar, cubit untuk zoom.'}>
       <color attach="background" args={['#191939']} />
       <ambientLight intensity={.9} />
       <hemisphereLight args={[COLORS.white, COLORS.navy, 1.1]} />
@@ -162,8 +209,8 @@ export default function RaceScene(props: SceneProps) {
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -.16, 0]} receiveShadow><planeGeometry args={[80, 80]} /><meshStandardMaterial color="#090c1d" roughness={.85} /></mesh>
       <Grid position={[0, -.145, 0]} args={[36, 36]} cellSize={1} cellThickness={.35} cellColor="#2c2852" sectionSize={5} sectionThickness={.6} sectionColor="#463e7a" fadeDistance={23} fadeStrength={3} />
       <Circuit circuit={props.circuit} />
-      {[0, 1, 2].map(lane => <Racer key={lane} lane={lane} color={lane === 0 ? props.color : lane === 1 ? COLORS.gold : COLORS.white} progress={props.progress} seconds={props.seconds} boosted={props.boosted} />)}
-      <CameraRig mode={props.cameraMode} resetKey={props.resetKey} />
+      {[0, 1, 2].map(lane => <Racer key={lane} lane={lane} playerRef={lane === 0 ? playerRef : undefined} color={lane === 0 ? props.color : lane === 1 ? COLORS.gold : COLORS.white} progress={props.progress} seconds={props.seconds} boosted={props.boosted} />)}
+      <CameraRig mode={props.cameraMode} follow={follow} resetKey={props.resetKey} playerRef={playerRef} active={visible && props.active !== false} boosted={props.boosted} />
       <ContextMonitor onLost={() => setLost(true)} />
     </Canvas>
   </SceneBoundary>
