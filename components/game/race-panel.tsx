@@ -5,7 +5,8 @@ import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties }
 import { Camera, ChevronDown, Coins, Flag, Gauge, LoaderCircle, Maximize, RotateCcw, Timer, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { coins, formatCoins, lapReward, lapSeconds, type GameState } from "@/lib/game";
+import { batteryTelemetry, BOOST_DURATION_SECONDS, coins, formatCoins, lapReward, lapSeconds, type GameState } from "@/lib/game";
+import { RaceBattery } from "./race-battery";
 import { cn } from "@/lib/utils";
 
 const RaceScene = dynamic(() => import("./race-scene"), {
@@ -68,6 +69,9 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
 }) {
   const reducedMotion = useSyncExternalStore(subscribeMotionPreference, () => window.matchMedia("(prefers-reduced-motion: reduce)").matches, () => true);
   const [cameraMode, setCameraMode] = useState(0);
+  const [inspect, setInspect] = useState(false);
+  const [bodyVisible, setBodyVisible] = useState(false);
+  const battery = batteryTelemetry(game);
   const [cameraChoice, setCameraChoice] = useState<boolean | null>(null);
   const followCamera = cameraChoice ?? !reducedMotion;
   const [resetKey, setResetKey] = useState(0);
@@ -102,17 +106,22 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
         </h2>
         <span className="live-tag">AUTO</span>
       </div>
-      <div className="scene-wrap">
-        <div className="scene-overlay lap-hud">
+      <div className={cn("scene-wrap", inspect && "is-inspecting")}>
+        {inspect ? <div className="scene-overlay inspect-hud"><strong>{bodyVisible ? "DETAIL MOBIL" : "DI BALIK BODI"}</strong><span>{bodyVisible ? "Cat metalik · ban · aero kit" : "2 sel · motor · penggerak 4WD"}</span></div> : <div className="scene-overlay lap-hud">
           <span>Lap</span><strong>{String(game.laps + 1).padStart(3, "0")}</strong>
-        </div>
-        <RaceScene model={game.carSelection?.model ?? 'neo-falcon'} progress={game.progress} seconds={seconds} color={game.color} boosted={boosted} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} />
+        </div>}
+        <RaceScene model={game.carSelection?.model ?? 'neo-falcon'} progress={game.progress} seconds={seconds} color={game.color} boosted={boosted} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
         <div className={cn("scene-overlay boost-hud", boosted && "boost-hud-active")} aria-hidden={!boosted}>
           <Zap aria-hidden="true" /><strong>2×</strong><span>GASPOL</span>
-          <i style={{ transform: `scaleX(${Math.max(0, Math.min(1, game.boostLeft / 10))})` }} />
+          <i style={{ transform: `scaleX(${Math.max(0, Math.min(1, game.boostLeft / BOOST_DURATION_SECONDS))})` }} />
         </div>
-        <div className="scene-overlay lane-hud"><i style={{ backgroundColor: game.color }} />JALUR 01<span>MOBILMU</span></div>
+        {!inspect && <div className="scene-overlay lane-hud"><i style={{ backgroundColor: game.color }} />JALUR 01<span>MOBILMU</span></div>}
+        {inspect && <div className="scene-overlay inspect-hint">Geser untuk memutar · balapan tetap jalan</div>}
         <div className="scene-controls">
+          {inspect ? <>
+            <Button variant="outline" size="sm" onClick={() => setBodyVisible(value => !value)} aria-pressed={bodyVisible} aria-label={bodyVisible ? "Lepas bodi untuk melihat baterai" : "Pasang bodi untuk melihat detail mobil"}>{bodyVisible ? "Lepas bodi" : "Pasang bodi"}</Button>
+            <Button variant="outline" size="sm" onClick={() => setInspect(false)}><Camera data-icon="inline-start" />Balapan</Button>
+          </> : <>
           <Button variant="outline" size="sm" onClick={() => setCameraChoice(!followCamera)} aria-pressed={!followCamera} aria-label={followCamera ? "Aktifkan kamera overview" : "Kembali ke kamera follow mobil"} title={followCamera ? "Lihat seluruh lintasan" : "Kembali mengikuti mobil"}>
             <Camera data-icon="inline-start" aria-hidden="true" />
             Overview
@@ -123,11 +132,12 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
           <Button variant="outline" size="icon-sm" onClick={() => { setCameraChoice(null); setCameraMode(0); setResetKey((v) => v + 1); }} aria-label={reducedMotion ? "Reset kamera ke overview" : "Reset kamera ke follow mobil"}>
             <RotateCcw aria-hidden="true" />
           </Button>
+          </>}
           <Button variant="outline" size="icon-sm" onClick={fullscreen} aria-label="Layar penuh">
             <Maximize aria-hidden="true" />
           </Button>
         </div>
-        <LapFeedback laps={game.laps} reward={lapReward(game)} active={active} />
+        <LapFeedback laps={game.laps} reward={lapReward(game)} active={active && !inspect} />
       </div>
       <div className="lap-progress" role="progressbar" aria-label="Progres putaran saat ini" aria-valuenow={Math.round(game.progress * 100)} aria-valuemin={0} aria-valuemax={100}>
         <div style={{ transform: `scaleX(${game.progress})` }} />
@@ -146,10 +156,14 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
           <div className="track-stat-value reward-value">{formatCoins(lapReward(game))}</div>
         </div>
       </div>
+      <RaceBattery game={game} inspect={inspect} onInspect={() => {
+        setInspect(value => !value);
+        panel.current?.scrollIntoView({ block: "start", behavior: reducedMotion ? "instant" : "smooth" });
+      }} />
       <div className="race-actions">
-        <Button variant="gold" size="lg" className="boost-button" onClick={onBoost} disabled={disabled || game.cooldown > 0} aria-busy={boosting} style={{ "--charge": `${(1 - game.cooldown / 35) * 100}%` } as CSSProperties}>
+        <Button variant="gold" size="lg" className="boost-button" onClick={onBoost} disabled={disabled || boosting || !battery.canBoost} aria-busy={boosting} style={{ "--charge": `${battery.percent}%` } as CSSProperties}>
           {boosting ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <Zap data-icon="inline-start" fill="currentColor" />}
-          <span>{boosting ? "Menyalakan boost…" : boosted ? "Ngacir!" : game.cooldown > 0 ? "Isi ulang" : "Gaspol 2×"}</span>
+          <span>{boosting ? "Menyalakan boost…" : boosted ? "Ngacir!" : game.cooldown > 0 ? "Mengisi baterai" : "Gaspol 2×"}</span>
           {!boosting && <small>{boosted ? `${Math.ceil(game.boostLeft)}s` : game.cooldown > 0 ? `${Math.ceil(game.cooldown)}s` : "10s"}</small>}
         </Button>
       </div>
