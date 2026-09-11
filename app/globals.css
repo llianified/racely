@@ -17,9 +17,9 @@
   --secondary-foreground: #d3e0f8;
   --muted: #1b2a41;
   --muted-foreground: #92a2ba;
-  --accent: #edbe72;
+  --accent: #ffc21c;
   --accent-foreground: #101722;
-  --destructive: #edbe72;
+  --destructive: #ffc21c;
   --border: #b4cafa14;
   --input: #b4cafa22;
   --ring: #5185ff;
@@ -154,15 +154,15 @@
 .boost-button:disabled { color: #a4bce8; background: #172840; border-color: #5185ff30; box-shadow: none; }
 .boost-button:disabled::after { content: ''; position: absolute; bottom: 0; height: 2px; width: var(--charge); background: var(--primary); left: 0; }
 .is-boosted .boost-button { background: #244995; color: white; }
-.race-reward { display: flex; align-items: center; gap: 13px; min-height: 83px; padding: 15px 20px; border: 1px solid #edbe7225; border-radius: 10px; background: linear-gradient(105deg, #edbe720a, transparent 80%), var(--card); }
-.reward-coin { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid #edbe7225; background: #edbe720c; border-radius: 50%; color: var(--accent); }
+.race-reward { display: flex; align-items: center; gap: 13px; min-height: 83px; padding: 15px 20px; border: 1px solid #ffc21c25; border-radius: 10px; background: linear-gradient(105deg, #ffc21c0a, transparent 80%), var(--card); }
+.reward-coin { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid #ffc21c25; background: #ffc21c0c; border-radius: 50%; color: var(--accent); }
 .reward-coin svg { width: 18px; }
 .reward-copy { flex: 1; min-width: 0; }
 .reward-copy > span { font-size: 8px; letter-spacing: 1.3px; color: var(--muted-foreground); }
 .reward-copy > strong { display: block; font-size: 25px; font-weight: 650; line-height: 1.25; letter-spacing: -.8px; font-variant-numeric: tabular-nums; }
 .reward-copy small { font-size: 10px; letter-spacing: 0; font-weight: 400; color: var(--muted-foreground); }
 .race-reward [data-slot='button'] { min-height: 40px; }
-.reward-ready .reward-coin { box-shadow: 0 0 20px #edbe7210; }
+.reward-ready .reward-coin { box-shadow: 0 0 20px #ffc21c10; }
 .garage-panel { background: #142033; }
 .car-showcase { position: relative; height: 205px; overflow: hidden; }
 .car-image { width: 100%; height: 100%; object-fit: cover; object-position: center 55%; mix-blend-mode: lighten; }
@@ -204,7 +204,7 @@
 .race-extras p, .race-extras .text-sm { font-size: 10px; }
 .race-extras .pt-4 { padding-top: 10px; }
 .race-extras .py-4 { padding-top: 10px; padding-bottom: 0; }
-.reward-ticket { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px; background: #edbe7207; border: 1px solid #edbe7226; border-radius: 12px; }
+.reward-ticket { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px; background: #ffc21c07; border: 1px solid #ffc21c26; border-radius: 12px; }
 .reward-ticket h3 { font-size: 13px; }
 .reward-ticket p { font-size: 11px; }
 .reward-ticket button { min-height: 40px; }
