@@ -252,9 +252,10 @@
 .level-segments { display: flex; gap: 3px; margin-top: 10px; }
 .level-segments > span { height: 4px; flex: 1; background: var(--secondary); border-radius: 2px; }
 .level-segments > span.filled { background: var(--primary); }
-.upgrade-action { display: flex; flex-direction: column; align-items: stretch; flex: 0 0 104px; min-width: 0; }
+.upgrade-action { display: flex; flex-direction: column; align-items: stretch; justify-content: center; flex: 0 0 104px; min-width: 0; }
 .upgrade-buy { width: 100%; min-height: 40px; font-variant-numeric: tabular-nums; }
-.upgrade-action > span { color: var(--muted-foreground); font-size: 14px; margin-top: 6px; text-align: center; overflow-wrap: anywhere; }
+.upgrade-buy[data-short] { font-size: 13px; }
+.upgrade-buy[data-short] svg { width: 13px; height: 13px; }
 .body-colors { display: flex; align-items: center; gap: 4px; }
 .color-swatch { height: 40px; width: 40px; border: 6px solid var(--card); border-radius: 50%; background: var(--swatch); color: var(--background); display: grid; place-items: center; }
 .color-swatch svg { width: 16px; height: 16px; stroke-width: 3; }
