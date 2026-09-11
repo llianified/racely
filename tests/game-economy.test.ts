@@ -3,7 +3,7 @@ import {
   calculateRaceSettlement,
   HEARTBEAT_CAP_SECONDS,
 } from "../lib/game-economy";
-import { INITIAL_GAME, batteryTelemetry, gameReducer, lapReward, lapSeconds, upgradeCost } from "../lib/game";
+import { INITIAL_GAME, batteryTelemetry, gameReducer, lapReward, lapSeconds, modificationPartName, modificationPreview, upgradeCost } from "../lib/game";
 
 const start = new Date("2026-09-11T00:00:00.000Z");
 
@@ -46,6 +46,49 @@ describe("Boost battery", () => {
     const charging = gameReducer(next, { type: "tick", delta: .5 });
     expect(charging.progress - next.progress).toBeCloseTo(.5 / 8);
     expect(charging.cooldown).toBeCloseTo(24.1);
+  });
+});
+
+describe("Modification workshop", () => {
+  it("simulates a single component without spending coins or mutating progress", () => {
+    const state = { ...INITIAL_GAME, balance: 40, boostLeft: 10, levels: { engine: 2, tires: 3, battery: 4 } };
+    const original = structuredClone(state);
+    const preview = modificationPreview(state, "engine");
+    expect(preview.cost).toBe(upgradeCost("engine", 2));
+    expect(preview.beforeSeconds).toBe(lapSeconds({ ...state, boostLeft: 0 }));
+    expect(preview.afterSeconds).toBeLessThan(preview.beforeSeconds);
+    expect(preview.afterReward).toBe(preview.beforeReward);
+    expect(state).toEqual(original);
+  });
+
+  it("shows the correct battery and tire effects on either circuit", () => {
+    for (const circuit of [0, 1]) {
+      const state = { ...INITIAL_GAME, circuit };
+      const battery = modificationPreview(state, "battery");
+      expect(battery.afterReward - battery.beforeReward).toBeCloseTo(.01);
+      expect(battery.afterSeconds).toBe(battery.beforeSeconds);
+      const tires = modificationPreview(state, "tires");
+      expect(tires.afterSeconds).toBeLessThan(tires.beforeSeconds);
+      expect(tires.afterReward).toBe(tires.beforeReward);
+    }
+  });
+
+  it("shows exact affordability and caps the maximum level", () => {
+    expect(modificationPreview({ ...INITIAL_GAME, balance: 24.5 }, "engine").shortfall).toBe(.5);
+    expect(modificationPreview({ ...INITIAL_GAME, balance: 25 }, "engine").shortfall).toBe(0);
+    const maxed = modificationPreview({ ...INITIAL_GAME, levels: { engine: 10, tires: 10, battery: 10 } }, "engine");
+    expect(maxed).toMatchObject({ maxed: true, nextLevel: 10, cost: 0 });
+    expect(maxed.afterSeconds).toBe(maxed.beforeSeconds);
+  });
+
+  it("names parts consistently across every tuning tier", () => {
+    expect(modificationPartName("engine", 1)).toBe("Motor standar");
+    expect(modificationPartName("engine", 2)).toBe("Motor sport");
+    expect(modificationPartName("engine", 4)).toBe("Motor sport");
+    expect(modificationPartName("engine", 5)).toBe("Motor racing");
+    expect(modificationPartName("engine", 7)).toBe("Motor racing");
+    expect(modificationPartName("engine", 8)).toBe("Motor pro");
+    expect(modificationPartName("engine", 10)).toBe("Motor pro");
   });
 });
 
