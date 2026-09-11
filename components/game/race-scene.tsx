@@ -69,7 +69,7 @@ function TrackBrand() {
     const ctx = canvas.getContext('2d')!
     ctx.clearRect(0, 0, 1024, 256)
     ctx.fillStyle = '#b2a5d9'; ctx.globalAlpha = .65; ctx.textAlign = 'center'
-    ctx.font = 'italic 900 116px Arial'; ctx.letterSpacing = '6px'; ctx.fillText('RACELY', 512, 145)
+    ctx.font = '900 116px Arial'; ctx.letterSpacing = '6px'; ctx.fillText('RACELY', 512, 145)
     ctx.font = '22px Arial'; ctx.fillText('M I N I   4 W D   /   R A C I N G   C L U B', 512, 205)
     ctx.fillStyle = '#ffce00'; ctx.fillRect(345, 235, 334, 3)
     const texture = new THREE.CanvasTexture(canvas)
@@ -87,7 +87,7 @@ const TrackMarkings = memo(function TrackMarkings() {
     canvas.width = 512; canvas.height = 768
     const ctx = canvas.getContext('2d')!
     ctx.fillStyle = '#e3ddf4'
-    ctx.font = 'italic 800 80px Arial'; ctx.textAlign = 'center'
+    ctx.font = '800 80px Arial'; ctx.textAlign = 'center'
     for (let lane = 0; lane < 3; lane++) {
       const y = lane * 256
       ctx.globalAlpha = .75
