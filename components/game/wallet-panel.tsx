@@ -113,7 +113,7 @@ export function WalletPanel({
             <Send aria-hidden="true" />
             Tarik saldo
           </h2>
-          <span>Min. {coins(MIN_WITHDRAW_COINS)}</span>
+          <Badge variant="secondary">Min. {coins(MIN_WITHDRAW_COINS)}</Badge>
         </div>
         <form className="wallet-form" onSubmit={submit}>
           <div className="wallet-field">
@@ -255,7 +255,7 @@ export function WalletPanel({
             <Clock aria-hidden="true" />
             Riwayat penarikan
           </h2>
-          <span>{game.withdrawals.length} permintaan</span>
+          <Badge variant="secondary">{game.withdrawals.length} permintaan</Badge>
         </div>
         {game.withdrawals.length === 0 ? (
           <p className="wallet-empty">

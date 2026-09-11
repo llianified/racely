@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Coins, Flag, Gift, LockKeyhole, Trophy } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -122,7 +123,7 @@ export function RewardsPanel({
             <Gift aria-hidden="true" />
             Rincian hadiah
           </h2>
-          <span>{game.missionsClaimed.length}/{MISSIONS.length} misi diklaim</span>
+          <Badge variant="secondary">{game.missionsClaimed.length}/{MISSIONS.length} misi diklaim</Badge>
         </div>
         <ul className="reward-list">
           {rows.map((row) => (
