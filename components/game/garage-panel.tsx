@@ -85,7 +85,6 @@ export function UpgradePanel({ game, onUpgrade, disabled = false }: { game: Game
               <div className="upgrade-action">
                 <Button
                   variant="gold"
-                  size="sm"
                   className="upgrade-buy"
                   data-short={!max && !affordable ? "" : undefined}
                   onClick={() => onUpgrade(key)}
