@@ -113,6 +113,25 @@ export const lapSeconds = (s: GameState) =>
   8 /
   (1 + (s.levels.engine - 1) * 0.15 + (s.levels.tires - 1) * 0.1) /
   (s.boostLeft > 0 ? 2 : 1);
+export const BOOST_DURATION_SECONDS = 10;
+export const BATTERY_RECHARGE_SECONDS = 25;
+
+// Derive reserve from the authoritative boost timers, so reloads cannot refill it.
+export function batteryTelemetry(s: Pick<GameState, "boostLeft" | "cooldown">) {
+  const discharging = s.boostLeft > 0;
+  const charging = !discharging && s.cooldown > 0;
+  const charge = Math.max(0, Math.min(1, discharging
+    ? s.boostLeft / BOOST_DURATION_SECONDS
+    : 1 - s.cooldown / BATTERY_RECHARGE_SECONDS));
+  return {
+    charge,
+    percent: Math.round(charge * 100),
+    phase: discharging ? "discharging" as const : charging ? "charging" as const : "ready" as const,
+    readyIn: Math.max(0, Math.ceil(s.cooldown)),
+    canBoost: !discharging && !charging,
+  };
+}
+
 export const totalLevel = (s: GameState) =>
   Object.values(s.levels).reduce((a, b) => a + b, 0) - 2;
 
@@ -165,7 +184,10 @@ export function gameReducer(s: GameState, action: GameAction): GameState {
   if (action.type === "hydrate") return action.state;
   if (s.carSelection?.model === null) return s;
   const delta = Math.max(0, Math.min(action.delta, 0.5));
-  const progress = s.progress + delta / lapSeconds(s);
+  const boostedSeconds = Math.min(delta, Math.max(0, s.boostLeft));
+  const normalSeconds = delta - boostedSeconds;
+  const normalLapSeconds = lapSeconds({ ...s, boostLeft: 0 });
+  const progress = s.progress + (boostedSeconds * 2 + normalSeconds) / normalLapSeconds;
   const completed = Math.floor(progress);
   const income = completed * lapReward(s);
   return {
