@@ -131,7 +131,10 @@
 .coin-balance small { @apply sr-only; }
 
 /* ── page heading ──────────────────────────────────── */
-.page-content { padding: 10px var(--gutter) calc(var(--nav-height) + var(--safe-bottom) + 14px); }
+.page-content { position: relative; padding: 10px var(--gutter) calc(var(--nav-height) + var(--safe-bottom) + 14px); }
+/* Keeps the 3D arena mounted and correctly sized while another tab is on screen,
+   so returning to Balapan never rebuilds the WebGL context. */
+.tab-offstage { position: absolute; inset-inline: var(--gutter); top: 0; visibility: hidden; opacity: 0; pointer-events: none; z-index: -1; }
 .page-heading { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-bottom: 8px; min-height: 32px; }
 .page-heading h1 { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: var(--fs-micro); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--subtle-foreground); }
 .page-heading h1::before { content: ''; width: 14px; height: 3px; flex-shrink: 0; border-radius: 2px; background: var(--accent); }
