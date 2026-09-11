@@ -100,8 +100,7 @@ export function WalletPanel({
         <div className="wallet-balance">
           <span className="eyebrow">Saldo tersedia</span>
           <strong>{formatCoins(balance)} <span>koin</span></strong>
-          <p>Setara {idr(balance)}</p>
-          <span className="wallet-rate">1 koin = {idr(1)}</span>
+          <p>~ {idr(balance)}</p>
         </div>
         <Button
           variant="gold"
