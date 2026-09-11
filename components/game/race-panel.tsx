@@ -4,7 +4,6 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { Camera, ChevronDown, Coins, Flag, Gauge, Maximize, RotateCcw, Timer, Zap } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { coins, formatCoins, lapReward, lapSeconds, type GameState } from "@/lib/game";
 import { cn } from "@/lib/utils";
@@ -101,10 +100,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
             <ChevronDown data-icon="inline-end" />
           </Button>
         </h2>
-        <Badge variant="secondary">
-          <Zap data-icon="inline-start" />
-          AUTO
-        </Badge>
+        <span className="live-tag">AUTO</span>
       </div>
       <div className="scene-wrap">
         <div className="scene-overlay lap-hud">
