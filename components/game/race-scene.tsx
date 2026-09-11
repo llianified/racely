@@ -8,9 +8,10 @@ import { CarLighting } from './car-lighting'
 import * as THREE from 'three'
 import { COLORS, MiniCar } from './mini-car'
 import type { CarModelId } from '@/lib/car-catalog'
+import type { GameState } from '@/lib/game'
 
 const HALF = 3.35
-export type SceneProps = { model?: CarModelId; progress: number; seconds: number; color: string; boosted: boolean; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean }
+export type SceneProps = { levels?: GameState['levels']; model?: CarModelId; progress: number; seconds: number; color: string; boosted: boolean; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean }
 
 function trackPoint(t: number, radius: number) {
   const straight = HALF * 2
@@ -45,7 +46,7 @@ function Ribbon({ inner, outer, height = .12, color, y = 0, glow = false }: { in
   </mesh>
 }
 
-function Racer({ lane, color, model, progress, seconds, boosted, playerRef }: { model?: CarModelId; lane: number; color: string; progress: number; seconds: number; boosted: boolean; playerRef?: RefObject<THREE.Group | null> }) {
+function Racer({ lane, color, model, progress, seconds, boosted, playerRef, levels }: { levels?: GameState['levels']; model?: CarModelId; lane: number; color: string; progress: number; seconds: number; boosted: boolean; playerRef?: RefObject<THREE.Group | null> }) {
   const ownRef = useRef<THREE.Group>(null)
   const group = playerRef ?? ownRef
   const phase = useRef(lane === 0 ? progress : lane * .32)
@@ -60,7 +61,7 @@ function Racer({ lane, color, model, progress, seconds, boosted, playerRef }: { 
     group.current.rotation.y = p.angle
   }, -2)
   return <group ref={group}>
-    <MiniCar color={color} model={model} scale={.85} speed={(HALF * 4 + Math.PI * 2 * (2.24 + lane * .68)) / (seconds * (lane === 0 ? 1 : 1.16 + lane * .08)) / .85} />
+    <MiniCar color={color} model={model} levels={levels} scale={.85} speed={(HALF * 4 + Math.PI * 2 * (2.24 + lane * .68)) / (seconds * (lane === 0 ? 1 : 1.16 + lane * .08)) / .85} />
     {lane === 0 && boosted && <pointLight color={COLORS.blue} intensity={3} distance={1.6} position={[0, .1, -.35]} />}
   </group>
 }
@@ -241,12 +242,12 @@ function CameraRig({ mode, follow, resetKey, playerRef, active, boosted, reduced
   </>
 }
 
-function CarInspector({ color, model, charge, reducedMotion, bodyVisible }: Pick<SceneProps, 'color' | 'model' | 'charge' | 'reducedMotion' | 'bodyVisible'>) {
+function CarInspector({ color, model, charge, reducedMotion, bodyVisible, levels }: Pick<SceneProps, 'color' | 'model' | 'charge' | 'reducedMotion' | 'bodyVisible' | 'levels'>) {
   const { size } = useThree()
   return <>
     <OrthographicCamera makeDefault position={[1.1, 1.5, 1.7]} zoom={Math.min(size.width / 1.6, size.height / 1.25)} near={.01} far={50} />
     <OrbitControls makeDefault target={[0, .12, 0]} enablePan={false} minZoom={100} maxZoom={450} minPolarAngle={.1} maxPolarAngle={Math.PI / 2.1} enableDamping={!reducedMotion} />
-    <MiniCar color={color} model={model} inspect={!bodyVisible} charge={charge} />
+    <MiniCar color={color} model={model} inspect={!bodyVisible} charge={charge} levels={levels} />
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -.008, 0]} receiveShadow>
       <circleGeometry args={[1.4, 64]} /><meshStandardMaterial color={COLORS.surface} roughness={.8} />
     </mesh>
@@ -302,10 +303,10 @@ export default function RaceScene(props: SceneProps) {
       <directionalLight position={[2, 10, 7]} intensity={2.2} castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={props.inspect ? -1.5 : -10} shadow-camera-right={props.inspect ? 1.5 : 10} shadow-camera-top={props.inspect ? 1.5 : 10} shadow-camera-bottom={props.inspect ? -1.5 : -10} shadow-normalBias={.006} shadow-bias={-.0001} />
       <directionalLight position={[-8, 5, -6]} intensity={.8} color={COLORS.white} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -.16, 0]} receiveShadow><planeGeometry args={[80, 80]} /><meshStandardMaterial color="#090c1d" roughness={.85} /></mesh>
-      {props.inspect ? <CarInspector color={props.color} model={props.model} charge={props.charge} reducedMotion={props.reducedMotion} bodyVisible={props.bodyVisible} /> : <>
+      {props.inspect ? <CarInspector levels={props.levels} color={props.color} model={props.model} charge={props.charge} reducedMotion={props.reducedMotion} bodyVisible={props.bodyVisible} /> : <>
       <Grid position={[0, -.145, 0]} args={[36, 36]} cellSize={1} cellThickness={.35} cellColor="#2c2852" sectionSize={5} sectionThickness={.6} sectionColor="#463e7a" fadeDistance={23} fadeStrength={3} />
       <Circuit circuit={props.circuit} />
-      {[0, 1, 2].map(lane => <Racer key={lane} lane={lane} model={lane === 0 ? props.model : 'neo-falcon'} playerRef={lane === 0 ? playerRef : undefined} color={lane === 0 ? props.color : lane === 1 ? COLORS.gold : COLORS.white} progress={props.progress} seconds={props.seconds} boosted={props.boosted} />)}
+      {[0, 1, 2].map(lane => <Racer key={lane} lane={lane} levels={lane === 0 ? props.levels : undefined} model={lane === 0 ? props.model : 'neo-falcon'} playerRef={lane === 0 ? playerRef : undefined} color={lane === 0 ? props.color : lane === 1 ? COLORS.gold : COLORS.white} progress={props.progress} seconds={props.seconds} boosted={props.boosted} />)}
       <CameraRig mode={props.cameraMode} follow={follow} resetKey={props.resetKey} playerRef={playerRef} active={visible && props.active !== false} boosted={props.boosted} reducedMotion={props.reducedMotion ?? false} />
       </>}
       <ContextMonitor onLost={() => setLost(true)} />

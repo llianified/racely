@@ -3,6 +3,7 @@
 import { memo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import type { CarModelId } from '@/lib/car-catalog'
+import type { GameState } from '@/lib/game'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 
@@ -381,24 +382,55 @@ function CarSurfaces({ parts, color, model, inspect = false }: {
   })}</>
 }
 
-function RollingWheel({ wheel, color, model, speed }: {
-  wheel: ReturnType<typeof createCarGeometry>['wheels'][number]; color: string; model: CarModelId; speed: number
+function RollingWheel({ wheel, color, model, speed, level }: {
+  wheel: ReturnType<typeof createCarGeometry>['wheels'][number]; color: string; model: CarModelId; speed: number; level: number
 }) {
   const group = useRef<THREE.Group>(null)
   useFrame((_, delta) => {
     if (group.current && !document.hidden) group.current.rotation.x = (group.current.rotation.x + Math.min(delta, .05) * speed / .122) % (Math.PI * 2)
   })
-  return <group ref={group} position={wheel.position}><CarSurfaces parts={wheel.parts} color={color} model={model} /></group>
+  return <group ref={group} position={wheel.position} scale={[1 + (level - 1) * .025, 1, 1]}>
+    <CarSurfaces parts={wheel.parts} color={color} model={model} />
+    {level > 1 && <mesh position={[Math.sign(wheel.position[0]) * .059, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+      <torusGeometry args={[.092, .004 + level * .0005, 8, 32]} />
+      <meshStandardMaterial color={COLORS.gold} metalness={.8} roughness={.25} />
+    </mesh>}
+  </group>
 }
 
-export const MiniCar = memo(function MiniCar({ color, model = 'neo-falcon', scale = 1, speed = 0, inspect = false, charge = 1 }: {
-  color: string; model?: CarModelId; scale?: number; speed?: number; inspect?: boolean; charge?: number
+const STOCK_LEVELS = { engine: 1, tires: 1, battery: 1 };
+
+const InstalledParts = memo(function InstalledParts({ levels, inspect }: { levels: GameState['levels']; inspect: boolean }) {
+  return <group name="installed-modifications">
+    {levels.engine > 1 && <group name="motor-heatsink" position={[0, .218, -.36]}>
+      <mesh castShadow><boxGeometry args={[.18, .025, .085]} /><meshStandardMaterial color={COLORS.navy} metalness={.65} roughness={.3} /></mesh>
+      {Array.from({ length: levels.engine + 1 }, (_, index) => <mesh key={index} position={[(index - levels.engine / 2) * .016, .025, 0]} castShadow>
+        <boxGeometry args={[.008, .04 + levels.engine * .003, .085]} />
+        <meshStandardMaterial color={COLORS.gold} metalness={.8} roughness={.28} />
+      </mesh>)}
+    </group>}
+    {levels.tires > 1 && SIDES.flatMap(end => SIDES.map(side => <mesh key={`${end}:${side}`} position={[side * .324, .21, end * .425]} castShadow>
+      <cylinderGeometry args={[.042 + levels.tires * .001, .042 + levels.tires * .001, .012 + levels.tires * .002, 24]} />
+      <meshStandardMaterial color={COLORS.gold} metalness={.8} roughness={.25} />
+    </mesh>))}
+    {levels.battery > 1 && SIDES.map(side => <group key={side} name="battery-retainer" position={[side * (inspect ? .061 : .205), inspect ? .20 : .16, .03]}>
+      <mesh castShadow><boxGeometry args={[.025, .025, .24]} /><meshStandardMaterial color={COLORS.navy} roughness={.5} metalness={.5} /></mesh>
+      {Array.from({ length: levels.battery - 1 }, (_, index) => <mesh key={index} position={[0, .016, -.096 + index * .024]} castShadow>
+        <boxGeometry args={[.033, .012, .012]} /><meshStandardMaterial color={COLORS.gold} metalness={.7} roughness={.3} />
+      </mesh>)}
+    </group>)}
+  </group>
+})
+
+export const MiniCar = memo(function MiniCar({ color, model = 'neo-falcon', scale = 1, speed = 0, inspect = false, charge = 1, levels = STOCK_LEVELS }: {
+  color: string; model?: CarModelId; scale?: number; speed?: number; inspect?: boolean; charge?: number; levels?: GameState['levels']
 }) {
   const geometry = GEOMETRY_CACHE[model] ?? (GEOMETRY_CACHE[model] = createCarGeometry(model))
   return <group scale={scale}>
     <CarSurfaces parts={geometry.shell} color={color} model={model} inspect={inspect} />
     {inspect && <CarSurfaces parts={geometry.internals} color={color} model={model} />}
-    {geometry.wheels.map((wheel, index) => <RollingWheel key={index} wheel={wheel} color={color} model={model} speed={speed} />)}
+    <InstalledParts levels={levels} inspect={inspect} />
+    {geometry.wheels.map((wheel, index) => <RollingWheel key={index} wheel={wheel} color={color} model={model} speed={speed} level={levels.tires} />)}
     {inspect && Array.from({ length: 5 }, (_, index) => <mesh key={index} position={[(index - 2) * .023, .216, -.157]}>
       <boxGeometry args={[.016, .008, .018]} />
       <meshStandardMaterial color={COLORS.navy} emissive={COLORS.gold} emissiveIntensity={charge > index / 5 ? 1.8 : 0} />
