@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { memo, type CSSProperties } from "react";
-import { ArrowUp, BatteryMedium, Check, Cog, CircleDot } from "lucide-react";
+import { ArrowUp, BatteryMedium, Check, Cog, CircleDot, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -102,11 +102,18 @@ export function UpgradePanel({ game, onUpgrade, disabled = false }: { game: Game
                 </div>
               </div>
               <div className="upgrade-action">
-                <Button variant="gold" size="sm" className="upgrade-buy" onClick={() => onUpgrade(key)} disabled={disabled || max || !affordable} aria-label={max ? `${title} level maksimal` : `Upgrade ${title}, ${coins(cost)}`}>
-                  {max ? <Check data-icon="inline-start" /> : <ArrowUp data-icon="inline-start" />}
-                  {max ? "MAX" : `${formatCoins(cost)} koin`}
+                <Button
+                  variant="gold"
+                  size="sm"
+                  className="upgrade-buy"
+                  data-short={!max && !affordable ? "" : undefined}
+                  onClick={() => onUpgrade(key)}
+                  disabled={disabled || max || !affordable}
+                  aria-label={max ? `${title} level maksimal` : affordable ? `Upgrade ${title}, ${coins(cost)}` : `Upgrade ${title} butuh ${coins(cost)}, kurang ${coins(cost - Math.floor(game.balance))}`}
+                >
+                  {max ? <Check data-icon="inline-start" /> : affordable ? <ArrowUp data-icon="inline-start" /> : <Lock data-icon="inline-start" />}
+                  {max ? "MAX" : affordable ? `${formatCoins(cost)} koin` : `Kurang ${formatCoins(cost - Math.floor(game.balance))}`}
                 </Button>
-                {!max && !affordable && <span>Kurang {formatCoins(cost - Math.floor(game.balance))}</span>}
               </div>
             </div>
           );
