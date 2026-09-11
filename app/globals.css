@@ -202,7 +202,7 @@
 .is-boosted .boost-button:disabled { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); border-top-color: var(--primary); }
 .is-boosted .boost-button:disabled svg { color: var(--primary-foreground); }
 
-/* ── hasil balapan ─────────────────────────────────── */
+/* ── hasil balapan ──────────────────────────────��──── */
 .race-reward { position: relative; display: flex; align-items: center; gap: 10px; padding: 10px var(--gutter) 10px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); transition: border-color .25s; }
 .race-reward::before { content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; background: var(--secondary); transition: background .25s; }
 .reward-ready { border-color: color-mix(in srgb, var(--accent) 32%, transparent); }
@@ -241,7 +241,7 @@
 .upgrade-panel .panel-heading { padding: 16px 16px 0; }
 .upgrade-panel .panel-heading h2 { font-size: 16px; }
 .upgrade-list { padding-inline: 16px; }
-.upgrade-row { display: flex; align-items: center; gap: 12px; padding-block: 16px; border-bottom: 1px solid var(--border); }
+.upgrade-row { display: flex; align-items: flex-end; gap: 12px; padding-block: 16px; border-bottom: 1px solid var(--border); }
 .upgrade-row:last-child { border-bottom: none; }
 .upgrade-info { flex: 1 1 auto; min-width: 0; }
 .upgrade-name { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
@@ -252,7 +252,7 @@
 .level-segments { display: flex; gap: 3px; margin-top: 10px; }
 .level-segments > span { height: 4px; flex: 1; background: var(--secondary); border-radius: 2px; }
 .level-segments > span.filled { background: var(--primary); }
-.upgrade-action { display: flex; flex-direction: column; align-items: stretch; justify-content: center; flex: 0 0 104px; min-width: 0; }
+.upgrade-action { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-end; flex: 0 0 104px; min-width: 0; }
 .upgrade-buy { width: 100%; min-height: 40px; font-variant-numeric: tabular-nums; }
 .upgrade-buy[data-short] { font-size: 13px; }
 .upgrade-buy[data-short] svg { width: 13px; height: 13px; }
