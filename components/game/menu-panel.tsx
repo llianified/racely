@@ -6,6 +6,7 @@ import {
   Trophy, Warehouse, Wrench, Zap,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { GameTab } from "./game-navigation";
 
 export function MenuPanel({
@@ -45,10 +46,6 @@ export function MenuPanel({
 
   return (
     <section className="menu-panel panel section-enter" aria-label="Menu Racely">
-      <div className="menu-intro">
-        <span className="eyebrow">RACELY / MINI 4WD</span>
-        <p>Semua yang kamu butuhkan untuk ngegas.</p>
-      </div>
       <div className="menu-groups">
         {groups.map(({ title, icon: Icon, items }, index) => (
           <details className="menu-group" key={title} open={index === 0}>
@@ -59,21 +56,21 @@ export function MenuPanel({
             </summary>
             <div className="menu-items">
               {items.map(({ label, icon: ItemIcon, action, badge }) => (
-                <button type="button" key={label} onClick={action}>
+                <Button variant="menu" key={label} onClick={action}>
                   <ItemIcon aria-hidden="true" />
                   <span>{label}</span>
                   {badge ? <Badge variant="secondary">{badge}</Badge> : <ChevronRight className="menu-item-arrow" aria-hidden="true" />}
-                </button>
+                </Button>
               ))}
             </div>
           </details>
         ))}
-        <button className="menu-direct" onClick={onWallet}>
+        <Button variant="menuDirect" onClick={onWallet}>
           <Coins aria-hidden="true" /><span>Koin virtual</span><ArrowUpRight aria-hidden="true" />
-        </button>
-        <button className="menu-direct" onClick={onHelp}>
+        </Button>
+        <Button variant="menuDirect" onClick={onHelp}>
           <CircleHelp aria-hidden="true" /><span>Cara bermain</span><ArrowUpRight aria-hidden="true" />
-        </button>
+        </Button>
       </div>
       <p className="menu-note"><ShieldCheck aria-hidden="true" />Balapan untuk seru-seruan. Tanpa uang sungguhan.</p>
     </section>
