@@ -3,7 +3,6 @@
 import {
   Flag,
   Warehouse,
-  ClipboardList,
   Gift,
   Coins,
   Menu,
@@ -11,12 +10,11 @@ import {
 import { cn } from "@/lib/utils";
 import { rupiah } from "@/lib/game";
 
-export type GameTab = "menu" | "race" | "garage" | "missions" | "rewards";
+export type GameTab = "menu" | "race" | "garage" | "rewards";
 export const NAV_ITEMS = [
   { id: "menu" as const, label: "Menu", icon: Menu },
   { id: "race" as const, label: "Balapan", icon: Flag },
   { id: "garage" as const, label: "Garasi", icon: Warehouse },
-  { id: "missions" as const, label: "Misi", icon: ClipboardList },
   { id: "rewards" as const, label: "Hadiah", icon: Gift },
 ];
 export function Brand() {
