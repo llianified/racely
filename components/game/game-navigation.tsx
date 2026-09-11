@@ -6,16 +6,18 @@ import {
   Gift,
   Coins,
   Menu,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { rupiah } from "@/lib/game";
+import { formatCoins } from "@/lib/game";
 
-export type GameTab = "menu" | "race" | "garage" | "rewards";
+export type GameTab = "menu" | "race" | "garage" | "rewards" | "wallet";
 export const NAV_ITEMS = [
   { id: "menu" as const, label: "Menu", icon: Menu },
   { id: "race" as const, label: "Balapan", icon: Flag },
   { id: "garage" as const, label: "Garasi", icon: Warehouse },
   { id: "rewards" as const, label: "Hadiah", icon: Gift },
+  { id: "wallet" as const, label: "Dompet", icon: Wallet },
 ];
 export function Brand() {
   return (
@@ -83,12 +85,12 @@ export function Topbar({
         <button
           onClick={onWallet}
           className="coin-balance"
-          aria-label="Lihat koin virtual"
+          aria-label={`Dompet, ${formatCoins(balance)} koin`}
         >
           <Coins />
           <span>
-            <strong key={balance}>{rupiah(balance)}</strong>
-            <small>KOIN VIRTUAL</small>
+            <strong key={balance}>{formatCoins(balance)}</strong>
+            <small>KOIN</small>
           </span>
         </button>
         <button

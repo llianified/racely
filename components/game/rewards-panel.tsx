@@ -4,9 +4,16 @@ import { Check, Coins, Flag, Gift, LockKeyhole, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { MISSIONS, missionValue, rupiah, type GameState } from "@/lib/game";
+import {
+  coins,
+  MISSIONS,
+  missionValue,
+  roundCoins,
+  STARTER_GIFT,
+  type GameState,
+} from "@/lib/game";
 
-export const GIFT_AMOUNT = 5000;
+export const GIFT_AMOUNT = STARTER_GIFT;
 
 type RewardRow = {
   id: string;
@@ -23,7 +30,10 @@ export function claimableTotal(game: GameState) {
   const missions = MISSIONS.filter(
     (m) => !game.missionsClaimed.includes(m.id) && missionValue(game, m.id) >= m.target,
   ).reduce((sum, m) => sum + m.reward, 0);
-  return game.pending + (game.rewardClaimed ? 0 : GIFT_AMOUNT) + missions;
+  // Fractions stay in pending until they add up to a full coin.
+  return roundCoins(
+    Math.floor(game.pending) + (game.rewardClaimed ? 0 : GIFT_AMOUNT) + missions,
+  );
 }
 
 export function RewardsPanel({
@@ -48,18 +58,18 @@ export function RewardsPanel({
       icon: Flag,
       label: "Hasil balapan",
       note:
-        game.pending > 0
+        Math.floor(game.pending) > 0
           ? "Koin dari putaran yang sudah selesai"
-          : "Terus balapan untuk mengumpulkan koin",
+          : "Kumpulkan minimal 1 koin utuh untuk klaim",
       amount: game.pending,
-      state: game.pending > 0 ? "ready" : "waiting",
+      state: Math.floor(game.pending) > 0 ? "ready" : "waiting",
       onClaim: onClaimRace,
     },
     {
       id: "gift",
       icon: Gift,
       label: "Bonus starter",
-      note: "Sekali per akun. Untuk koin virtual saja.",
+      note: "Sekali per akun. Modal awal buat upgrade pertama.",
       amount: GIFT_AMOUNT,
       state: game.rewardClaimed ? "claimed" : "ready",
       onClaim: onClaimGift,
@@ -86,7 +96,7 @@ export function RewardsPanel({
       <section className="rewards-hero" aria-label="Total hadiah siap diklaim">
         <div className="rewards-hero-copy">
           <span className="eyebrow">Siap diklaim</span>
-          <strong>{rupiah(total)}</strong>
+          <strong>{coins(total)}</strong>
           <p>
             {readyCount > 0
               ? `${readyCount} hadiah menunggu di garasimu.`
@@ -146,7 +156,7 @@ export function RewardsPanel({
                 )}
               </div>
               <div className="reward-row-action">
-                <strong>{rupiah(row.amount)}</strong>
+                <strong>{coins(row.amount)}</strong>
                 {row.state === "claimed" ? (
                   <span className="mission-status">
                     <Check size={14} aria-hidden="true" />
@@ -175,8 +185,8 @@ export function RewardsPanel({
       </section>
 
       <p className="rewards-note">
-        Semua hadiah berupa koin virtual Racely. Tidak bisa ditarik, ditukar
-        uang, atau ditransfer.
+        Semua hadiah berupa koin Racely. Koin bisa dipakai untuk upgrade atau
+        ditarik lewat menu Dompet.
       </p>
     </div>
   );
