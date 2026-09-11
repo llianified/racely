@@ -19,19 +19,19 @@ const buttonVariants = cva(
         destructive:
           'bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40',
         link: 'text-primary underline-offset-4 hover:underline',
+        menu: 'justify-start whitespace-normal text-left font-semibold text-secondary-foreground hover:bg-menu-header [&_svg]:text-muted-foreground',
+        menuDirect: 'justify-start whitespace-normal bg-secondary text-left text-secondary-foreground hover:bg-menu-header [&_svg]:text-muted-foreground [&_svg:last-child]:ml-auto',
+        circuit: 'justify-between whitespace-normal bg-secondary text-left text-secondary-foreground hover:bg-secondary/80 [&>span]:shrink-0 [&>span]:text-xs [&>span]:text-muted-foreground',
       },
       size: {
-        default:
-          'min-h-11 gap-2 px-4',
-        xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: 'min-h-14 gap-2 px-6 text-base',
+        default: 'min-h-11 gap-2 px-4 py-2',
+        xs: 'min-h-11 gap-1 px-2 py-2 text-xs',
+        sm: 'min-h-11 gap-1.5 px-3 py-2 text-xs',
+        lg: 'min-h-12 gap-2 px-4 py-3 text-sm',
         icon: 'size-11',
-        'icon-xs':
-          "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
-        'icon-sm':
-          'size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg',
-        'icon-lg': 'size-9',
+        'icon-xs': 'size-11',
+        'icon-sm': 'size-11',
+        'icon-lg': 'size-12',
       },
     },
     defaultVariants: {
