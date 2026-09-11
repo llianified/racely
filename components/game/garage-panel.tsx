@@ -25,10 +25,12 @@ export const BODY_COLORS = [
 
 export const GaragePanel = memo(function GaragePanel({
   game,
+  active = true,
   onChooseColor,
   disabled = false,
 }: {
   game: GameState;
+  active?: boolean;
   onChooseColor: (color: (typeof BODY_COLORS)[number]["color"], name: string) => void;
   disabled?: boolean;
 }) {
