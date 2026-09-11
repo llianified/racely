@@ -1,3 +1,4 @@
+@import url('https://api.fontshare.com/v2/css?f[]=excon@400,500,700,900&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
@@ -31,7 +32,7 @@
   --radius: .8rem;
 }
 @theme inline {
-  --font-sans: var(--font-geist);
+  --font-sans: 'Excon', 'Roboto', sans-serif;
   --font-mono: var(--font-geist-mono);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
