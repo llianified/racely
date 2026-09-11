@@ -5,7 +5,6 @@ import {
   useReducer,
   useRef,
   useState,
-  type CSSProperties,
 } from "react";
 import {
   ArrowUpRight,
@@ -110,7 +109,7 @@ function GameGate({ error, onRetry }: { error?: Error; onRetry?: () => void }) {
               </p>
             </div>
             {onRetry ? (
-              <Button className="w-full" onClick={onRetry}>
+              <Button variant="gold" size="lg" className="w-full" onClick={onRetry}>
                 Coba sinkronkan lagi
               </Button>
             ) : (
@@ -118,7 +117,7 @@ function GameGate({ error, onRetry }: { error?: Error; onRetry?: () => void }) {
                 href="https://t.me/RacelyBot?startapp=play"
                 target="_blank"
                 rel="noreferrer"
-                className={buttonVariants({ className: "w-full" })}
+                className={buttonVariants({ variant: "gold", size: "lg", className: "w-full" })}
               >
                 Buka @RacelyBot
                 <ArrowUpRight data-icon="inline-end" />
@@ -392,7 +391,7 @@ export function GameDashboard() {
                   Mobil melaju otomatis melawan 2 bot latihan. GASPOL menggandakan kecepatan selama 10 detik, lalu isi ulang 25 detik. Geser arena untuk orbit, cubit untuk zoom, atau ketuk ikon kamera.
                 </InfoHint>
               )}
-              <Button variant="ghost" size="icon" onClick={() => setDialog("help")} aria-label="Cara bermain">
+              <Button variant="ghost" size="icon-sm" onClick={() => setDialog("help")} aria-label="Cara bermain">
                 <CircleHelp aria-hidden="true" />
               </Button>
             </div>
@@ -424,38 +423,8 @@ export function GameDashboard() {
             </div>
           ) : tab === "garage" ? (
             <div className="garage-layout section-enter">
-                <GaragePanel game={game} />
+                <GaragePanel game={game} onChooseColor={chooseColor} disabled={Boolean(busyAction)} />
                 <UpgradePanel game={game} onUpgrade={upgrade} disabled={Boolean(busyAction)} />
-                <section id="body-colors" tabIndex={-1} className="panel color-panel">
-                  <div className="panel-heading">
-                    <h2>Warna bodi</h2>
-                    <InfoHint title="Warna bodi">Gratis. Warna pilihan langsung aktif di arena 3D dan tersimpan. Foto katalog tetap Electric Blue.</InfoHint>
-                  </div>
-                  <div className="body-colors" role="group" aria-label="Pilihan warna bodi">
-                    {(
-                      [
-                        { color: "#4275ff", name: "Electric Blue" },
-                        { color: "#f4b65b", name: "Champagne Gold" },
-                        { color: "#e9eef7", name: "Arctic White" },
-                      ] as const
-                    ).map((choice) => (
-                      <button
-                        key={choice.color}
-                        style={{ "--swatch": choice.color } as CSSProperties}
-                        className={cn(
-                          "color-swatch",
-                          game.color === choice.color && "selected",
-                        )}
-                        aria-label={choice.name}
-                        aria-pressed={game.color === choice.color}
-                        disabled={Boolean(busyAction)}
-                        onClick={() => chooseColor(choice.color, choice.name)}
-                      >
-                        {game.color === choice.color && <Check size={18} />}
-                      </button>
-                    ))}
-                  </div>
-                </section>
             </div>
           ) : tab === "missions" ? (
             <div className="garage-layout section-enter">
