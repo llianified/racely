@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { getGameState } from "@/lib/game-server";
 import {
+  getPreviewGameState,
+  PREVIEW_GAME_COOKIE,
+} from "@/lib/preview-game";
+import {
   authenticateTelegramRequest,
   getOrCreatePreviewIdentity,
   PREVIEW_SESSION_COOKIE,
@@ -14,19 +18,35 @@ export async function GET(request: Request) {
   try {
     const preview = getOrCreatePreviewIdentity(request);
     const identity = preview?.identity ?? authenticateTelegramRequest(request);
-    const game = await getGameState(identity);
+    const previewGame =
+      preview && !process.env.DATABASE_URL
+        ? getPreviewGameState(request, identity)
+        : null;
+    const game = previewGame?.state ?? (await getGameState(identity));
     const response = NextResponse.json(game, {
       headers: { "Cache-Control": "no-store" },
     });
+    const cookieOptions = {
+      httpOnly: true,
+      sameSite: "lax" as const,
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    };
 
     if (preview?.isNew) {
-      response.cookies.set(PREVIEW_SESSION_COOKIE, preview.sessionId, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-        maxAge: 60 * 60 * 24 * 7,
-      });
+      response.cookies.set(
+        PREVIEW_SESSION_COOKIE,
+        preview.sessionId,
+        cookieOptions,
+      );
+    }
+    if (previewGame) {
+      response.cookies.set(
+        PREVIEW_GAME_COOKIE,
+        previewGame.cookieValue,
+        cookieOptions,
+      );
     }
 
     return response;

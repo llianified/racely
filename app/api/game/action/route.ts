@@ -5,6 +5,11 @@ import {
   performGameAction,
 } from "@/lib/game-server";
 import {
+  performPreviewGameAction,
+  PREVIEW_GAME_COOKIE,
+  PreviewGameRuleError,
+} from "@/lib/preview-game";
+import {
   authenticateTelegramRequest,
   TelegramAuthError,
 } from "@/lib/telegram-auth";
@@ -29,18 +34,42 @@ export async function POST(request: Request) {
         { status: 400 },
       );
 
-    const game = await performGameAction(
-      identity,
-      body.data.requestId,
-      body.data.action,
-    );
-    return NextResponse.json(game, {
+    const previewGame =
+      identity.userId.startsWith("preview:") && !process.env.DATABASE_URL
+        ? performPreviewGameAction(
+            request,
+            identity,
+            body.data.requestId,
+            body.data.action,
+          )
+        : null;
+    const game =
+      previewGame?.state ??
+      (await performGameAction(
+        identity,
+        body.data.requestId,
+        body.data.action,
+      ));
+    const response = NextResponse.json(game, {
       headers: { "Cache-Control": "no-store" },
     });
+    if (previewGame) {
+      response.cookies.set(PREVIEW_GAME_COOKIE, previewGame.cookieValue, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7,
+      });
+    }
+    return response;
   } catch (error) {
     if (error instanceof TelegramAuthError)
       return NextResponse.json({ error: error.message }, { status: 401 });
-    if (error instanceof GameRuleError)
+    if (
+      error instanceof GameRuleError ||
+      error instanceof PreviewGameRuleError
+    )
       return NextResponse.json(
         { error: error.message },
         { status: error.status },
