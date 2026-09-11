@@ -174,8 +174,8 @@
 .lap-progress { position: relative; height: 4px; background: var(--secondary); overflow: hidden; }
 .lap-progress::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(25% - 2px), var(--background) calc(25% - 2px) 25%); pointer-events: none; }
 .lap-progress > div { width: 100%; height: 100%; transform-origin: left; background: var(--accent); }
-.track-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding-block: 10px; background: color-mix(in srgb, var(--background) 28%, var(--card)); }
-.track-stat { padding-inline: 10px; border-right: 1px solid var(--border); }
+.track-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: color-mix(in srgb, var(--background) 28%, var(--card)); }
+.track-stat { padding: 10px; border-right: 1px solid var(--border); }
 .track-stat:last-child { border: none; }
 .track-stat-label { color: var(--muted-foreground); display: flex; align-items: center; gap: 4px; font-size: var(--fs-nano); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .track-stat-label svg { width: 11px; height: 11px; flex-shrink: 0; }
@@ -202,7 +202,7 @@
 .is-boosted .boost-button:disabled { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); border-top-color: var(--primary); }
 .is-boosted .boost-button:disabled svg { color: var(--primary-foreground); }
 
-/* ── hasil balapan ──────────────────────────────����──── */
+/* ── hasil balapan ──────────────────────────────�����──── */
 .race-reward { position: relative; display: flex; align-items: center; gap: 10px; padding: 10px var(--gutter) 10px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); transition: border-color .25s; }
 .race-reward::before { content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; background: var(--secondary); transition: background .25s; }
 .reward-ready { border-color: color-mix(in srgb, var(--accent) 32%, transparent); }
@@ -376,7 +376,7 @@
 .boot-bar > span { display: block; width: 42%; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--primary), var(--accent)); animation: boot-slide 1.15s ease-in-out infinite; }
 @keyframes boot-slide { 0% { transform: translateX(-105%); } 100% { transform: translateX(240%); } }
 .circuit-preview { display: flex; align-items: center; gap: 12px; margin: 10px calc(var(--gutter) * -1) 0; padding: 12px var(--gutter); border-block: 1px dashed var(--border); color: var(--foreground); }
-.circuit-ticket-number { flex-shrink: 0; align-self: stretch; display: flex; align-items: center; padding-right: 12px; border-right: 1px solid var(--border); color: var(--subtle-foreground); font-size: 30px; font-style: italic; font-weight: 900; letter-spacing: -.06em; line-height: 1; }
+.circuit-ticket-number { flex-shrink: 0; align-self: stretch; display: flex; align-items: center; margin-block: -12px; padding: 12px 12px 12px 0; border-right: 1px solid var(--border); color: var(--subtle-foreground); font-size: 30px; font-style: italic; font-weight: 900; letter-spacing: -.06em; line-height: 1; }
 .circuit-ticket-flag { width: 20px; height: 20px; flex-shrink: 0; color: var(--subtle-foreground); margin-left: auto; }
 .circuit-panel { border-radius: 10px; }
 .circuit-panel .circuit-progress [data-slot='progress-track'] { height: 4px; }
