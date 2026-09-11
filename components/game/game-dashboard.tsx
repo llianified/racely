@@ -14,6 +14,7 @@ import {
   Flag,
   Zap,
 } from "lucide-react";
+import Image from "next/image";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
@@ -96,6 +97,14 @@ async function readGameResponse(response: Response): Promise<GameState> {
 function BootScreen() {
   return (
     <main className="boot-screen">
+      <Image
+        src="/racely-logo.png"
+        alt=""
+        width={112}
+        height={112}
+        priority
+        className="boot-logo"
+      />
       <h1 className="boot-word">RACELY</h1>
       <div
         className="boot-bar"
@@ -114,9 +123,14 @@ function GameGate({ error, onRetry }: { error: Error; onRetry?: () => void }) {
     <main className="flex min-h-dvh items-center justify-center bg-background px-6 text-center text-foreground">
       <Toaster theme="dark" position="top-center" />
       <section className="panel flex w-full max-w-md flex-col items-center gap-5 p-8">
-        <div className="brand-mark flex size-14 items-center justify-center rounded-2xl bg-primary/10">
-          <Flag />
-        </div>
+        <Image
+          src="/racely-logo.png"
+          alt="Logo Racely"
+          width={96}
+          height={96}
+          priority
+          className="gate-logo"
+        />
         <div>
           <p className="eyebrow">RACELY TELEGRAM MINI APP</p>
           <h1 className="mt-2 text-2xl font-semibold">
