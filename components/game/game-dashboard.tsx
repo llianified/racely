@@ -411,6 +411,7 @@ export function GameDashboard() {
       <>
         <Toaster theme="dark" position="top-center" />
         <CarSelection
+          developmentPreview={Boolean(game.developmentPreview)}
           returningPlayer={game.carSelection.returningPlayer}
           initialColor={game.color}
           saving={busyAction === "select-car"}
