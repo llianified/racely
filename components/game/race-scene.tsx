@@ -6,7 +6,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid, OrbitControls, RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
 
-const COLORS = { blue: '#4275ff', navy: '#0b111c', surface: '#121b2b', gray: '#8d9bb0', white: '#e9eef7', gold: '#f4b65b' }
+const COLORS = { blue: '#7841ee', navy: '#090c1d', surface: '#191939', gray: '#9789cd', white: '#d9d1f4', gold: '#ffce00' }
 const HALF = 3.35
 export type SceneProps = { progress: number; seconds: number; color: string; boosted: boolean; cameraMode: number; resetKey: number; circuit: number }
 
@@ -89,7 +89,7 @@ function TrackBrand() {
     const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 256
     const ctx = canvas.getContext('2d')!
     ctx.clearRect(0, 0, 1024, 256)
-    ctx.fillStyle = '#92a2ba'; ctx.globalAlpha = .32; ctx.textAlign = 'center'
+    ctx.fillStyle = '#9789cd'; ctx.globalAlpha = .32; ctx.textAlign = 'center'
     ctx.font = 'italic 900 116px Arial'; ctx.fillText('RACELY', 512, 145)
     ctx.font = '25px Arial'; ctx.fillText('N I G H T   R A C I N G   C L U B', 512, 205)
     return new THREE.CanvasTexture(canvas)
@@ -100,11 +100,11 @@ function TrackBrand() {
 
 const Circuit = memo(function Circuit({ circuit }: { circuit: number }) {
   return <group>
-    <Ribbon inner={1.7} outer={4.1} height={.12} y={-.14} color="#070d17" />
-    <Ribbon inner={1.85} outer={3.96} height={.10} color="#26364b" />
-    {[0, 1, 2].map(i => <Ribbon key={i} inner={1.9 + i * .68} outer={2.57 + i * .68} height={.11} color={i === 1 ? '#354459' : '#28394e'} />)}
-    {[1.88, 2.56, 3.24, 3.92].map((r, i) => <Ribbon key={r} inner={r} outer={r + .055} height={i === 0 || i === 3 ? .28 : .2} color={i === 0 || i === 3 ? '#1d3c68' : '#8b9cb4'} />)}
-    {[1.88, 3.92].map(r => <Ribbon key={r} inner={r} outer={r + .06} height={.018} y={.28} glow color={circuit ? COLORS.gold : '#649aff'} />)}
+    <Ribbon inner={1.7} outer={4.1} height={.12} y={-.14} color="#090c1d" />
+    <Ribbon inner={1.85} outer={3.96} height={.10} color="#2c2852" />
+    {[0, 1, 2].map(i => <Ribbon key={i} inner={1.9 + i * .68} outer={2.57 + i * .68} height={.11} color={i === 1 ? '#463e7a' : '#2c2852'} />)}
+    {[1.88, 2.56, 3.24, 3.92].map((r, i) => <Ribbon key={r} inner={r} outer={r + .055} height={i === 0 || i === 3 ? .28 : .2} color={i === 0 || i === 3 ? '#5027a7' : '#9789cd'} />)}
+    {[1.88, 3.92].map(r => <Ribbon key={r} inner={r} outer={r + .06} height={.018} y={.28} glow color={circuit ? COLORS.gold : '#a37ef2'} />)}
     <TrackBrand />
     <group position={[-1.55, 0, -2.95]}>
       {[-1.12, 1.12].map(z => <mesh key={z} position={[0, .85, z]} castShadow><boxGeometry args={[.16, 1.7, .16]} /><meshStandardMaterial color={COLORS.blue} /></mesh>)}
@@ -176,13 +176,13 @@ export default function RaceScene(props: SceneProps) {
   return <SceneBoundary key={attempt} onRetry={retry}>
     {!ready && <div className="scene-loading absolute inset-0" role="status"><Flag /><strong>Menyalakan lampu sirkuit.</strong><span>Menyiapkan lintasan 3D…</span></div>}
     <Canvas orthographic dpr={[1, 1.25]} frameloop={visible ? 'always' : 'never'} shadows="percentage" camera={{ position: [9, 12.5, 12], zoom: 30, near: .1, far: 100 }} gl={{ antialias: true, alpha: false, powerPreference: 'default' }} fallback={<SceneError onRetry={retry} />} onCreated={() => setReady(true)} aria-label="Arena mini 4WD 3D. Geser untuk memutar, cubit untuk zoom.">
-      <color attach="background" args={['#101a2a']} />
+      <color attach="background" args={['#191939']} />
       <ambientLight intensity={.9} />
       <hemisphereLight args={[COLORS.white, COLORS.navy, 1.1]} />
       <directionalLight position={[2, 10, 7]} intensity={2.6} castShadow shadow-mapSize={[512, 512]} shadow-camera-left={-12} shadow-camera-right={12} shadow-camera-top={12} shadow-camera-bottom={-12} shadow-normalBias={.04} />
       <directionalLight position={[-8, 5, -6]} intensity={1.8} color={COLORS.blue} />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -.16, 0]} receiveShadow><planeGeometry args={[80, 80]} /><meshStandardMaterial color="#0e1727" roughness={.85} /></mesh>
-      <Grid position={[0, -.145, 0]} args={[36, 36]} cellSize={1} cellThickness={.35} cellColor="#33445c" sectionSize={5} sectionThickness={.6} sectionColor="#445979" fadeDistance={23} fadeStrength={3} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -.16, 0]} receiveShadow><planeGeometry args={[80, 80]} /><meshStandardMaterial color="#090c1d" roughness={.85} /></mesh>
+      <Grid position={[0, -.145, 0]} args={[36, 36]} cellSize={1} cellThickness={.35} cellColor="#2c2852" sectionSize={5} sectionThickness={.6} sectionColor="#463e7a" fadeDistance={23} fadeStrength={3} />
       <Circuit circuit={props.circuit} />
       {[0, 1, 2].map(lane => <Racer key={lane} lane={lane} color={lane === 0 ? props.color : lane === 1 ? COLORS.gold : COLORS.white} progress={props.progress} seconds={props.seconds} boosted={props.boosted} />)}
       <CameraRig mode={props.cameraMode} resetKey={props.resetKey} />
