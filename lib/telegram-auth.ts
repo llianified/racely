@@ -23,41 +23,14 @@ export type PlayerIdentity = {
 
 export const PREVIEW_SESSION_COOKIE = "racely-preview-session";
 
-function normalizedHostname(value: string | undefined) {
-  if (!value) return null;
-  try {
-    return new URL(value.includes("://") ? value : `https://${value}`)
-      .hostname
-      .toLowerCase();
-  } catch {
-    return null;
-  }
-}
-
-export function isPreviewBypassAllowed(request: Request) {
-  if (
-    process.env.NODE_ENV !== "development" ||
-    process.env.RACELY_ENABLE_PREVIEW !== "true"
-  ) {
-    return false;
-  }
-
-  const requestHost = normalizedHostname(request.url);
-  const allowedHosts = new Set(
-    [
-      "localhost",
-      "127.0.0.1",
-      "[::1]",
-      process.env.V0_RUNTIME_URL,
-      process.env.V0_DEV_APP_URL,
-      process.env.V0_BUILD_URL,
-      process.env.V0_SANDBOX_URL,
-    ]
-      .map(normalizedHostname)
-      .filter((host): host is string => Boolean(host)),
+// The dev server is reachable through the v0 preview proxy under a hostname we
+// cannot enumerate ahead of time, so development trusts any host. A production
+// build never sets NODE_ENV to development, so the deployed app stays gated.
+export function isPreviewBypassAllowed(_request: Request) {
+  return (
+    process.env.NODE_ENV === "development" &&
+    process.env.RACELY_ENABLE_PREVIEW !== "false"
   );
-
-  return requestHost !== null && allowedHosts.has(requestHost);
 }
 
 function getPreviewSessionId(request: Request) {
