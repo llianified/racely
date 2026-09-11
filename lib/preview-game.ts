@@ -3,21 +3,30 @@ import "server-only";
 import { Buffer } from "node:buffer";
 import { z } from "zod";
 import {
+  accountPattern,
   INITIAL_GAME,
   MISSIONS,
   lapReward,
   lapSeconds,
   missionValue,
+  roundCoins,
+  STARTER_GIFT,
   upgradeCost,
+  WITHDRAW_METHODS,
   type GameCommand,
   type GameState,
   type Upgrade,
+  type WithdrawMethod,
 } from "@/lib/game";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
 
-const STARTER_GIFT = 5000;
 const MAX_OFFLINE_SECONDS = 24 * 60 * 60;
 const MAX_RECEIPTS = 12;
+const MAX_WITHDRAWALS = 8;
+const METHOD_IDS = WITHDRAW_METHODS.map((method) => method.id) as [
+  WithdrawMethod,
+  ...WithdrawMethod[],
+];
 const previewGameSchema = z.object({
   version: z.literal(1),
   userId: z.string(),
@@ -45,6 +54,20 @@ const previewGameSchema = z.object({
       username: z.string().nullable(),
       photoUrl: z.string().nullable(),
     }),
+    withdrawals: z
+      .array(
+        z.object({
+          id: z.string(),
+          coins: z.number().nonnegative(),
+          method: z.enum(METHOD_IDS),
+          account: z.string(),
+          accountName: z.string(),
+          status: z.enum(["pending", "processing", "paid", "rejected"]),
+          createdAt: z.string(),
+        }),
+      )
+      .max(MAX_WITHDRAWALS)
+      .default([]),
   }),
 });
 
@@ -72,6 +95,7 @@ function initialPreviewGame(identity: PlayerIdentity, now: number): PreviewGame 
       ...INITIAL_GAME,
       levels: { ...INITIAL_GAME.levels },
       missionsClaimed: [],
+      withdrawals: [],
       player: {
         name: identity.displayName,
         username: identity.username,
@@ -126,7 +150,7 @@ function settlePreviewGame(game: PreviewGame, now: number): PreviewGame {
       : 0;
   const progress = game.state.progress + boostedProgress + normalProgress;
   const completedLaps = Math.floor(progress);
-  const income = completedLaps * lapReward(game.state);
+  const income = roundCoins(completedLaps * lapReward(game.state));
 
   return {
     ...game,
@@ -135,8 +159,8 @@ function settlePreviewGame(game: PreviewGame, now: number): PreviewGame {
       ...game.state,
       progress: progress % 1,
       laps: game.state.laps + completedLaps,
-      pending: game.state.pending + income,
-      earned: game.state.earned + income,
+      pending: roundCoins(game.state.pending + income),
+      earned: roundCoins(game.state.earned + income),
       boostLeft: Math.max(0, game.state.boostLeft - elapsed),
       cooldown: Math.max(0, game.state.cooldown - elapsed),
     },
@@ -156,9 +180,7 @@ function applyUpgrade(state: GameState, key: Upgrade) {
   }
   const cost = upgradeCost(key, level);
   if (state.balance < cost) {
-    throw new PreviewGameRuleError(
-      "Koin virtual belum cukup untuk upgrade ini.",
-    );
+    throw new PreviewGameRuleError("Koin belum cukup untuk upgrade ini.");
   }
   return {
     ...state,
@@ -191,8 +213,40 @@ export function performPreviewGameAction(
   let state = game.state;
   if (action.type === "upgrade") {
     state = applyUpgrade(state, action.key);
-  } else if (action.type === "claim" && state.pending > 0) {
-    state = { ...state, balance: state.balance + state.pending, pending: 0 };
+  } else if (action.type === "claim" && Math.floor(state.pending) > 0) {
+    const settled = Math.floor(state.pending);
+    state = {
+      ...state,
+      balance: state.balance + settled,
+      pending: roundCoins(state.pending - settled),
+    };
+  } else if (action.type === "withdraw") {
+    if (state.balance < action.coins) {
+      throw new PreviewGameRuleError(
+        "Saldo koin tidak cukup untuk penarikan ini.",
+      );
+    }
+    if (!accountPattern(action.method).test(action.account)) {
+      throw new PreviewGameRuleError(
+        "Nomor tujuan tidak valid untuk metode ini.",
+      );
+    }
+    state = {
+      ...state,
+      balance: state.balance - action.coins,
+      withdrawals: [
+        {
+          id: requestId,
+          coins: action.coins,
+          method: action.method,
+          account: action.account,
+          accountName: action.accountName,
+          status: "pending" as const,
+          createdAt: new Date(now).toISOString(),
+        },
+        ...state.withdrawals,
+      ].slice(0, MAX_WITHDRAWALS),
+    };
   } else if (action.type === "boost") {
     if (state.cooldown > 0) {
       throw new PreviewGameRuleError("Boost masih mengisi ulang.");
