@@ -141,7 +141,7 @@
 .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px var(--gutter) 0; }
 .panel-heading h2 { min-width: 0; font-size: var(--fs-body); font-weight: 800; }
 
-/* ── track ───�������─────────────────────────────────────── */
+/* ── track ───���������─────────────────────────────────────── */
 .track-panel { position: relative; transition: border-color .3s; }
 .track-panel.is-boosted { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
 .track-top { display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 4px 10px 4px 4px; }
@@ -253,8 +253,36 @@
 .gift-bottom > strong { color: var(--accent); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .mission-status { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-micro); color: var(--muted-foreground); }
 .mission-status svg { width: 13px; height: 13px; }
-.reward-ticket { padding: 10px var(--gutter) 12px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); min-width: 0; }
 .gift-bottom > strong { font-size: var(--fs-display); }
+
+/* ── hadiah ────────────────────────────────────────── */
+.rewards-hero { display: flex; flex-direction: column; gap: 10px; padding: 12px var(--gutter) 13px; border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: var(--radius); background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 12%, var(--card)), var(--card) 62%); }
+.rewards-hero-copy > strong { display: block; margin-top: 3px; font-size: 30px; font-weight: 900; line-height: 1.1; letter-spacing: -.035em; color: var(--accent); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.rewards-hero-copy > p { margin-top: 3px; font-size: var(--fs-micro); color: var(--muted-foreground); }
+.rewards-list-panel { padding: 10px var(--gutter) 6px; }
+.reward-list { display: flex; flex-direction: column; margin-top: 4px; }
+.reward-row { display: flex; align-items: flex-start; gap: 9px; padding-block: 10px; border-bottom: 1px solid var(--border); }
+.reward-row:last-child { border-bottom: none; }
+.reward-row.is-claimed { opacity: .55; }
+.reward-row-icon { display: grid; place-items: center; width: 28px; height: 28px; flex-shrink: 0; border-radius: 9px; background: var(--secondary); color: var(--muted-foreground); }
+.reward-row.is-ready .reward-row-icon { background: color-mix(in srgb, var(--accent) 16%, var(--secondary)); color: var(--accent); }
+.reward-row-icon svg { width: 14px; height: 14px; }
+.reward-row-copy { flex: 1 1 auto; min-width: 0; }
+.reward-row-copy h3 { font-size: var(--fs-small); font-weight: 800; }
+.reward-row-copy p { margin-top: 1px; font-size: var(--fs-micro); color: var(--muted-foreground); }
+.reward-row-copy .mission-progress { margin-top: 6px; }
+.reward-row-copy [data-slot='progress-track'] { background: var(--background); height: 5px; }
+.reward-row-action { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex: 0 0 auto; }
+.reward-row-action > strong { font-size: var(--fs-body); font-weight: 850; color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.reward-row.is-claimed .reward-row-action > strong { color: var(--muted-foreground); }
+.rewards-note { font-size: var(--fs-nano); line-height: 1.6; color: var(--muted-foreground); padding-inline: 2px; }
+
+/* ── boot ──────────────────────────────────────────── */
+.boot-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; min-height: 100dvh; padding: 24px; background: var(--background); }
+.boot-word { font-size: 34px; font-weight: 950; letter-spacing: -.03em; line-height: 1; color: var(--foreground); }
+.boot-bar { width: min(220px, 62vw); height: 4px; border-radius: 999px; background: var(--secondary); overflow: hidden; }
+.boot-bar > span { display: block; width: 42%; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--primary), var(--accent)); animation: boot-slide 1.15s ease-in-out infinite; }
+@keyframes boot-slide { 0% { transform: translateX(-105%); } 100% { transform: translateX(240%); } }
 .circuit-preview { margin-top: 10px; padding: 10px var(--gutter); border-radius: calc(var(--radius) * .75); background: var(--secondary); color: var(--foreground); }
 .circuit-preview h3 { font-size: var(--fs-title); line-height: 1.25; text-wrap: balance; }
 .circuit-preview p { color: var(--accent); font-size: var(--fs-micro); font-weight: 700; margin-top: 2px; }
