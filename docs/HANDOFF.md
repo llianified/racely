@@ -11,7 +11,8 @@ sebagai checklist `[ ]` supaya bisa dicentang saat dikerjakan.
 **Repo:** `llianified/racely`
 **Branch kerja saat ini:** `racely`
 **Branch asal:** `v0/telegram-integration-123e00b7` (commit awal `7af7a54`)
-**Commit terakhir:** `bb9481b` — *feat: add Telegram update handling and database schema changes*
+**Commit terakhir:** `0dce182` — *docs: add Racely handoff and remaining-work checklist*
+**Commit kode terakhir:** `bb9481b` — *feat: add Telegram update handling and database schema changes*
 **Stack:** Next.js (App Router, `output: "standalone"`), TypeScript, Drizzle ORM,
 Neon Postgres, Vitest, PM2 di AWS EC2.
 
@@ -182,15 +183,88 @@ Catatan dari pembacaan kode yang belum sempat diperbaiki:
 
 ## 5. Prompt Siap Pakai untuk Sesi Berikutnya
 
-> Lanjutkan implementasi produksi Racely di repo `llianified/racely`, branch
-> `racely`, commit `bb9481b`. Baca `docs/HANDOFF.md` lebih dulu — dokumen itu
-> memuat seluruh konteks, keputusan final, status env, dan checklist sisa
-> pekerjaan.
->
-> Kerjakan checklist bagian A sampai F secara berurutan. Prioritas pertama:
-> menstabilkan tiga file tes baru yang belum pernah dijalankan hijau.
->
-> Batasan keras: withdrawal tetap antrean manual berstatus pending; produksi
-> wajib auth Telegram initData; preview hanya untuk development eksplisit;
-> jangan pernah menulis atau mencetak credential, connection string, atau bot
-> token di mana pun.
+### 5a. Versi pendek (jika agent bisa membaca repo)
+
+```text
+Lanjutkan implementasi produksi Racely di repo llianified/racely, branch racely,
+commit 0dce182. Baca docs/HANDOFF.md lebih dulu — dokumen itu memuat seluruh
+konteks, keputusan final, status environment variable, checklist sisa pekerjaan,
+dan temuan audit yang belum ditindaklanjuti.
+
+Kerjakan checklist bagian A sampai F secara berurutan, dan centang item di
+docs/HANDOFF.md setiap kali satu item benar-benar selesai. Prioritas pertama:
+menstabilkan tiga file tes baru (tests/telegram-auth.test.ts,
+tests/telegram-bot.test.ts, tests/withdrawal-policy.test.ts) yang belum pernah
+dijalankan sampai hijau — perlakukan sebagai draft, bukan sebagai tes yang sudah
+terbukti benar.
+
+Batasan keras: withdrawal tetap antrean manual berstatus pending (jangan pernah
+jadi transfer otomatis); produksi wajib auth Telegram initData; preview hanya
+aktif saat RACELY_ENABLE_PREVIEW=true DAN NODE_ENV bukan production; jangan
+pernah menulis atau mencetak credential, connection string, atau bot token di
+file, log, commit, maupun jawaban. Cek env yang benar-benar tersedia sebelum
+meminta variabel apa pun, dan jangan pernah meminta DATABASE_URL ulang tanpa
+mengecek.
+```
+
+### 5b. Versi lengkap (self-contained, tanpa perlu baca dokumen ini)
+
+```text
+Lanjutkan implementasi produksi Racely: Telegram bot + Telegram Mini App
+berbasis Next.js App Router (output standalone), TypeScript, Drizzle ORM, Neon
+Postgres, Vitest, dideploy sebagai Node.js standalone + PM2 di AWS EC2.
+Repo llianified/racely, branch racely, commit 0dce182.
+
+KEPUTUSAN FINAL YANG TIDAK BOLEH DIUBAH
+- Produksi wajib autentikasi Telegram initData (HMAC + cek kedaluwarsa).
+- Mode preview hanya untuk development lokal: aktif jika
+  RACELY_ENABLE_PREVIEW=true DAN NODE_ENV bukan production.
+- Withdrawal tetap antrean manual berstatus pending. Jangan pernah diubah
+  menjadi transfer otomatis.
+- Deployment Node.js standalone + PM2, bukan serverless.
+- Jangan pernah menulis, mencetak, atau meng-commit credential, connection
+  string, atau bot token.
+
+SUDAH SELESAI
+- Auth/preview hardening, persistensi car_model dan onboarding, game state
+  server-authoritative, migrasi 0001 + runner scripts/migrate.mjs, bot helper,
+  webhook route, health endpoint, PM2 config, .env.example, standalone build.
+- Deduplikasi update Telegram: tabel racely_telegram_updates,
+  migrations/0002_telegram_updates.sql, lib/telegram-updates.ts
+  (claimTelegramUpdate + releaseTelegramUpdate), dan perbaikan webhook route
+  yang sebelumnya membuang hasil safeParse lalu memakai payload mentah.
+- Scrubbing credential di scripts/migrate.mjs dan
+  scripts/setup-telegram-bot.mjs, CHECK constraint car_model, serta
+  vitest.config.ts plus tiga file tes baru.
+
+BELUM SELESAI — INI YANG HARUS DIKERJAKAN
+A. Jalankan pnpm test, perbaiki tiga file tes baru sampai hijau, pastikan
+   semua fetch ke Telegram ter-mock dan tes lama tetap lulus.
+B. Cek ketersediaan DATABASE_URL, minta izin mutasi database, jalankan
+   pnpm db:migrate, validasi skema aktual (racely_players,
+   racely_withdrawals, racely_telegram_updates, kolom car_model, constraint
+   racely_players_car_model_check), lalu tambahkan tests/database.test.ts yang
+   auto-skip saat DATABASE_URL kosong untuk onboarding, persistensi car_model,
+   idempotensi claim update, dan withdrawal pending.
+C. Jalankan pnpm run typecheck, pnpm install --frozen-lockfile, dan
+   pnpm run build:standalone.
+D. Verifikasi UI dengan agent-browser pada viewport 384x595 dark mode memakai
+   preview development eksplisit; alur onboarding, pemilihan mobil, dashboard,
+   withdrawal; screenshot disimpan di /tmp/agent-browser/.
+E. Audit ecosystem.config.cjs, scripts/prepare-standalone.mjs, dan
+   scripts/setup-telegram-bot.mjs agar repeatable dan tidak membocorkan token;
+   tulis runbook EC2 singkat (deploy, rotasi secret, set webhook, rollback).
+F. Commit dan sync ke branch yang sama, lalu berikan ringkasan hasil dan
+   langkah operasional yang tersisa.
+
+TEMUAN AUDIT YANG BELUM DITINDAKLANJUTI
+- Belum ada rate limiting di app/api/game/action/route.ts padahal endpoint itu
+  mengubah saldo.
+- Pembersihan racely_telegram_updates baru best-effort; perlu TTL atau job.
+- Security headers belum diset di next.config.mjs; hati-hati soal framing
+  karena Mini App berjalan di WebView Telegram, jangan pasang
+  X-Frame-Options: DENY.
+- Katalog mobil terduplikasi di lib/car-catalog.ts, constraint DB, dan
+  components/game/car-selection.tsx; perlu satu sumber kebenaran.
+- Health endpoint belum melaporkan status koneksi database.
+```
