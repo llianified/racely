@@ -51,8 +51,9 @@ export const accountPattern = (id: WithdrawMethod) =>
     : /^08\d{8,12}$/;
 
 export type GameState = {
-  // Absent on the unchanged Telegram/database path; null means preview onboarding.
+  // Optional only so legacy preview cookies can be upgraded without losing progress.
   carSelection?: { model: CarModelId | null; returningPlayer: boolean };
+  developmentPreview: boolean;
   balance: number;
   pending: number;
   earned: number;
@@ -70,6 +71,7 @@ export type GameState = {
 };
 
 export const INITIAL_GAME: GameState = {
+  developmentPreview: false,
   balance: 10,
   pending: 0,
   earned: 0,
