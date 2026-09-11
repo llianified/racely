@@ -97,7 +97,7 @@ export function RacePanel({ game, onBoost, onCircuits, disabled = false }: {
       <div className="race-actions">
         <Button variant="gold" size="lg" className="boost-button" onClick={onBoost} disabled={disabled || game.cooldown > 0} style={{ "--charge": `${(1 - game.cooldown / 35) * 100}%` } as CSSProperties}>
           <Zap data-icon="inline-start" fill="currentColor" />
-          <span>{boosted ? `NGACIR! ${Math.ceil(game.boostLeft)}s` : game.cooldown > 0 ? `Isi ulang ${Math.ceil(game.cooldown)}s` : "GASPOL 2×"}</span>
+          <span>{boosted ? `Ngacir! ${Math.ceil(game.boostLeft)}s` : game.cooldown > 0 ? `Isi ulang ${Math.ceil(game.cooldown)}s` : "Gaspol 2×"}</span>
           {game.cooldown === 0 && <small>10s</small>}
         </Button>
       </div>

@@ -39,11 +39,13 @@ export const GaragePanel = memo(function GaragePanel({
           <CarPreviewScene color={game.color} />
         </div>
         <div className="car-identity">
-          <div className="car-identity-top">
-            <h2>Neo Falcon</h2>
-            <Badge variant="secondary">LV. {totalLevel(game)}</Badge>
+          <div className="car-identity-head">
+            <div className="car-identity-top">
+              <h2>Neo Falcon</h2>
+              <Badge variant="secondary">LV. {totalLevel(game)}</Badge>
+            </div>
+            <p>Super-II · Mini 4WD</p>
           </div>
-          <p>Super-II · Mini 4WD</p>
           <div className="body-colors" role="group" aria-label="Warna bodi">
             {BODY_COLORS.map((choice) => (
               <button
