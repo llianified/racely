@@ -233,9 +233,16 @@ export function GameDashboard() {
   }, []);
 
   const navigate = (next: GameTab, target?: string) => {
-    navigationTarget.current = target ?? "page-title";
-    setTab(next);
+    const targetId = target ?? "page-title";
     window.scrollTo({ top: 0, behavior: "instant" });
+    if (next === tab) {
+      const element = document.getElementById(targetId);
+      element?.focus({ preventScroll: true });
+      if (target) element?.scrollIntoView({ block: "start" });
+      return;
+    }
+    navigationTarget.current = targetId;
+    setTab(next);
   };
   const haptic = () => {
     const app = window.Telegram?.WebApp;
@@ -376,7 +383,7 @@ export function GameDashboard() {
           onWallet={() => setDialog("wallet")}
           onHelp={() => setDialog("help")}
         />
-        <main className="page-content">
+        <main className="page-content" aria-busy={Boolean(busyAction)}>
           <div className="page-heading">
             <h1 id="page-title" tabIndex={-1} className="text-balance">{TITLES[tab]}</h1>
             <div className="flex items-center gap-1">
