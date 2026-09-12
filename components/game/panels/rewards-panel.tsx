@@ -167,12 +167,8 @@ export function RewardsPanel({
       <section className="rewards-hero" aria-label="Total hadiah siap diklaim">
         <div className="rewards-hero-copy">
           <span className="eyebrow">Siap diklaim</span>
-          <strong>{coins(total)}</strong>
-          <p>
-            {readyCount > 0
-              ? `${readyCount} hadiah menunggu, setara ${idr(total)}.`
-              : "Belum ada yang bisa diklaim. Gas lagi di lintasan."}
-          </p>
+          <strong>{formatCoins(total)} <span>koin</span></strong>
+          <p>~ {idr(total)}</p>
         </div>
         <Button
           variant="gold"
@@ -184,6 +180,16 @@ export function RewardsPanel({
           <Coins data-icon="inline-start" />
           Klaim semua
         </Button>
+        <div className="rewards-hero-side">
+          <span className="rewards-ready">
+            <Gift aria-hidden="true" />
+            {readyCount > 0 ? `${readyCount} hadiah menunggu` : "Belum ada hadiah menunggu"}
+          </span>
+          <InfoHint title="Tentang hadiah">
+            Semua hadiah berupa koin Racely. 1 koin setara {idr(1)} dan bisa
+            ditarik lewat tab Dompet setelah saldo cukup.
+          </InfoHint>
+        </div>
       </section>
 
       <ReferralCard
@@ -200,10 +206,6 @@ export function RewardsPanel({
           </h2>
           <div className="heading-aside">
             <span>{game.missionsClaimed.length}/{MISSIONS.length} misi diklaim</span>
-            <InfoHint title="Tentang hadiah">
-              Semua hadiah berupa koin Racely. 1 koin setara {idr(1)} dan bisa
-              ditarik lewat tab Dompet setelah saldo cukup.
-            </InfoHint>
           </div>
         </div>
         <ul className="reward-list">

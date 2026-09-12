@@ -722,11 +722,16 @@
 .gift-bottom > strong { font-size: var(--fs-display); }
 
 /* ── hadiah ──��─────────────────────────────────────── */
-.rewards-hero { display: flex; flex-direction: column; border: var(--stroke) solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: var(--radius); background: var(--card); padding: var(--space-lg); }
-.rewards-hero-copy { margin-bottom: var(--space-lg); }
+.rewards-hero { overflow: hidden; border: var(--stroke) solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: var(--radius); background: var(--card); }
+.rewards-hero > [data-slot='button'] { width: calc(100% - var(--space-lg) * 2); margin: 0 var(--space-lg) var(--space-lg); }
+.rewards-hero-copy { padding: var(--space-lg); }
 .rewards-hero-copy .eyebrow { font-size: var(--fs-read); letter-spacing: var(--track-caps-md); }
-.rewards-hero-copy > strong { display: block; margin-top: var(--space-sm); font-size: var(--fs-7xl); font-weight: var(--fw-black); line-height: var(--lh-tight); letter-spacing: var(--track-tight-sm); color: var(--accent); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.rewards-hero-copy > p { margin-top: var(--space-sm); font-size: var(--fs-read); line-height: var(--lh-normal); color: var(--muted-foreground); }
+.rewards-hero-copy > strong { display: block; margin-top: var(--space-sm); font-size: var(--fs-8xl); font-weight: var(--fw-black); line-height: var(--lh-tight); letter-spacing: var(--track-tight-sm); color: var(--accent); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.rewards-hero-copy > strong > span { font-size: var(--fs-lead); font-weight: var(--fw-medium); letter-spacing: var(--track-flat); color: var(--muted-foreground); }
+.rewards-hero-copy > p { margin-top: var(--space-sm); font-size: var(--fs-lead); font-weight: var(--fw-semibold); }
+.rewards-hero-side { display: flex; align-items: center; justify-content: space-between; padding: var(--space-md) var(--space-lg); border-top: var(--stroke) solid var(--border); background: color-mix(in srgb, var(--background) 25%, var(--card)); }
+.rewards-ready { display: inline-flex; align-items: center; gap: var(--space-sm); color: var(--muted-foreground); font-size: var(--fs-read); font-variant-numeric: tabular-nums; }
+.rewards-ready svg { width: var(--icon-base); height: var(--icon-base); flex-shrink: 0; color: var(--accent); }
 .rewards-list-panel { padding: var(--space-md) var(--gutter); }
 .rewards-list-panel .section-card-heading { flex-wrap: wrap; }
 .rewards-list-panel .section-card-heading h2 { font-size: var(--fs-lead); }
