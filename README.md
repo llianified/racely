@@ -16,6 +16,9 @@ Vitest. Produksi berjalan sebagai Node.js standalone di balik PM2 di AWS EC2 —
 
 ## Mulai cepat (development)
 
+Prasyarat: Node.js **20.9+** (CI memakai 22) dan pnpm — versinya dipatok lewat
+`packageManager` di `package.json`, jadi `corepack enable` sudah cukup.
+
 ```bash
 pnpm install
 pnpm dev            # http://localhost:3000
@@ -42,7 +45,7 @@ pnpm dev
 
 ```
 app/                    App Router — route tipis, logika didelegasikan ke lib/
-  api/game/             GET state + POST action (aksi pemain)
+  api/game/             GET state + POST action (aksi pemain), keduanya rate-limited
   api/telegram/webhook/ Endpoint webhook bot
   api/health/           Health check load balancer (503 saat DB tak terjangkau)
 components/
@@ -57,17 +60,24 @@ lib/
   telegram-bot.ts       Pemanggilan Bot API
   telegram-updates.ts   Dedupe update webhook lewat Postgres
   rate-limit.ts         Rate limiter per pemain (in-memory, per proses)
+  http-body.ts          Baca body request dengan batas ukuran (streaming)
   car-catalog.ts        Katalog mobil & warna
-  db/                   Koneksi pool + skema Drizzle
+  db/
+    connection-url.ts   Normalisasi DSN — paksa TLS verify-full untuk host remote
+    index.ts            Pool koneksi + instance Drizzle
+    schema.ts           Skema tabel
 migrations/             SQL bernomor, dijalankan scripts/migrate.mjs
 scripts/                Migrasi, persiapan build standalone, setup bot
 tests/                  Vitest (lingkungan node)
 docs/                   Runbook, tutorial setup, handoff
 ```
 
-Batas yang dijaga: `lib/game-server.ts` dan `lib/db/` mengimpor `server-only`
-sehingga tidak mungkin ikut terbundel ke client; `lib/game.ts` dan
-`lib/game-economy.ts` sengaja murni supaya bisa diuji tanpa database.
+Batas yang dijaga: `lib/game-server.ts`, `lib/http-body.ts`, dan `lib/db/`
+mengimpor `server-only` sehingga tidak mungkin ikut terbundel ke client;
+`lib/game.ts` dan `lib/game-economy.ts` sengaja murni supaya bisa diuji tanpa
+database. `lib/db/connection-url.ts` sengaja bebas dependensi karena
+`scripts/migrate.mjs` berjalan di plain node dan meniru aturan yang sama —
+`tests/database-url.test.ts` menjaga keduanya tetap sinkron.
 
 ---
 
@@ -77,6 +87,7 @@ sehingga tidak mungkin ikut terbundel ke client; `lib/game.ts` dan
 |---|---|
 | `pnpm dev` | Server development |
 | `pnpm run typecheck` | `tsc --noEmit` |
+| `pnpm run lint` | ESLint (flat config, `eslint.config.mjs`) |
 | `pnpm test` | Vitest sekali jalan |
 | `pnpm run db:migrate` | Terapkan migrasi (idempoten) |
 | `pnpm run build` | Build Next.js |
@@ -98,6 +109,10 @@ Di produksi **tidak ada** file env di dalam repo. Nilai asli hidup di
 `node --env-file`. `.env.development` sengaja ikut di-commit karena hanya berisi
 flag preview non-rahasia.
 
+`PUBLIC_APP_URL` dibutuhkan **saat build**, bukan hanya saat runtime: halaman
+`/` di-prerender, jadi `metadataBase` ikut dibekukan ke dalam hasil build.
+Lihat `docs/RUNBOOK.md` §1.
+
 Jangan pernah menulis token, connection string, atau secret ke dalam repo, log,
 atau commit message.
 
@@ -111,8 +126,21 @@ pnpm test
 
 Suite berjalan tanpa database: `tests/database.test.ts` otomatis di-skip kalau
 `DATABASE_URL` kosong. Dengan `DATABASE_URL` terisi, test itu menguji skema,
-CHECK constraint, persistensi, dan dedupe update Telegram terhadap Postgres
-sungguhan — jalankan `pnpm run db:migrate` lebih dulu.
+CHECK constraint, persistensi, idempotensi `requestId`, retensi receipt, dan
+dedupe update Telegram terhadap Postgres sungguhan — jalankan
+`pnpm run db:migrate` lebih dulu.
+
+Di CI skip itu tidak diizinkan: workflow menyediakan service container Postgres,
+dan suite sendiri menegaskan `DATABASE_URL` ada setiap kali `CI` di-set, supaya
+konfigurasi yang rusak membuat run gagal alih-alih hijau tanpa menguji apa pun.
+
+---
+
+## CI
+
+`.github/workflows/ci.yml` berjalan di setiap pull request dan push ke `main`:
+typecheck → lint → migrasi → test (dengan Postgres sungguhan) → build. Kalau CI
+merah, jangan deploy.
 
 ---
 
