@@ -100,7 +100,7 @@
   --car-showcase-w: 76px;
   --car-showcase-h: 70px;
 
-  --scene-h: 300px;
+  --scene-h: clamp(220px, 40svh, 300px);
   --race-hud-gradient: linear-gradient(0deg, #090c1de6, #090c1d00 48%, #090c1d66);
   --scene-h-inspect: 240px;
   --stage-inspect-h: 192px;
@@ -544,22 +544,28 @@
 .lap-progress { position: relative; height: var(--space-xs); background: var(--secondary); overflow: hidden; }
 .lap-progress::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(25% - 2px), var(--background) calc(25% - 2px) 25%); pointer-events: none; }
 .lap-progress > div { width: 100%; height: 100%; transform-origin: left; background: var(--accent); }
-.race-overview-hud { position: absolute; inset: var(--space-md); z-index: var(--z-overlay); display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; color: var(--foreground); font-variant-numeric: tabular-nums; }
-.race-hud-top { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-sm); }
+.race-overview-hud { flex-shrink: 0; border-top: var(--stroke) solid var(--border); background: var(--background); color: var(--foreground); font-variant-numeric: tabular-nums; }
+.race-hud-top { position: absolute; inset: var(--space-md) var(--space-md) auto; z-index: var(--z-overlay); display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-sm); pointer-events: none; font-variant-numeric: tabular-nums; }
 .race-hud-position { display: flex; align-items: baseline; gap: var(--space-6); padding: var(--space-5) var(--space-10); border: var(--stroke) solid var(--border); border-radius: var(--corner-md); background: color-mix(in srgb, var(--background) 88%, transparent); color: var(--foreground); }
 .race-hud-position span { font-size: var(--fs-read); color: var(--muted-foreground); }
-.race-hud-position strong { color: var(--accent); font-weight: var(--fw-black); font-size: var(--fs-4xl); line-height: var(--lh-tight); }
+.race-hud-position strong { color: var(--accent); font-weight: var(--fw-black); font-size: var(--fs-xl); line-height: var(--lh-tight); }
 .race-hud-mode { padding: var(--space-6) var(--space-sm); border-radius: var(--corner-md); background: color-mix(in srgb, var(--background) 88%, transparent); color: var(--muted-foreground); font-size: var(--fs-read); font-weight: var(--fw-semibold); }
 .is-course-out .race-hud-mode { color: var(--accent); }
-.race-hud-telemetry { display: grid; grid-template-columns: 1.2fr 1fr 1fr; margin: 0; padding: var(--space-sm) 0; border: var(--stroke) solid var(--border); border-radius: var(--corner-md); background: color-mix(in srgb, var(--background) 88%, transparent); color: var(--foreground); }
-.race-hud-telemetry > div { display: flex; flex-direction: column; justify-content: center; gap: var(--space-3); min-width: 0; padding-inline: var(--space-10); }
+.race-hud-telemetry { display: flex; margin: 0; padding-block: var(--space-sm); }
+.race-hud-telemetry > div { flex: 1; min-width: 0; padding-inline: var(--space-md); }
 .race-hud-telemetry > div + div { border-left: var(--stroke) solid var(--border); }
-.race-hud-telemetry dt { color: var(--muted-foreground); font-size: var(--fs-read); line-height: var(--lh-normal); white-space: nowrap; }
-.race-hud-telemetry dd { display: flex; align-items: baseline; gap: var(--space-xs); margin: 0; font-size: var(--fs-2xl); font-weight: var(--fw-heavy); line-height: var(--lh-tight); letter-spacing: var(--track-tight-sm); white-space: nowrap; }
-.race-hud-telemetry .race-hud-speed dd { font-size: var(--fs-5xl); font-weight: var(--fw-black); }
+.race-hud-telemetry dt { color: var(--muted-foreground); font-size: var(--fs-read); line-height: var(--lh-normal); }
+.race-hud-telemetry dd { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-xs); margin: 0; font-size: var(--fs-xl); font-weight: var(--fw-heavy); line-height: var(--lh-tight); letter-spacing: var(--track-tight-sm); }
 .race-hud-telemetry small { font-size: var(--fs-read); font-weight: var(--fw-medium); letter-spacing: var(--track-flat); color: var(--muted-foreground); }
+.race-hud-telemetry .race-hud-meter { display: block; height: var(--space-xs); margin-top: var(--space-xs); overflow: hidden; border-radius: var(--corner-pill); background: var(--secondary); }
+.race-hud-meter > span { display: block; width: 100%; height: 100%; transform-origin: left; background: var(--accent); }
+.race-hud-server { display: flex; flex-wrap: wrap; justify-content: space-between; column-gap: var(--space-md); margin: 0; padding: var(--space-5) var(--space-md); border-top: var(--stroke) solid var(--border); font-size: var(--fs-read); line-height: var(--lh-normal); }
+.race-hud-server > div { display: flex; align-items: baseline; gap: var(--space-6); }
+.race-hud-server dt { color: var(--muted-foreground); }
+.race-hud-server dd { margin: 0; font-weight: var(--fw-semibold); }
 .race-hud-reward { color: var(--accent); }
-@media (max-width: 359px) { .race-hud-telemetry > div { padding-inline: var(--space-6); } .race-hud-telemetry .race-hud-speed dd { font-size: var(--fs-4xl); } }
+.race-powertrain-note { padding: var(--space-md); color: var(--muted-foreground); font-size: var(--fs-read); line-height: var(--lh-normal); text-wrap: pretty; }
+@media (max-width: 359px) { .race-hud-telemetry > div { padding-inline: var(--space-sm); } }
 .reward-value { color: var(--accent); }
 .race-actions { padding: var(--space-md) var(--gutter); border-top: var(--stroke) solid var(--border); }
 .race-battery { padding: var(--space-lg) var(--space-md); border-top: var(--stroke) solid var(--border); background: var(--background); color: var(--accent); font-size: var(--fs-read); line-height: var(--lh-normal); }
@@ -660,6 +666,9 @@
 .upgrade-name svg { width: var(--icon-base); height: var(--icon-base); flex-shrink: 0; color: var(--muted-foreground); }
 .level-label { font-size: var(--fs-read); font-weight: var(--fw-bold); color: var(--accent); white-space: nowrap; }
 .upgrade-info p { margin-top: var(--space-6); font-size: var(--fs-read); line-height: var(--lh-normal); color: var(--muted-foreground); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.upgrade-arena-info { margin-top: var(--space-sm); padding-top: var(--space-xs); border-top: var(--stroke) solid var(--border); }
+.upgrade-arena-info strong { color: var(--foreground); font-weight: var(--fw-semibold); }
+.upgrade-arena-note { padding: var(--space-md) var(--space-lg); border-bottom: var(--stroke) solid var(--border); color: var(--muted-foreground); font-size: var(--fs-read); line-height: var(--lh-normal); }
 .level-segments { display: flex; gap: var(--space-3); margin-top: var(--space-10); }
 .level-segments > span { height: var(--space-xs); flex: 1; background: var(--secondary); border-radius: var(--corner-2xs); }
 .level-segments > span.filled { background: var(--primary); }
