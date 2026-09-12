@@ -184,15 +184,26 @@ Verifikasi skema lewat SQL Editor di Neon:
 
 ```sql
 select table_name from information_schema.tables
-where table_schema = 'public' and table_name like 'racely_%';
--- harus muncul: racely_players, racely_withdrawals, racely_telegram_updates
+where table_schema = 'public' and table_name like 'racely_%'
+order by table_name;
+-- harus muncul keenamnya:
+--   racely_action_receipts
+--   racely_players
+--   racely_reward_claims
+--   racely_schema_migrations
+--   racely_telegram_updates
+--   racely_withdrawals
 
 select conname from pg_constraint
 where conname = 'racely_players_car_model_check';
 -- harus mengembalikan satu baris
 ```
 
-**Selesai kalau:** ketiga tabel ada, constraint ada, dan `pnpm test` hijau
+`racely_schema_migrations` dibuat oleh runner untuk mencatat migrasi yang sudah
+dijalankan; lima sisanya adalah tabel aplikasi. Kalau ada yang kurang, jangan
+lanjut — periksa output `pnpm run db:migrate`.
+
+**Selesai kalau:** keenam tabel ada, constraint ada, dan `pnpm test` hijau
 tanpa skip.
 
 ---
@@ -280,12 +291,27 @@ tampilkan di UI kalau perlu.
 
 ---
 
+## Setelah live — peningkatan opsional
+
+Tidak ada yang perlu dikerjakan sekarang. Dua hal ini baru relevan kalau
+trafik tumbuh:
+
+- **Lebih dari satu instance PM2.** Rate limiter dan dedupe update Telegram
+  bersifat per-proses, jadi `instances: 1` + `exec_mode: "fork"` wajib
+  dipertahankan sampai keduanya dipindah ke Postgres atau Redis.
+- **Volume update Telegram besar.** Pembersihan baris lama di
+  `racely_telegram_updates` saat ini probabilistik (dijalankan sesekali saat
+  ada aksi). Kalau volumenya besar, ganti dengan job terjadwal atau TTL.
+
+---
+
 ## Referensi cepat
 
 | Kebutuhan | Dokumen |
 |---|---|
 | Deploy ulang, rotasi secret, rollback, troubleshooting | `docs/RUNBOOK.md` |
-| Status proyek, keputusan arsitektur, sisa pekerjaan | `docs/HANDOFF.md` |
+| Orientasi proyek, struktur kode, cara jalan lokal | `README.md` |
+| Rute tugas + aturan saat mengubah kode | `AGENTS.md` |
 | Daftar environment variable | `.env.example` |
 
 Perintah yang paling sering dipakai:
