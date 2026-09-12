@@ -83,16 +83,16 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
         await panel.current.requestFullscreen();
         setControlFeedback("Layar penuh aktif.");
       } else {
-        toast.info("Putar perangkat untuk arena yang lebih luas.");
+        toast.info("Putar perangkat");
       }
     } catch {
-      toast.info("Layar penuh tidak tersedia. Kamu tetap bisa memutar dan memperbesar lintasan.");
+      toast.info("Layar penuh tak tersedia");
     }
   };
   const openCircuits = async () => {
     if (document.fullscreenElement) {
       try { await document.exitFullscreen(); }
-      catch { toast.info("Keluar dari layar penuh untuk memilih sirkuit."); return; }
+      catch { toast.info("Tutup layar penuh dulu"); return; }
     }
     onCircuits();
   };

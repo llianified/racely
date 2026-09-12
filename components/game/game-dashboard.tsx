@@ -25,7 +25,6 @@ import { telegramHaptic, useTelegramWebApp } from "./use-telegram-webapp";
 import {
   coins,
   gameReducer,
-  idr,
   INITIAL_GAME,
   MISSIONS,
   missionValue,
@@ -208,12 +207,8 @@ export function GameDashboard() {
       await mutate(next, { revalidate: false });
       telegramHaptic();
       return next;
-    } catch (actionError) {
-      toast.error(
-        actionError instanceof Error
-          ? actionError.message
-          : "Aksi belum bisa diproses.",
-      );
+    } catch {
+      toast.error("Aksi gagal");
       return null;
     } finally {
       mutationLocked.current = false;
@@ -230,11 +225,7 @@ export function GameDashboard() {
     const next = await runAction({ type: "upgrade", key }, `upgrade:${key}`);
     if (next)
       toast.success(
-        `${{ engine: "Mesin", tires: "Ban & roller", battery: "Baterai" }[key]} → Level ${next.levels[key]}`,
-        {
-          description: "Terpasang dan tersimpan. Langsung aktif di lintasan.",
-          duration: 1800,
-        },
+        `${{ engine: "Mesin", tires: "Ban", battery: "Baterai" }[key]} Lv. ${next.levels[key]}`,
       );
     return Boolean(next);
   };
@@ -242,31 +233,21 @@ export function GameDashboard() {
     const next = await runAction(action);
     if (!next) return false;
     toast.success(action.type === "unequip-part"
-      ? `${SLOT_LABELS[action.slot]} dikembalikan ke bawaan`
-      : `${PART_CATALOG[action.partId].name} ${action.type === "buy-part" ? "dibeli" : "terpasang"}`, {
-      description: action.type === "buy-part"
-        ? "Masuk koleksi. Pasang kapan saja tanpa biaya tambahan."
-        : "Tersimpan dan langsung terlihat di garasi serta lintasan.",
-    });
+      ? `${SLOT_LABELS[action.slot]} bawaan`
+      : `${PART_CATALOG[action.partId].name} ${action.type === "buy-part" ? "dibeli" : "aktif"}`);
     return true;
   };
   const claim = async () => {
     const amount = Math.floor(game.pending);
     if (amount < 1) return;
     if (await runAction({ type: "claim" }))
-      toast.success(`+${coins(amount)} masuk saldo`, {
-        description: `Setara ${idr(amount)} dan siap ditarik lewat Dompet.`,
-        duration: 1800,
-      });
+      toast.success(`+${coins(amount)} ke saldo`);
   };
   const daily = async () => {
     if (game.daily.claimedToday) return;
     const amount = game.daily.reward;
     if (await runAction({ type: "daily" }))
-      toast.success(`Check-in harian! +${coins(amount)}`, {
-        description: "Balik lagi besok supaya streak-nya tidak putus.",
-        duration: 1800,
-      });
+      toast.success(`Harian +${coins(amount)}`);
   };
   const invite = async () => {
     const link = game.referral.link;
@@ -274,22 +255,15 @@ export function GameDashboard() {
     try {
       await navigator.clipboard.writeText(link);
       telegramHaptic();
-      toast.success("Link ajakan disalin", {
-        description: "Kirim ke temanmu lewat Telegram atau WhatsApp.",
-        duration: 1800,
-      });
+      toast.success("Link disalin");
     } catch {
-      // Clipboard bisa ditolak (izin, konteks non-secure). Tampilkan linknya
-      // supaya pemain masih bisa menyalin manual, bukan gagal diam-diam.
-      toast.info("Salin manual ya", { description: link, duration: 6000 });
+      toast.error("Link gagal disalin");
     }
   };
   const gift = async () => {
     if (game.rewardClaimed) return;
     if (await runAction({ type: "gift" }))
-      toast.success(`Bonus starter ${coins(STARTER_GIFT)} diklaim!`, {
-        description: "Bonus ini hanya bisa diklaim sekali.",
-      });
+      toast.success(`Starter +${coins(STARTER_GIFT)}`);
   };
   const mission = async (id: string) => {
     const missionItem = MISSIONS.find((item) => item.id === id);
@@ -300,7 +274,7 @@ export function GameDashboard() {
     )
       return;
     if (await runAction({ type: "mission", id }))
-      toast.success(`Misi beres! +${coins(missionItem.reward)}`);
+      toast.success(`Misi +${coins(missionItem.reward)}`);
   };
   const claimAll = async () => {
     const total = claimableTotal(game);
@@ -314,18 +288,12 @@ export function GameDashboard() {
         missionValue(game, item.id) >= item.target;
       if (ready && !(await runAction({ type: "mission", id: item.id }))) return;
     }
-    toast.success(`+${coins(total)} diklaim`, {
-      description: "Semua hadiah yang siap sudah masuk saldomu.",
-      duration: 2400,
-    });
+    toast.success(`Hadiah +${coins(total)}`);
   };
   const withdraw = async (payload: WithdrawPayload) => {
     const next = await runAction({ type: "withdraw", ...payload }, "withdraw");
     if (!next) return false;
-    toast.success(`Penarikan ${idr(payload.coins)} dikirim`, {
-      description: "Tim Racely memverifikasi dalam 1×24 jam kerja.",
-      duration: 1800,
-    });
+    toast.success("Penarikan dikirim");
     return true;
   };
   const chooseCircuit = async (circuit: 1) => {
@@ -333,20 +301,20 @@ export function GameDashboard() {
     if (await runAction({ type: "circuit", circuit })) {
       setDialog(null);
       navigate("race");
-      toast.success("Selamat datang di Midnight Speedway!");
+      toast.success("Midnight aktif");
     }
   };
   const boost = async () => {
     if (game.cooldown > 0) return;
     if (await runAction({ type: "boost" }))
-      toast.success("Gaspol 2× aktif", { duration: 1800 });
+      toast.success("Gaspol 2× aktif");
   };
   const chooseColor = async (
     color: CarColor,
     name: string,
   ) => {
     if (await runAction({ type: "color", color }, `color:${color}`))
-      toast.success(`Bodi ${name} terpasang dan tersimpan`);
+      toast.success(`${name} aktif`);
   };
 
   if (!clientReady || (isLoading && !data && !error)) return <BootScreen />;
