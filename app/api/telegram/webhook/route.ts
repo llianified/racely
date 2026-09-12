@@ -11,6 +11,7 @@ import {
   claimTelegramUpdate,
   releaseTelegramUpdate,
 } from "@/lib/telegram-updates";
+import { recordBotChat } from "@/lib/bot-chats";
 import { readTextBody, RequestBodyTooLargeError } from "@/lib/http-body";
 
 export const runtime = "nodejs";
@@ -84,6 +85,11 @@ export async function POST(request: Request) {
   }
 
   try {
+    // Pesan privat ini adalah satu-satunya izin yang Telegram berikan untuk
+    // menghubungi pemain nanti; catat sebelum membalas.
+    const chat = update.data.message?.chat;
+    if (chat?.type === "private") await recordBotChat(chat.id);
+
     const reply = buildTelegramReply(update.data, publicAppUrl);
     if (reply) await sendTelegramReply(reply);
     return NextResponse.json({ ok: true }, { headers: noStoreHeaders });
