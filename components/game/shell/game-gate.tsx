@@ -16,9 +16,9 @@ export function GameGate({
   onRetry?: () => void;
 }) {
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-background px-6 text-center text-foreground">
+    <main className="flex min-h-dvh w-full items-center justify-center bg-background px-6 py-8 text-center text-foreground">
       <Toaster theme="dark" position="top-center" />
-      <section className="panel flex w-full max-w-md flex-col items-center gap-5 p-8">
+      <section className="panel flex w-full max-w-(--app-width) shrink-0 flex-col items-center gap-5 p-6">
         <Image
           src="/racely-logo.png"
           alt="Logo Racely"
