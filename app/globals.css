@@ -623,9 +623,9 @@
 .garage-panel, .upgrade-panel, .rewards-layout { --fs-nano: 14px; --fs-micro: 14px; --fs-small: 14px; --fs-body: 14px; }
 .car-identity { padding: var(--space-lg) var(--space-lg) 0; }
 .car-identity-head { min-width: 0; }
+.car-identity-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); min-width: 0; }
 .car-identity-title { display: flex; align-items: center; gap: var(--space-sm); min-width: 0; }
 .car-identity-title h2 { min-width: 0; overflow-wrap: anywhere; }
-.car-identity-title [data-slot='button'] { flex-shrink: 0; margin-left: auto; margin-right: -6px; }
 .car-level-chip { flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .car-identity h2 { font-size: var(--fs-2xl); line-height: var(--lh-tight); letter-spacing: var(--track-snug); }
 .car-identity p { margin-top: var(--space-xs); font-size: var(--fs-read); color: var(--muted-foreground); }
