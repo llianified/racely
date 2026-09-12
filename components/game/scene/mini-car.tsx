@@ -4,6 +4,7 @@ import { memo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import type { CarModelId } from '@/lib/car-catalog'
 import type { GameState } from '@/lib/game'
+import { PART_CATALOG, type BodyParts, type PartId } from '@/lib/car-parts'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 
@@ -99,6 +100,8 @@ function createCarGeometry(model: CarModelId) {
   }
   const internalParts: Partial<Record<Finish, THREE.BufferGeometry[]>> = {}
   let internal = false
+  let spoiler = false
+  const spoilerParts: Partial<Record<Finish, THREE.BufferGeometry[]>> = {}
   const wheels: { position: Position; parts: Partial<Record<Finish, THREE.BufferGeometry[]>> }[] = []
   let currentWheel: (typeof wheels)[number] | null = null
   const add = (finish: Finish, geometry: THREE.BufferGeometry, position: Position = [0, 0, 0], rotation: Position = [0, 0, 0]) => {
@@ -114,6 +117,9 @@ function createCarGeometry(model: CarModelId) {
       triangles.translate(-x, -y, -z)
       const wheelFinish = currentWheel.parts[finish] ??= []
       wheelFinish.push(triangles)
+    } else if (spoiler) {
+      const spoilerFinish = spoilerParts[finish] ??= []
+      spoilerFinish.push(triangles)
     } else if (internal) {
       const internalFinish = internalParts[finish] ??= []
       internalFinish.push(triangles)
@@ -305,6 +311,7 @@ function createCarGeometry(model: CarModelId) {
     }
   }
 
+  spoiler = true
   if (model === 'neo-falcon') {
   for (const side of SIDES) {
     add('chassis', plate([
@@ -339,6 +346,7 @@ function createCarGeometry(model: CarModelId) {
     add('livery', new THREE.BoxGeometry(.25, .003, .009), [0, .258, -.327])
   }
 
+  spoiler = false
   internal = true
   add('alloy', cylinder(.037, .15), [0, .158, -.225], [0, 0, Math.PI / 2])
   for (const side of SIDES) {
@@ -362,7 +370,7 @@ function createCarGeometry(model: CarModelId) {
       merged.computeBoundingSphere()
       return [finish, merged]
     })) as Partial<Record<Finish, THREE.BufferGeometry>>
-  return { shell: merge(parts), internals: merge(internalParts), wheels: wheels.map(wheel => ({ position: wheel.position, parts: merge(wheel.parts) })) }
+  return { shell: merge(parts), spoiler: merge(spoilerParts), internals: merge(internalParts), wheels: wheels.map(wheel => ({ position: wheel.position, parts: merge(wheel.parts) })) }
 }
 
 // Both canvases share immutable geometry; batch details by finish instead of drawing each bolt separately.
@@ -401,6 +409,72 @@ function RollingWheel({ wheel, color, model, speed, level }: {
   </group>
 }
 
+function createAeroGeometry(id: PartId, model: CarModelId) {
+  const groups: Partial<Record<Finish, THREE.BufferGeometry[]>> = {}
+  const add = (finish: Finish, geometry: THREE.BufferGeometry, position: Position = [0, 0, 0], rotation: Position = [0, 0, 0]) => {
+    geometry.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(...rotation)))
+    geometry.translate(...position)
+    const triangles = geometry.index ? geometry.toNonIndexed() : geometry
+    if (triangles !== geometry) geometry.dispose()
+    for (const name of Object.keys(triangles.attributes)) if (name !== 'position' && name !== 'normal') triangles.deleteAttribute(name)
+    ;(groups[finish] ??= []).push(triangles)
+  }
+  const box = (finish: Finish, size: Position, position: Position, rotation?: Position) => add(finish, new THREE.BoxGeometry(...size), position, rotation)
+  const luna = model === 'luna-gt'
+  if (PART_CATALOG[id].slot === 'hood') {
+    const width = luna ? .13 : .078
+    add('chassis', sculptedShell([
+      [.18, width * .7, luna ? .195 : .213, .008], [.24, width, .191, .012],
+      [.31, width * .88, .176, .008], [.382, width * .72, .148, .004],
+    ], 24, 24))
+    if (id === 'vented-hood') {
+      for (const side of SIDES) for (let i = 0; i < 4; i++) {
+        box('alloy', [width * .55, .004, .009], [side * width * .45, .205 - i * .009, .225 + i * .025], [-.27, 0, 0])
+      }
+    } else {
+      add('chassis', sculptedShell([[.19, .012, .218, .006], [.23, .034, .227, .025], [.28, .034, .218, .026], [.30, .032, .214, .022]], 24, 24))
+      box('rubber', [.052, .029, .004], [0, .226, .302])
+      box('alloy', [.065, .004, .006], [0, .244, .302])
+    }
+    for (const side of SIDES) add('alloy', new THREE.CylinderGeometry(.005, .005, .004, 12), [side * width * .7, .182, .31])
+  } else if (id === 'ducktail') {
+    add('body', sculptedShell([[-.21, .018, 0, .005], [-.15, .036, .008, .012], [0, .043, .01, .014], [.15, .036, .008, .012], [.21, .018, 0, .005]], 32, 20), [0, .225, -.322], [0, Math.PI / 2, 0])
+    for (const side of SIDES) box('chassis', [.014, .04, .035], [side * .095, .198, -.305])
+  } else if (id === 'gt-wing') {
+    for (const side of SIDES) {
+      box('alloy', [.028, .013, .052], [side * .105, .208, -.299])
+      box('chassis', [.013, .135, .022], [side * .105, .272, -.30], [.2, 0, 0])
+      box('chassis', [.013, .023, .055], [side * .105, .342, -.317])
+      add('chassis', plate([[-.047, -.02], [.047, -.018], [.056, .023], [-.035, .034]], .008), [side * .263, .361, -.333], [0, 0, Math.PI / 2])
+      box('gold', [.035, .003, .088], [side * .215, .337, -.334])
+    }
+    add('chassis', sculptedShell([[-.26, .037, 0, .006], [-.19, .058, .004, .011], [0, .053, .009, .013], [.19, .058, .004, .011], [.26, .037, 0, .006]], 36, 24), [0, .325, -.336], [0, Math.PI / 2, 0])
+  } else if (id === 'front-splitter') {
+    add('chassis', plate([[-.22, .30], [-.19, .39], [-.12, .415], [.12, .415], [.19, .39], [.22, .30], [.15, .325], [-.15, .325]], .01), [0, .09, 0])
+    for (const side of SIDES) box('alloy', [.006, .076, .006], [side * .14, .132, .355], [-.28, 0, side * .12])
+  } else {
+    for (const side of SIDES) {
+      add('chassis', plate([[-.023, -.17], [.03, -.14], [.027, .16], [-.014, .18]], .012), [side * .177, .079, 0])
+      box('gold', [.006, .006, .25], [side * .201, .095, 0])
+      box('chassis', [.009, .045, .046], [side * .195, .107, -.145], [-.3, 0, side * .2])
+    }
+  }
+  return Object.fromEntries(Object.entries(groups).map(([finish, geometries]) => {
+    const geometry = mergeGeometries(geometries!)!
+    geometries!.forEach(item => item.dispose())
+    geometry.computeBoundingSphere()
+    return [finish, geometry]
+  })) as Partial<Record<Finish, THREE.BufferGeometry>>
+}
+
+const AERO_CACHE = new Map<string, ReturnType<typeof createAeroGeometry>>()
+const AeroPart = memo(function AeroPart({ id, model, color }: { id: PartId; model: CarModelId; color: string }) {
+  const key = `${model}:${id}`
+  let geometry = AERO_CACHE.get(key)
+  if (!geometry) { geometry = createAeroGeometry(id, model); AERO_CACHE.set(key, geometry) }
+  return <group name={`part-${id}`}><CarSurfaces parts={geometry} color={color} model={model} /></group>
+})
+
 const STOCK_LEVELS = { engine: 1, tires: 1, battery: 1 };
 
 const InstalledParts = memo(function InstalledParts({ levels, inspect }: { levels: GameState['levels']; inspect: boolean }) {
@@ -425,12 +499,14 @@ const InstalledParts = memo(function InstalledParts({ levels, inspect }: { level
   </group>
 })
 
-export const MiniCar = memo(function MiniCar({ color, model = 'neo-falcon', scale = 1, speed = 0, inspect = false, charge = 1, levels = STOCK_LEVELS }: {
-  color: string; model?: CarModelId; scale?: number; speed?: number; inspect?: boolean; charge?: number; levels?: GameState['levels']
+export const MiniCar = memo(function MiniCar({ color, model = 'neo-falcon', scale = 1, speed = 0, inspect = false, charge = 1, levels = STOCK_LEVELS, equipped }: {
+  color: string; model?: CarModelId; scale?: number; speed?: number; inspect?: boolean; charge?: number; levels?: GameState['levels']; equipped?: BodyParts['equipped']
 }) {
   const geometry = GEOMETRY_CACHE[model] ?? (GEOMETRY_CACHE[model] = createCarGeometry(model))
   return <group scale={scale}>
     <CarSurfaces parts={geometry.shell} color={color} model={model} inspect={inspect} />
+    {!equipped?.spoiler && <CarSurfaces parts={geometry.spoiler} color={color} model={model} inspect={inspect} />}
+    {!inspect && Object.values(equipped ?? {}).map(id => <AeroPart key={id} id={id} color={color} model={model} />)}
     {inspect && <CarSurfaces parts={geometry.internals} color={color} model={model} />}
     <InstalledParts levels={levels} inspect={inspect} />
     {geometry.wheels.map((wheel, index) => <RollingWheel key={index} wheel={wheel} color={color} model={model} speed={speed} level={levels.tires} />)}

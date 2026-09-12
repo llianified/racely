@@ -24,6 +24,7 @@ import {
   racingDayKey,
 } from "./game-economy";
 import { CAR_MODEL_IDS, isCarColor } from "./car-catalog";
+import { applyPartCommand, bodyPartsSchema, PartRuleError } from "./car-parts";
 import { referralLink } from "./telegram-bot";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
 
@@ -52,6 +53,7 @@ const previewGameSchema = z.object({
     .default([]),
   state: z.object({
     developmentPreview: z.boolean().default(true),
+    bodyParts: bodyPartsSchema.optional(),
     carSelection: z.object({
       model: z.enum(CAR_MODEL_IDS).nullable(),
       returningPlayer: z.boolean(),
@@ -316,6 +318,13 @@ export function performPreviewGameAction(
       carSelection: { model: action.model, returningPlayer: selection?.returningPlayer ?? false },
       color: action.color,
     };
+  } else if (action.type === "buy-part" || action.type === "equip-part" || action.type === "unequip-part") {
+    try {
+      state = { ...state, ...applyPartCommand(state, action) };
+    } catch (error) {
+      if (error instanceof PartRuleError) throw new PreviewGameRuleError(error.message);
+      throw error;
+    }
   } else if (action.type === "upgrade") {
     state = applyUpgrade(state, action.key);
   } else if (action.type === "claim" && Math.floor(state.pending) > 0) {

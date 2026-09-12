@@ -20,6 +20,7 @@ import {
   racingDayKey,
 } from "@/lib/game-economy";
 import { CAR_MODEL_IDS, isCarColor } from "@/lib/car-catalog";
+import { applyPartCommand, PART_IDS, PART_SLOTS, PartRuleError } from "@/lib/car-parts";
 import {
   accountPattern,
   COIN_TO_IDR,
@@ -64,6 +65,9 @@ const RECEIPT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const RECEIPT_PRUNE_PROBABILITY = 0.02;
 
 const commandSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("buy-part"), partId: z.enum(PART_IDS) }).strict(),
+  z.object({ type: z.literal("equip-part"), partId: z.enum(PART_IDS) }).strict(),
+  z.object({ type: z.literal("unequip-part"), slot: z.enum(PART_SLOTS) }).strict(),
   z.object({ type: z.literal("sync") }).strict(),
   z
     .object({
@@ -173,6 +177,7 @@ function stateFromRow(
 ): GameState {
   return {
     developmentPreview: false,
+    bodyParts: row.bodyParts,
     // Left off the payload entirely when there is nothing to report, so the
     // client can treat its presence as "show the welcome-back dialog".
     offlineEarnings: offlineEarnings ?? undefined,
@@ -616,6 +621,13 @@ export async function performGameAction(
         throw new GameRuleError("Model atau warna mobil tidak valid.", 400);
       }
       next = { ...next, carModel: action.model, color: action.color };
+    } else if (action.type === "buy-part" || action.type === "equip-part" || action.type === "unequip-part") {
+      try {
+        next = { ...next, ...applyPartCommand(next, action) };
+      } catch (error) {
+        if (error instanceof PartRuleError) throw new GameRuleError(error.message);
+        throw error;
+      }
     } else if (action.type === "upgrade") {
       next = applyUpgrade(next, action.key);
     } else if (action.type === "claim") {
@@ -745,6 +757,7 @@ export async function performGameAction(
         cooldownEndsAt: next.cooldownEndsAt,
         rewardClaimed: next.rewardClaimed,
         missionsClaimed: next.missionsClaimed,
+        bodyParts: next.bodyParts,
         carModel: next.carModel,
         color: next.color,
         circuit: next.circuit,
