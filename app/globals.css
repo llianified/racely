@@ -360,7 +360,7 @@
   html { scroll-padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + var(--space-md)); }
 }
 
-.car-selection { width: 100%; max-width: var(--app-width); min-height: 100dvh; margin-inline: auto; padding: calc(var(--space-20) + var(--safe-top)) var(--space-20) calc(var(--space-20) + var(--safe-bottom)); display: flex; flex-direction: column; gap: var(--space-20); background: var(--background); color: var(--foreground); font-size: var(--fs-read); line-height: var(--lh-normal); animation: boot-enter var(--anim-select-enter) ease-out both; }
+.car-selection { width: 100%; max-width: var(--app-width); min-height: 100dvh; margin-inline: auto; padding: calc(var(--space-20) + var(--safe-top)) calc(var(--space-20) + var(--safe-right)) calc(var(--space-20) + var(--safe-bottom)) calc(var(--space-20) + var(--safe-left)); display: flex; flex-direction: column; gap: var(--space-20); background: var(--background); color: var(--foreground); font-size: var(--fs-read); line-height: var(--lh-normal); animation: boot-enter var(--anim-select-enter) ease-out both; }
 .selection-header { display: flex; flex-direction: column; gap: var(--space-xl); }
 .selection-topline { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); }
 .selection-brand { display: flex; align-items: center; gap: var(--space-sm); font-size: var(--fs-2xl); font-weight: var(--fw-ultra); font-style: italic; letter-spacing: var(--track-tight-xl); line-height: var(--lh-none); }
@@ -410,7 +410,7 @@
   .selection-details > p { min-height: 0; }
 }
 @media (max-width: 359px) {
-  .car-selection { padding-inline: var(--space-lg); }
+  .car-selection { padding-left: calc(var(--space-lg) + var(--safe-left)); padding-right: calc(var(--space-lg) + var(--safe-right)); }
   .selection-edition { max-width: var(--edition-max-w); text-align: right; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -429,6 +429,13 @@
   --telegram-chrome-top: max(var(--space-48), var(--racely-content-inset-top, var(--tg-content-safe-area-inset-top, 0px)));
   --scroll-offset-top: calc(var(--safe-top) + var(--space-56) + var(--space-md));
 }
+/* Kontrol native Telegram mengapit strip atas. Seperti topbar app, wordmark
+   onboarding tinggal di tengah strip itu dan konten dimulai setelahnya. */
+[data-telegram-fullscreen='true'] .car-selection { padding-top: var(--device-safe-top); }
+[data-telegram-fullscreen='true'] .selection-topline { justify-content: center; min-height: var(--telegram-chrome-top); padding-inline: var(--telegram-control-wing); pointer-events: none; }
+[data-telegram-fullscreen='true'] .selection-brand { min-width: 0; max-width: var(--telegram-wordmark-width); overflow: hidden; font-size: var(--fs-display); }
+[data-telegram-fullscreen='true'] .selection-logo,
+[data-telegram-fullscreen='true'] .selection-edition { display: none; }
 [data-telegram-fullscreen='true'] .topbar { flex-direction: column; align-items: stretch; gap: 0; padding: var(--device-safe-top) 0 0; }
 [data-telegram-fullscreen='true'] .topbar-brand { justify-content: center; height: var(--telegram-chrome-top); min-height: var(--telegram-chrome-top); padding-inline: var(--telegram-control-wing); pointer-events: none; }
 [data-telegram-fullscreen='true'] .topbar-brand .brand { min-width: 0; max-width: var(--telegram-wordmark-width); overflow: hidden; }
