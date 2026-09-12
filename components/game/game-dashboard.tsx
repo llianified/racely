@@ -328,17 +328,12 @@ export function GameDashboard() {
     });
     return true;
   };
-  const chooseCircuit = async (circuit: number) => {
-    if ((circuit !== 0 && circuit !== 1) || (circuit === 1 && game.laps < 25))
-      return;
+  const chooseCircuit = async (circuit: 1) => {
+    if (game.circuit >= circuit || game.laps < 25) return;
     if (await runAction({ type: "circuit", circuit })) {
       setDialog(null);
       navigate("race");
-      toast.success(
-        circuit
-          ? "Selamat datang di Midnight Speedway!"
-          : "Kembali ke Jakarta Raceway",
-      );
+      toast.success("Selamat datang di Midnight Speedway!");
     }
   };
   const boost = async () => {

@@ -795,6 +795,9 @@ export async function performGameAction(
       }
       next = { ...next, color: action.color };
     } else if (action.type === "circuit") {
+      if (action.circuit < next.circuit) {
+        throw new GameRuleError("Trek lama tidak bisa dipilih lagi.");
+      }
       if (action.circuit === 1 && next.laps < 25) {
         throw new GameRuleError(
           "Selesaikan 25 putaran untuk membuka sirkuit ini.",
