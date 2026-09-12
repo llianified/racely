@@ -1,0 +1,24 @@
+name: Deploy Racely
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: racely-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.RACELY_HOST }}
+          username: ${{ secrets.RACELY_USER }}
+          key: ${{ secrets.RACELY_SSH_KEY }}
+          script: |
+            /usr/local/bin/deploy-racely
