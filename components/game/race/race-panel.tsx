@@ -145,10 +145,29 @@ export function RacePanel({ game, onBoost, onChooseCircuit, active = true, disab
             </SelectContent>
           </Select>
         </h2>
-        <span className="live-tag" aria-label={`Posisi ${position} dari 3, balapan langsung`}>Pos {position} · LIVE</span>
       </div>
       <div className={cn("scene-wrap", inspect && "is-inspecting", !inspect && cinematic && "is-cinematic", !inspect && telemetry.recovery > 0 && "is-course-out", !inspect && telemetry.grip < 40 && "is-grip-critical")}>
         {!inspect && <div className="race-vignette" aria-hidden="true" />}
+        {!inspect && (
+          <div className="scene-overlay race-overview-hud" aria-label={`Kecepatan ${displaySpeedKmh(seconds).toFixed(1)} kilometer per jam, waktu per putaran ${seconds.toFixed(2)} detik, koin per putaran ${formatCoins(lapReward(game))}, posisi ${position} dari 3`}>
+            <div>
+              <span>Kecepatan</span>
+              <strong>{displaySpeedKmh(seconds).toFixed(1)} <small>km/j</small></strong>
+            </div>
+            <div>
+              <span>Waktu/lap</span>
+              <strong>{seconds.toFixed(2)} <small>d</small></strong>
+            </div>
+            <div data-reward>
+              <span>Koin/lap</span>
+              <strong>{formatCoins(lapReward(game))}</strong>
+            </div>
+            <div>
+              <span>Pos</span>
+              <strong>{position}<small>/3</small></strong>
+            </div>
+          </div>
+        )}
         {inspect && <div className="scene-overlay inspect-hud"><strong>{bodyVisible ? "DETAIL MOBIL" : "DI BALIK BODI"}</strong><span>{bodyVisible ? "Cat metalik · ban · aero kit" : "2 sel · motor · penggerak 4WD"}</span></div>}
         <RaceScene equipped={game.bodyParts?.equipped} driving={driving} onTelemetry={setTelemetry} cinematic={cinematic && !reducedMotion} levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.progress} seconds={seconds} opponentSeconds={opponents} color={game.color} boosted={boosted} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
         {inspect && <div className="scene-overlay inspect-hint">Geser untuk memutar · balapan tetap jalan</div>}
