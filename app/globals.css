@@ -137,7 +137,7 @@
 /* ── app bar (bukan navbar desktop) ────────────────── */
 .topbar { position: sticky; top: 0; z-index: 20; height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-inline: var(--gutter); background: color-mix(in srgb, var(--background) 82%, transparent); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
 .brand { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
-.brand-mark { width: 34px; height: auto; flex-shrink: 0; object-fit: contain; }
+.brand-mark { width: 19px; height: auto; flex-shrink: 0; object-fit: contain; }
 .brand-word { font-size: var(--fs-title); font-weight: 950; letter-spacing: -.01em; line-height: 1; }
 .brand-sub { display: none; }
 .racer-avatar { position: relative; display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; background: var(--secondary); border: 1px solid var(--border); color: var(--foreground); font-size: var(--fs-small); font-weight: 850; }
@@ -415,8 +415,8 @@
 
 /* ── boot ──────────────────────────────────────────── */
 .boot-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; min-height: 100dvh; padding: 24px; background: var(--background); }
-.boot-logo { width: 112px; height: auto; object-fit: contain; animation: boot-logo-in .5s ease-out both; }
-.gate-logo { width: 96px; height: auto; object-fit: contain; }
+.boot-logo { width: 81px; height: auto; object-fit: contain; animation: boot-logo-in .5s ease-out both; }
+.gate-logo { width: 70px; height: auto; object-fit: contain; }
 @keyframes boot-logo-in { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
 .boot-word { font-size: 34px; font-weight: 950; letter-spacing: -.03em; line-height: 1; color: var(--foreground); }
 .boot-bar { width: min(220px, 62vw); height: 4px; border-radius: 999px; background: var(--secondary); overflow: hidden; }
