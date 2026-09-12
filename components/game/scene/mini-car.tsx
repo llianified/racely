@@ -7,7 +7,10 @@ import type { GameState } from '@/lib/game'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 
-export const COLORS = { blue: '#7841ee', navy: '#090c1d', surface: '#191939', gray: '#9789cd', white: '#d9d1f4', gold: '#ffce00', azure: '#4275ff', sky: '#8db5ff' }
+// Palet scene. Nilai yang juga ada sebagai token CSS ditulis sekali di sini
+// supaya WebGL dan DOM tidak pelan-pelan melenceng: `muted` = --muted-foreground,
+// `success` = --success. `gravel` khusus 3D dan tidak punya padanan di CSS.
+export const COLORS = { blue: '#7841ee', navy: '#090c1d', surface: '#191939', gray: '#9789cd', white: '#d9d1f4', gold: '#ffce00', azure: '#4275ff', sky: '#8db5ff', muted: '#b2a5d9', success: '#64e300', gravel: '#a99a85' }
 
 type Point = [number, number]
 type Position = [number, number, number]
