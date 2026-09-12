@@ -1,4 +1,4 @@
-import { Camera, Check, Flag, Gauge, Timer, Zap } from "lucide-react";
+import { Camera, Flag, Gauge, Timer, Zap } from "lucide-react";
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,23 +11,18 @@ import {
 import {
   coins,
   formatDuration,
-  lapReward,
   type GameState,
   type OfflineEarnings,
 } from "@/lib/game";
 
 
-export type DialogKind = "help" | "circuits" | "welcome";
+export type DialogKind = "help" | "welcome";
 
 const DIALOG_COPY: Record<DialogKind, { title: string; description: string }> =
   {
     welcome: {
       title: "Selamat datang kembali!",
       description: "Mobilmu tetap muter di lintasan selama kamu pergi.",
-    },
-    circuits: {
-      title: "Progres trek",
-      description: "Trek hanya maju. Bonus Midnight bersifat permanen.",
     },
     help: {
       title: "Mobil kecil. Langsung jalan.",
@@ -91,15 +86,11 @@ export function GameDialog({
   onClose,
   game,
   offline,
-  onChooseCircuit,
-  disabled,
 }: {
   kind: DialogKind | null;
   onClose: () => void;
   game: GameState;
   offline: OfflineEarnings | null;
-  onChooseCircuit: (circuit: 1) => void;
-  disabled: boolean;
 }) {
   // Closing sets kind to null while the popup is still fading out, so the copy
   // has to survive one more render or the body flashes to another dialog's.
@@ -108,7 +99,6 @@ export function GameDialog({
   if (kind) shown.current = kind;
   // eslint-disable-next-line react-hooks/refs
   const active = kind ?? shown.current;
-  const unlockLaps = game.economy.circuitUnlockLaps;
 
   return (
     <Sheet
@@ -130,30 +120,6 @@ export function GameDialog({
             offlineCapSeconds={game.economy.offlineCapSeconds}
             onClose={onClose}
           />
-        ) : active === "circuits" ? (
-          <div className="circuit-choices">
-            <Button variant="circuit" disabled>
-              Jakarta Raceway
-              <span>
-                {coins(lapReward({ ...game, circuit: 0 }))} / putaran
-                {game.circuit === 0 ? " · Aktif" : " · Trek awal"}
-              </span>
-              {game.circuit === 0 && <Check data-icon="inline-end" />}
-            </Button>
-            <Button
-              variant="circuit"
-              disabled={disabled || game.laps < unlockLaps || game.circuit === 1}
-              onClick={() => onChooseCircuit(1)}
-            >
-              Midnight Speedway
-              <span>
-                {game.laps < unlockLaps
-                  ? `${game.laps}/${unlockLaps} putaran`
-                  : `${coins(lapReward({ ...game, circuit: 1 }))} / putaran${game.circuit === 1 ? " · Aktif" : ""}`}
-              </span>
-              {game.circuit === 1 && <Check data-icon="inline-end" />}
-            </Button>
-          </div>
         ) : (
           <div className="help-steps">
             <div className="help-step">
