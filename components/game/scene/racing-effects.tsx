@@ -72,7 +72,7 @@ export function RacingEffects({ playerRef, driving, boosted, reducedMotion }: { 
           transform.position.copy(p.position)
           const size = p.gravel && i % 3 === 0 ? .025 * p.life : (.045 + (1 - p.life) * .14) * p.life
           transform.scale.setScalar(size)
-          color.set(p.gravel ? COLORS.gravel : COLORS.muted).multiplyScalar(.5 + p.life * .5)
+          color.set(p.gravel ? '#a99a85' : '#b2a5d9').multiplyScalar(.5 + p.life * .5)
           dust.current.setColorAt(i, color)
         } else transform.scale.setScalar(0)
         transform.rotation.set(i, i * .7, 0)
@@ -98,7 +98,7 @@ export function RacingEffects({ playerRef, driving, boosted, reducedMotion }: { 
     }
     marker.current.position.set(player.position.x, state?.offRoad ? -.085 : .142, player.position.z)
     const material = marker.current.material as THREE.MeshBasicMaterial
-    material.color.set(state?.recovery || state && state.grip < 40 ? COLORS.gold : state?.lineLocked || state?.perfectBoost ? COLORS.success : COLORS.sky)
+    material.color.set(state?.recovery || state && state.grip < 40 ? COLORS.gold : state?.lineLocked || state?.perfectBoost ? '#64e300' : COLORS.sky)
   }, -1)
   return <>
     <instancedMesh ref={trail} args={[undefined, undefined, 28]} frustumCulled={false}>
