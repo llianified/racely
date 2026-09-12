@@ -755,6 +755,11 @@
 .help-footnote { padding: var(--space-md); border: var(--stroke) solid var(--border); border-radius: var(--radius); color: var(--muted-foreground); }
 .circuit-choices { display: flex; flex-direction: column; gap: var(--space-md); }
 
+/* ── kartu ajak teman ──────────────────────────────── */
+.referral-card { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-md) var(--gutter); }
+.referral-note { font-size: var(--fs-read); line-height: var(--lh-normal); color: var(--muted-foreground); }
+.referral-link { display: block; overflow-wrap: anywhere; padding: var(--space-md); border: var(--stroke) solid var(--border); border-radius: var(--corner-panel); background: var(--secondary); color: var(--accent); font-size: var(--fs-small); line-height: var(--lh-base); }
+
 /* ── dialog selamat datang kembali (hasil offline) ─── */
 .welcome-back { display: flex; flex-direction: column; gap: var(--space-md); }
 .welcome-haul { display: flex; flex-direction: column; padding: var(--space-lg); border: var(--stroke) solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: var(--radius); background: var(--card); }

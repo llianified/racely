@@ -245,6 +245,22 @@ export function GameDashboard() {
         duration: 2400,
       });
   };
+  const invite = async () => {
+    const link = game.referral.link;
+    if (!link) return;
+    try {
+      await navigator.clipboard.writeText(link);
+      telegramHaptic();
+      toast.success("Link ajakan disalin", {
+        description: "Kirim ke temanmu lewat Telegram atau WhatsApp.",
+        duration: 2400,
+      });
+    } catch {
+      // Clipboard bisa ditolak (izin, konteks non-secure). Tampilkan linknya
+      // supaya pemain masih bisa menyalin manual, bukan gagal diam-diam.
+      toast.info("Salin manual ya", { description: link, duration: 6000 });
+    }
+  };
   const gift = async () => {
     if (game.rewardClaimed) return;
     if (await runAction({ type: "gift" }))
@@ -434,6 +450,7 @@ export function GameDashboard() {
               onClaimGift={gift}
               onClaimMission={mission}
               onClaimAll={claimAll}
+              onInvite={invite}
               disabled={Boolean(busyAction)}
             />
           )}
