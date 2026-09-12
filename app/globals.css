@@ -561,7 +561,7 @@
 .battery-value { min-width: var(--battery-value-w); color: var(--accent); font-size: var(--fs-7xl); font-weight: var(--fw-black); letter-spacing: var(--track-tight-lg); font-variant-numeric: tabular-nums; line-height: var(--lh-none); }
 .battery-value small { font-size: var(--fs-lead); font-weight: var(--fw-semibold); letter-spacing: var(--track-flat); }
 .battery-meter { display: flex; flex: 1; gap: var(--space-3); height: var(--space-xl); min-width: 0; padding-inline: var(--space-3); }
-.battery-cell { display: block; flex: 1; min-width: 0; overflow: hidden; border-radius: var(--corner-2xs); background: var(--secondary); transform: skewX(-12deg); }
+.battery-cell { display: block; flex: 1; min-width: 0; overflow: hidden; border-radius: var(--corner-2xs); background: var(--secondary); }
 .battery-cell > span { display: block; width: 100%; height: 100%; background: var(--accent); transform-origin: left; transition: transform var(--dur-instant) linear; }
 .race-battery[data-phase='charging'] .battery-cell > span { background: var(--muted-foreground); }
 .race-battery[data-phase='charging'] .battery-value { color: var(--muted-foreground); }
