@@ -161,14 +161,44 @@ merah, jangan deploy.
 
 ## Deploy
 
-Urutan rilis produksi:
+Push ke `main` otomatis dirilis ke EC2 **hanya setelah workflow CI sukses**.
+GitHub Actions mengunggah source yang sudah diverifikasi ke direktori release
+berdasarkan commit SHA, lalu `scripts/deploy-ec2.sh` menjalankan migrasi, build
+standalone, reload PM2, health check, setup bot, dan menyimpan lima release
+terbaru. Jika health check gagal, proses aplikasi dikembalikan ke release
+sebelumnya. Migrasi tetap bersifat maju dan tidak di-rollback.
+
+Bootstrap satu kali di Ubuntu EC2 (ganti `ubuntu` jika `RACELY_USER` berbeda):
 
 ```bash
-pnpm run db:migrate
-pnpm run build:standalone
-pnpm run pm2:reload
-pnpm run bot:setup
+sudo apt-get update
+sudo apt-get install -y curl rsync util-linux
+# Instal Node.js 22 dari sumber paket tepercaya Anda, lalu pastikan ini berhasil:
+node --version
+corepack --version
+
+sudo install -d -o ubuntu -g ubuntu -m 755 /opt/racely/releases
+sudo install -d -o ubuntu -g ubuntu -m 755 /var/log/racely
+sudo install -d -o ubuntu -g ubuntu -m 750 /etc/racely
+sudo install -o ubuntu -g ubuntu -m 600 /dev/null /etc/racely/racely.env
+sudoedit /etc/racely/racely.env
 ```
+
+Isi `/etc/racely/racely.env` mengikuti `.env.example`. Pastikan security group
+hanya membuka SSH dari sumber yang diperlukan dan port aplikasi `3000` tidak
+terbuka publik jika sudah diproksi oleh Nginx/load balancer.
+
+Buat key SSH deployment khusus tanpa passphrase. Tambahkan **public key** ke
+`~/.ssh/authorized_keys` milik user EC2, lalu simpan **private key lengkap**
+(termasuk baris `BEGIN`/`END` dan newline asli) sebagai GitHub Actions secret
+`RACELY_SSH_KEY`. Tambahkan juga `RACELY_HOST` dan `RACELY_USER`. Workflow
+memvalidasi private key sebelum mencoba koneksi dan memakai SSH `accept-new`;
+ini tidak memerlukan secret host-key, tetapi tidak memberikan pinning identitas
+host sekuat `known_hosts` yang diverifikasi di luar koneksi.
+
+Environment GitHub `production` direkomendasikan untuk approval dan pembatasan
+secret. Deployment manual dari tab Actions tetap tersedia dan merilis commit
+`main` yang sedang aktif.
 
 **`vercel.json` jangan dihapus.** `"deploymentEnabled": false` di dalamnya
 adalah rem yang menahan Vercel supaya tidak membuat deployment otomatis setiap
