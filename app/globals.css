@@ -176,7 +176,7 @@
   --safe-top: max(env(safe-area-inset-top, 0px), var(--tg-content-safe-area-inset-top, 0px));
   --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--tg-content-safe-area-inset-bottom, 0px));
   --nav-height: var(--space-56);
-  /* ── tangga huruf — satu tangga menaik, tanpa lubang ─────────────────────
+  /* ── tangga huruf — satu tangga menaik, tanpa lubang ─��───────────────────
      2xs 8 · xs 9 · nano 10 · micro 11 · small 12 · body 13 · read 14 ·
      title 15 · lead 16 · display 19 · xl 21 · 2xl 22 · 3xl 23 · 4xl 24 ·
      5xl 28 · 6xl 30 · 7xl 32 · 8xl 36 · 9xl 48 · 10xl 68
@@ -281,8 +281,8 @@
   --radius-sm: calc(var(--radius) * .5);
   --radius-md: calc(var(--radius) * .75);
   --radius-lg: var(--radius);
-  /* rounded-xl dipakai tombol; disamakan dengan --radius supaya tombol tidak
-     lagi lebih bulat daripada permukaan yang menampungnya. */
+  /* rounded-xl dipakai popover dan pembungkus preview garasi; disamakan dengan
+     --radius supaya tidak ada permukaan yang lebih bulat daripada tombol. */
   --radius-xl: var(--radius);
 }
 @layer base {
