@@ -26,9 +26,8 @@ const DIALOG_COPY: Record<DialogKind, { title: string; description: string }> =
       description: "Mobilmu tetap muter di lintasan selama kamu pergi.",
     },
     circuits: {
-      title: "Pilih tempat ngegas",
-      description:
-        "Midnight selalu membayar lebih per putaran. Jakarta ada kalau kamu lebih suka tampilannya.",
+      title: "Progres trek",
+      description: "Trek hanya maju. Bonus Midnight bersifat permanen.",
     },
     help: {
       title: "Mobil kecil. Langsung jalan.",
@@ -96,7 +95,7 @@ export function GameDialog({
   onClose: () => void;
   game: GameState;
   offline: OfflineEarnings | null;
-  onChooseCircuit: (circuit: number) => void;
+  onChooseCircuit: (circuit: 1) => void;
   disabled: boolean;
 }) {
   // Closing sets kind to null while the popup is still fading out, so the copy
@@ -125,26 +124,17 @@ export function GameDialog({
           <WelcomeBack offline={offline} onClose={onClose} />
         ) : active === "circuits" ? (
           <div className="circuit-choices">
-            {/* Hasil per putaran ditampilkan di kedua tombol. Tanpa itu kedua
-                sirkuit terlihat setara padahal Midnight selalu membayar lebih,
-                dan "Kembali ke Jakarta" jadi tombol yang memotong penghasilan
-                tanpa memberi tahu. Sekarang pilihannya jujur: pindah balik
-                adalah soal selera tampilan, dan harganya kelihatan. */}
-            <Button
-              variant="circuit"
-              disabled={disabled}
-              onClick={() => onChooseCircuit(0)}
-            >
+            <Button variant="circuit" disabled>
               Jakarta Raceway
               <span>
                 {coins(lapReward({ ...game, circuit: 0 }))} / putaran
-                {game.circuit === 0 ? " · Aktif" : ""}
+                {game.circuit === 0 ? " · Aktif" : " · Trek awal"}
               </span>
               {game.circuit === 0 && <Check data-icon="inline-end" />}
             </Button>
             <Button
               variant="circuit"
-              disabled={disabled || game.laps < 25}
+              disabled={disabled || game.laps < 25 || game.circuit === 1}
               onClick={() => onChooseCircuit(1)}
             >
               Midnight Speedway
