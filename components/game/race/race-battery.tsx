@@ -18,9 +18,9 @@ export function RaceBattery({ game, inspect, onInspect }: { game: GameState; ins
         <span className="battery-power">
           <strong className="battery-value" aria-hidden="true">{battery.percent}<small>%</small></strong>
           <span className="battery-meter" role="progressbar" aria-label="Daya baterai boost" aria-valuemin={0} aria-valuemax={100} aria-valuenow={battery.percent} aria-valuetext={`${battery.percent} persen. ${status}`}>
-            {Array.from({ length: 20 }, (_, index) => (
+            {Array.from({ length: 10 }, (_, index) => (
               <span className="battery-cell" key={index} aria-hidden="true">
-                <span style={{ transform: `scaleX(${Math.max(0, Math.min(1, battery.charge * 20 - index))})` }} />
+                <span style={{ transform: `scaleX(${Math.max(0, Math.min(1, battery.charge * 10 - index))})` }} />
               </span>
             ))}
           </span>

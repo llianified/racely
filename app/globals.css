@@ -117,6 +117,10 @@
   --upgrade-action-w: 104px;
   --withdraw-action-w: 80px;
   --battery-value-w: 76px;
+  --battery-h: 72px;
+  --battery-cell-slant: -12deg;
+  --battery-frame: color-mix(in srgb, var(--foreground) 30%, var(--background));
+  --battery-surface: color-mix(in srgb, var(--foreground) 5%, var(--background));
   /* Muat "24,95/25" (65,7px) tanpa memendekkan bar misi mana pun. */
   --mission-count-w: 68px;
   --edition-max-w: 100px;
@@ -552,18 +556,21 @@
 @media (min-width: 480px) { .track-stat-label svg { display: block; } }
 .reward-value { color: var(--accent); }
 .race-actions { padding: var(--space-md) var(--gutter); border-top: var(--stroke) solid var(--border); }
-.race-battery { padding: var(--space-md); border-top: var(--stroke) solid var(--border); background: var(--background); color: var(--accent); font-size: var(--fs-read); line-height: var(--lh-normal); }
-.battery-shell { display: flex; align-items: center; width: 100%; border: 0; padding: 0; background: transparent; color: inherit; cursor: pointer; border-radius: var(--corner-md); }
-.battery-shell::after { content: ''; flex-shrink: 0; width: var(--space-6); height: var(--space-20); border-radius: 0 var(--corner-md) var(--corner-md) 0; background: currentColor; }
+.race-battery { padding: var(--space-lg) var(--space-md); border-top: var(--stroke) solid var(--border); background: var(--background); color: var(--accent); font-size: var(--fs-read); line-height: var(--lh-normal); }
+.battery-shell { display: flex; align-items: center; width: 100%; border: 0; padding: 0; background: transparent; color: inherit; cursor: pointer; border-radius: var(--corner-md); -webkit-tap-highlight-color: transparent; }
+.battery-shell::after { content: ''; flex-shrink: 0; width: var(--space-8); height: var(--space-28); border-radius: 0 var(--corner-md) var(--corner-md) 0; background: var(--battery-frame); }
 .battery-shell:focus-visible { outline: var(--focus-w) solid var(--ring); outline-offset: var(--focus-offset); }
-.battery-shell:hover .battery-power, .battery-shell[aria-pressed='true'] .battery-power { background: color-mix(in srgb, currentColor 8%, var(--background)); }
-.battery-power { display: flex; flex: 1; align-items: center; gap: var(--space-md); min-width: 0; min-height: var(--space-56); padding: var(--space-sm) var(--space-md); border: var(--stroke-2) solid currentColor; border-radius: var(--corner-md); }
-.battery-value { min-width: var(--battery-value-w); font-size: var(--fs-7xl); font-weight: var(--fw-black); letter-spacing: var(--track-tight-lg); font-variant-numeric: tabular-nums; line-height: var(--lh-none); text-align: left; }
-.battery-value small { font-size: var(--fs-lead); font-weight: var(--fw-semibold); letter-spacing: var(--track-flat); }
-.battery-meter { display: flex; flex: 1; gap: var(--space-3); height: var(--space-28); min-width: 0; }
-.battery-cell { display: block; flex: 1; min-width: 0; overflow: hidden; border-radius: var(--corner-2xs); background: var(--secondary); }
+.battery-shell:hover .battery-power, .battery-shell[aria-pressed='true'] .battery-power { border-color: currentColor; }
+.battery-shell:active .battery-power { background: color-mix(in srgb, var(--accent) 8%, var(--background)); }
+.battery-power { display: flex; flex: 1; align-items: center; gap: var(--space-lg); min-width: 0; min-height: var(--battery-h); padding: var(--space-md) var(--space-lg); border: var(--stroke-2) solid var(--battery-frame); border-radius: var(--corner-md); background: var(--battery-surface); color: inherit; box-shadow: inset 0 0 0 var(--space-3) var(--background); transition: border-color var(--dur-fast); }
+.battery-value { display: flex; align-items: baseline; gap: var(--space-3); min-width: var(--battery-value-w); color: var(--foreground); font-size: var(--fs-8xl); font-weight: var(--fw-black); font-style: italic; letter-spacing: var(--track-tight-lg); font-variant-numeric: tabular-nums; line-height: var(--lh-none); text-align: left; }
+.battery-value small { color: var(--muted-foreground); font-size: var(--fs-read); font-weight: var(--fw-bold); font-style: normal; letter-spacing: var(--track-flat); }
+.battery-meter { display: flex; flex: 1; gap: var(--space-4); height: var(--space-36); min-width: 0; transform: skewX(var(--battery-cell-slant)); }
+.battery-cell { display: block; flex: 1; min-width: 0; overflow: hidden; border-radius: var(--space-2); background: color-mix(in srgb, var(--foreground) 8%, var(--background)); }
 .battery-cell > span { display: block; width: 100%; height: 100%; background: currentColor; transform-origin: left; transition: transform var(--dur-instant) linear; }
 .race-battery[data-phase='charging'] { color: var(--muted-foreground); }
+.race-battery[data-phase='discharging'] .battery-power { border-color: var(--accent); }
+.race-battery[data-phase='discharging'] .battery-shell::after { background: var(--accent); }
 .scene-wrap.is-inspecting { height: var(--scene-h-inspect); }
 .inspect-hud { top: var(--space-md); left: var(--space-md); display: flex; flex-direction: column; gap: var(--space-xs); font-size: var(--fs-read); line-height: var(--lh-normal); }
 .inspect-hud strong { letter-spacing: var(--track-caps-md); }
