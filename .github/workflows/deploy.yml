@@ -1,86 +1,24 @@
 name: Deploy Racely
 
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 concurrency:
   group: racely-production
-  cancel-in-progress: false
-
-permissions:
-  contents: read
+  cancel-in-progress: true
 
 jobs:
   deploy:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    environment: production
-    env:
-      DEPLOY_SHA: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}
 
     steps:
-      - name: Check out verified revision
-        uses: actions/checkout@v5
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1
         with:
-          ref: ${{ env.DEPLOY_SHA }}
-
-      - name: Prepare SSH
-        env:
-          RACELY_HOST: ${{ secrets.RACELY_HOST }}
-          RACELY_USER: ${{ secrets.RACELY_USER }}
-          RACELY_SSH_KEY: ${{ secrets.RACELY_SSH_KEY }}
-        run: |
-          test -n "$RACELY_HOST"
-          test -n "$RACELY_USER"
-          install -m 700 -d "$HOME/.ssh"
-
-          python3 - <<'PY'
-          import os
-          from pathlib import Path
-
-          key = os.environ["RACELY_SSH_KEY"].strip()
-          if "\\n" in key and "\n" not in key:
-              key = key.replace("\\n", "\n")
-          Path.home().joinpath(".ssh/racely_ec2").write_text(f"{key}\n")
-          PY
-
-          chmod 600 "$HOME/.ssh/racely_ec2"
-          ssh-keygen -y -f "$HOME/.ssh/racely_ec2" >/dev/null
-
-          cat > "$HOME/.ssh/config" <<EOF
-          Host racely-production
-            HostName $RACELY_HOST
-            User $RACELY_USER
-            IdentityFile $HOME/.ssh/racely_ec2
-            IdentitiesOnly yes
-            StrictHostKeyChecking accept-new
-            UserKnownHostsFile $HOME/.ssh/known_hosts
-            ServerAliveInterval 15
-            ServerAliveCountMax 3
-          EOF
-          chmod 600 "$HOME/.ssh/config"
-
-      - name: Upload immutable release
-        run: |
-          release_dir="/opt/racely/releases/$DEPLOY_SHA"
-          ssh racely-production "mkdir -p '$release_dir'"
-          rsync -az --delete \
-            --exclude '.git/' \
-            --exclude '.next/' \
-            --exclude 'node_modules/' \
-            --exclude '.env' \
-            --exclude '.env.*.local' \
-            ./ "racely-production:$release_dir/"
-
-      - name: Activate and verify release
-        run: |
-          ssh racely-production \
-            "bash '/opt/racely/releases/$DEPLOY_SHA/scripts/deploy-ec2.sh' '$DEPLOY_SHA'"
+          host: ${{ secrets.RACELY_HOST }}
+          username: ${{ secrets.RACELY_USER }}
+          key: ${{ secrets.RACELY_SSH_KEY }}
+          script: |
+            /usr/local/bin/deploy-racely
