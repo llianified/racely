@@ -58,8 +58,8 @@ export function RaceOverviewHud({ seconds, baseSeconds, reward, telemetry, boost
         </div>
       </dl>
       <dl className="race-hud-server">
-        <div><dt>Lap server</dt><dd>{seconds.toFixed(2)} d</dd></div>
-        <div><dt>Koin/lap</dt><dd className="race-hud-reward">{formatCoins(reward)}</dd></div>
+        <div><dt>Lap server</dt><dd>{seconds.toFixed(2)}<small>d</small></dd></div>
+        <div><dt>Koin/lap</dt><dd className="race-hud-reward">+{formatCoins(reward)}</dd></div>
       </dl>
     </section>
   );
