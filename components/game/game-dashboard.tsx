@@ -41,6 +41,10 @@ import { cn } from "@/lib/utils";
 import type { CarColor } from "@/lib/car-catalog";
 import { PART_CATALOG, SLOT_LABELS, type PartCommand } from "@/lib/car-parts";
 
+const GAME_TOAST_OFFSET = {
+  bottom: "calc(var(--nav-height) + var(--safe-bottom) + var(--space-md))",
+} as const;
+
 export function GameDashboard() {
   const [game, dispatch] = useReducer(gameReducer, INITIAL_GAME);
   const [tab, setTab] = useState<GameTab>("race");
@@ -229,7 +233,7 @@ export function GameDashboard() {
         `${{ engine: "Mesin", tires: "Ban & roller", battery: "Baterai" }[key]} → Level ${next.levels[key]}`,
         {
           description: "Terpasang dan tersimpan. Langsung aktif di lintasan.",
-          duration: 2200,
+          duration: 1800,
         },
       );
     return Boolean(next);
@@ -252,7 +256,7 @@ export function GameDashboard() {
     if (await runAction({ type: "claim" }))
       toast.success(`+${coins(amount)} masuk saldo`, {
         description: `Setara ${idr(amount)} dan siap ditarik lewat Dompet.`,
-        duration: 2200,
+        duration: 1800,
       });
   };
   const daily = async () => {
@@ -261,7 +265,7 @@ export function GameDashboard() {
     if (await runAction({ type: "daily" }))
       toast.success(`Check-in harian! +${coins(amount)}`, {
         description: "Balik lagi besok supaya streak-nya tidak putus.",
-        duration: 2400,
+        duration: 1800,
       });
   };
   const invite = async () => {
@@ -272,7 +276,7 @@ export function GameDashboard() {
       telegramHaptic();
       toast.success("Link ajakan disalin", {
         description: "Kirim ke temanmu lewat Telegram atau WhatsApp.",
-        duration: 2400,
+        duration: 1800,
       });
     } catch {
       // Clipboard bisa ditolak (izin, konteks non-secure). Tampilkan linknya
@@ -320,7 +324,7 @@ export function GameDashboard() {
     if (!next) return false;
     toast.success(`Penarikan ${idr(payload.coins)} dikirim`, {
       description: "Tim Racely memverifikasi dalam 1×24 jam kerja.",
-      duration: 2600,
+      duration: 1800,
     });
     return true;
   };
@@ -342,7 +346,7 @@ export function GameDashboard() {
     if (await runAction({ type: "boost" }))
       toast.success("Gaspol aktif · kecepatan 2×", {
         description: "Pantau sisa waktu di tombol. Baterai mengisi ulang otomatis setelahnya.",
-        duration: 2200,
+        duration: 1800,
       });
   };
   const chooseColor = async (
@@ -372,7 +376,7 @@ export function GameDashboard() {
   if (game.carSelection?.model === null) {
     return (
       <>
-        <Toaster theme="dark" position="top-center" />
+        <Toaster theme="dark" />
         <CarSelection
           developmentPreview={Boolean(game.developmentPreview)}
           returningPlayer={game.carSelection.returningPlayer}
@@ -386,7 +390,11 @@ export function GameDashboard() {
 
   return (
     <div className="game-shell">
-      <Toaster theme="dark" position="top-center" />
+      <Toaster
+        theme="dark"
+        offset={GAME_TOAST_OFFSET}
+        mobileOffset={GAME_TOAST_OFFSET}
+      />
       <GameNavigation
         tab={tab}
         onTab={navigate}
