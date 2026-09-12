@@ -5,7 +5,7 @@ import { memo, useRef, useState } from "react";
 import { ArrowUp, BatteryMedium, CarFront, Check, Cog, CircleDot, LoaderCircle, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { CAR_CATALOG, type CarColor } from "@/lib/car-catalog";
 import { CarColorPicker } from "../car/car-color-picker";
 import { InfoHint } from "./info-hint";
@@ -114,7 +114,7 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
   };
 
   return (
-    <Dialog open={open} onOpenChange={(value) => { if (!installLock.current) setOpen(value); }}>
+    <Sheet open={open} onOpenChange={(value) => { if (!installLock.current) setOpen(value); }}>
       <div className="upgrade-row">
         <div className="upgrade-info">
           <div className="upgrade-name"><Icon size={16} aria-hidden="true" /><h3>{title}</h3><span className="level-label">Lv. {level}</span></div>
@@ -126,17 +126,17 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
           </div>
         </div>
         <div className="upgrade-action">
-          <DialogTrigger render={<Button variant="gold" className="upgrade-buy" disabled={blocked || maxed} />} aria-label={maxed ? `${title} level maksimal` : `Modifikasi ${title}`}>
+          <SheetTrigger render={<Button variant="gold" className="upgrade-buy" disabled={blocked || maxed} />} aria-label={maxed ? `${title} level maksimal` : `Modifikasi ${title}`}>
             {maxed ? <Check data-icon="inline-start" /> : <Wrench data-icon="inline-start" />}
             {maxed ? "MAX" : "Modif"}
-          </DialogTrigger>
+          </SheetTrigger>
         </div>
       </div>
-      <DialogContent className="gap-0 p-0 font-sans" showCloseButton={!installing}>
-        <DialogHeader className="border-b border-border px-xl py-(--space-20) pr-12">
-          <DialogTitle>Modifikasi {title.toLowerCase()}</DialogTitle>
-          <DialogDescription>Pilih peningkatan permanen untuk mobilmu. Koin hanya dipotong setelah pemasangan berhasil.</DialogDescription>
-        </DialogHeader>
+      <SheetContent side="bottom" className="game-sheet gap-0 p-0 font-sans" showCloseButton={!installing}>
+        <SheetHeader className="border-b border-border px-xl py-(--space-20) pr-12">
+          <SheetTitle>Modifikasi {title.toLowerCase()}</SheetTitle>
+          <SheetDescription>Pilih peningkatan permanen untuk mobilmu. Koin hanya dipotong setelah pemasangan berhasil.</SheetDescription>
+        </SheetHeader>
         <div className="flex flex-col text-read leading-relaxed">
           <div className="flex items-center gap-md border-b border-border bg-background px-xl py-lg text-foreground">
             <Icon className="size-6 shrink-0 text-accent" aria-hidden="true" />
@@ -205,15 +205,15 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
               : "Part dan tampilan 3D berubah otomatis setelah pemasangan berhasil, di garasi maupun lintasan. Part tidak bisa dijual kembali."}
           </p>
         </div>
-        <DialogFooter className="border-t border-border px-xl py-(--space-20)">
-          <DialogClose render={<Button variant="outline" disabled={installing} />}>Batal</DialogClose>
+        <SheetFooter className="border-t border-border px-xl py-(--space-20)">
+          <SheetClose render={<Button variant="outline" disabled={installing} />}>Batal</SheetClose>
           <Button variant="gold" disabled={blocked || maxed || shortfall > 0} onClick={() => void install()} aria-busy={installing}>
             {installing ? <LoaderCircle className="animate-spin" data-icon="inline-start" /> : <ArrowUp data-icon="inline-start" />}
             {installing ? "Memasang…" : maxed ? "Level maksimal" : `Pasang · ${coins(cost)}`}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -224,7 +224,6 @@ export function UpgradePanel({ game, onUpgrade, disabled = false }: UpgradePanel
         <h2><Wrench aria-hidden="true" />Bengkel modifikasi</h2>
         <InfoHint title="Modifikasi mobil">Pilih part, cek perubahan performa, lalu konfirmasi pemasangan. Mesin dan ban mempercepat putaran; ban juga memperkuat grip dan mempercepat pemulihannya di simulasi. Baterai menambah hasil koin. Setiap pemasangan menaikkan satu level, maksimal level 10.</InfoHint>
       </div>
-      <p className="px-lg pt-md text-read leading-relaxed text-muted-foreground">Rakit performamu. Cek simulasi sebelum pasang.</p>
       <div className="upgrade-list">
         {PARTS.map((part) => <ModificationSlot key={part.key} part={part} game={game} onUpgrade={onUpgrade} disabled={disabled} />)}
       </div>
