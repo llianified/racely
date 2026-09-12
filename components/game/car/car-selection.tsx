@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
-import { ArrowLeft, ArrowRight, Check, Flag, LoaderCircle, LockKeyhole } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Flag, LoaderCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CAR_CATALOG, CAR_MODEL_IDS, isCarColor, type CarColor, type CarModelId } from "@/lib/car-catalog";
@@ -75,17 +75,21 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
         </div>
         <ol className="selection-steps" aria-label="Langkah onboarding">
           <li aria-current={step === 1 ? "step" : undefined} data-complete={step === 2 || undefined}>
-            <span>{step === 2 ? <Check className="size-4" aria-label="Selesai" /> : "01"} Pilih mobil</span>
+            <span><span className="selection-step-number">{step === 2 ? <Check className="size-4" aria-label="Selesai" /> : "01"}</span> Pilih mobil</span>
           </li>
-          <li aria-current={step === 2 ? "step" : undefined}><span>02 Sentuhanmu</span></li>
+          <li aria-current={step === 2 ? "step" : undefined}>
+            <span><span className="selection-step-number">02</span> Sentuhanmu</span>
+          </li>
         </ol>
         <div className="selection-intro">
           <h1 ref={headingRef} tabIndex={-1}>
             {step === 1 ? <>{returningPlayer ? "Kembali ke garasi." : "Mobil pertamamu."}<br /><span>Awal cerita baru.</span></> : <>Pilih warnanya.<br /><span>Tunjukkan gayamu.</span></>}
           </h1>
           <p>{step === 1
-            ? returningPlayer ? "Koin, upgrade, dan progresmu tetap aman." : "Dua karakter. Satu pilihan. Mana jagoanmu?"
-            : "Sentuhan terakhir sebelum turun ke lintasan."}</p>
+            ? returningPlayer
+              ? "Koin, upgrade, dan progresmu tetap aman. Model hanya dipilih sekali."
+              : `Dua karakter. Satu pilihan. Mana jagoanmu? Model hanya dipilih sekali.${developmentPreview ? " Progres preview disimpan di browser ini." : ""}`
+            : "Sentuhan terakhir sebelum turun ke lintasan. Model tetap, warna bisa diganti."}</p>
         </div>
       </header>
 
@@ -134,7 +138,7 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
         {failed && <p role="alert">Belum tersimpan. Pilihanmu tetap di sini; coba lagi.</p>}
         <div className="selection-actions">
           {step === 2 && (
-            <Button variant="outline" size="icon-lg" aria-label="Kembali ke pilihan mobil" disabled={busy} onClick={() => { setStep(1); setFailed(false); }}>
+            <Button variant="outline" size="icon-lg" className="press-button" aria-label="Kembali ke pilihan mobil" disabled={busy} onClick={() => { setStep(1); setFailed(false); }}>
               <ArrowLeft aria-hidden="true" />
             </Button>
           )}
@@ -144,13 +148,6 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
             {step === 1 && <ArrowRight data-icon="inline-end" />}
           </Button>
         </div>
-        <p className="selection-hint">
-          <LockKeyhole className="size-4" aria-hidden="true" />
-          {step === 1 ? "Model dipilih sekali." : "Model tetap; warna bisa diganti."}
-        </p>
-        <p className="selection-save-note">{developmentPreview
-          ? "Preview saja · progres lokal di browser ini."
-          : "Tersimpan ke akun Telegram kamu."}</p>
       </footer>
     </main>
   );
