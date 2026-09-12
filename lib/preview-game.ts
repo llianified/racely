@@ -17,8 +17,14 @@ import {
   type Upgrade,
   type WithdrawMethod,
 } from "./game";
-import { calculateRaceSettlement } from "./game-economy";
+import {
+  calculateRaceSettlement,
+  DAILY_HISTORY_DAYS,
+  dailyCheckIn,
+  racingDayKey,
+} from "./game-economy";
 import { CAR_MODEL_IDS, isCarColor } from "./car-catalog";
+import { referralLink } from "./telegram-bot";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
 
 export const previewCarActionSchema = z.object({
@@ -40,6 +46,10 @@ const previewGameSchema = z.object({
   userId: z.string(),
   updatedAt: z.number().int().nonnegative(),
   receipts: z.array(z.string().uuid()).max(MAX_RECEIPTS),
+  dailyClaims: z
+    .array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
+    .max(DAILY_HISTORY_DAYS)
+    .default([]),
   state: z.object({
     developmentPreview: z.boolean().default(true),
     carSelection: z.object({
@@ -85,6 +95,8 @@ const previewGameSchema = z.object({
 });
 
 type PreviewGame = z.infer<typeof previewGameSchema>;
+/** Bentuk state di dalam cookie: GameState tanpa field turunan per-respons. */
+type PreviewState = PreviewGame["state"];
 
 export const PREVIEW_GAME_COOKIE = "racely-preview-game";
 
@@ -104,6 +116,7 @@ function initialPreviewGame(identity: PlayerIdentity, now: number): PreviewGame 
     userId: identity.userId,
     updatedAt: now,
     receipts: [],
+    dailyClaims: [],
     state: {
       ...INITIAL_GAME,
       developmentPreview: true,
@@ -211,9 +224,18 @@ function settlePreviewGame(game: PreviewGame, now: number): SettledPreview {
 function previewResult(
   game: PreviewGame,
   offline: OfflineEarnings | null,
+  now: number,
 ): { state: GameState; cookieValue: string } {
+  const state: GameState = {
+    ...game.state,
+    daily: dailyCheckIn(game.dailyClaims, new Date(now)),
+    // Mode preview hanya punya satu pemain di dalam cookie, jadi tidak ada yang
+    // bisa diajak dan tidak ada yang bisa dibayar. Linknya tetap dibangun
+    // supaya tata letak kartu ajakan bisa dicek saat `pnpm dev`.
+    referral: { link: referralLink(game.userId), invited: 0, earned: 0 },
+  };
   return {
-    state: offline ? { ...game.state, offlineEarnings: offline } : game.state,
+    state: offline ? { ...state, offlineEarnings: offline } : state,
     cookieValue: serializePreviewGame(game),
   };
 }
@@ -222,7 +244,7 @@ function serializePreviewGame(game: PreviewGame) {
   return Buffer.from(JSON.stringify(game), "utf8").toString("base64url");
 }
 
-function applyUpgrade(state: GameState, key: Upgrade) {
+function applyUpgrade(state: PreviewState, key: Upgrade) {
   const level = state.levels[key];
   if (level >= 10) {
     throw new PreviewGameRuleError(
@@ -244,11 +266,12 @@ export function getPreviewGameState(
   request: Request,
   identity: PlayerIdentity,
 ) {
+  const now = Date.now();
   const { game, offline } = settlePreviewGame(
     readPreviewGame(request, identity),
-    Date.now(),
+    now,
   );
-  return previewResult(game, offline);
+  return previewResult(game, offline, now);
 }
 
 export function performPreviewGameAction(
@@ -272,7 +295,7 @@ export function performPreviewGameAction(
         throw new PreviewGameRuleError("Model sudah dikonfirmasi dan tidak dapat diganti.");
       }
       // A retry must not reset a later garage color or grant any progress.
-      return previewResult(game, offline);
+      return previewResult(game, offline, now);
     }
   } else if (selection?.model === null && action.type !== "sync") {
     throw new PreviewGameRuleError("Pilih mobilmu sebelum mulai bermain.");
@@ -282,10 +305,11 @@ export function performPreviewGameAction(
   }
 
   if (action.type !== "sync" && game.receipts.includes(requestId)) {
-    return previewResult(game, offline);
+    return previewResult(game, offline, now);
   }
 
   let state = game.state;
+  let dailyClaims = game.dailyClaims;
   if (action.type === "select-car") {
     state = {
       ...state,
@@ -339,6 +363,15 @@ export function performPreviewGameAction(
       rewardClaimed: true,
       balance: state.balance + STARTER_GIFT,
     };
+  } else if (action.type === "daily") {
+    const status = dailyCheckIn(game.dailyClaims, new Date(now));
+    if (!status.claimedToday) {
+      state = { ...state, balance: state.balance + status.reward };
+      dailyClaims = [racingDayKey(new Date(now)), ...game.dailyClaims].slice(
+        0,
+        DAILY_HISTORY_DAYS,
+      );
+    }
   } else if (action.type === "mission") {
     const mission = MISSIONS.find((item) => item.id === action.id);
     if (
@@ -367,11 +400,12 @@ export function performPreviewGameAction(
   game = {
     ...game,
     state,
+    dailyClaims,
     updatedAt: now,
     receipts:
       action.type === "sync"
         ? game.receipts
         : [...game.receipts, requestId].slice(-MAX_RECEIPTS),
   };
-  return previewResult(game, offline);
+  return previewResult(game, offline, now);
 }

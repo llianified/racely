@@ -24,6 +24,7 @@ const identity = {
   displayName: "Integration Racer",
   username: "integration_racer",
   photoUrl: null,
+  startParam: null,
 };
 
 describeDatabase("Neon Postgres persistence", () => {
@@ -33,6 +34,7 @@ describeDatabase("Neon Postgres persistence", () => {
   let updates: typeof import("@/lib/telegram-updates");
   let drizzle: typeof import("drizzle-orm");
   const claimedUpdateIds: number[] = [];
+  const extraUserIds: string[] = [];
 
   beforeAll(async () => {
     [db, schema, gameServer, updates, drizzle] = await Promise.all([
@@ -50,6 +52,14 @@ describeDatabase("Neon Postgres persistence", () => {
     await db
       .delete(schema.players)
       .where(drizzle.eq(schema.players.userId, identity.userId));
+    for (const userId of extraUserIds) {
+      await db
+        .delete(schema.players)
+        .where(drizzle.eq(schema.players.userId, userId));
+      await db
+        .delete(schema.botChats)
+        .where(drizzle.eq(schema.botChats.userId, userId));
+    }
     for (const updateId of claimedUpdateIds) {
       await updates.releaseTelegramUpdate(updateId);
     }
@@ -66,11 +76,13 @@ describeDatabase("Neon Postgres persistence", () => {
           'racely_withdrawals',
           'racely_telegram_updates',
           'racely_action_receipts',
-          'racely_reward_claims'
+          'racely_reward_claims',
+          'racely_bot_chats'
         )
     `);
     expect(tables.rows.map((row) => row.table_name).sort()).toEqual([
       "racely_action_receipts",
+      "racely_bot_chats",
       "racely_players",
       "racely_reward_claims",
       "racely_telegram_updates",
@@ -230,6 +242,153 @@ describeDatabase("Neon Postgres persistence", () => {
 
     await updates.releaseTelegramUpdate(updateId);
     expect(await updates.claimTelegramUpdate(updateId)).toBe(true);
+  });
+
+  it("mengikat pengajak sekali, membayar keduanya sekali, di capaian", async () => {
+    const game = await import("@/lib/game");
+    const player = (suffix: string, startParam: string | null = null) => {
+      const userId = `test-ref-${suffix}-${randomUUID()}`;
+      extraUserIds.push(userId);
+      return { userId, displayName: `Ref ${suffix}`, username: null, photoUrl: null, startParam };
+    };
+    const balanceOf = async (userId: string) => {
+      const [row] = await db!
+        .select({ balance: schema.players.balance, referredBy: schema.players.referredBy })
+        .from(schema.players)
+        .where(drizzle.eq(schema.players.userId, userId));
+      return row;
+    };
+
+    const inviter = player("inviter");
+    await gameServer.getGameState(inviter);
+    const inviterStart = (await balanceOf(inviter.userId))!.balance;
+
+    // Diri sendiri tidak bisa jadi pengajak.
+    const selfie = player("self");
+    await gameServer.getGameState({ ...selfie, startParam: `ref_${selfie.userId}` });
+    expect((await balanceOf(selfie.userId))!.referredBy).toBeNull();
+
+    // Pengajak yang tidak ada diabaikan, bukan bikin baris menggantung.
+    const orphan = player("orphan", "ref_test-ref-tidak-ada");
+    await gameServer.getGameState(orphan);
+    expect((await balanceOf(orphan.userId))!.referredBy).toBeNull();
+
+    const invitee = player("invitee", `ref_${inviter.userId}`);
+    const bound = await gameServer.getGameState(invitee);
+    expect((await balanceOf(invitee.userId))!.referredBy).toBe(inviter.userId);
+    // Belum mencapai 100 putaran -> belum ada yang dibayar.
+    expect(bound.referral.earned).toBe(0);
+    expect((await balanceOf(inviter.userId))!.balance).toBe(inviterStart);
+
+    const inviteeStart = (await balanceOf(invitee.userId))!.balance;
+    await db!
+      .update(schema.players)
+      .set({ laps: game.REFERRAL_MILESTONE_LAPS })
+      .where(drizzle.eq(schema.players.userId, invitee.userId));
+
+    await gameServer.getGameState(invitee);
+    expect((await balanceOf(invitee.userId))!.balance).toBe(
+      inviteeStart + game.REFERRAL_REWARD_INVITEE,
+    );
+    expect((await balanceOf(inviter.userId))!.balance).toBe(
+      inviterStart + game.REFERRAL_REWARD_INVITER,
+    );
+
+    // Sync berikutnya tidak boleh membayar lagi.
+    await gameServer.getGameState(invitee);
+    await gameServer.getGameState(invitee);
+    expect((await balanceOf(inviter.userId))!.balance).toBe(
+      inviterStart + game.REFERRAL_REWARD_INVITER,
+    );
+
+    const inviterState = await gameServer.getGameState(inviter);
+    expect(inviterState.referral).toMatchObject({
+      invited: 1,
+      earned: game.REFERRAL_REWARD_INVITER,
+    });
+    expect(inviterState.referral.link).toContain(`ref_${inviter.userId}`);
+
+    // Sudah pernah balapan -> tidak bisa diikat belakangan.
+    const veteran = player("veteran");
+    await gameServer.getGameState(veteran);
+    await db!
+      .update(schema.players)
+      .set({ laps: 5 })
+      .where(drizzle.eq(schema.players.userId, veteran.userId));
+    await gameServer.getGameState({ ...veteran, startParam: `ref_${inviter.userId}` });
+    expect((await balanceOf(veteran.userId))!.referredBy).toBeNull();
+  });
+
+  /**
+   * Sapuan pemberitahuan idle: bagian yang tidak bisa dicakup unit test adalah
+   * query-nya sendiri -- join ke racely_bot_chats, predikat "satu pesan per
+   * periode menganggur", dan penandaannya. Pengiriman ke Telegram sengaja
+   * dibiarkan gagal (tanpa TELEGRAM_BOT_TOKEN) supaya tidak ada panggilan
+   * jaringan; yang diuji di sini adalah pemilihan baris dan efeknya.
+   */
+  it("memilih dan menandai pemain yang jendela offline-nya hampir penuh", async () => {
+    const notifier = await import("@/lib/idle-notifier");
+    const { IDLE_NOTIFY_AFTER_SECONDS } = await import("@/lib/idle-notify");
+    const chats = await import("@/lib/bot-chats");
+    process.env.PUBLIC_APP_URL ??= "https://racely.fun";
+
+    const now = new Date();
+    const idleSince = new Date(
+      now.getTime() - (IDLE_NOTIFY_AFTER_SECONDS + 60) * 1000,
+    );
+    const chatId = 900000000 + (Date.now() % 10000);
+    const userId = String(chatId);
+    extraUserIds.push(userId);
+
+    await db!
+      .insert(schema.players)
+      .values({
+        userId,
+        displayName: "Idle Racer",
+        carModel: "luna-gt",
+        lastSettledAt: idleSince,
+      })
+      .onConflictDoNothing();
+
+    const eligible = async () => {
+      const rows = await db!
+        .select({ notified: schema.players.idleNotifiedAt })
+        .from(schema.players)
+        .where(drizzle.eq(schema.players.userId, userId));
+      return rows[0]?.notified ?? null;
+    };
+
+    // Belum pernah menyapa bot -> Telegram melarang kita menghubunginya.
+    await notifier.runIdleNotifierPass(now);
+    expect(await eligible()).toBeNull();
+
+    await chats.recordBotChat(chatId);
+    const firstPass = await notifier.runIdleNotifierPass(now);
+    expect(firstPass.sent + firstPass.skipped).toBeGreaterThan(0);
+    const markedAt = await eligible();
+    expect(markedAt).not.toBeNull();
+
+    // Sapuan kedua tanpa pemain kembali tidak boleh mengirim ulang.
+    await notifier.runIdleNotifierPass(now);
+    expect((await eligible())?.getTime()).toBe(markedAt?.getTime());
+
+    // Pemain kembali: last_settled_at melompat ke depan, melewati tanda
+    // notifikasi. Baru kembali berarti belum menganggur -- tidak boleh dikirimi
+    // apa pun, dan tandanya tidak boleh bergerak.
+    const returnedAt = new Date(now.getTime() + 60 * 1000);
+    await db!
+      .update(schema.players)
+      .set({ lastSettledAt: returnedAt })
+      .where(drizzle.eq(schema.players.userId, userId));
+    await notifier.runIdleNotifierPass(returnedAt);
+    expect((await eligible())?.getTime()).toBe(markedAt?.getTime());
+
+    // Menganggur lagi setelah kembali -> layak dinotifikasi sekali lagi.
+    const laterNow = new Date(
+      returnedAt.getTime() + (IDLE_NOTIFY_AFTER_SECONDS + 60) * 1000,
+    );
+    await notifier.runIdleNotifierPass(laterNow);
+    expect((await eligible())?.getTime()).toBe(laterNow.getTime());
   });
 });
 
