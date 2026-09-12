@@ -125,7 +125,7 @@ describe('arena powertrain', () => {
 
   it('withholds boost during recovery or off-road travel without refilling energy', () => {
     for (const interruption of [{ recovery: RECOVERY_SECONDS }, { offRoad: true }]) {
-      const state = Object.assign(createDrivingState(), interruption, { boostEnergy: .4 });
+      const state: DrivingState = { ...createDrivingState(), ...interruption, boostEnergy: .4 };
       advance(state, 1, true);
       expect(state.boostEnergy).toBe(.4);
       expect(state.boostPower).toBe(0);
