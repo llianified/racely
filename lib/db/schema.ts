@@ -1,3 +1,4 @@
+import { desc } from "drizzle-orm";
 import {
   bigint,
   bigserial,
@@ -57,14 +58,21 @@ export const actionReceipts = pgTable(
       .references(() => players.userId, { onDelete: "cascade" }),
     requestId: text("request_id").notNull(),
     actionType: text("action_type").notNull(),
-    response: jsonb("response").notNull(),
+    /**
+     * Legacy column, kept nullable so a rollback to older code still inserts.
+     * Nothing writes or reads it now: replay recomputes the state instead, and
+     * the snapshot used to duplicate withdrawal account numbers into this table.
+     */
+    response: jsonb("response"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
+  // (user_id, request_id) is the idempotency key; its primary-key index already
+  // covers every user_id lookup, so no separate user index is needed.
   (table) => [
     primaryKey({ columns: [table.userId, table.requestId] }),
-    index("racely_action_receipts_user_idx").on(table.userId),
+    index("racely_action_receipts_created_idx").on(table.createdAt),
   ],
 );
 
@@ -81,9 +89,9 @@ export const rewardClaims = pgTable(
       .notNull()
       .defaultNow(),
   },
+  // The unique (user_id, reward_key) index also serves user_id lookups.
   (table) => [
-    index("racely_reward_claims_user_idx").on(table.userId),
-    uniqueIndex("racely_reward_claims_key_uidx").on(
+    uniqueIndex("racely_reward_claims_key_unique").on(
       table.userId,
       table.rewardKey,
     ),
@@ -110,8 +118,12 @@ export const withdrawals = pgTable(
     processedAt: timestamp("processed_at", { withTimezone: true }),
   },
   (table) => [
-    index("racely_withdrawals_user_idx").on(table.userId),
-    uniqueIndex("racely_withdrawals_request_uidx").on(
+    // Matches the history query: filter on user_id, newest first.
+    index("racely_withdrawals_user_recent_idx").on(
+      table.userId,
+      desc(table.createdAt),
+    ),
+    uniqueIndex("racely_withdrawals_request_unique").on(
       table.userId,
       table.requestId,
     ),

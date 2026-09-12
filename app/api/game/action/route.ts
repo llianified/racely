@@ -17,19 +17,15 @@ import {
   TelegramAuthError,
 } from "@/lib/telegram-auth";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { readJsonBody, RequestBodyTooLargeError } from "@/lib/http-body";
+
+const MAX_ACTION_BODY_BYTES = 2048;
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    const contentLength = Number(request.headers.get("content-length") ?? 0);
-    if (contentLength > 2048)
-      return NextResponse.json(
-        { error: "Permintaan terlalu besar." },
-        { status: 413 },
-      );
-
     // Mirrors GET /api/game: a preview visitor may not have a session cookie yet
     // (first mutation of the session), so mint one instead of failing auth.
     const preview = getOrCreatePreviewIdentity(request);
@@ -49,7 +45,7 @@ export async function POST(request: Request) {
         },
       );
 
-    const payload: unknown = await request.json();
+    const payload = await readJsonBody(request, MAX_ACTION_BODY_BYTES);
     const isCookiePreview = identity.userId.startsWith("preview:");
     const body = gameActionSchema.safeParse(payload);
     if (!body.success)
@@ -102,6 +98,11 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: error.message },
         { status: error.status },
+      );
+    if (error instanceof RequestBodyTooLargeError)
+      return NextResponse.json(
+        { error: "Permintaan terlalu besar." },
+        { status: 413 },
       );
     if (error instanceof SyntaxError)
       return NextResponse.json(
