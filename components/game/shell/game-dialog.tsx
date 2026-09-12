@@ -15,7 +15,7 @@ import {
   type GameState,
   type OfflineEarnings,
 } from "@/lib/game";
-import { OFFLINE_CAP_SECONDS } from "@/lib/game-economy";
+
 
 export type DialogKind = "help" | "circuits" | "welcome";
 
@@ -38,9 +38,12 @@ const DIALOG_COPY: Record<DialogKind, { title: string; description: string }> =
 
 function WelcomeBack({
   offline,
+  offlineCapSeconds,
   onClose,
 }: {
   offline: OfflineEarnings;
+  /** Dari config ekonomi, bukan konstanta build -- lihat lib/economy-config.ts. */
+  offlineCapSeconds: number;
   onClose: () => void;
 }) {
   return (
@@ -69,7 +72,7 @@ function WelcomeBack({
       <p className="welcome-note">
         <Gauge aria-hidden="true" />
         <span>
-          Offline: ½ kecepatan, maksimal {formatDuration(OFFLINE_CAP_SECONDS)}.
+          Offline: ½ kecepatan, maksimal {formatDuration(offlineCapSeconds)}.
           {offline.capped
             ? ` Kamu pergi ${formatDuration(offline.awaySeconds)}; sisanya tidak dihitung.`
             : ""}
@@ -105,6 +108,7 @@ export function GameDialog({
   if (kind) shown.current = kind;
   // eslint-disable-next-line react-hooks/refs
   const active = kind ?? shown.current;
+  const unlockLaps = game.economy.circuitUnlockLaps;
 
   return (
     <Sheet
@@ -121,7 +125,11 @@ export function GameDialog({
           </SheetDescription>
         </SheetHeader>
         {active === "welcome" && offline ? (
-          <WelcomeBack offline={offline} onClose={onClose} />
+          <WelcomeBack
+            offline={offline}
+            offlineCapSeconds={game.economy.offlineCapSeconds}
+            onClose={onClose}
+          />
         ) : active === "circuits" ? (
           <div className="circuit-choices">
             <Button variant="circuit" disabled>
@@ -134,13 +142,13 @@ export function GameDialog({
             </Button>
             <Button
               variant="circuit"
-              disabled={disabled || game.laps < 25 || game.circuit === 1}
+              disabled={disabled || game.laps < unlockLaps || game.circuit === 1}
               onClick={() => onChooseCircuit(1)}
             >
               Midnight Speedway
               <span>
-                {game.laps < 25
-                  ? `${game.laps}/25 putaran`
+                {game.laps < unlockLaps
+                  ? `${game.laps}/${unlockLaps} putaran`
                   : `${coins(lapReward({ ...game, circuit: 1 }))} / putaran${game.circuit === 1 ? " · Aktif" : ""}`}
               </span>
               {game.circuit === 1 && <Check data-icon="inline-end" />}
@@ -163,7 +171,9 @@ export function GameDialog({
               <p>
                 <strong>Boost, klaim, lalu upgrade.</strong>
                 <span>
-                  Gaspol 2× selama 10 detik, lalu isi ulang selama 25 detik.
+                  Gaspol {game.economy.boostMultiplier}× selama{" "}
+                  {game.economy.boostDurationSeconds} detik, lalu isi ulang
+                  selama {game.economy.batteryRechargeSeconds} detik.
                   Baterai terisi otomatis dan balapan normal tetap jalan.
                 </span>
               </p>
@@ -174,7 +184,7 @@ export function GameDialog({
                 <strong>Ditinggal pun tetap ngumpulin koin.</strong>
                 <span>
                   Saat kamu tutup aplikasi, mobilmu jalan setengah kecepatan
-                  sampai {formatDuration(OFFLINE_CAP_SECONDS)}. Hasilnya
+                  sampai {formatDuration(game.economy.offlineCapSeconds)}. Hasilnya
                   langsung masuk koin pending.
                 </span>
               </p>

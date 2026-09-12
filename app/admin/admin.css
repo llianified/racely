@@ -1,0 +1,244 @@
+/**
+ * Panel admin. Permukaan terpisah dari app pemain: dibuka di browser desktop,
+ * bukan di dalam Telegram, jadi ia punya lebarnya sendiri (--admin-width) dan
+ * tidak memakai satu pun kelas .game-* .
+ *
+ * Seluruh nilai di sini bersumber token di :root (app/globals.css) -- lihat
+ * AGENTS.md. Yang literal hanya nilai struktural: 0, 100%, dan track grid.
+ */
+
+.adm-shell {
+  width: 100%;
+  max-width: var(--admin-width);
+  margin-inline: auto;
+  padding: var(--space-24) var(--space-20) var(--space-48);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+  font-size: var(--fs-read);
+  line-height: var(--lh-normal);
+}
+
+.adm-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding-bottom: var(--space-16);
+  border-bottom: var(--stroke) solid var(--border);
+}
+.adm-top h1 {
+  font-size: var(--fs-title);
+  letter-spacing: var(--track-tight-xs);
+  line-height: var(--lh-tight);
+}
+.adm-top p { color: var(--muted-foreground); font-size: var(--fs-small); }
+.adm-top-actions { display: flex; align-items: center; gap: var(--space-8); }
+
+.adm-tabs { display: flex; flex-wrap: wrap; gap: var(--space-6); }
+.adm-tab {
+  padding: var(--space-8) var(--space-14);
+  border: var(--stroke) solid var(--border);
+  border-radius: var(--corner-pill);
+  background: var(--card);
+  color: var(--muted-foreground);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semibold);
+}
+.adm-tab[aria-selected='true'] {
+  border-color: color-mix(in srgb, var(--primary) 60%, transparent);
+  background: color-mix(in srgb, var(--primary) 22%, var(--card));
+  color: var(--foreground);
+}
+
+.adm-panel {
+  border: var(--stroke) solid var(--border);
+  border-radius: var(--corner-panel);
+  background: var(--card);
+  padding: var(--space-18);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-14);
+  min-width: 0;
+}
+.adm-panel > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+.adm-panel h2 { font-size: var(--fs-lead); line-height: var(--lh-snug); }
+.adm-panel h2 + p, .adm-hint { color: var(--muted-foreground); font-size: var(--fs-small); }
+
+.adm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-12);
+}
+.adm-stat {
+  border: var(--stroke) solid var(--border);
+  border-radius: var(--corner-lg);
+  background: color-mix(in srgb, var(--primary) 7%, var(--card));
+  padding: var(--space-14);
+  min-width: 0;
+}
+.adm-stat dt {
+  color: var(--muted-foreground);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--track-caps-sm);
+  text-transform: uppercase;
+}
+.adm-stat dd {
+  margin-top: var(--space-6);
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-heavier);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--lh-tight);
+  overflow-wrap: anywhere;
+}
+.adm-stat dd small {
+  display: block;
+  margin-top: var(--space-4);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  color: var(--muted-foreground);
+}
+.adm-stat[data-tone='warn'] {
+  background: color-mix(in srgb, var(--warning) 14%, var(--card));
+  border-color: color-mix(in srgb, var(--warning) 40%, transparent);
+}
+.adm-stat[data-tone='danger'] {
+  background: color-mix(in srgb, var(--destructive) 14%, var(--card));
+  border-color: color-mix(in srgb, var(--destructive) 45%, transparent);
+}
+
+.adm-scroll { overflow-x: auto; scrollbar-gutter: stable; }
+.adm-table {
+  width: 100%;
+  /* Tabel operasional: kolom menahan lebarnya dan .adm-scroll yang digeser.
+     Tanpa ini, di lebar HP setiap sel pecah -- "Rp10.000" jadi dua baris. */
+  min-width: var(--admin-table-min);
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+.adm-table th, .adm-table td {
+  padding: var(--space-10) var(--space-8);
+  text-align: left;
+  border-bottom: var(--stroke) solid var(--border);
+  vertical-align: top;
+}
+.adm-table th {
+  color: var(--muted-foreground);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--track-caps-sm);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.adm-table tbody tr:last-child td { border-bottom: 0; }
+.adm-table code { font-size: var(--fs-xs); overflow-wrap: anywhere; }
+.adm-table td strong { display: block; overflow-wrap: anywhere; }
+.adm-table td small {
+  display: block;
+  margin-top: var(--space-3);
+  color: var(--muted-foreground);
+  font-size: var(--fs-xs);
+}
+/* Angka uang tidak pernah dipecah. Dua kelas mengalahkan `.adm-table td strong`,
+   yang memakai overflow-wrap: anywhere untuk nama pemain yang panjang. */
+.adm-table .adm-amount { white-space: nowrap; }
+.adm-row-actions { display: flex; flex-wrap: wrap; gap: var(--space-6); }
+
+.adm-status {
+  display: inline-block;
+  padding: var(--space-3) var(--space-8);
+  border-radius: var(--corner-pill);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--track-caps-sm);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.adm-status[data-status='pending'] { background: color-mix(in srgb, var(--warning) 26%, var(--card)); color: var(--foreground); }
+.adm-status[data-status='processing'] { background: color-mix(in srgb, var(--primary) 32%, var(--card)); color: var(--foreground); }
+.adm-status[data-status='paid'] { background: color-mix(in srgb, var(--success) 26%, var(--card)); color: var(--foreground); }
+.adm-status[data-status='rejected'] { background: color-mix(in srgb, var(--destructive) 28%, var(--card)); color: var(--foreground); }
+
+.adm-form { display: flex; flex-direction: column; gap: var(--space-18); }
+.adm-fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-10); }
+.adm-fieldset legend {
+  color: var(--muted-foreground);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--track-caps-sm);
+  text-transform: uppercase;
+}
+/* align-items: end menyejajarkan dasar setiap field, jadi input tetap satu
+   garis meski labelnya satu baris di satu kolom dan dua baris (label + hint) di
+   kolom sebelahnya. */
+.adm-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-10);
+  align-items: end;
+}
+.adm-field { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.adm-field label { font-size: var(--fs-xs); font-weight: var(--fw-semibold); }
+.adm-field label span { display: block; color: var(--muted-foreground); font-weight: var(--fw-normal); }
+.adm-input {
+  width: 100%;
+  padding: var(--space-8) var(--space-10);
+  border: var(--stroke) solid var(--input);
+  border-radius: var(--corner-field);
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.adm-input:focus-visible { outline: var(--focus-w) solid var(--ring); outline-offset: var(--focus-offset); }
+.adm-field[data-dirty='true'] .adm-input { border-color: color-mix(in srgb, var(--accent) 65%, transparent); }
+
+.adm-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8); }
+.adm-note { color: var(--muted-foreground); font-size: var(--fs-small); }
+.adm-error {
+  padding: var(--space-10) var(--space-12);
+  border: var(--stroke) solid color-mix(in srgb, var(--destructive) 55%, transparent);
+  border-radius: var(--corner-md);
+  background: color-mix(in srgb, var(--destructive) 16%, var(--card));
+  font-size: var(--fs-small);
+}
+.adm-error ul { margin-top: var(--space-6); padding-left: var(--space-18); }
+.adm-ok {
+  padding: var(--space-10) var(--space-12);
+  border: var(--stroke) solid color-mix(in srgb, var(--success) 50%, transparent);
+  border-radius: var(--corner-md);
+  background: color-mix(in srgb, var(--success) 14%, var(--card));
+  font-size: var(--fs-small);
+}
+
+.adm-login {
+  width: 100%;
+  max-width: var(--app-width);
+  margin: var(--space-56) auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.adm-audit { display: flex; flex-direction: column; gap: var(--space-8); margin: 0; padding: 0; list-style: none; }
+.adm-audit li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-8);
+  padding-bottom: var(--space-8);
+  border-bottom: var(--stroke) solid var(--border);
+  font-size: var(--fs-small);
+}
+.adm-audit li:last-child { border-bottom: 0; padding-bottom: 0; }
+.adm-audit time { color: var(--muted-foreground); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
+.adm-audit code { font-size: var(--fs-xs); color: var(--muted-foreground); overflow-wrap: anywhere; }

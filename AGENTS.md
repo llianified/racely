@@ -26,7 +26,9 @@ dua salinan pasti melenceng.
 
 - Produksi **wajib** autentikasi Telegram `initData` (HMAC + cek kedaluwarsa).
 - **Withdrawal tetap antrean manual berstatus `pending`.** Jangan pernah
-  diubah jadi transfer otomatis.
+  diubah jadi transfer otomatis. Panel admin di `/admin` hanya **mencatat**
+  keputusan operator — tidak ada integrasi pembayaran, dan tidak ada jalur yang
+  memindahkan penarikan tanpa seorang manusia menekan tombolnya.
 - Mode preview hanya untuk development: butuh `RACELY_ENABLE_PREVIEW=true`
   **dan** `NODE_ENV !== "production"`.
 - Migrasi bersifat additive dan idempoten. Untuk membatalkan sesuatu, tulis
@@ -76,9 +78,50 @@ test itu merah, meski langkah 3 sudah benar.
 
 ### Mengubah ekonomi, reward, atau biaya upgrade
 
-`lib/game-economy.ts` (murni, tanpa I/O) dan konstanta di `lib/game.ts`.
-Jangan menaruh aturan ekonomi di `lib/game-server.ts` — file itu untuk
-persistensi. Test: `tests/game-economy.test.ts`.
+**Nilainya tidak lagi ada di kode.** Seluruh angka ekonomi hidup di
+`EconomyConfig` (`lib/economy-config.ts`) dan disetel lewat panel admin di
+`/admin` → tab Ekonomi, tanpa deploy. `DEFAULT_ECONOMY` di file itu adalah
+nilai yang berlaku selama tabel `racely_economy_config` masih kosong.
+
+Yang diubah di kode hanyalah **rumus**, atau **knob baru**:
+
+1. `lib/economy-config.ts` → tambah field di `EconomyConfig`, `DEFAULT_ECONOMY`,
+   dan `economyConfigSchema` (dengan batas yang masuk akal).
+2. `app/admin/admin-economy.tsx` → tambah field itu ke `GROUPS` supaya muncul di
+   panel. Knob yang tidak terdaftar di sana tidak bisa disetel siapa pun.
+3. Alirkan ke pemakainya. Config ikut di `GameState.economy`, jadi UI membacanya
+   dari `game.economy.*` — **jangan** mengimpor angka sebagai konstanta modul
+   lagi; itu yang dulu membuat tampilan dan server bisa menyimpang tanpa satu
+   error pun.
+
+Rumus murni tetap di `lib/economy-config.ts` (`lapSecondsAt`, `lapRewardAt`,
+`upgradeCostAt`) dan penyelesaian balapan di `lib/game-economy.ts` — keduanya
+tanpa I/O. Jangan menaruh aturan ekonomi di `lib/game-server.ts`; file itu untuk
+persistensi. Pembacaan config dari database ada di `lib/economy-store.ts`
+(cache per-proses 30 detik, alasan yang sama dengan rate limiter).
+
+Test: `tests/economy-config.test.ts` (batas + proyeksi),
+`tests/game-economy.test.ts` (mengunci nilai bawaan).
+
+### Menyentuh panel admin
+
+`/admin` adalah permukaan terpisah: browser desktop, bukan Telegram. Ia tidak
+memakai satu pun komponen atau kelas CSS milik app pemain.
+
+- `lib/admin-auth.ts` — password dari `RACELY_ADMIN_PASSWORD` + cookie sesi
+  bertanda tangan. **Tidak ada bypass development.** Kunci penanda tangan
+  diturunkan dari password, jadi rotasi password memutus semua sesi.
+- `lib/admin-ops.ts` — antrean penarikan, tabel perpindahan status, audit,
+  ringkasan kewajiban.
+- `lib/admin-api.ts` — `guardAdmin()`. Setiap route di `app/api/admin/` wajib
+  memanggilnya; yang mengubah sesuatu memakai `{ mutating: true }` (cek Origin).
+- `app/admin/admin.css` — gaya panel, semua bersumber token di `:root`.
+
+**`paid` dan `rejected` adalah status akhir.** Jangan pernah menambahkan jalur
+keluar dari keduanya di `ALLOWED_TRANSITIONS`: `rejected` mengembalikan koin ke
+saldo pemain, jadi menolak penarikan yang sudah dibayar akan memulangkan koin
+yang uangnya sudah keluar dari rekening. Alasan lengkapnya ada di migrasi 0008.
+Dijaga `tests/admin-ops.test.ts`.
 
 ### Menambah kolom atau tabel
 
