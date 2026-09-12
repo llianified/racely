@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Camera, ChevronDown, Coins, Flag, Gauge, LoaderCircle, Maximize, RotateCcw, Timer, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { batteryTelemetry, BOOST_DURATION_SECONDS, coins, formatCoins, lapReward, lapSeconds, type GameState } from "@/lib/game";
+import { batteryTelemetry, BOOST_DURATION_SECONDS, coins, displaySpeedKmh, FASTEST_LAP_SECONDS, formatCoins, lapReward, lapSeconds, type GameState } from "@/lib/game";
 import { RaceBattery } from "./race-battery";
 import { cn } from "@/lib/utils";
 import { createDrivingState } from "@/lib/race-dynamics";
@@ -127,8 +127,9 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
         </div>
         {!inspect && <div className="scene-overlay race-speed-hud" aria-label="Kecepatan mobil di arena">
           <span><i style={{ backgroundColor: game.color }} />MOBILMU / 01</span>
-          <strong>{(192 / seconds * telemetry.speedMultiplier).toFixed(1)}<small>KM/J</small></strong>
-          <div className="race-speed-meter" aria-hidden="true"><i style={{ transform: `scaleX(${Math.min(1, telemetry.speedMultiplier * (boosted ? 1 : .5))})` }} /></div>
+          <strong>{displaySpeedKmh(seconds).toFixed(1)}<small>KM/J</small></strong>
+          {/* Seberapa dekat ke putaran tercepat yang mungkin: naik saat diupgrade, penuh saat Gaspol. */}
+          <div className="race-speed-meter" aria-hidden="true"><i style={{ transform: `scaleX(${Math.min(1, FASTEST_LAP_SECONDS / seconds)})` }} /></div>
         </div>}
         {inspect && <div className="scene-overlay inspect-hint">Geser untuk memutar · balapan tetap jalan</div>}
         <LapFeedback laps={game.laps} reward={lapReward(game)} active={active && !inspect} />
@@ -161,7 +162,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
       <div className="track-stats">
         <div className="track-stat">
           <div className="track-stat-label"><Gauge aria-hidden="true" />Kecepatan</div>
-          <div className="track-stat-value">{(192 / seconds * telemetry.speedMultiplier).toFixed(1)} <small>km/j</small></div>
+          <div className="track-stat-value">{displaySpeedKmh(seconds).toFixed(1)} <small>km/j</small></div>
         </div>
         <div className="track-stat">
           <div className="track-stat-label"><Timer aria-hidden="true" />Waktu/lap</div>

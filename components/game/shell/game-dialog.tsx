@@ -11,6 +11,7 @@ import {
 import {
   coins,
   formatDuration,
+  lapReward,
   type GameState,
   type OfflineEarnings,
 } from "@/lib/game";
@@ -26,7 +27,8 @@ const DIALOG_COPY: Record<DialogKind, { title: string; description: string }> =
     },
     circuits: {
       title: "Pilih tempat ngegas",
-      description: "Selesaikan putaran untuk membuka lintasan baru.",
+      description:
+        "Midnight selalu membayar lebih per putaran. Jakarta ada kalau kamu lebih suka tampilannya.",
     },
     help: {
       title: "Mobil kecil. Langsung jalan.",
@@ -126,12 +128,21 @@ export function GameDialog({
           <WelcomeBack offline={offline} onClose={onClose} />
         ) : active === "circuits" ? (
           <div className="circuit-choices">
+            {/* Hasil per putaran ditampilkan di kedua tombol. Tanpa itu kedua
+                sirkuit terlihat setara padahal Midnight selalu membayar lebih,
+                dan "Kembali ke Jakarta" jadi tombol yang memotong penghasilan
+                tanpa memberi tahu. Sekarang pilihannya jujur: pindah balik
+                adalah soal selera tampilan, dan harganya kelihatan. */}
             <Button
               variant="circuit"
               disabled={disabled}
               onClick={() => onChooseCircuit(0)}
             >
               Jakarta Raceway
+              <span>
+                {coins(lapReward({ ...game, circuit: 0 }))} / putaran
+                {game.circuit === 0 ? " · Aktif" : ""}
+              </span>
               {game.circuit === 0 && <Check data-icon="inline-end" />}
             </Button>
             <Button
@@ -141,8 +152,11 @@ export function GameDialog({
             >
               Midnight Speedway
               <span>
-                {game.circuit === 1 ? "Aktif" : game.laps >= 25 ? "Terbuka" : `${game.laps}/25 putaran`}
+                {game.laps < 25
+                  ? `${game.laps}/25 putaran`
+                  : `${coins(lapReward({ ...game, circuit: 1 }))} / putaran${game.circuit === 1 ? " · Aktif" : ""}`}
               </span>
+              {game.circuit === 1 && <Check data-icon="inline-end" />}
             </Button>
           </div>
         ) : (

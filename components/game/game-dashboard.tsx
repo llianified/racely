@@ -55,7 +55,7 @@ export function GameDashboard() {
   const mutationLocked = useRef(false);
   const navigationTarget = useRef<string | null>(null);
   const expired = useRef(false);
-  const welcomeShown = useRef(false);
+  const welcomeShown = useRef<OfflineEarnings | null>(null);
 
   useEffect(() => {
     const targetId = navigationTarget.current;
@@ -136,10 +136,16 @@ export function GameDashboard() {
     const earnings = data?.offlineEarnings;
     // The server reports an absence on exactly the one response that credited
     // it, so it has to be latched out here before the next sync replaces the
-    // state that carried it. welcomeShown only ever flips false -> true, so
-    // opening the dialog cannot cascade or reopen later.
-    if (!earnings || earnings.coins <= 0 || welcomeShown.current) return;
-    welcomeShown.current = true;
+    // state that carried it. The latch holds that payload, not a boolean: a
+    // Telegram Mini App keeps its webview alive across visits, so a player who
+    // leaves and comes back five times a day has five absences to be told
+    // about. A boolean showed the first and silently swallowed the rest --
+    // the offline payout, the whole point of the feature, went invisible after
+    // one dialog. Each fetch builds a fresh object, so identity is what
+    // separates a new absence from a re-render of the one already shown.
+    if (!earnings || earnings.coins <= 0 || welcomeShown.current === earnings)
+      return;
+    welcomeShown.current = earnings;
     setWelcomeBack(earnings);
   }, [data]);
 
