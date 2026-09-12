@@ -4,6 +4,8 @@ import { memo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import type { CarModelId } from '@/lib/car-catalog'
 import type { GameState } from '@/lib/game'
+import { visibleCosmetics, type EquippedCosmetics } from '@/lib/cosmetics'
+import { CosmeticSpoiler } from './cosmetic-spoiler'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 
@@ -93,7 +95,7 @@ function turned(profile: Point[], segments = 48) {
   return new THREE.LatheGeometry(profile.map(([radius, y]) => new THREE.Vector2(radius, y)), segments)
 }
 
-function createCarGeometry(model: CarModelId) {
+function createCarGeometry(model: CarModelId, customSpoiler: boolean) {
   const parts: Record<Finish, THREE.BufferGeometry[]> = {
     body: [], chassis: [], rubber: [], alloy: [], gold: [], livery: [], glass: [],
   }
@@ -305,6 +307,7 @@ function createCarGeometry(model: CarModelId) {
     }
   }
 
+  if (!customSpoiler) {
   if (model === 'neo-falcon') {
   for (const side of SIDES) {
     add('chassis', plate([
@@ -338,6 +341,7 @@ function createCarGeometry(model: CarModelId) {
     ], 32, 20), [0, .249, -.299], [0, Math.PI / 2, 0])
     add('livery', new THREE.BoxGeometry(.25, .003, .009), [0, .258, -.327])
   }
+  }
 
   internal = true
   add('alloy', cylinder(.037, .15), [0, .158, -.225], [0, 0, Math.PI / 2])
@@ -366,10 +370,12 @@ function createCarGeometry(model: CarModelId) {
 }
 
 // Both canvases share immutable geometry; batch details by finish instead of drawing each bolt separately.
-const GEOMETRY_CACHE: Partial<Record<CarModelId, ReturnType<typeof createCarGeometry>>> = {}
+const GEOMETRY_CACHE = new Map<string, ReturnType<typeof createCarGeometry>>()
+const LIVERY_COLORS: Record<string, string> = { 'gold-line': COLORS.gold, 'falcon-ember': '#ff593f', 'luna-aurora': '#68ffd2' }
+const NO_COSMETICS: EquippedCosmetics = {}
 
-function CarSurfaces({ parts, color, model, inspect = false }: {
-  parts: Partial<Record<Finish, THREE.BufferGeometry>>; color: string; model: CarModelId; inspect?: boolean
+function CarSurfaces({ parts, color, model, inspect = false, cosmetics = NO_COSMETICS, wheel = false }: {
+  parts: Partial<Record<Finish, THREE.BufferGeometry>>; color: string; model: CarModelId; inspect?: boolean; cosmetics?: EquippedCosmetics; wheel?: boolean
 }) {
   return <>{(Object.entries(parts) as [Finish, THREE.BufferGeometry][]).map(([finish, geometry]) => {
     if (inspect && ['body', 'glass', 'livery'].includes(finish)) return null
@@ -377,7 +383,7 @@ function CarSurfaces({ parts, color, model, inspect = false }: {
       {finish === 'body' ? <meshPhysicalMaterial color={color} roughness={.24} metalness={.35} clearcoat={1} clearcoatRoughness={.12} />
         : finish === 'glass' ? <meshPhysicalMaterial color={COLORS.navy} roughness={.08} metalness={.15} clearcoat={1} clearcoatRoughness={.04} />
         : <meshStandardMaterial
-          color={finish === 'gold' ? (model === 'luna-gt' ? COLORS.white : COLORS.gold) : ['alloy', 'livery'].includes(finish) ? COLORS.white : COLORS.navy}
+          color={finish === 'livery' ? LIVERY_COLORS[cosmetics.livery ?? ''] ?? COLORS.white : finish === 'alloy' && wheel && cosmetics.wheel === 'gold-forged' ? COLORS.gold : finish === 'gold' ? (model === 'luna-gt' ? COLORS.white : COLORS.gold) : finish === 'alloy' ? COLORS.white : COLORS.navy}
           roughness={finish === 'rubber' ? .96 : finish === 'chassis' ? .68 : .3}
           metalness={['alloy', 'gold'].includes(finish) ? .85 : finish === 'chassis' ? .15 : 0}
         />}
@@ -385,15 +391,23 @@ function CarSurfaces({ parts, color, model, inspect = false }: {
   })}</>
 }
 
-function RollingWheel({ wheel, color, model, speed, level }: {
-  wheel: ReturnType<typeof createCarGeometry>['wheels'][number]; color: string; model: CarModelId; speed: number; level: number
+function RollingWheel({ wheel, color, model, speed, level, cosmetics }: {
+  wheel: ReturnType<typeof createCarGeometry>['wheels'][number]; color: string; model: CarModelId; speed: number; level: number; cosmetics: EquippedCosmetics
 }) {
   const group = useRef<THREE.Group>(null)
   useFrame((_, delta) => {
     if (group.current && !document.hidden) group.current.rotation.x = (group.current.rotation.x + Math.min(delta, .05) * speed / .122) % (Math.PI * 2)
   })
   return <group ref={group} position={wheel.position} scale={[1 + (level - 1) * .025, 1, 1]}>
-    <CarSurfaces parts={wheel.parts} color={color} model={model} />
+    <CarSurfaces parts={wheel.parts} color={color} model={model} cosmetics={cosmetics} wheel />
+    {cosmetics.wheel === 'chrome-disc' && <mesh position={[Math.sign(wheel.position[0]) * .062, 0, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+      <cylinderGeometry args={[.086, .086, .006, 32]} />
+      <meshPhysicalMaterial color={COLORS.white} metalness={1} roughness={.14} clearcoat={1} />
+    </mesh>}
+    {cosmetics.wheel === 'gold-forged' && <mesh position={[Math.sign(wheel.position[0]) * .059, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+      <torusGeometry args={[.086, .005, 8, 32]} />
+      <meshStandardMaterial color={COLORS.gold} metalness={.9} roughness={.2} />
+    </mesh>}
     {level > 1 && <mesh position={[Math.sign(wheel.position[0]) * .059, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
       <torusGeometry args={[.092, .004 + level * .0005, 8, 32]} />
       <meshStandardMaterial color={COLORS.gold} metalness={.8} roughness={.25} />
@@ -425,15 +439,23 @@ const InstalledParts = memo(function InstalledParts({ levels, inspect }: { level
   </group>
 })
 
-export const MiniCar = memo(function MiniCar({ color, model = 'neo-falcon', scale = 1, speed = 0, inspect = false, charge = 1, levels = STOCK_LEVELS }: {
-  color: string; model?: CarModelId; scale?: number; speed?: number; inspect?: boolean; charge?: number; levels?: GameState['levels']
+export const MiniCar = memo(function MiniCar({ color, model = 'neo-falcon', scale = 1, speed = 0, inspect = false, charge = 1, levels = STOCK_LEVELS, cosmetics = NO_COSMETICS }: {
+  color: string; model?: CarModelId; scale?: number; speed?: number; inspect?: boolean; charge?: number; levels?: GameState['levels']; cosmetics?: EquippedCosmetics
 }) {
-  const geometry = GEOMETRY_CACHE[model] ?? (GEOMETRY_CACHE[model] = createCarGeometry(model))
+  const installed = visibleCosmetics(model, cosmetics)
+  const customSpoiler = Boolean(installed.spoiler)
+  const cacheKey = `${model}:${customSpoiler}`
+  let geometry = GEOMETRY_CACHE.get(cacheKey)
+  if (!geometry) {
+    geometry = createCarGeometry(model, customSpoiler)
+    GEOMETRY_CACHE.set(cacheKey, geometry)
+  }
   return <group scale={scale}>
-    <CarSurfaces parts={geometry.shell} color={color} model={model} inspect={inspect} />
+    <CarSurfaces parts={geometry.shell} color={color} model={model} inspect={inspect} cosmetics={installed} />
+    {!inspect && installed.spoiler && <CosmeticSpoiler id={installed.spoiler} />}
     {inspect && <CarSurfaces parts={geometry.internals} color={color} model={model} />}
     <InstalledParts levels={levels} inspect={inspect} />
-    {geometry.wheels.map((wheel, index) => <RollingWheel key={index} wheel={wheel} color={color} model={model} speed={speed} level={levels.tires} />)}
+    {geometry.wheels.map((wheel, index) => <RollingWheel key={index} wheel={wheel} color={color} model={model} speed={speed} level={levels.tires} cosmetics={installed} />)}
     {inspect && Array.from({ length: 5 }, (_, index) => <mesh key={index} position={[(index - 2) * .023, .216, -.157]}>
       <boxGeometry args={[.016, .008, .018]} />
       <meshStandardMaterial color={COLORS.navy} emissive={COLORS.gold} emissiveIntensity={charge > index / 5 ? 1.8 : 0} />

@@ -14,6 +14,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { CarModelId } from "@/lib/car-catalog";
+import type { EquippedCosmetics } from "@/lib/cosmetics";
 
 export const players = pgTable("racely_players", {
   userId: text("user_id").primaryKey(),
@@ -35,6 +36,8 @@ export const players = pgTable("racely_players", {
     .$type<string[]>()
     .notNull()
     .default([]),
+  ownedCosmetics: jsonb("owned_cosmetics").$type<string[]>().notNull().default([]),
+  equippedCosmetics: jsonb("equipped_cosmetics").$type<EquippedCosmetics>().notNull().default({}),
   carModel: text("car_model").$type<CarModelId>(),
   color: text("color").notNull().default("#4275ff"),
   circuit: integer("circuit").notNull().default(0),

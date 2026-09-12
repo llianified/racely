@@ -20,6 +20,7 @@ import {
   racingDayKey,
 } from "@/lib/game-economy";
 import { CAR_MODEL_IDS, isCarColor } from "@/lib/car-catalog";
+import { buyCosmetic, equipCosmetic, COSMETIC_SLOTS, CosmeticRuleError } from "@/lib/cosmetics";
 import {
   accountPattern,
   COIN_TO_IDR,
@@ -65,6 +66,8 @@ const RECEIPT_PRUNE_PROBABILITY = 0.02;
 
 const commandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("sync") }).strict(),
+  z.object({ type: z.literal("buy-cosmetic"), id: z.string().min(1).max(64) }).strict(),
+  z.object({ type: z.literal("equip-cosmetic"), slot: z.enum(COSMETIC_SLOTS), id: z.string().min(1).max(64).nullable() }).strict(),
   z
     .object({
       type: z.literal("upgrade"),
@@ -205,6 +208,8 @@ function stateFromRow(
     rewardClaimed: row.rewardClaimed,
     missionsClaimed: row.missionsClaimed,
     color: row.color,
+    ownedCosmetics: row.ownedCosmetics,
+    equippedCosmetics: row.equippedCosmetics,
     circuit: row.circuit,
     player: {
       name: row.displayName,
@@ -616,6 +621,16 @@ export async function performGameAction(
         throw new GameRuleError("Model atau warna mobil tidak valid.", 400);
       }
       next = { ...next, carModel: action.model, color: action.color };
+    } else if (action.type === "buy-cosmetic" || action.type === "equip-cosmetic") {
+      if (!next.carModel) throw new GameRuleError("Pilih mobilmu sebelum mulai bermain.");
+      try {
+        next = action.type === "buy-cosmetic"
+          ? { ...next, ...buyCosmetic(next.balance, next.ownedCosmetics, next.carModel, action.id) }
+          : { ...next, equippedCosmetics: equipCosmetic(next.ownedCosmetics, next.equippedCosmetics, next.carModel, action.slot, action.id) };
+      } catch (error) {
+        if (error instanceof CosmeticRuleError) throw new GameRuleError(error.message);
+        throw error;
+      }
     } else if (action.type === "upgrade") {
       next = applyUpgrade(next, action.key);
     } else if (action.type === "claim") {
@@ -746,6 +761,8 @@ export async function performGameAction(
         rewardClaimed: next.rewardClaimed,
         missionsClaimed: next.missionsClaimed,
         carModel: next.carModel,
+        ownedCosmetics: next.ownedCosmetics,
+        equippedCosmetics: next.equippedCosmetics,
         color: next.color,
         circuit: next.circuit,
         lastSettledAt: next.lastSettledAt,

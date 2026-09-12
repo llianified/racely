@@ -131,6 +131,36 @@ describeDatabase("Neon Postgres persistence", () => {
     ).rejects.toThrow();
   });
 
+  it("serializes concurrent cosmetic purchases and persists ownership and equipment", async () => {
+    const user = { ...identity, userId: `test:${randomUUID()}` };
+    extraUserIds.push(user.userId);
+    await gameServer.getGameState(user);
+    await gameServer.performGameAction(user, randomUUID(), { type: "select-car", model: "neo-falcon", color: "#4275ff" });
+    await db!.update(schema.players).set({ balance: 100 }).where(drizzle.eq(schema.players.userId, user.userId));
+    const requestId = randomUUID();
+    const results = await Promise.all([
+      gameServer.performGameAction(user, requestId, { type: "buy-cosmetic", id: "gold-line" }),
+      gameServer.performGameAction(user, requestId, { type: "buy-cosmetic", id: "gold-line" }),
+    ]);
+    for (const result of results) {
+      expect(result.balance).toBe(75);
+      expect(result.ownedCosmetics).toEqual(["gold-line"]);
+      expect(result.equippedCosmetics).toEqual({});
+    }
+    await expect(gameServer.performGameAction(user, randomUUID(), { type: "buy-cosmetic", id: "gold-line" })).rejects.toThrow("sudah dimiliki");
+    await expect(gameServer.performGameAction(user, randomUUID(), { type: "buy-cosmetic", id: "gold-forged" })).rejects.toThrow("Koin belum cukup");
+    await expect(gameServer.performGameAction(user, randomUUID(), { type: "buy-cosmetic", id: "luna-aurora" })).rejects.toThrow("tidak cocok");
+    await expect(gameServer.performGameAction(user, randomUUID(), { type: "equip-cosmetic", slot: "wheel", id: "gold-forged" })).rejects.toThrow("Beli kosmetik");
+    await gameServer.performGameAction(user, randomUUID(), { type: "equip-cosmetic", slot: "livery", id: "gold-line" });
+    const reloaded = await gameServer.getGameState(user);
+    expect(reloaded.ownedCosmetics).toEqual(["gold-line"]);
+    expect(reloaded.equippedCosmetics).toEqual({ livery: "gold-line" });
+    const removed = await gameServer.performGameAction(user, randomUUID(), { type: "equip-cosmetic", slot: "livery", id: null });
+    expect(removed.balance).toBe(75);
+    expect(removed.ownedCosmetics).toEqual(["gold-line"]);
+    expect(removed.equippedCosmetics).toEqual({});
+  });
+
   it("stores a withdrawal as pending and debits the balance", async () => {
     await db!
       .update(schema.players)

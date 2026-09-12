@@ -12,19 +12,20 @@ type CarPreviewProps = {
   color: string
   model?: CarModelId
   levels?: GameState['levels']
+  cosmetics?: GameState['equippedCosmetics']
   inspect?: boolean
   active?: boolean
 }
 
-function Turntable({ color, model, levels, inspect }: CarPreviewProps) {
+function Turntable({ color, model, levels, inspect, cosmetics }: CarPreviewProps) {
   const group = useRef<THREE.Group>(null)
   useFrame((_, delta) => {
     if (group.current && !document.hidden) group.current.rotation.y += delta * .45
   })
-  return <group ref={group} rotation={[0, .6, 0]}><MiniCar color={color} model={model} levels={levels} inspect={inspect} /></group>
+  return <group ref={group} rotation={[0, .6, 0]}><MiniCar color={color} model={model} levels={levels} inspect={inspect} cosmetics={cosmetics} /></group>
 }
 
-export default function CarPreviewScene({ color, model, levels, inspect, active = true }: CarPreviewProps) {
+export default function CarPreviewScene({ color, model, levels, inspect, cosmetics, active = true }: CarPreviewProps) {
   return (
     <Canvas
       orthographic
@@ -39,7 +40,7 @@ export default function CarPreviewScene({ color, model, levels, inspect, active 
       <directionalLight position={[2, 5, 3]} intensity={2.2} />
       <directionalLight position={[-3, 2, -2]} intensity={.9} color={COLORS.white} />
       <group position={[0, -.12, 0]}>
-        <Turntable color={color} model={model} levels={levels} inspect={inspect} />
+        <Turntable color={color} model={model} levels={levels} inspect={inspect} cosmetics={cosmetics} />
       </group>
     </Canvas>
   )

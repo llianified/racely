@@ -46,7 +46,7 @@ export const GaragePanel = memo(function GaragePanel({
   return (
     <section id="body-colors" tabIndex={-1} className="panel garage-panel" aria-label="Mobil kamu">
       <div className="car-stage" role="img" aria-label={`${car.name} warna ${colorName}, model 3D yang sama dengan di lintasan`}>
-        <CarPreviewScene color={game.color} model={model} levels={game.levels} active={active} />
+        <CarPreviewScene color={game.color} model={model} levels={game.levels} cosmetics={game.equippedCosmetics} active={active} />
       </div>
       <div className="car-identity">
         <div className="car-identity-head">
@@ -139,7 +139,7 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
           <div className="border-b border-border bg-background px-xl py-lg text-foreground">
             <div className="overflow-hidden rounded-xl border border-border">
               <div className="h-48" role="img" aria-label={`${showAfter ? "Setelah" : "Sebelum"} modifikasi ${title}, level ${showAfter ? nextLevel : level}${inspect ? ", bodi dilepas" : ""}`}>
-                {open && <CarPreviewScene color={game.color} model={game.carSelection?.model ?? "neo-falcon"} levels={showAfter ? { ...game.levels, [key]: nextLevel } : game.levels} inspect={inspect} />}
+                {open && <CarPreviewScene color={game.color} model={game.carSelection?.model ?? "neo-falcon"} cosmetics={game.equippedCosmetics} levels={showAfter ? { ...game.levels, [key]: nextLevel } : game.levels} inspect={inspect} />}
               </div>
               <div className="flex flex-wrap items-center justify-between gap-sm border-t border-border p-md">
                 <span aria-live="polite">{showAfter ? "Setelah" : "Sebelum"} · Lv. {showAfter ? nextLevel : level}</span>

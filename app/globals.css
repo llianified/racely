@@ -211,6 +211,41 @@
   --space-xl: var(--space-24);
   --gutter: var(--space-md);
 }
+.cosmetics-count { color: var(--muted-foreground); font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
+.cosmetics-intro { padding: var(--space-lg); }
+.cosmetics-intro p { font-size: var(--fs-read); font-weight: var(--fw-bold); }
+.cosmetics-intro span { display: block; margin-top: var(--space-xs); font-size: var(--fs-small); line-height: var(--lh-relaxed); color: var(--muted-foreground); }
+.cosmetics-views { display: flex; gap: var(--space-xs); margin: 0 var(--space-lg); padding: var(--space-xs); border: var(--stroke) solid var(--border); border-radius: var(--corner-xl); background: var(--background); }
+.cosmetics-views button { flex: 1; }
+.cosmetics-views button span { color: var(--muted-foreground); font-size: var(--fs-small); }
+.cosmetics-filters { display: flex; flex-wrap: wrap; gap: var(--space-xs); padding: var(--space-md) var(--space-lg); }
+.cosmetics-list { list-style: none; }
+.cosmetics-item { display: flex; align-items: center; gap: var(--space-md); padding: var(--space-lg); border-top: var(--stroke) solid var(--border); }
+.cosmetics-icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: var(--space-42); height: var(--space-42); background: var(--secondary); border-radius: var(--corner-xl); color: var(--muted-foreground); }
+.cosmetics-icon svg { width: var(--icon-xl); height: var(--icon-xl); }
+.cosmetics-icon.is-equipped { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--card)); }
+.cosmetics-item-info { flex: 1; min-width: 0; }
+.cosmetics-item-info span { font-size: var(--fs-micro); color: var(--muted-foreground); }
+.cosmetics-item-info h3 { font-size: var(--fs-read); font-weight: var(--fw-bold); }
+.cosmetics-item-info p { margin-top: var(--space-xs); font-size: var(--fs-small); color: var(--accent); font-variant-numeric: tabular-nums; }
+.cosmetics-note { border-top: var(--stroke) solid var(--border); padding: var(--space-md) var(--space-lg); color: var(--muted-foreground); font-size: var(--fs-small); line-height: var(--lh-relaxed); }
+.cosmetics-loadout { display: flex; flex-direction: column; gap: var(--space-md); margin: var(--space-lg); padding: var(--space-lg); background: var(--background); border: var(--stroke) solid var(--border); border-radius: var(--corner-xl); }
+.cosmetics-loadout > div { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); font-size: var(--fs-small); color: var(--muted-foreground); }
+.cosmetics-loadout strong { display: block; color: var(--foreground); font-size: var(--fs-body); margin-top: var(--space-xs); }
+.cosmetics-empty { display: flex; flex-direction: column; align-items: center; gap: var(--space-md); padding: var(--space-xl); text-align: center; border-top: var(--stroke) solid var(--border); }
+.cosmetics-empty > svg { width: var(--icon-xl); height: var(--icon-xl); color: var(--accent); }
+.cosmetics-empty strong { font-size: var(--fs-read); }
+.cosmetics-empty p { color: var(--muted-foreground); font-size: var(--fs-small); line-height: var(--lh-relaxed); }
+.cosmetics-dialog { gap: var(--space-lg); padding: var(--space-xl); }
+.cosmetics-dialog [data-slot="dialog-header"] { padding-right: var(--space-lg); }
+.cosmetics-preview { height: var(--stage-select-h); flex-shrink: 0; background: var(--background); border: var(--stroke) solid var(--border); border-radius: var(--corner-xl); overflow: hidden; }
+.cosmetics-compare { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); }
+.cosmetics-compare > span { color: var(--muted-foreground); font-size: var(--fs-micro); letter-spacing: var(--track-caps); }
+.cosmetics-price { display: flex; flex-direction: column; gap: var(--space-sm); padding: var(--space-lg); border: var(--stroke) solid var(--border); border-radius: var(--corner-xl); background: var(--background); font-size: var(--fs-body); }
+.cosmetics-price > div { display: flex; justify-content: space-between; gap: var(--space-md); }
+.cosmetics-price dt { color: var(--muted-foreground); }
+.cosmetics-price dd { font-variant-numeric: tabular-nums; font-weight: var(--fw-semibold); }
+
 @theme inline {
   --font-sans: 'Google Sans Flex Variable', sans-serif;
   --font-mono: 'Google Sans Flex Variable', sans-serif;

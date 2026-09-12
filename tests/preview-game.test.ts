@@ -16,6 +16,34 @@ const selectLuna = { type: "select-car", model: "luna-gt", color: "#b9a1ed" } as
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(now); });
 afterEach(() => vi.useRealTimers());
 
+describe("Preview cosmetics", () => {
+  it("buys permanently, retries safely, equips and unequips without affecting performance", () => {
+    const selected = action(getPreviewGameState(request(), identity).cookieValue, selectLuna);
+    expect(selected.state.ownedCosmetics).toEqual([]);
+    expect(() => action(selected.cookieValue, { type: "buy-cosmetic", id: "gold-line" })).toThrow("Koin belum cukup");
+    const funded = action(selected.cookieValue, { type: "gift" });
+    const id = randomUUID();
+    const purchased = action(funded.cookieValue, { type: "buy-cosmetic", id: "gold-line" }, id);
+    expect(purchased.state.balance).toBe(funded.state.balance - 25);
+    expect(purchased.state.ownedCosmetics).toEqual(["gold-line"]);
+    expect(purchased.state.equippedCosmetics).toEqual({});
+    expect(action(purchased.cookieValue, { type: "buy-cosmetic", id: "gold-line" }, id).state).toEqual(purchased.state);
+    expect(() => action(purchased.cookieValue, { type: "buy-cosmetic", id: "gold-line" })).toThrow("sudah dimiliki");
+    expect(() => action(purchased.cookieValue, { type: "buy-cosmetic", id: "falcon-ember" })).toThrow("tidak cocok");
+    expect(() => action(purchased.cookieValue, { type: "equip-cosmetic", slot: "wheel", id: "gold-forged" })).toThrow("Beli kosmetik");
+    const equipped = action(purchased.cookieValue, { type: "equip-cosmetic", slot: "livery", id: "gold-line" });
+    const reloaded = getPreviewGameState(request(equipped.cookieValue), identity);
+    expect(reloaded.state.equippedCosmetics).toEqual({ livery: "gold-line" });
+    expect(reloaded.state.ownedCosmetics).toEqual(["gold-line"]);
+    expect(lapSeconds(reloaded.state)).toBe(lapSeconds(funded.state));
+    expect(lapReward(reloaded.state)).toBe(lapReward(funded.state));
+    const removed = action(reloaded.cookieValue, { type: "equip-cosmetic", slot: "livery", id: null });
+    expect(removed.state.equippedCosmetics).toEqual({});
+    expect(removed.state.balance).toBe(purchased.state.balance);
+    expect(removed.state.ownedCosmetics).toEqual(["gold-line"]);
+  });
+});
+
 describe("Workshop installation", () => {
   it("installs a part once, deducts its cost, and preserves it on reload", () => {
     const fresh = getPreviewGameState(request(), identity);

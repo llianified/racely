@@ -10,6 +10,8 @@ import { GameGate } from "./shell/game-gate";
 import { GameDialog, type DialogKind } from "./shell/game-dialog";
 import { MenuPanel } from "./shell/menu-panel";
 import { GaragePanel, UpgradePanel } from "./panels/garage-panel";
+import { CosmeticsPanel } from "./panels/cosmetics-panel";
+import { getCosmetic } from "@/lib/cosmetics";
 import { RewardsPanel, claimableTotal } from "./panels/rewards-panel";
 import { WalletPanel, type WithdrawPayload } from "./panels/wallet-panel";
 import { CircuitPanel } from "./race/circuit-panel";
@@ -425,6 +427,21 @@ export function GameDashboard() {
                 game={game}
                 onUpgrade={upgrade}
                 disabled={Boolean(busyAction)}
+              />
+              <CosmeticsPanel
+                game={game}
+                active={tab === "garage"}
+                disabled={Boolean(busyAction)}
+                onBuy={async id => {
+                  const next = await runAction({ type: "buy-cosmetic", id }, `buy-cosmetic:${id}`);
+                  if (next) toast.success(`${getCosmetic(id)?.name ?? "Kosmetik"} jadi milikmu!`, { description: "Tersimpan permanen di Koleksi. Pasang kapan saja." });
+                  return Boolean(next);
+                }}
+                onEquip={async (slot, id) => {
+                  const next = await runAction({ type: "equip-cosmetic", slot, id }, `equip-cosmetic:${slot}`);
+                  if (next) toast.success(id ? "Kosmetik terpasang di garasi dan lintasan" : "Tampilan bawaan dipasang kembali");
+                  return Boolean(next);
+                }}
               />
             </div>
           )}

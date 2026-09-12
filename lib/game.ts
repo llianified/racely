@@ -1,4 +1,5 @@
 import type { CarColor, CarModelId } from "./car-catalog";
+import type { CosmeticSlot, EquippedCosmetics } from "./cosmetics";
 
 export type Upgrade = "engine" | "tires" | "battery";
 export type PlayerProfile = {
@@ -107,6 +108,8 @@ export type GameState = {
   // Optional only so legacy preview cookies can be upgraded without losing progress.
   carSelection?: { model: CarModelId | null; returningPlayer: boolean };
   developmentPreview: boolean;
+  ownedCosmetics: string[];
+  equippedCosmetics: EquippedCosmetics;
   balance: number;
   pending: number;
   earned: number;
@@ -128,6 +131,8 @@ export type GameState = {
 
 export const INITIAL_GAME: GameState = {
   developmentPreview: false,
+  ownedCosmetics: [],
+  equippedCosmetics: {},
   balance: 10,
   pending: 0,
   earned: 0,
@@ -278,6 +283,8 @@ export type GameCommand =
   | { type: "mission"; id: string }
   | { type: "select-car"; model: CarModelId; color: CarColor }
   | { type: "color"; color: CarColor }
+  | { type: "buy-cosmetic"; id: string }
+  | { type: "equip-cosmetic"; slot: CosmeticSlot; id: string | null }
   | { type: "circuit"; circuit: 0 | 1 }
   | {
       type: "withdraw";

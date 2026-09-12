@@ -24,6 +24,7 @@ import {
   racingDayKey,
 } from "./game-economy";
 import { CAR_MODEL_IDS, isCarColor } from "./car-catalog";
+import { buyCosmetic, equipCosmetic, CosmeticRuleError, COSMETICS } from "./cosmetics";
 import { referralLink } from "./telegram-bot";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
 
@@ -52,6 +53,12 @@ const previewGameSchema = z.object({
     .default([]),
   state: z.object({
     developmentPreview: z.boolean().default(true),
+    ownedCosmetics: z.array(z.string().max(64)).max(COSMETICS.length).default([]),
+    equippedCosmetics: z.object({
+      livery: z.string().max(64).optional(),
+      wheel: z.string().max(64).optional(),
+      spoiler: z.string().max(64).optional(),
+    }).strict().default({}),
     carSelection: z.object({
       model: z.enum(CAR_MODEL_IDS).nullable(),
       returningPlayer: z.boolean(),
@@ -316,6 +323,16 @@ export function performPreviewGameAction(
       carSelection: { model: action.model, returningPlayer: selection?.returningPlayer ?? false },
       color: action.color,
     };
+  } else if (action.type === "buy-cosmetic" || action.type === "equip-cosmetic") {
+    const model = selection?.model ?? "neo-falcon";
+    try {
+      state = action.type === "buy-cosmetic"
+        ? { ...state, ...buyCosmetic(state.balance, state.ownedCosmetics, model, action.id) }
+        : { ...state, equippedCosmetics: equipCosmetic(state.ownedCosmetics, state.equippedCosmetics, model, action.slot, action.id) };
+    } catch (error) {
+      if (error instanceof CosmeticRuleError) throw new PreviewGameRuleError(error.message);
+      throw error;
+    }
   } else if (action.type === "upgrade") {
     state = applyUpgrade(state, action.key);
   } else if (action.type === "claim" && Math.floor(state.pending) > 0) {
