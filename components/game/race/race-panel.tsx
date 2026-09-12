@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { batteryTelemetry, BOOST_DURATION_SECONDS, coins, formatCoins, lapReward, lapSeconds, type GameState } from "@/lib/game";
 import { RaceBattery } from "./race-battery";
 import { cn } from "@/lib/utils";
+import { createDrivingState, stabilizeCar } from "@/lib/race-dynamics";
+import { GripChallenge } from "./grip-challenge";
 
 const RaceScene = dynamic(() => import("../scene/race-scene"), {
   ssr: false,
@@ -68,6 +70,9 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
   boosting?: boolean;
 }) {
   const reducedMotion = useSyncExternalStore(subscribeMotionPreference, () => window.matchMedia("(prefers-reduced-motion: reduce)").matches, () => true);
+  const driving = useRef(createDrivingState());
+  const [telemetry, setTelemetry] = useState(createDrivingState);
+  const [cinematic, setCinematic] = useState(true);
   const [cameraMode, setCameraMode] = useState(0);
   const [inspect, setInspect] = useState(false);
   const [bodyVisible, setBodyVisible] = useState(false);
@@ -106,11 +111,13 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
         </h2>
         <span className="live-tag">AUTO</span>
       </div>
-      <div className={cn("scene-wrap", inspect && "is-inspecting")}>
+      <div className={cn("scene-wrap", inspect && "is-inspecting", !inspect && cinematic && "is-cinematic", !inspect && telemetry.recovery > 0 && "is-course-out", !inspect && telemetry.grip < 40 && "is-grip-critical")}>
+        {!inspect && <div className="race-vignette" aria-hidden="true" />}
+        {!inspect && telemetry.recovery > 0 && <div className="course-out-callout" role="status"><strong>COURSE OUT</strong><span>Kembali ke lintasan…</span></div>}
         {inspect ? <div className="scene-overlay inspect-hud"><strong>{bodyVisible ? "DETAIL MOBIL" : "DI BALIK BODI"}</strong><span>{bodyVisible ? "Cat metalik · ban · aero kit" : "2 sel · motor · penggerak 4WD"}</span></div> : <div className="scene-overlay lap-hud">
           <span>Lap</span><strong>{String(game.laps + 1).padStart(3, "0")}</strong>
         </div>}
-        <RaceScene levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.progress} seconds={seconds} color={game.color} boosted={boosted} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
+        <RaceScene driving={driving} onTelemetry={setTelemetry} cinematic={cinematic && !reducedMotion} levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.progress} seconds={seconds} color={game.color} boosted={boosted} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
         <div className={cn("scene-overlay boost-hud", boosted && "boost-hud-active")} aria-hidden={!boosted}>
           <Zap aria-hidden="true" /><strong>2×</strong><span>GASPOL</span>
           <i style={{ transform: `scaleX(${Math.max(0, Math.min(1, game.boostLeft / BOOST_DURATION_SECONDS))})` }} />
@@ -124,7 +131,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
           </> : <>
           <Button variant="outline" size="sm" onClick={() => setCameraChoice(!followCamera)} aria-pressed={!followCamera} aria-label={followCamera ? "Aktifkan kamera overview" : "Kembali ke kamera follow mobil"} title={followCamera ? "Lihat seluruh lintasan" : "Kembali mengikuti mobil"}>
             <Camera data-icon="inline-start" aria-hidden="true" />
-            Overview
+            {followCamera ? 'Overview' : 'Follow'}
           </Button>
           {!followCamera && <Button variant="outline" size="icon-sm" onClick={() => setCameraMode((v) => (v + 1) % 3)} aria-label={`Ganti sudut overview, preset ${cameraMode + 1} dari 3`} title={`Sudut overview ${cameraMode + 1}/3`}>
             <span aria-hidden="true">{cameraMode + 1}/3</span>
@@ -142,6 +149,17 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
       <div className="lap-progress" role="progressbar" aria-label="Progres putaran saat ini" aria-valuenow={Math.round(game.progress * 100)} aria-valuemin={0} aria-valuemax={100}>
         <div style={{ transform: `scaleX(${game.progress})` }} />
       </div>
+      <div className="race-director-bar">
+        <span>{followCamera ? 'CHASE CAM' : `OVERVIEW / 0${cameraMode + 1}`}<i />{reducedMotion ? 'REDUCED MOTION' : cinematic ? 'DIRECTOR LIVE' : 'KAMERA STABIL'}</span>
+        <Button variant="ghost" size="xs" aria-pressed={cinematic && !reducedMotion} disabled={reducedMotion} onClick={() => setCinematic(value => !value)}>Sinematik {cinematic && !reducedMotion ? 'on' : 'off'}</Button>
+      </div>
+      {!inspect && <GripChallenge state={telemetry} active={active} onStabilize={() => {
+        if (active && stabilizeCar(driving.current)) setTelemetry({ ...driving.current });
+      }} onToggle={() => {
+        const enabled = !driving.current.enabled;
+        Object.assign(driving.current, createDrivingState(), { enabled });
+        setTelemetry({ ...driving.current });
+      }} />}
       <div className="track-stats">
         <div className="track-stat">
           <div className="track-stat-label"><Gauge aria-hidden="true" />Kecepatan</div>
