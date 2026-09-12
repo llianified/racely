@@ -654,7 +654,7 @@
 .garage-stats dt { color: var(--muted-foreground); font-size: var(--fs-read); }
 .garage-stats dd { margin-top: var(--space-xs); font-size: var(--fs-read); color: var(--muted-foreground); }
 .garage-stats strong { color: var(--foreground); font-size: var(--fs-2xl); font-variant-numeric: tabular-nums; }
-.upgrade-panel > .section-card-heading { min-height: var(--space-48); margin-inline: 0; padding: var(--space-md) var(--gutter); }
+
 .upgrade-list { padding-inline: 0; }
 .upgrade-row { display: flex; align-items: flex-end; gap: var(--space-md); padding: var(--space-lg); border-bottom: var(--stroke) solid var(--border); }
 .upgrade-row:last-child { border-bottom: none; }
