@@ -175,8 +175,14 @@
   --corner-panel: calc(var(--radius) * .75);
   --corner-field: calc(var(--radius) * .7);
 
-  --safe-top: max(env(safe-area-inset-top, 0px), var(--tg-content-safe-area-inset-top, 0px));
-  --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--tg-content-safe-area-inset-bottom, 0px));
+  --device-safe-top: max(env(safe-area-inset-top, 0px), var(--racely-device-inset-top, var(--tg-safe-area-inset-top, 0px)));
+  --telegram-chrome-top: var(--racely-content-inset-top, var(--tg-content-safe-area-inset-top, 0px));
+  --safe-top: calc(var(--device-safe-top) + var(--telegram-chrome-top));
+  --safe-bottom: calc(max(env(safe-area-inset-bottom, 0px), var(--racely-device-inset-bottom, var(--tg-safe-area-inset-bottom, 0px))) + var(--racely-content-inset-bottom, var(--tg-content-safe-area-inset-bottom, 0px)));
+  --safe-left: calc(max(env(safe-area-inset-left, 0px), var(--racely-device-inset-left, var(--tg-safe-area-inset-left, 0px))) + var(--racely-content-inset-left, var(--tg-content-safe-area-inset-left, 0px)));
+  --safe-right: calc(max(env(safe-area-inset-right, 0px), var(--racely-device-inset-right, var(--tg-safe-area-inset-right, 0px))) + var(--racely-content-inset-right, var(--tg-content-safe-area-inset-right, 0px)));
+  --telegram-control-wing: 34%;
+  --telegram-wordmark-width: 96px;
   --nav-height: var(--space-56);
   /* ── tangga huruf — satu tangga menaik, tanpa lubang ─���───────────────────
      2xs 8 · xs 9 · nano 10 · micro 11 · small 12 · body 13 · read 14 ·
@@ -388,11 +394,33 @@
 }
 
 /* ── shell ─────────────────────────────────────────── */
-.game-shell { width: 100%; max-width: var(--app-width); min-height: 100dvh; margin-inline: auto; padding-top: var(--safe-top); }
+.game-shell { width: 100%; max-width: var(--app-width); min-height: 100dvh; margin-inline: auto; padding-left: var(--safe-left); padding-right: var(--safe-right); }
 .main-shell { min-width: 0; }
 
 /* ── app bar (bukan navbar desktop) ────────────────── */
-.topbar { position: sticky; top: 0; z-index: var(--z-topbar); height: var(--space-48); display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); padding-inline: var(--gutter); background: var(--background); color: var(--foreground); border-bottom: var(--stroke) solid color-mix(in srgb, var(--muted-foreground) 18%, transparent); }
+.topbar { position: sticky; top: 0; z-index: var(--z-topbar); min-height: calc(var(--space-48) + var(--safe-top)); display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); padding: var(--safe-top) var(--gutter) 0; background: var(--background); color: var(--foreground); border-bottom: var(--stroke) solid color-mix(in srgb, var(--muted-foreground) 18%, transparent); }
+.topbar-brand { display: flex; align-items: center; min-height: var(--space-48); }
+.cockpit-identity { display: none; }
+:root[data-telegram-fullscreen='true'] {
+  --telegram-chrome-top: max(var(--space-48), var(--racely-content-inset-top, var(--tg-content-safe-area-inset-top, 0px)));
+  --scroll-offset-top: calc(var(--safe-top) + var(--space-56) + var(--space-md));
+}
+[data-telegram-fullscreen='true'] .topbar { flex-direction: column; align-items: stretch; gap: 0; padding: var(--device-safe-top) 0 0; }
+[data-telegram-fullscreen='true'] .topbar-brand { justify-content: center; height: var(--telegram-chrome-top); min-height: var(--telegram-chrome-top); padding-inline: var(--telegram-control-wing); pointer-events: none; }
+[data-telegram-fullscreen='true'] .topbar-brand .brand { min-width: 0; max-width: var(--telegram-wordmark-width); overflow: hidden; }
+[data-telegram-fullscreen='true'] .topbar-brand .brand-mark { display: none; }
+[data-telegram-fullscreen='true'] .topbar-brand .brand-word { font-size: var(--fs-display); }
+[data-telegram-fullscreen='true'] .topbar-right { min-height: var(--space-56); padding-inline: var(--gutter); border-top: var(--stroke) solid var(--border); }
+[data-telegram-fullscreen='true'] .cockpit-identity { display: flex; flex: 1; min-width: 0; flex-direction: column; }
+.cockpit-label { color: var(--muted-foreground); font-size: var(--fs-read); font-weight: var(--fw-semibold); letter-spacing: var(--track-caps-sm); line-height: var(--lh-tight); }
+.cockpit-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-read); line-height: var(--lh-normal); }
+[data-telegram-fullscreen='true'] .coin-balance { height: var(--space-40); border-radius: var(--corner-md); }
+[data-telegram-fullscreen='true'] .racer-avatar { height: var(--space-40); border-radius: var(--corner-md); }
+[data-telegram-fullscreen='true'] .racer-photo,
+[data-telegram-fullscreen='true'] .racer-initial { width: var(--space-38); height: var(--space-38); }
+[data-telegram-fullscreen='true'] [data-slot='dialog-content'] { top: calc(var(--safe-top) + (100dvh - var(--safe-top) - var(--safe-bottom)) / 2); max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - var(--space-xl)); max-width: min(var(--app-width), calc(100% - var(--safe-left) - var(--safe-right) - var(--space-xl))); }
+[data-telegram-fullscreen='true'] [data-sonner-toaster][data-y-position='top'] { top: calc(var(--safe-top) + var(--space-md)); }
+[data-telegram-fullscreen='true'] .mobile-nav { padding-left: max(var(--space-xs), var(--safe-left)); padding-right: max(var(--space-xs), var(--safe-right)); }
 .brand { display: flex; align-items: center; gap: var(--space-sm); flex-shrink: 0; }
 .brand-mark { width: var(--space-32); height: auto; flex-shrink: 0; object-fit: contain; }
 .brand-word { font-size: var(--fs-4xl); font-weight: var(--fw-ultra); font-style: italic; letter-spacing: var(--track-tight-3xl); line-height: var(--lh-none); }
