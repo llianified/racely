@@ -28,13 +28,10 @@ export function Brand() {
         alt=""
         width={372}
         height={248}
-        priority
+        sizes="32px"
         className="brand-mark"
       />
-      <div>
-        <div className="brand-word">RACELY</div>
-        <div className="brand-sub">SMALL SCALE. BIG AMBITION.</div>
-      </div>
+      <div className="brand-word">RACELY<span aria-hidden="true">.</span></div>
     </div>
   );
 }
@@ -83,29 +80,35 @@ export function Topbar({
   onWallet: () => void;
   onHelp: () => void;
 }) {
-  const initial = racerName.trim().charAt(0).toUpperCase() || "R";
+  const initial = Array.from(racerName.trim())[0]?.toUpperCase() || "R";
+  const displayedBalance = formatCoins(Math.floor(balance));
+
   return (
-    <header className="topbar">
+    <header className="topbar font-sans">
       <Brand />
       <div className="topbar-right">
         <button
+          type="button"
           onClick={onWallet}
           className="coin-balance"
-          aria-label="Buka dompet dan tarik koin"
+          aria-label={`Saldo ${displayedBalance} koin. Buka dompet dan tarik koin`}
+          title="Buka dompet"
         >
-          <Coins />
-          <span>
-            <strong key={balance}>{formatCoins(Math.floor(balance))}</strong>
-            <small>KOIN</small>
+          <Coins aria-hidden="true" />
+          <span aria-hidden="true">
+            <small>Koin</small>
+            <strong>{displayedBalance}</strong>
           </span>
         </button>
         <button
+          type="button"
           onClick={onHelp}
           className="racer-avatar"
           aria-label={`${racerName}, level ${level}. Cara bermain`}
+          title={`${racerName} · Level ${level} · Cara bermain`}
         >
-          <span aria-hidden="true">{initial}</span>
-          <small aria-hidden="true">{level}</small>
+          <span className="racer-initial" aria-hidden="true">{initial}</span>
+          <span className="racer-level" aria-hidden="true">LV {level}</span>
         </button>
       </div>
     </header>
