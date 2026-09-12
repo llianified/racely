@@ -65,7 +65,7 @@ function SheetContent({
             render={
               <Button
                 variant="ghost"
-                className="absolute top-3 right-3"
+                className="absolute top-lg right-lg"
                 size="icon"
               />
             }
@@ -103,7 +103,7 @@ function SheetTitle({ className, ...props }: SheetPrimitive.Title.Props) {
   return (
     <SheetPrimitive.Title
       data-slot="sheet-title"
-      className={cn("pr-8 text-xl leading-tight font-bold text-foreground", className)}
+      className={cn("pr-(--space-40) text-xl leading-tight font-bold text-foreground", className)}
       {...props}
     />
   )
