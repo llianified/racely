@@ -15,7 +15,12 @@ import { SectionCardHeading } from "../shell/section-card-heading";
 
 const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
   ssr: false,
-  loading: () => <div className="scene-loading" role="status">Menyiapkan part 3D…</div>,
+  loading: () => (
+    <div className="scene-loading" role="status">
+      <LoaderCircle className="animate-spin" aria-hidden="true" />
+      <strong>Menyiapkan mobil 3D…</strong>
+    </div>
+  ),
 });
 
 type ShopProps = {
@@ -64,7 +69,7 @@ function ShopContents({ game, disabled, onAction, onPending }: Omit<ShopProps, "
   return <>
     <div className="parts-shop-scroll">
       <div className="parts-shop-stage" role="img" aria-label={`${CAR_CATALOG[model].name}: ${trying ? `pratinjau ${part.name}, belum disimpan` : "part yang terpasang"}`}>
-        <CarPreviewScene color={game.color} model={model} levels={game.levels} equipped={previewParts} interactive />
+        <CarPreviewScene color={game.color} model={model} levels={game.levels} equipped={previewParts} />
       </div>
       <div className="parts-shop-preview-bar">
         <div className="parts-shop-preview-state">
