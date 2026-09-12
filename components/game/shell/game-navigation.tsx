@@ -87,8 +87,12 @@ export function Topbar({
 
   return (
     <header className="topbar font-sans">
-      <Brand />
+      <div className="topbar-brand"><Brand /></div>
       <div className="topbar-right">
+        <div className="cockpit-identity">
+          <span className="cockpit-label">PEMBALAP</span>
+          <strong className="cockpit-name" title={racerName}>{racerName}</strong>
+        </div>
         <button
           type="button"
           onClick={onWallet}

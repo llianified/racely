@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+type SafeAreaInsets = { top: number; bottom: number; left: number; right: number };
+
 type TelegramWebApp = {
   ready: () => void;
   expand: () => void;
@@ -10,6 +12,13 @@ type TelegramWebApp = {
   isVersionAtLeast: (version: string) => boolean;
   setHeaderColor: (color: string) => void;
   setBackgroundColor: (color: string) => void;
+  setBottomBarColor?: (color: string) => void;
+  requestFullscreen?: () => void;
+  isFullscreen?: boolean;
+  safeAreaInset?: SafeAreaInsets;
+  contentSafeAreaInset?: SafeAreaInsets;
+  onEvent?: (event: string, handler: () => void) => void;
+  offEvent?: (event: string, handler: () => void) => void;
   HapticFeedback?: { impactOccurred: (style: "light" | "medium") => void };
 };
 
@@ -19,7 +28,51 @@ declare global {
   }
 }
 
-const SHELL_COLOR = "#090c1d";
+const fullscreenRequested = new WeakSet<TelegramWebApp>();
+const viewportEvents = [
+  "safeAreaChanged", "contentSafeAreaChanged", "fullscreenChanged",
+  "fullscreenFailed", "viewportChanged", "activated",
+];
+
+/** Native chrome changes independently of React, including while minimized. */
+export function connectTelegramViewport(app: TelegramWebApp, root: HTMLElement) {
+  const syncViewport = () => {
+    root.dataset.telegramFullscreen = String(Boolean(app.isFullscreen));
+    for (const edge of ["top", "bottom", "left", "right"] as const) {
+      for (const [kind, insets] of [["device", app.safeAreaInset], ["content", app.contentSafeAreaInset]] as const) {
+        const value = insets?.[edge];
+        const property = `--racely-${kind}-inset-${edge}`;
+        if (typeof value === "number" && Number.isFinite(value)) {
+          root.style.setProperty(property, `${Math.max(0, value)}px`);
+        } else {
+          root.style.removeProperty(property);
+        }
+      }
+    }
+  };
+
+  syncViewport();
+  for (const event of viewportEvents) app.onEvent?.(event, syncViewport);
+  if (app.isVersionAtLeast("8.0") && app.requestFullscreen && !app.isFullscreen && !fullscreenRequested.has(app)) {
+    fullscreenRequested.add(app);
+    try {
+      app.requestFullscreen();
+    } catch {
+      // Unsupported desktop/web clients must still load the game normally.
+      syncViewport();
+    }
+  }
+
+  return () => {
+    for (const event of viewportEvents) app.offEvent?.(event, syncViewport);
+    delete root.dataset.telegramFullscreen;
+    for (const kind of ["device", "content"]) {
+      for (const edge of ["top", "bottom", "left", "right"]) {
+        root.style.removeProperty(`--racely-${kind}-inset-${edge}`);
+      }
+    }
+  };
+}
 
 /**
  * Reads the signed initData the Mini App was opened with and tells the caller
@@ -33,20 +86,24 @@ export function useTelegramWebApp() {
 
   useEffect(() => {
     const app = window.Telegram?.WebApp;
+    let disconnectViewport: (() => void) | undefined;
     if (app && app.platform !== "unknown") {
-      app.ready();
+      const root = document.documentElement;
+      const shellColor = getComputedStyle(root).getPropertyValue("--background").trim();
+      if (app.isVersionAtLeast("6.9")) {
+        app.setHeaderColor(shellColor);
+        app.setBackgroundColor(shellColor);
+      }
+      if (app.isVersionAtLeast("7.10")) app.setBottomBarColor?.(shellColor);
+      disconnectViewport = connectTelegramViewport(app, root);
       app.expand();
-      // window.Telegram.WebApp is injected by an external script and never
-      // changes afterwards, so there is nothing to subscribe to -- reading it
-      // once on mount is the only way in.
+      app.ready();
+      // Telegram injects initData before hydration; this establishes the client session.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setInitData(app.initData ?? "");
-      if (app.isVersionAtLeast("6.9")) {
-        app.setHeaderColor(SHELL_COLOR);
-        app.setBackgroundColor(SHELL_COLOR);
-      }
     }
     setClientReady(true);
+    return disconnectViewport;
   }, []);
 
   return { initData, clientReady };
