@@ -58,8 +58,15 @@ function Racer({ lane, color, model, progress, seconds, boosted, playerRef, leve
     const dt = Math.min(delta, .1)
     const state = lane === 0 ? driving?.current : undefined
     if (state) stepDriving(state, dt, phase.current, boosted, levels?.tires)
-    // Local racing distance must not be pulled back to server progress: that cancels grip penalties.
-    phase.current = (phase.current + dt * (state?.speedMultiplier ?? 1) / (seconds * (lane === 0 ? 1 : 1.16 + lane * .08))) % 1
+    phase.current = (phase.current + dt / (seconds * (lane === 0 ? 1 : 1.16 + lane * .08))) % 1
+    if (lane === 0) {
+      // Grip menggerakkan racing line, bukan laju putaran -- itu milik server.
+      // Tanpa rekonsiliasi ini mobil di layar hanyut permanen dari putaran yang
+      // benar-benar dibayar, dan popup lap meletus saat mobil di titik acak.
+      // Ditarik pelan lewat busur terpendek supaya posisinya tidak melompat.
+      const drift = ((progress - phase.current + 1.5) % 1) - .5
+      phase.current = (phase.current + drift * (1 - Math.exp(-2 * dt)) + 1) % 1
+    }
     const p = trackPoint(phase.current, PLAYER_RADIUS + lane * .68)
     const offset = state?.offset ?? 0
     const slip = state ? Math.max(0, (65 - state.grip) / 65) : 0

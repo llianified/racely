@@ -13,7 +13,7 @@ import { InfoHint } from "./info-hint";
 import { BodyPartsShop } from "./body-parts-shop";
 import type { PartCommand } from "@/lib/car-parts";
 import { gripTuning } from "@/lib/race-dynamics";
-import { coins, formatCoins, lapReward, lapSeconds, modificationPreview, totalLevel, type GameState, type Upgrade } from "@/lib/game";
+import { coins, displaySpeedKmh, formatCoins, lapReward, lapSeconds, modificationPreview, totalLevel, type GameState, type Upgrade } from "@/lib/game";
 
 const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
   ssr: false,
@@ -27,7 +27,11 @@ const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
 
 export const PARTS = [
   { key: "engine" as Upgrade, title: "Mesin", subtitle: "+15% tenaga dasar", icon: Cog },
-  { key: "tires" as Upgrade, title: "Ban & roller", subtitle: "+10% tenaga dasar · grip lebih kuat", icon: CircleDot },
+  // Grip sengaja tidak disebut di sini: simulasinya menggerakkan racing line,
+  // bukan koin atau lap server, jadi menjualnya di baris keputusan pembelian
+  // menjanjikan penghasilan yang tidak akan datang. Rinciannya tetap ada di
+  // tabel grip dalam lembar modifikasi, lengkap dengan batasannya.
+  { key: "tires" as Upgrade, title: "Ban & roller", subtitle: "+10% tenaga dasar", icon: CircleDot },
   { key: "battery" as Upgrade, title: "Baterai", subtitle: "+0,01 koin / putaran", icon: BatteryMedium },
 ];
 
@@ -67,7 +71,7 @@ export const GaragePanel = memo(function GaragePanel({
       </div>
       <CarColorPicker model={model} color={game.color} disabled={disabled} onChoose={onChooseColor} />
       <dl className="garage-stats">
-        <div><dt>Kecepatan dasar</dt><dd><strong>{(192 / lapSeconds({ ...game, boostLeft: 0 })).toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</strong> km/j</dd></div>
+        <div><dt>Kecepatan dasar</dt><dd><strong>{displaySpeedKmh(lapSeconds({ ...game, boostLeft: 0 })).toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</strong> km/j</dd></div>
         <div><dt>Hasil per putaran</dt><dd><strong>{formatCoins(lapReward(game))}</strong> koin</dd></div>
       </dl>
       <BodyPartsShop game={game} active={active} disabled={disabled} onAction={onPartAction} />
