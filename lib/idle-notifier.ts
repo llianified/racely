@@ -4,10 +4,11 @@ import { and, asc, eq, isNotNull, lt, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { botChats, players } from "@/lib/db/schema";
 import {
-  IDLE_NOTIFY_AFTER_SECONDS,
+  idleNotifyAfterSeconds,
   idleNotificationText,
   idleSecondsOf,
 } from "@/lib/idle-notify";
+import { readEconomyConfig } from "@/lib/economy-store";
 import { parsePublicAppUrl, sendTelegramReply } from "@/lib/telegram-bot";
 
 /** Sesapuan dibatasi supaya satu tick tidak pernah membanjiri Bot API. */
@@ -33,7 +34,11 @@ export async function runIdleNotifierPass(now = new Date()) {
     return { sent: 0, skipped: 0 };
   }
 
-  const cutoff = new Date(now.getTime() - IDLE_NOTIFY_AFTER_SECONDS * 1000);
+  // Jendela offline bisa disetel dari panel, jadi ambangnya dibaca tiap sapuan.
+  const economy = await readEconomyConfig();
+  const cutoff = new Date(
+    now.getTime() - idleNotifyAfterSeconds(economy) * 1000,
+  );
   const candidates = await db
     .select({
       userId: players.userId,
@@ -70,7 +75,7 @@ export async function runIdleNotifierPass(now = new Date()) {
     try {
       await sendTelegramReply({
         chat_id: chatId,
-        text: idleNotificationText(idleSecondsOf(candidate, now)),
+        text: idleNotificationText(idleSecondsOf(candidate, now), economy),
         reply_markup: {
           inline_keyboard: [
             [{ text: "Buka Racely", web_app: { url: appUrl } }],

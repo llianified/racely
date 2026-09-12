@@ -60,6 +60,9 @@ describeDatabase("Neon Postgres persistence", () => {
         .delete(schema.botChats)
         .where(drizzle.eq(schema.botChats.userId, userId));
     }
+    // Config ekonomi bersifat global: satu baris yang tertinggal akan mengubah
+    // permainan untuk semua orang, bukan hanya test berikutnya.
+    await db.delete(schema.economyConfig);
     for (const updateId of claimedUpdateIds) {
       await updates.releaseTelegramUpdate(updateId);
     }
@@ -374,7 +377,7 @@ describeDatabase("Neon Postgres persistence", () => {
   });
 
   it("mengikat pengajak sekali, membayar keduanya sekali, di capaian", async () => {
-    const game = await import("@/lib/game");
+    const { DEFAULT_ECONOMY: E } = await import("@/lib/economy-config");
     const player = (suffix: string, startParam: string | null = null) => {
       const userId = `test-ref-${suffix}-${randomUUID()}`;
       extraUserIds.push(userId);
@@ -412,28 +415,28 @@ describeDatabase("Neon Postgres persistence", () => {
     const inviteeStart = (await balanceOf(invitee.userId))!.balance;
     await db!
       .update(schema.players)
-      .set({ laps: game.REFERRAL_MILESTONE_LAPS })
+      .set({ laps: E.referralMilestoneLaps })
       .where(drizzle.eq(schema.players.userId, invitee.userId));
 
     await gameServer.getGameState(invitee);
     expect((await balanceOf(invitee.userId))!.balance).toBe(
-      inviteeStart + game.REFERRAL_REWARD_INVITEE,
+      inviteeStart + E.referralRewardInvitee,
     );
     expect((await balanceOf(inviter.userId))!.balance).toBe(
-      inviterStart + game.REFERRAL_REWARD_INVITER,
+      inviterStart + E.referralRewardInviter,
     );
 
     // Sync berikutnya tidak boleh membayar lagi.
     await gameServer.getGameState(invitee);
     await gameServer.getGameState(invitee);
     expect((await balanceOf(inviter.userId))!.balance).toBe(
-      inviterStart + game.REFERRAL_REWARD_INVITER,
+      inviterStart + E.referralRewardInviter,
     );
 
     const inviterState = await gameServer.getGameState(inviter);
     expect(inviterState.referral).toMatchObject({
       invited: 1,
-      earned: game.REFERRAL_REWARD_INVITER,
+      earned: E.referralRewardInviter,
     });
     expect(inviterState.referral.link).toContain(`ref_${inviter.userId}`);
 
@@ -457,7 +460,9 @@ describeDatabase("Neon Postgres persistence", () => {
    */
   it("memilih dan menandai pemain yang jendela offline-nya hampir penuh", async () => {
     const notifier = await import("@/lib/idle-notifier");
-    const { IDLE_NOTIFY_AFTER_SECONDS } = await import("@/lib/idle-notify");
+    const { idleNotifyAfterSeconds } = await import("@/lib/idle-notify");
+    const { DEFAULT_ECONOMY: E } = await import("@/lib/economy-config");
+    const IDLE_NOTIFY_AFTER_SECONDS = idleNotifyAfterSeconds(E);
     const chats = await import("@/lib/bot-chats");
     process.env.PUBLIC_APP_URL ??= "https://racely.fun";
 
@@ -518,6 +523,208 @@ describeDatabase("Neon Postgres persistence", () => {
     );
     await notifier.runIdleNotifierPass(laterNow);
     expect((await eligible())?.getTime()).toBe(laterNow.getTime());
+  });
+
+  /**
+   * Panel admin memindahkan penarikan lewat `transitionWithdrawal`, yang
+   * menggantikan `UPDATE ... SET status` manual lewat psql. Dua penjaganya ada
+   * di SQL, jadi hanya bisa diuji terhadap Postgres sungguhan: klausa
+   * `WHERE status = <yang dibaca operator>` untuk konkurensi, dan
+   * `refunded_at IS NULL` untuk baris yang koinnya sudah dipulangkan.
+   */
+  it("memindahkan penarikan hanya lewat jalur yang diizinkan", async () => {
+    const ops = await import("@/lib/admin-ops");
+    const userId = `test-ops-${randomUUID()}`;
+    extraUserIds.push(userId);
+    const operator = {
+      userId,
+      displayName: "Ops Racer",
+      username: null,
+      photoUrl: null,
+      startParam: null,
+    };
+
+    await gameServer.performGameAction(operator, randomUUID(), {
+      type: "select-car",
+      model: "luna-gt",
+      color: "#b9a1ed",
+    });
+    await db!
+      .update(schema.players)
+      .set({ balance: 400 })
+      .where(drizzle.eq(schema.players.userId, userId));
+    await gameServer.performGameAction(operator, randomUUID(), {
+      type: "withdraw",
+      method: "dana",
+      account: "081234567890",
+      accountName: "Ops Racer",
+      coins: 150,
+    });
+
+    const [pending] = await db!
+      .select()
+      .from(schema.withdrawals)
+      .where(drizzle.eq(schema.withdrawals.userId, userId));
+    expect(pending.status).toBe("pending");
+    const id = String(pending.id);
+
+    const processing = await ops.transitionWithdrawal({
+      id,
+      expectedStatus: "pending",
+      nextStatus: "processing",
+      actor: "test",
+    });
+    expect(processing.to).toBe("processing");
+
+    // Tab kedua yang masih melihat 'pending' tidak boleh menerapkan apa pun.
+    await expect(
+      ops.transitionWithdrawal({
+        id,
+        expectedStatus: "pending",
+        nextStatus: "rejected",
+        actor: "test",
+      }),
+    ).rejects.toThrow("sudah berubah statusnya");
+
+    const paid = await ops.transitionWithdrawal({
+      id,
+      expectedStatus: "processing",
+      nextStatus: "paid",
+      actor: "test",
+    });
+    expect(paid.amountIdr).toBe(pending.amountIdr);
+
+    const [afterPaid] = await db!
+      .select()
+      .from(schema.withdrawals)
+      .where(drizzle.eq(schema.withdrawals.id, pending.id));
+    expect(afterPaid.status).toBe("paid");
+    expect(afterPaid.processedAt).not.toBeNull();
+
+    // 'paid' adalah akhir: menolaknya akan memulangkan koin yang uangnya sudah
+    // keluar dari rekening -- lihat catatan operasional di migrasi 0008.
+    await expect(
+      ops.transitionWithdrawal({
+        id,
+        expectedStatus: "paid",
+        nextStatus: "rejected",
+        actor: "test",
+      }),
+    ).rejects.toThrow("tidak diizinkan");
+
+    // Saldo pemain tidak boleh bergerak sedikit pun karena panel: uangnya
+    // berpindah di luar Racely, panel hanya mencatat keputusannya.
+    expect((await gameServer.getGameState(operator)).balance).toBe(250);
+
+    const audit = await ops.readAuditTrail(10);
+    expect(audit.some((row) => row.action === "withdrawal:paid")).toBe(true);
+  });
+
+  it("menolak memindahkan penarikan yang koinnya sudah dikembalikan", async () => {
+    const ops = await import("@/lib/admin-ops");
+    const userId = `test-refunded-${randomUUID()}`;
+    extraUserIds.push(userId);
+    const player = {
+      userId,
+      displayName: "Refund Racer",
+      username: null,
+      photoUrl: null,
+      startParam: null,
+    };
+
+    await gameServer.performGameAction(player, randomUUID(), {
+      type: "select-car",
+      model: "luna-gt",
+      color: "#b9a1ed",
+    });
+    await db!
+      .update(schema.players)
+      .set({ balance: 300 })
+      .where(drizzle.eq(schema.players.userId, userId));
+    await gameServer.performGameAction(player, randomUUID(), {
+      type: "withdraw",
+      method: "dana",
+      account: "081234567890",
+      accountName: "Refund Racer",
+      coins: 110,
+    });
+
+    const [row] = await db!
+      .select()
+      .from(schema.withdrawals)
+      .where(drizzle.eq(schema.withdrawals.userId, userId));
+    await db!
+      .update(schema.withdrawals)
+      .set({ status: "rejected" })
+      .where(drizzle.eq(schema.withdrawals.id, row.id));
+    // Sync pemain yang mengembalikan koinnya dan menstempel refunded_at.
+    await gameServer.getGameState(player);
+
+    await expect(
+      ops.transitionWithdrawal({
+        id: String(row.id),
+        expectedStatus: "rejected",
+        nextStatus: "paid",
+        actor: "test",
+      }),
+    ).rejects.toThrow("tidak diizinkan");
+  });
+
+  /**
+   * Bukti ujung-ke-ujung bahwa config ekonomi benar-benar menggerakkan
+   * permainan, bukan hanya tersimpan: satu baris di racely_economy_config harus
+   * mengubah hasil aksi pemain berikutnya.
+   *
+   * Baris config bersifat global, jadi seluruh test yang menyentuh database ada
+   * di berkas ini -- yang dijalankan vitest secara berurutan -- dan `finally`
+   * di bawah memulangkan keadaannya.
+   */
+  it("menyimpan config ekonomi dan memakainya di aksi pemain berikutnya", async () => {
+    const store = await import("@/lib/economy-store");
+    const { DEFAULT_ECONOMY } = await import("@/lib/economy-config");
+    const userId = `test-eco-${randomUUID()}`;
+    extraUserIds.push(userId);
+    const player = {
+      userId,
+      displayName: "Economy Racer",
+      username: null,
+      photoUrl: null,
+      startParam: null,
+    };
+
+    try {
+      const saved = await store.writeEconomyConfig(
+        { ...DEFAULT_ECONOMY, starterGift: 77 },
+        "test",
+      );
+      expect(saved.starterGift).toBe(77);
+
+      const snapshot = await store.readEconomyConfigSnapshot();
+      expect(snapshot.usingDefaults).toBe(false);
+      expect(snapshot.updatedBy).toBe("test");
+      expect((await store.readEconomyConfig()).starterGift).toBe(77);
+
+      await gameServer.performGameAction(player, randomUUID(), {
+        type: "select-car",
+        model: "luna-gt",
+        color: "#b9a1ed",
+      });
+      const gifted = await gameServer.performGameAction(player, randomUUID(), {
+        type: "gift",
+      });
+      // Saldo awal bawaan + bonus starter yang baru disetel.
+      expect(gifted.balance).toBe(DEFAULT_ECONOMY.startingBalance + 77);
+      // Config ikut di payload, jadi client menghitung dengan angka yang sama.
+      expect(gifted.economy.starterGift).toBe(77);
+    } finally {
+      await db!.delete(schema.economyConfig);
+      store.resetEconomyCache();
+    }
+
+    // Tabel kosong berarti kembali ke bawaan, bukan nol.
+    const restored = await store.readEconomyConfigSnapshot();
+    expect(restored.usingDefaults).toBe(true);
+    expect(restored.config).toEqual(DEFAULT_ECONOMY);
   });
 });
 

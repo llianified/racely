@@ -20,7 +20,6 @@ import {
   formatCoins,
   idr,
   methodLabel,
-  MIN_WITHDRAW_COINS,
   WITHDRAW_METHODS,
   WITHDRAW_STATUS_LABEL,
   type GameState,
@@ -34,7 +33,13 @@ export type WithdrawPayload = {
   coins: number;
 };
 
-const QUICK_AMOUNTS = [100, 250, 500, 1000];
+/**
+ * Nominal cepat diturunkan dari batas minimum, bukan ditulis lepas: minimum yang
+ * disetel jadi 500 dari panel akan membuat chip "100" menawarkan penarikan yang
+ * pasti ditolak server. Pada nilai bawaan hasilnya tetap 100/250/500/1000.
+ */
+const quickAmounts = (min: number) =>
+  [min, min * 2.5, min * 5, min * 10].map((value) => Math.round(value));
 
 export function WalletPanel({
   game,
@@ -45,8 +50,10 @@ export function WalletPanel({
   onWithdraw: (payload: WithdrawPayload) => Promise<boolean>;
   disabled?: boolean;
 }) {
+  const { economy } = game;
+  const minWithdraw = economy.minWithdrawCoins;
   const [method, setMethod] = useState<WithdrawMethod>("dana");
-  const [amount, setAmount] = useState(String(MIN_WITHDRAW_COINS));
+  const [amount, setAmount] = useState(String(minWithdraw));
   const [account, setAccount] = useState("");
   const [accountName, setAccountName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -60,8 +67,12 @@ export function WalletPanel({
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (disabled) return;
-    if (!Number.isInteger(requested) || requested < MIN_WITHDRAW_COINS) {
-      setError(`Penarikan minimal ${coins(MIN_WITHDRAW_COINS)}.`);
+    if (!Number.isInteger(requested) || requested < minWithdraw) {
+      setError(`Penarikan minimal ${coins(minWithdraw)}.`);
+      return;
+    }
+    if (requested > economy.maxWithdrawCoins) {
+      setError(`Penarikan maksimal ${coins(economy.maxWithdrawCoins)}.`);
       return;
     }
     if (requested > balance) {
@@ -88,7 +99,7 @@ export function WalletPanel({
       coins: requested,
     });
     if (ok) {
-      setAmount(String(MIN_WITHDRAW_COINS));
+      setAmount(String(minWithdraw));
       setAccount("");
       setAccountName("");
       setOpen(false);
@@ -101,18 +112,18 @@ export function WalletPanel({
         <div className="wallet-balance">
           <span className="eyebrow">Saldo tersedia</span>
           <strong>{formatCoins(balance)} <span>koin</span></strong>
-          <p>~ {idr(balance)}</p>
+          <p>~ {idr(balance, economy)}</p>
         </div>
         <Button
           variant="gold"
           size="lg"
           className="w-full"
-          disabled={disabled || balance < MIN_WITHDRAW_COINS}
+          disabled={disabled || balance < minWithdraw}
           onClick={() => setOpen(true)}
         >
           <Send data-icon="inline-start" />
-          {balance < MIN_WITHDRAW_COINS
-            ? `Kumpulkan ${coins(MIN_WITHDRAW_COINS - balance)} lagi`
+          {balance < minWithdraw
+            ? `Kumpulkan ${coins(minWithdraw - balance)} lagi`
             : "Tarik saldo"}
         </Button>
         <div className="wallet-hero-side">
@@ -123,7 +134,7 @@ export function WalletPanel({
           <InfoHint title="Cara kerja saldo">
             Koin dari balapan masuk ke &quot;belum diklaim&quot; dulu. Setiap 1
             koin penuh bisa kamu klaim ke saldo, lalu ditarik ke e-wallet atau
-            rekening bank saat mencapai {coins(MIN_WITHDRAW_COINS)}.
+            rekening bank saat mencapai {coins(minWithdraw)}.
           </InfoHint>
         </div>
       </section>
@@ -136,7 +147,7 @@ export function WalletPanel({
               Tarik saldo
             </SheetTitle>
             <SheetDescription>
-              Saldo {formatCoins(balance)} koin · minimal {coins(MIN_WITHDRAW_COINS)} per penarikan.
+              Saldo {formatCoins(balance)} koin · minimal {coins(minWithdraw)} per penarikan.
             </SheetDescription>
           </SheetHeader>
           <p className="wallet-dialog-note">
@@ -160,12 +171,12 @@ export function WalletPanel({
               aria-describedby="withdraw-amount-note"
             />
             <p id="withdraw-amount-note">
-              Kamu terima {idr(requested)} setelah diproses.
+              Kamu terima {idr(requested, economy)} setelah diproses.
             </p>
           </div>
 
           <div className="wallet-chips" role="group" aria-label="Nominal cepat">
-            {QUICK_AMOUNTS.map((value) => (
+            {quickAmounts(minWithdraw).map((value) => (
               <button
                 key={value}
                 type="button"
@@ -184,7 +195,7 @@ export function WalletPanel({
             <button
               type="button"
               className="wallet-chip"
-              disabled={balance < MIN_WITHDRAW_COINS}
+              disabled={balance < minWithdraw}
               onClick={() => setAmount(String(balance))}
             >
               Semua
@@ -264,12 +275,12 @@ export function WalletPanel({
             variant="gold"
             size="lg"
             className="w-full"
-            disabled={disabled || balance < MIN_WITHDRAW_COINS}
+            disabled={disabled || balance < minWithdraw}
           >
             <Send data-icon="inline-start" />
-            {balance < MIN_WITHDRAW_COINS
-              ? `Kumpulkan ${coins(MIN_WITHDRAW_COINS - balance)} lagi`
-              : `Tarik ${idr(requested)}`}
+            {balance < minWithdraw
+              ? `Kumpulkan ${coins(minWithdraw - balance)} lagi`
+              : `Tarik ${idr(requested, economy)}`}
           </Button>
         </form>
         </SheetContent>
@@ -290,7 +301,7 @@ export function WalletPanel({
             {game.withdrawals.map((item) => (
               <li key={item.id} className="wallet-history-row">
                 <div>
-                  <h3>{idr(item.coins)}</h3>
+                  <h3>{idr(item.coins, economy)}</h3>
                   <p>
                     {methodLabel(item.method)} · {item.account}
                   </p>
