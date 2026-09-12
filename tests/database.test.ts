@@ -229,6 +229,56 @@ describeDatabase("Neon Postgres persistence", () => {
     expect(survivor).toBeUndefined();
   });
 
+  it("commits the actions 0001 could not record: daily check-in and aero kit", async () => {
+    // The CHECK on action_type shipped in 0001 with nine values and never grew.
+    // Every one of these four aborted its own transaction in production -- the
+    // reward credit, the purchase and the race settlement rolled back together
+    // -- until migration 0007 widened the list.
+    await db!
+      .update(schema.players)
+      .set({ balance: 500 })
+      .where(drizzle.eq(schema.players.userId, identity.userId));
+
+    const before = await gameServer.performGameAction(identity, randomUUID(), {
+      type: "sync",
+    });
+    const claimed = await gameServer.performGameAction(identity, randomUUID(), {
+      type: "daily",
+    });
+    expect(claimed.daily.claimedToday).toBe(true);
+    expect(claimed.balance).toBeGreaterThan(before.balance);
+
+    const bought = await gameServer.performGameAction(identity, randomUUID(), {
+      type: "buy-part",
+      partId: "vented-hood",
+    });
+    expect(bought.bodyParts?.owned).toContain("vented-hood");
+    expect(bought.balance).toBe(claimed.balance - 8);
+
+    const fitted = await gameServer.performGameAction(identity, randomUUID(), {
+      type: "equip-part",
+      partId: "vented-hood",
+    });
+    expect(fitted.bodyParts?.equipped.hood).toBe("vented-hood");
+
+    const bare = await gameServer.performGameAction(identity, randomUUID(), {
+      type: "unequip-part",
+      slot: "hood",
+    });
+    expect(bare.bodyParts?.equipped.hood).toBeUndefined();
+    // Unequipping returns the part to the collection, it never refunds or deletes.
+    expect(bare.bodyParts?.owned).toContain("vented-hood");
+
+    const recorded = await db!
+      .select({ actionType: schema.actionReceipts.actionType })
+      .from(schema.actionReceipts)
+      .where(drizzle.eq(schema.actionReceipts.userId, identity.userId));
+    const types = new Set(recorded.map((row) => row.actionType));
+    for (const type of ["daily", "buy-part", "equip-part", "unequip-part"]) {
+      expect(types.has(type)).toBe(true);
+    }
+  });
+
   it("claims a Telegram update exactly once, even across processes", async () => {
     const updateId = Date.now();
     claimedUpdateIds.push(updateId);
