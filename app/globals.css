@@ -32,9 +32,9 @@
   --menu-header: #494078;
   --gold-highlight: #fff18b;
   --gold-shadow: #ba731b;
-  /* Kiblatnya keluarga tombol tekan. Permukaan utama onboarding ikut token ini. */
-  --radius: .375rem;
-  --press-radius: var(--radius);
+  /* Satu sumber radius untuk seluruh permukaan kotak aplikasi. */
+  --press-radius: .375rem;
+  --radius: var(--press-radius);
   --app-width: 480px;
 
   /* ── tangga ukuran (px) ──────────────────────────────────────────────────
@@ -55,11 +55,12 @@
   --icon-2xs: 12px; --icon-xs: 13px;  --icon-sm: 14px;  --icon-md: 15px;
   --icon-base: 16px; --icon-lg: 18px; --icon-xl: 20px;
 
-  /* ── sudut ───────────────────────────────────────────────────────────────
-     Awalan --corner-* supaya tidak bentrok dengan --radius-* milik Tailwind. */
-  --corner-2xs: 2px; --corner-xs: 3px;  --corner-sm: 4px;  --corner-md: 6px;
-  --corner-lg: 9px;  --corner-xl: 10px; --corner-2xl: 12px; --corner-3xl: 20px;
-  --corner-4xl: 24px; --corner-pill: 999px; --corner-round: 50%;
+  /* Semua sudut kotak mengikuti keluarga tombol; pill dan lingkaran tetap khusus. */
+  --corner-2xs: var(--press-radius); --corner-xs: var(--press-radius);
+  --corner-sm: var(--press-radius); --corner-md: var(--press-radius);
+  --corner-lg: var(--press-radius); --corner-xl: var(--press-radius);
+  --corner-2xl: var(--press-radius); --corner-3xl: var(--press-radius);
+  --corner-4xl: var(--press-radius); --corner-pill: 999px; --corner-round: 50%;
 
   /* ── bobot huruf (Google Sans Flex variabel, jadi setengah-langkah sah) ── */
   --fw-normal: 400;   --fw-medium: 500;   --fw-semibold: 600; --fw-strong: 650;
@@ -168,9 +169,9 @@
   /* Offset scroll supaya anchor tidak tertutup topbar yang sticky. */
   --scroll-offset-top: 60px;
 
-  /* Sudut turunan --radius. .7 dan .75 nyaris kembar -- kandidat digabung. */
-  --corner-panel: calc(var(--radius) * .75);
-  --corner-field: calc(var(--radius) * .7);
+  /* Alias semantik tetap satu sumber agar panel dan field tidak menyimpang. */
+  --corner-panel: var(--press-radius);
+  --corner-field: var(--press-radius);
 
   --device-safe-top: max(env(safe-area-inset-top, 0px), var(--racely-device-inset-top, var(--tg-safe-area-inset-top, 0px)));
   --telegram-chrome-top: var(--racely-content-inset-top, var(--tg-content-safe-area-inset-top, 0px));
@@ -337,12 +338,14 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-menu-header: var(--menu-header);
-  --radius-sm: calc(var(--radius) * .5);
-  --radius-md: calc(var(--radius) * .75);
-  --radius-lg: var(--radius);
-  /* rounded-xl dipakai popover dan pembungkus preview garasi; disamakan dengan
-     --radius supaya tidak ada permukaan yang lebih bulat daripada tombol. */
-  --radius-xl: var(--radius);
+  /* Utility rounded-* Tailwind untuk kotak juga mengikuti keluarga tombol. */
+  --radius-sm: var(--press-radius);
+  --radius-md: var(--press-radius);
+  --radius-lg: var(--press-radius);
+  --radius-xl: var(--press-radius);
+  --radius-2xl: var(--press-radius);
+  --radius-3xl: var(--press-radius);
+  --radius-4xl: var(--press-radius);
 }
 @layer base {
   * { @apply border-border outline-ring/50; }
