@@ -148,9 +148,9 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
           <LockKeyhole className="size-4" aria-hidden="true" />
           {step === 1 ? "Model dipilih sekali." : "Model tetap; warna bisa diganti."}
         </p>
-        <p className="selection-save-note">{developmentPreview
-          ? "Preview saja · progres lokal di browser ini."
-          : "Tersimpan ke akun Telegram kamu."}</p>
+        {developmentPreview && (
+          <p className="selection-save-note">Preview saja · progres lokal di browser ini.</p>
+        )}
       </footer>
     </main>
   );
