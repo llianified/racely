@@ -98,7 +98,7 @@ export function RacingEffects({ playerRef, driving, boosted, reducedMotion }: { 
     }
     marker.current.position.set(player.position.x, state?.offRoad ? -.085 : .142, player.position.z)
     const material = marker.current.material as THREE.MeshBasicMaterial
-    material.color.set(state?.recovery || state && state.grip < 40 ? COLORS.gold : state?.lineLocked || state?.perfectBoost ? COLORS.success : COLORS.sky)
+    material.color.set(state?.recovery || state && state.grip < 40 ? COLORS.gold : COLORS.sky)
   }, -1)
   return <>
     <instancedMesh ref={trail} args={[undefined, undefined, 28]} frustumCulled={false}>
