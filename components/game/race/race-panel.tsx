@@ -138,7 +138,12 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
             {!boosting && <small>{boosted ? `${Math.ceil(game.boostLeft)}s` : game.cooldown > 0 ? `${Math.ceil(game.cooldown)}s` : '10s'}</small>}
           </Button>
         </div>}
-        <div className="scene-controls">
+        <LapFeedback laps={game.laps} reward={lapReward(game)} active={active && !inspect} />
+      </div>
+      <div className="lap-progress" role="progressbar" aria-label="Progres putaran saat ini" aria-valuenow={Math.round(game.progress * 100)} aria-valuemin={0} aria-valuemax={100}>
+        <div style={{ transform: `scaleX(${game.progress})` }} />
+      </div>
+      <div className="scene-controls" role="group" aria-label="Kontrol kamera arena">
           {inspect ? <>
             <Button variant="outline" size="sm" onClick={() => setBodyVisible(value => !value)} aria-pressed={bodyVisible} aria-label={bodyVisible ? "Lepas bodi untuk melihat baterai" : "Pasang bodi untuk melihat detail mobil"}>{bodyVisible ? "Lepas bodi" : "Pasang bodi"}</Button>
             <Button variant="outline" size="sm" onClick={() => setInspect(false)}><Camera data-icon="inline-start" />Balapan</Button>
@@ -157,11 +162,6 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
           <Button variant="outline" size="icon-sm" onClick={fullscreen} aria-label="Layar penuh">
             <Maximize aria-hidden="true" />
           </Button>
-        </div>
-        <LapFeedback laps={game.laps} reward={lapReward(game)} active={active && !inspect} />
-      </div>
-      <div className="lap-progress" role="progressbar" aria-label="Progres putaran saat ini" aria-valuenow={Math.round(game.progress * 100)} aria-valuemin={0} aria-valuemax={100}>
-        <div style={{ transform: `scaleX(${game.progress})` }} />
       </div>
       <div className="race-director-bar">
         <span>{followCamera ? 'CHASE CAM' : `OVERVIEW / 0${cameraMode + 1}`}<i />{reducedMotion ? 'REDUCED MOTION' : cinematic ? 'DIRECTOR LIVE' : 'KAMERA STABIL'}</span>

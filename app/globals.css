@@ -464,7 +464,7 @@
 .lane-hud { left: var(--space-10); bottom: var(--space-md); display: grid; grid-template-columns: 3px auto; align-items: center; column-gap: var(--space-6); font-size: var(--fs-nano); line-height: var(--lh-hud); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps); padding: var(--space-5) var(--space-7); border-radius: var(--corner-xs); background: color-mix(in srgb, var(--background) 88%, transparent); }
 .lane-hud i { width: var(--space-3); height: var(--space-23); grid-row: span 2; }
 .lane-hud span { font-size: var(--fs-2xs); color: var(--muted-foreground); font-weight: var(--fw-semibold); letter-spacing: var(--track-caps-xl); }
-.scene-controls { position: absolute; z-index: var(--z-overlay); bottom: var(--space-sm); right: var(--space-sm); display: flex; gap: var(--space-xs); }
+.scene-controls { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-xs); padding: var(--space-sm) var(--space-10); background: var(--background); border-bottom: var(--stroke) solid var(--border); }
 .scene-controls [data-slot='button'] { background: color-mix(in srgb, var(--background) 92%, transparent); color: var(--foreground); min-height: var(--space-36); border-radius: var(--corner-md); font-variant-numeric: tabular-nums; }
 .scene-controls [data-slot='button'][data-size='icon-sm'] { width: var(--space-36); }
 .scene-controls [data-slot='button']:focus-visible { outline-offset: -3px; }
@@ -707,7 +707,7 @@
 .wallet-history-row h3 { font-size: var(--fs-lead); font-weight: var(--fw-heavy); font-variant-numeric: tabular-nums; }
 .wallet-history-row p { margin-top: var(--space-xs); font-size: var(--fs-read); line-height: var(--lh-normal); color: var(--muted-foreground); overflow-wrap: anywhere; }
 
-/* ── boot ──────────────────────────────────────────── */
+/* ── boot ─────��────────────────────────────────────── */
 .boot-screen { display: flex; flex-direction: column; align-items: center; min-height: 100dvh; padding: calc(var(--space-32) + var(--safe-top)) var(--space-xl) calc(var(--space-xl) + var(--safe-bottom)); background: var(--background); color: var(--foreground); text-align: center; }
 .boot-eyebrow { font-size: var(--fs-read); font-weight: var(--fw-semibold); letter-spacing: var(--track-caps-3xl); line-height: var(--lh-normal); color: var(--muted-foreground); }
 .boot-content { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-48); width: 100%; min-height: var(--boot-content-h); }
