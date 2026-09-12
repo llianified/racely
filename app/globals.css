@@ -113,22 +113,62 @@
   html { scroll-padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + 12px); }
 }
 
-.car-selection { width: 100%; max-width: var(--app-width); margin-inline: auto; padding: 20px 16px calc(20px + var(--safe-bottom)); display: flex; flex-direction: column; gap: 16px; font-size: 14px; line-height: 1.5; }
-.car-selection h1 { font-size: 24px; }
-.car-selection h2 { font-size: 20px; }
+.car-selection { width: 100%; max-width: var(--app-width); min-height: 100dvh; margin-inline: auto; padding: calc(20px + var(--safe-top)) 20px calc(20px + var(--safe-bottom)); display: flex; flex-direction: column; gap: 20px; background: var(--background); color: var(--foreground); font-size: 14px; line-height: 1.5; animation: boot-enter .5s ease-out both; }
+.selection-header { display: flex; flex-direction: column; gap: 24px; }
+.selection-topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.selection-brand { display: flex; align-items: center; gap: 8px; font-size: 22px; font-weight: 1000; font-style: italic; letter-spacing: -.055em; line-height: 1; }
+.selection-brand-dot { color: var(--accent); }
+.selection-logo { width: 36px; height: auto; }
+.selection-edition { color: var(--muted-foreground); font-size: 14px; font-weight: 600; letter-spacing: .06em; }
+.selection-steps { display: flex; gap: 12px; list-style: none; }
+.selection-steps > li { display: flex; flex: 1; flex-direction: column; gap: 8px; color: var(--muted-foreground); font-size: 14px; }
+.selection-steps > li > span { display: flex; align-items: center; gap: 8px; }
+.selection-steps > li::after { content: ''; height: 3px; border-radius: 999px; background: color-mix(in srgb, var(--muted-foreground) 20%, transparent); }
+.selection-steps > li[aria-current] { color: var(--foreground); font-weight: 700; }
+.selection-steps > li[aria-current]::after { background: var(--accent); }
+.selection-steps > li[data-complete]::after { background: var(--primary); }
+.selection-steps > li[data-complete] svg { color: var(--accent); }
+.selection-intro { display: flex; flex-direction: column; gap: 8px; }
+.car-selection h1 { font-size: clamp(28px, 8vw, 36px); font-weight: 950; letter-spacing: -.045em; line-height: 1.12; text-wrap: balance; }
+.car-selection h1 > span { color: var(--accent); }
+.selection-intro > p { color: var(--muted-foreground); text-wrap: pretty; }
+.selection-showcase { overflow: hidden; border: 1px solid color-mix(in srgb, var(--muted-foreground) 18%, transparent); border-radius: 20px; background: color-mix(in srgb, var(--primary) 9%, var(--background)); color: var(--foreground); }
+.selection-specs { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px 0; color: var(--muted-foreground); font-size: 14px; }
+.selection-stage { height: clamp(160px, 29dvh, 240px); }
+.selection-details { display: flex; flex-direction: column; gap: 4px; padding: 0 16px 16px; }
+.car-selection h2 { font-size: 24px; font-weight: 900; font-style: italic; letter-spacing: -.03em; line-height: 1.2; }
+.selection-details > p { min-height: 42px; color: var(--muted-foreground); font-size: 14px; text-wrap: pretty; }
+.selection-controls { display: flex; flex-direction: column; gap: 12px; }
 .car-model-options { display: flex; gap: 8px; }
-.car-model-option { flex: 1; min-height: 48px; padding-inline: 12px; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border); border-radius: 12px; background: var(--card); color: var(--card-foreground); font-weight: 700; }
-.car-model-option[data-pressed] { border-color: var(--ring); background: var(--secondary); color: var(--secondary-foreground); }
-.selection-check { visibility: hidden; }
+.car-model-option { display: flex; flex: 1; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; min-height: 48px; padding-inline: 12px; border: 1px solid color-mix(in srgb, var(--muted-foreground) 22%, transparent); border-radius: 12px; background: var(--background); color: var(--muted-foreground); font-weight: 700; }
+.car-model-option:hover:not(:disabled) { border-color: var(--muted-foreground); color: var(--foreground); }
+.car-model-option[data-pressed] { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 18%, var(--background)); color: var(--foreground); }
+.selection-check { visibility: hidden; flex-shrink: 0; color: var(--accent); }
 .car-model-option[data-pressed] .selection-check { visibility: visible; }
-.selection-showcase { overflow: hidden; }
-.selection-stage { height: 164px; }
-.selection-details { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 8px; }
+.selection-hint { display: flex; align-items: flex-start; justify-content: center; gap: 8px; color: var(--muted-foreground); font-size: 14px; text-wrap: pretty; }
+.selection-hint > svg { flex-shrink: 0; align-self: center; }
 .car-selection .garage-customize { padding: 0; }
 .car-selection .garage-color-label { font-size: 14px; }
 .car-selection .color-swatch { width: 44px; height: 44px; }
-.car-selection [data-slot='button'] { font-size: 14px; }
+.car-selection [data-slot='button'], .car-selection [data-slot='badge'] { font-size: 14px; }
 .car-model-option:disabled { opacity: .65; }
+.selection-footer { display: flex; flex-direction: column; gap: 12px; margin-top: auto; }
+.selection-actions { display: flex; align-items: stretch; gap: 8px; }
+.selection-actions > [data-size='icon-lg'] { height: auto; min-height: 48px; }
+.selection-save-note { color: var(--muted-foreground); text-align: center; font-size: 14px; text-wrap: pretty; }
+@media (max-height: 680px) {
+  .car-selection { gap: 16px; padding-top: calc(16px + var(--safe-top)); padding-bottom: calc(16px + var(--safe-bottom)); }
+  .selection-header { gap: 16px; }
+  .selection-stage { height: 140px; }
+  .selection-details > p { min-height: 0; }
+}
+@media (max-width: 359px) {
+  .car-selection { padding-inline: 16px; }
+  .selection-edition { max-width: 100px; text-align: right; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .car-selection { animation: none; }
+}
 
 /* ── shell ─────────────────────────────────────────── */
 .game-shell { width: 100%; max-width: var(--app-width); min-height: 100dvh; margin-inline: auto; padding-top: var(--safe-top); }
