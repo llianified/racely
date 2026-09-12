@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { CAR_CATALOG, CAR_MODEL_IDS, isCarColor, type CarColor, type CarModelId } from "@/lib/car-catalog";
 import { CarColorPicker } from "./car-color-picker";
 
-const CarPreviewScene = dynamic(() => import("./car-preview-scene"), { ssr: false });
+const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), { ssr: false });
 
 export function CarSelection({ developmentPreview, returningPlayer, initialColor, saving, onConfirm }: {
   developmentPreview: boolean;
