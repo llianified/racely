@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, lt } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import {
@@ -37,6 +37,13 @@ const METHOD_IDS = WITHDRAW_METHODS.map((method) => method.id) as [
   ...WithdrawMethod[],
 ];
 const HISTORY_LIMIT = 8;
+/**
+ * Receipts only have to outlive a client retry, which happens within seconds.
+ * Keep a generous window and prune probabilistically, like the Telegram update
+ * table, so the row count stays bounded without a scheduled job.
+ */
+const RECEIPT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+const RECEIPT_PRUNE_PROBABILITY = 0.02;
 
 const commandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("sync") }).strict(),
@@ -292,6 +299,23 @@ export async function getGameState(
   });
 }
 
+/**
+ * Runs outside the player's transaction on purpose: that transaction holds a
+ * `FOR UPDATE` lock on their row, and a sweep across every player's old receipts
+ * has no business extending it. A failed prune must never fail the action.
+ */
+async function pruneActionReceipts(now: Date) {
+  await getDatabase()
+    .delete(actionReceipts)
+    .where(
+      lt(
+        actionReceipts.createdAt,
+        new Date(now.getTime() - RECEIPT_RETENTION_MS),
+      ),
+    )
+    .catch(() => undefined);
+}
+
 export async function performGameAction(
   identity: PlayerIdentity,
   requestId: string,
@@ -299,7 +323,7 @@ export async function performGameAction(
 ): Promise<GameState> {
   const now = new Date();
 
-  return getDatabase().transaction(async (tx) => {
+  const result = await getDatabase().transaction(async (tx) => {
     await tx
       .insert(players)
       .values(playerValues(identity))
@@ -501,14 +525,22 @@ export async function performGameAction(
       .limit(HISTORY_LIMIT);
     const response = stateFromRow(saved, now, history);
     if (action.type !== "sync") {
+      // Deliberately no response snapshot: (userId, requestId) is the whole
+      // idempotency key, and a stored GameState would copy the player's
+      // withdrawal account numbers into this table on every later action.
       await tx.insert(actionReceipts).values({
         userId: identity.userId,
         requestId,
         actionType: action.type,
-        response,
       });
     }
 
     return response;
   });
+
+  if (action.type !== "sync" && Math.random() < RECEIPT_PRUNE_PROBABILITY) {
+    await pruneActionReceipts(now);
+  }
+
+  return result;
 }
