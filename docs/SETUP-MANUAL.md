@@ -172,7 +172,9 @@ cd /srv/racely
 set -a && source /etc/racely/racely.env && set +a
 
 pnpm run db:migrate
-pnpm test          # sekarang 5 tes database ikut jalan, semua harus hijau
+pnpm run typecheck
+pnpm run lint
+pnpm test          # tes database ikut jalan karena DATABASE_URL sudah ada
 pnpm run build:standalone
 ```
 
