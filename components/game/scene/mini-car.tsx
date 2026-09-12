@@ -7,7 +7,7 @@ import type { GameState } from '@/lib/game'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 
-export const COLORS = { blue: '#7841ee', navy: '#090c1d', surface: '#191939', gray: '#9789cd', white: '#d9d1f4', gold: '#ffce00' }
+export const COLORS = { blue: '#7841ee', navy: '#090c1d', surface: '#191939', gray: '#9789cd', white: '#d9d1f4', gold: '#ffce00', azure: '#4275ff', sky: '#8db5ff' }
 
 type Point = [number, number]
 type Position = [number, number, number]

@@ -24,6 +24,7 @@ import {
   upgradeCost,
   WITHDRAW_METHODS,
   type GameState,
+  type OfflineEarnings,
   type Upgrade,
   type WithdrawalRecord,
   type WithdrawMethod,
@@ -144,9 +145,13 @@ function stateFromRow(
   row: PlayerRow,
   now: Date,
   history: WithdrawalRow[] = [],
+  offlineEarnings: OfflineEarnings | null = null,
 ): GameState {
   return {
     developmentPreview: false,
+    // Left off the payload entirely when there is nothing to report, so the
+    // client can treat its presence as "show the welcome-back dialog".
+    offlineEarnings: offlineEarnings ?? undefined,
     carSelection: {
       model: row.carModel,
       returningPlayer:
@@ -183,9 +188,17 @@ function stateFromRow(
   };
 }
 
-export function settlePlayerRow(row: PlayerRow, now: Date): PlayerRow {
+export type SettledPlayer = {
+  row: PlayerRow;
+  offline: OfflineEarnings | null;
+};
+
+export function settlePlayerRow(row: PlayerRow, now: Date): SettledPlayer {
   if (row.carModel === null) {
-    return { ...row, lastSettledAt: now, updatedAt: now };
+    return {
+      row: { ...row, lastSettledAt: now, updatedAt: now },
+      offline: null,
+    };
   }
 
   const settlement = calculateRaceSettlement(
@@ -204,13 +217,16 @@ export function settlePlayerRow(row: PlayerRow, now: Date): PlayerRow {
   );
 
   return {
-    ...row,
-    pending: roundCoins(row.pending + settlement.income),
-    earned: roundCoins(row.earned + settlement.income),
-    laps: row.laps + settlement.completedLaps,
-    progress: settlement.progress,
-    lastSettledAt: now,
-    updatedAt: now,
+    row: {
+      ...row,
+      pending: roundCoins(row.pending + settlement.income),
+      earned: roundCoins(row.earned + settlement.income),
+      laps: row.laps + settlement.completedLaps,
+      progress: settlement.progress,
+      lastSettledAt: now,
+      updatedAt: now,
+    },
+    offline: settlement.offline,
   };
 }
 
@@ -278,11 +294,11 @@ export async function getGameState(
     const [saved] = await tx
       .update(players)
       .set({
-        pending: settled.pending,
-        earned: settled.earned,
-        laps: settled.laps,
-        progress: settled.progress,
-        lastSettledAt: settled.lastSettledAt,
+        pending: settled.row.pending,
+        earned: settled.row.earned,
+        laps: settled.row.laps,
+        progress: settled.row.progress,
+        lastSettledAt: settled.row.lastSettledAt,
         updatedAt: now,
       })
       .where(eq(players.userId, locked.userId))
@@ -295,7 +311,7 @@ export async function getGameState(
       .orderBy(desc(withdrawals.createdAt))
       .limit(HISTORY_LIMIT);
 
-    return stateFromRow(saved, now, history);
+    return stateFromRow(saved, now, history, settled.offline);
   });
 }
 
@@ -343,7 +359,8 @@ export async function performGameAction(
       .where(eq(players.userId, identity.userId))
       .for("update");
 
-    let next = settlePlayerRow(locked, now);
+    const settled = settlePlayerRow(locked, now);
+    let next = settled.row;
 
     if (action.type !== "sync") {
       const [receipt] = await tx
@@ -376,7 +393,7 @@ export async function performGameAction(
           .where(eq(withdrawals.userId, identity.userId))
           .orderBy(desc(withdrawals.createdAt))
           .limit(HISTORY_LIMIT);
-        return stateFromRow(saved, now, replayHistory);
+        return stateFromRow(saved, now, replayHistory, settled.offline);
       }
     }
 
@@ -523,7 +540,7 @@ export async function performGameAction(
       .where(eq(withdrawals.userId, identity.userId))
       .orderBy(desc(withdrawals.createdAt))
       .limit(HISTORY_LIMIT);
-    const response = stateFromRow(saved, now, history);
+    const response = stateFromRow(saved, now, history, settled.offline);
     if (action.type !== "sync") {
       // Deliberately no response snapshot: (userId, requestId) is the whole
       // idempotency key, and a stored GameState would copy the player's
