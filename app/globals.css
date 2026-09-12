@@ -400,7 +400,7 @@
 .selection-footer { display: flex; flex-direction: column; gap: var(--space-md); margin-top: auto; }
 .selection-actions { display: flex; align-items: stretch; gap: var(--space-sm); }
 .selection-actions > [data-size='icon-lg'] { height: auto; min-height: var(--space-48); box-shadow: 0 var(--space-3) 0 var(--border); }
-.selection-actions > [data-size='icon-lg']:active:not(:disabled) { box-shadow: 0 var(--stroke) 0 var(--border); }
+.selection-actions > [data-size='icon-lg']:active:not(:disabled) { box-shadow: 0 var(--space-2) 0 var(--border); }
 @media (max-height: 680px) {
   .car-selection { gap: var(--space-lg); padding-top: calc(var(--space-lg) + var(--safe-top)); padding-bottom: calc(var(--space-lg) + var(--safe-bottom)); }
   .selection-header { gap: var(--space-lg); }
@@ -584,7 +584,8 @@
 /* `transition-all` bawaan tombol ikut menganimasikan warna, jadi emasnya masih
    tertinggal beberapa ratus milidetik setelah tombol jadi disabled. Batasi ke
    properti gerak saja — sama seperti tombol boost. */
-[data-slot='button'], .gold-button, .wallet-chip, .color-swatch { transition-property: transform, translate, filter; transition-duration: var(--dur-instant); }
+/* Offset shadow berkurang sebesar jarak tekan dan ikut bertransisi, sehingga alasnya diam saat muka tombol turun menimpanya. */
+[data-slot='button'], .gold-button, .wallet-chip, .color-swatch { transition-property: transform, translate, box-shadow, filter; transition-duration: var(--dur-instant); }
 [data-slot='button']:disabled, .gold-button:disabled, .wallet-chip:disabled, .color-swatch:disabled { transition: none; transform: none; translate: none; }
 
 /* satu bahasa disabled untuk semua tombol: rata, solid, tanpa peredupan opacity */
