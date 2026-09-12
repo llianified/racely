@@ -4,6 +4,7 @@ import { CalendarCheck, Check, Coins, Copy, Flag, Gift, LockKeyhole, Trophy, Use
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { InfoHint } from "./info-hint";
+import { SectionCardHeading } from "../shell/section-card-heading";
 import { cn } from "@/lib/utils";
 import {
   coins,
@@ -65,15 +66,15 @@ function ReferralCard({
 }) {
   return (
     <section className="panel referral-card" aria-label="Ajak teman">
-      <div className="section-card-heading">
-        <h2>
-          <UserPlus aria-hidden="true" />
-          Ajak teman
-        </h2>
-        <span>
-          {referral.invited} diajak · {coins(referral.earned)} didapat
-        </span>
-      </div>
+      <SectionCardHeading
+        icon={UserPlus}
+        title="Ajak teman"
+        aside={
+          <span>
+            {referral.invited} diajak · {coins(referral.earned)} didapat
+          </span>
+        }
+      />
       <p className="referral-note">
         Kamu dapat {coins(REFERRAL_REWARD_INVITER)} dan temanmu{" "}
         {coins(REFERRAL_REWARD_INVITEE)} begitu dia menyelesaikan{" "}
@@ -167,12 +168,8 @@ export function RewardsPanel({
       <section className="rewards-hero" aria-label="Total hadiah siap diklaim">
         <div className="rewards-hero-copy">
           <span className="eyebrow">Siap diklaim</span>
-          <strong>{coins(total)}</strong>
-          <p>
-            {readyCount > 0
-              ? `${readyCount} hadiah menunggu, setara ${idr(total)}.`
-              : "Belum ada yang bisa diklaim. Gas lagi di lintasan."}
-          </p>
+          <strong>{formatCoins(total)} <span>koin</span></strong>
+          <p>~ {idr(total)}</p>
         </div>
         <Button
           variant="gold"
@@ -184,6 +181,16 @@ export function RewardsPanel({
           <Coins data-icon="inline-start" />
           Klaim semua
         </Button>
+        <div className="rewards-hero-side">
+          <span className="rewards-ready">
+            <Gift aria-hidden="true" />
+            {readyCount > 0 ? `${readyCount} hadiah menunggu` : "Belum ada hadiah menunggu"}
+          </span>
+          <InfoHint title="Tentang hadiah">
+            Semua hadiah berupa koin Racely. 1 koin setara {idr(1)} dan bisa
+            ditarik lewat tab Dompet setelah saldo cukup.
+          </InfoHint>
+        </div>
       </section>
 
       <ReferralCard
@@ -193,19 +200,13 @@ export function RewardsPanel({
       />
 
       <section className="panel rewards-list-panel" aria-label="Rincian hadiah">
-        <div className="section-card-heading">
-          <h2>
-            <Gift aria-hidden="true" />
-            Rincian hadiah
-          </h2>
-          <div className="heading-aside">
+        <SectionCardHeading
+          icon={Gift}
+          title="Rincian hadiah"
+          aside={
             <span>{game.missionsClaimed.length}/{MISSIONS.length} misi diklaim</span>
-            <InfoHint title="Tentang hadiah">
-              Semua hadiah berupa koin Racely. 1 koin setara {idr(1)} dan bisa
-              ditarik lewat tab Dompet setelah saldo cukup.
-            </InfoHint>
-          </div>
-        </div>
+          }
+        />
         <ul className="reward-list">
           {rows.map((row) => (
             <li

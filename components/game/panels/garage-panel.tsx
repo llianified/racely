@@ -5,12 +5,14 @@ import { memo, useRef, useState } from "react";
 import { ArrowUp, BatteryMedium, CarFront, Check, Cog, CircleDot, LoaderCircle, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { CAR_CATALOG, type CarColor } from "@/lib/car-catalog";
 import { CarColorPicker } from "../car/car-color-picker";
+import { SectionCardHeading } from "../shell/section-card-heading";
 import { InfoHint } from "./info-hint";
 import { BodyPartsShop } from "./body-parts-shop";
 import type { PartCommand } from "@/lib/car-parts";
+import { gripTuning } from "@/lib/race-dynamics";
 import { coins, formatCoins, lapReward, lapSeconds, modificationPreview, totalLevel, type GameState, type Upgrade } from "@/lib/game";
 
 const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
@@ -25,7 +27,7 @@ const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
 
 export const PARTS = [
   { key: "engine" as Upgrade, title: "Mesin", subtitle: "+15% tenaga dasar", icon: Cog },
-  { key: "tires" as Upgrade, title: "Ban & roller", subtitle: "+10% tenaga dasar", icon: CircleDot },
+  { key: "tires" as Upgrade, title: "Ban & roller", subtitle: "+10% tenaga dasar · grip lebih kuat", icon: CircleDot },
   { key: "battery" as Upgrade, title: "Baterai", subtitle: "+0,01 koin / putaran", icon: BatteryMedium },
 ];
 
@@ -93,6 +95,8 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
   const { key, title, icon: Icon } = part;
   const preview = modificationPreview(game, key);
   const { level, nextLevel, maxed, cost, shortfall } = preview;
+  const currentGrip = gripTuning(game.levels.tires);
+  const nextGrip = gripTuning(key === "tires" ? nextLevel : game.levels.tires);
   const blocked = disabled || installing;
   const benefit = key === "battery"
     ? `+${formatCoins(preview.afterReward - preview.beforeReward)} koin / putaran`
@@ -111,28 +115,29 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
   };
 
   return (
-    <Dialog open={open} onOpenChange={(value) => { if (!installLock.current) setOpen(value); }}>
+    <Sheet open={open} onOpenChange={(value) => { if (!installLock.current) setOpen(value); }}>
       <div className="upgrade-row">
         <div className="upgrade-info">
           <div className="upgrade-name"><Icon size={16} aria-hidden="true" /><h3>{title}</h3><span className="level-label">Lv. {level}</span></div>
           <p>{preview.currentPart} · Terpasang</p>
           <p>{maxed ? "Modifikasi maksimal" : benefit}</p>
+          {key === "tires" && <p>Grip · pengurasan −{currentGrip.drainReductionPercent}%{!maxed && ` → −${nextGrip.drainReductionPercent}%`}</p>}
           <div className="level-segments" aria-label={`Level ${level} dari 10`}>
             {Array.from({ length: 10 }, (_, i) => <span key={i} className={i < level ? "filled" : undefined} />)}
           </div>
         </div>
         <div className="upgrade-action">
-          <DialogTrigger render={<Button variant="gold" className="upgrade-buy" disabled={blocked || maxed} />} aria-label={maxed ? `${title} level maksimal` : `Modifikasi ${title}`}>
+          <SheetTrigger render={<Button variant="gold" className="upgrade-buy" disabled={blocked || maxed} />} aria-label={maxed ? `${title} level maksimal` : `Modifikasi ${title}`}>
             {maxed ? <Check data-icon="inline-start" /> : <Wrench data-icon="inline-start" />}
             {maxed ? "MAX" : "Modif"}
-          </DialogTrigger>
+          </SheetTrigger>
         </div>
       </div>
-      <DialogContent className="gap-0 p-0 font-sans" showCloseButton={!installing}>
-        <DialogHeader className="border-b border-border px-xl py-(--space-20) pr-12">
-          <DialogTitle>Modifikasi {title.toLowerCase()}</DialogTitle>
-          <DialogDescription>Pilih peningkatan permanen untuk mobilmu. Koin hanya dipotong setelah pemasangan berhasil.</DialogDescription>
-        </DialogHeader>
+      <SheetContent side="bottom" className="game-sheet gap-0 p-0 font-sans" showCloseButton={!installing}>
+        <SheetHeader className="border-b border-border px-xl py-(--space-20) pr-12">
+          <SheetTitle>Modifikasi {title.toLowerCase()}</SheetTitle>
+          <SheetDescription>Pilih peningkatan permanen untuk mobilmu. Koin hanya dipotong setelah pemasangan berhasil.</SheetDescription>
+        </SheetHeader>
         <div className="flex flex-col text-read leading-relaxed">
           <div className="flex items-center gap-md border-b border-border bg-background px-xl py-lg text-foreground">
             <Icon className="size-6 shrink-0 text-accent" aria-hidden="true" />
@@ -170,6 +175,26 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
               <tr className="border-y border-border"><th scope="row" className="px-xl py-sm font-normal">Koin / putaran</th><td className="text-right">{formatCoins(preview.beforeReward)}</td><td className="px-xl text-right font-bold text-accent">{formatCoins(preview.afterReward)}</td></tr>
             </tbody>
           </table>
+          {key === "tires" && <>
+            <table className="w-full text-left tabular-nums">
+              <caption className="px-xl pt-lg pb-sm text-left font-semibold">Grip tikungan · poin/detik</caption>
+              <thead className="text-muted-foreground">
+                <tr><th scope="col" className="px-xl pb-sm font-normal">Kondisi</th><th scope="col" className="pb-sm text-right font-normal">Saat ini</th><th scope="col" className="px-xl pb-sm text-right font-normal">Setelah</th></tr>
+              </thead>
+              <tbody>
+                {[
+                  { label: "Terkuras · normal", before: currentGrip.cornerDrain, after: nextGrip.cornerDrain },
+                  { label: "Terkuras · boost", before: currentGrip.boostedCornerDrain, after: nextGrip.boostedCornerDrain },
+                  { label: "Pulih · lurus", before: currentGrip.straightRecovery, after: nextGrip.straightRecovery },
+                ].map(row => <tr key={row.label} className="border-t border-border">
+                  <th scope="row" className="px-xl py-sm font-normal">{row.label}</th>
+                  <td className="text-right">{formatCoins(row.before)}</td>
+                  <td className="px-xl text-right font-bold text-accent">{formatCoins(row.after)}</td>
+                </tr>)}
+              </tbody>
+            </table>
+            <p className="border-y border-border px-xl py-lg text-muted-foreground">Pengurasan lebih kecil, pemulihan lebih cepat. Pengurangan dihitung dari ban level 1, hingga 54% di level 10. Boost tetap berisiko selip. Efek grip hanya saat simulasi aktif; tidak mengubah koin atau lap server.</p>
+          </>}
           <dl className="flex flex-col gap-sm border-b border-border px-xl py-lg">
             <div className="flex justify-between gap-md"><dt>Biaya pemasangan</dt><dd className="font-bold">{coins(cost)}</dd></div>
             <div className="flex justify-between gap-md text-muted-foreground"><dt>Saldo saat ini</dt><dd>{coins(game.balance)}</dd></div>
@@ -181,26 +206,28 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
               : "Part dan tampilan 3D berubah otomatis setelah pemasangan berhasil, di garasi maupun lintasan. Part tidak bisa dijual kembali."}
           </p>
         </div>
-        <DialogFooter className="border-t border-border px-xl py-(--space-20)">
-          <DialogClose render={<Button variant="outline" disabled={installing} />}>Batal</DialogClose>
+        <SheetFooter className="border-t border-border px-xl py-(--space-20)">
+          <SheetClose render={<Button variant="outline" disabled={installing} />}>Batal</SheetClose>
           <Button variant="gold" disabled={blocked || maxed || shortfall > 0} onClick={() => void install()} aria-busy={installing}>
             {installing ? <LoaderCircle className="animate-spin" data-icon="inline-start" /> : <ArrowUp data-icon="inline-start" />}
             {installing ? "Memasang…" : maxed ? "Level maksimal" : `Pasang · ${coins(cost)}`}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
 
 export function UpgradePanel({ game, onUpgrade, disabled = false }: UpgradePanelProps) {
   return (
     <section id="upgrades" tabIndex={-1} className="panel upgrade-panel" aria-label="Bengkel modifikasi">
-      <div className="panel-heading">
-        <h2><Wrench aria-hidden="true" />Bengkel modifikasi</h2>
-        <InfoHint title="Modifikasi mobil">Pilih part, cek perubahan performa, lalu konfirmasi pemasangan. Mesin dan ban mempercepat putaran; baterai menambah hasil koin. Setiap pemasangan menaikkan satu level, maksimal level 10.</InfoHint>
-      </div>
-      <p className="px-lg pt-md text-read leading-relaxed text-muted-foreground">Rakit performamu. Cek simulasi sebelum pasang.</p>
+      <SectionCardHeading
+        icon={Wrench}
+        title="Bengkel modifikasi"
+        aside={
+          <InfoHint title="Modifikasi mobil">Pilih part, cek perubahan performa, lalu konfirmasi pemasangan. Mesin dan ban mempercepat putaran; ban juga memperkuat grip dan mempercepat pemulihannya di simulasi. Baterai menambah hasil koin. Setiap pemasangan menaikkan satu level, maksimal level 10.</InfoHint>
+        }
+      />
       <div className="upgrade-list">
         {PARTS.map((part) => <ModificationSlot key={part.key} part={part} game={game} onUpgrade={onUpgrade} disabled={disabled} />)}
       </div>
