@@ -167,3 +167,36 @@ export const telegramUpdates = pgTable(
 
 export type PlayerRow = typeof players.$inferSelect;
 export type WithdrawalRow = typeof withdrawals.$inferSelect;
+
+/**
+ * Satu baris (`id = 'default'`) berisi seluruh `EconomyConfig` sebagai jsonb.
+ * Tabel kosong berarti "pakai DEFAULT_ECONOMY" -- lihat migrasi 0009 dan
+ * `lib/economy-store.ts`.
+ */
+export const economyConfig = pgTable("racely_economy_config", {
+  id: text("id").primaryKey(),
+  config: jsonb("config").notNull().$type<Record<string, unknown>>(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedBy: text("updated_by"),
+});
+
+/** Jejak setiap perubahan admin yang menyentuh uang. Hanya ditulis, tidak diubah. */
+export const adminAudit = pgTable(
+  "racely_admin_audit",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    actor: text("actor").notNull(),
+    action: text("action").notNull(),
+    target: text("target"),
+    detail: jsonb("detail").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("racely_admin_audit_recent_idx").on(desc(table.createdAt))],
+);
+
+export type EconomyConfigRow = typeof economyConfig.$inferSelect;
+export type AdminAuditRow = typeof adminAudit.$inferSelect;

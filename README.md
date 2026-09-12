@@ -48,8 +48,10 @@ pnpm dev
 ```
 app/                    App Router — route tipis, logika didelegasikan ke lib/
   api/game/             GET state + POST action (aksi pemain), keduanya rate-limited
+  api/admin/            Panel admin: sesi, antrean penarikan, config, kewajiban
   api/telegram/webhook/ Endpoint webhook bot
   api/health/           Health check load balancer (503 saat DB tak terjangkau)
+  admin/                Panel operasional di /admin (browser desktop, bukan Telegram)
 components/
   game/                 UI permainan (client components)
     game-dashboard.tsx  Orkestrasi: state, SWR, aksi pemain
@@ -62,7 +64,13 @@ components/
     car/                Pemilihan & pewarnaan mobil
   ui/                   Primitif shadcn/base-ui
 lib/
-  game.ts               Aturan & konstanta murni, dipakai server dan client
+  game.ts               Aturan murni + tipe GameState, dipakai server dan client
+  economy-config.ts     EconomyConfig: seluruh angka ekonomi + rumus dasarnya
+  economy-store.ts      Baca/tulis config ke database (cache per-proses)
+  economy-projection.ts Terjemahan config jadi proyeksi rupiah (untuk panel)
+  admin-auth.ts         Password operator + cookie sesi panel admin
+  admin-ops.ts          Antrean penarikan, perpindahan status, audit, kewajiban
+  admin-api.ts          guardAdmin() untuk seluruh route /api/admin
   game-economy.ts       Perhitungan hasil balapan (murni, tanpa I/O)
   game-server.ts        Eksekusi aksi terhadap database (`server-only`)
   preview-game.ts       State permainan berbasis cookie untuk mode preview
@@ -118,7 +126,7 @@ database. `lib/db/connection-url.ts` sengaja bebas dependensi karena
 `.env.example` adalah daftar lengkap beserta penjelasan tiap variabel. Ringkas:
 `DATABASE_URL` (Neon, pooled), `TELEGRAM_BOT_TOKEN`,
 `TELEGRAM_WEBHOOK_SECRET`, `PUBLIC_APP_URL` (nilai produksi:
-`https://racely.fun`).
+`https://racely.fun`), dan `RACELY_ADMIN_PASSWORD` untuk panel admin.
 
 Di produksi **tidak ada** file env di dalam repo. Nilai asli hidup di
 `/etc/racely/racely.env` (`chmod 600`) dan dimuat `ecosystem.config.cjs` lewat
@@ -130,6 +138,44 @@ flag preview non-rahasia.
 
 Jangan pernah menulis token, connection string, atau secret ke dalam repo, log,
 atau commit message.
+
+---
+
+## Panel admin
+
+`/admin` — antrean penarikan dan config ekonomi. Dibuka di **browser desktop**,
+bukan di dalam Telegram: pekerjaannya menyalin nomor rekening dan menyetel
+angka, bukan bermain.
+
+```bash
+# tambahkan ke .env.local (lokal) atau /etc/racely/racely.env (produksi)
+RACELY_ADMIN_PASSWORD=<minimal 16 karakter>
+```
+
+Tanpa variabel itu panel menjawab 503 dan tidak menampilkan apa pun. Password di
+bawah 16 karakter diperlakukan sama dengan tidak diisi — panel ini menyetujui
+pembayaran rupiah, jadi ia menolak dijaga rahasia yang lemah. Tidak ada bypass
+mode preview di sini; `pnpm dev` pun tetap meminta password.
+
+Tiga tab:
+
+- **Antrean** — penarikan per status, lengkap dengan konteks pemain (saldo,
+  putaran, berapa kali pernah dibayar) dan tombol salin nomor rekening.
+  Perpindahan status: `pending → processing → paid`, atau `→ rejected` yang
+  memulangkan koin ke saldo pemain pada sync berikutnya. **`paid` dan `rejected`
+  tidak bisa bergerak lagi.**
+- **Ekonomi** — seluruh `EconomyConfig`, dengan proyeksi rupiah yang dihitung
+  langsung saat diisi: penghasilan per jam, per hari idle, per bulan, biaya
+  max-out, dan nilai sebuah akun baru. Perubahan berlaku ≤30 detik (cache
+  per-proses) tanpa deploy.
+- **Kewajiban** — total koin yang belum ditarik dalam rupiah, antrean yang
+  menunggu dibayar, dan jejak audit setiap keputusan.
+
+Di luar produksi ada tombol **Seed penarikan** yang membuat pemain palsu beserta
+penarikan `pending`, supaya tata letak antrean bisa diuji tanpa membuat akun
+Telegram baru dan menggiling koin sampai batas minimum.
+
+Setiap perubahan status dan penyimpanan config dicatat di `racely_admin_audit`.
 
 ---
 
@@ -183,7 +229,8 @@ deployment dengan entri sampah kalau rem itu dilepas.
 - Mode preview hanya untuk development, butuh `RACELY_ENABLE_PREVIEW=true`
   **dan** `NODE_ENV !== "production"`.
 - **Withdrawal tetap antrean manual berstatus `pending`.** Jangan pernah
-  diubah menjadi transfer otomatis.
+  diubah menjadi transfer otomatis. Panel admin hanya mencatat keputusan
+  operator; `paid` dan `rejected` adalah status akhir.
 - Deployment adalah Node.js standalone + PM2 di EC2, bukan serverless.
 - Migrasi bersifat additive dan idempoten. Untuk membatalkan sesuatu, tulis
   migrasi maju baru — jangan mengedit migrasi yang sudah dijalankan.
