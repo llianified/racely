@@ -78,7 +78,6 @@ function Racer({ lane, color, model, progress, seconds, boosted, playerRef, leve
   }, -2)
   return <group ref={group}>
     <MiniCar color={color} model={model} levels={levels} scale={.85} speed={(HALF * 4 + Math.PI * 2 * (2.24 + lane * .68)) / (seconds * (lane === 0 ? 1 : 1.16 + lane * .08)) / .85} />
-    {lane === 0 && boosted && <pointLight color={COLORS.blue} intensity={3} distance={1.6} position={[0, .1, -.35]} />}
   </group>
 }
 
