@@ -95,10 +95,9 @@
   --car-showcase-w: 76px;
   --car-showcase-h: 70px;
 
-  --scene-h: 150px;
-  --scene-h-max: 280px;
-  /* Tinggi chrome di luar arena, dipotong dari 100svh saat menghitung scene. */
-  --scene-chrome-h: 390px;
+  --scene-h: 240px;
+  --scene-h-fluid: 42svh;
+  --scene-h-max: 380px;
   --scene-h-inspect: 300px;
   --scene-h-alert: 220px;
   --scene-h-fullscreen: 144px;
@@ -111,6 +110,7 @@
   --boot-content-h: 400px;
   --boot-content-h-short: 340px;
 
+  --grip-action-w: 108px;
   --upgrade-action-w: 104px;
   --upgrade-action-w-narrow: 92px;
   --withdraw-action-w: 80px;
@@ -140,6 +140,13 @@
   --dur-quick: .2s;
   --dur-base: .25s;
   --dur-slow: .3s;
+  --dur-slower: .4s;
+
+  /* Vignette arena: satu shadow lengkap per state, warnanya ikut --background
+     dan --warning supaya tidak ada hex yang menduplikasi token. */
+  --vignette: inset 0 0 50px 8px color-mix(in srgb, var(--background) 33%, transparent);
+  --vignette-cinematic: inset 0 0 65px 12px color-mix(in srgb, var(--background) 60%, transparent);
+  --vignette-alert: inset 0 0 45px 4px color-mix(in srgb, var(--warning) 35%, transparent);
 
   --opacity-claimed: .6;
   --opacity-locked: .65;
@@ -395,7 +402,33 @@
 .circuit-trigger { max-width: 100%; white-space: normal; text-align: left; padding-inline: var(--space-sm); font-size: var(--fs-body); font-weight: var(--fw-heavy); }
 .live-tag { display: inline-flex; align-items: center; gap: var(--space-5); color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps-xl); white-space: nowrap; }
 .live-tag::before { content: ''; width: var(--space-5); height: var(--space-5); flex-shrink: 0; border-radius: var(--corner-round); background: var(--accent); }
-.scene-wrap { height: clamp(var(--scene-h), calc(100svh - var(--scene-chrome-h) - var(--safe-top) - var(--safe-bottom)), min(62vw, var(--scene-h-max))); position: relative; background: var(--card); isolation: isolate; }
+.scene-wrap { height: clamp(var(--scene-h), var(--scene-h-fluid), var(--scene-h-max)); position: relative; overflow: hidden; background: var(--card); isolation: isolate; }
+/* ── arena sinematik & tantangan grip (sesi, tidak menyentuh koin/lap) ── */
+.race-vignette { position: absolute; inset: 0; z-index: var(--z-base); pointer-events: none; box-shadow: var(--vignette); transition: box-shadow var(--dur-slower); }
+.is-cinematic .race-vignette { box-shadow: var(--vignette-cinematic); }
+.is-grip-critical .race-vignette, .is-course-out .race-vignette { box-shadow: var(--vignette-alert); }
+.course-out-callout { position: absolute; top: 31%; left: 50%; transform: translateX(-50%); z-index: var(--z-overlay); display: flex; flex-direction: column; align-items: center; gap: var(--space-3); pointer-events: none; padding: var(--space-sm) var(--space-lg); background: color-mix(in srgb, var(--background) 88%, transparent); border-left: var(--stroke-3) solid var(--warning); white-space: nowrap; }
+.course-out-callout strong { color: var(--warning); font-size: var(--fs-xl); font-weight: var(--fw-black); font-style: italic; letter-spacing: var(--track-caps-md); }
+.course-out-callout span { color: var(--foreground); font-size: var(--fs-micro); }
+.race-director-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); padding: var(--space-6) var(--space-10); background: var(--background); border-bottom: var(--stroke) solid var(--border); }
+.race-director-bar > span { display: flex; align-items: center; gap: var(--space-6); color: var(--muted-foreground); font-size: var(--fs-2xs); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps); }
+.race-director-bar i { width: var(--space-xs); height: var(--space-xs); border-radius: var(--corner-round); background: var(--accent); }
+.grip-challenge { display: flex; flex-direction: column; gap: var(--space-9); padding: var(--space-10) var(--space-md) var(--space-md); background: color-mix(in srgb, var(--background) 40%, var(--card)); border-bottom: var(--stroke) solid var(--border); }
+.grip-heading, .grip-controls, .grip-reading, .grip-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); }
+.grip-heading > span { display: flex; align-items: center; gap: var(--space-6); color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps-lg); }
+.grip-heading > span svg { width: var(--icon-sm); height: var(--icon-sm); flex-shrink: 0; }
+.grip-telemetry { flex: 1; min-width: 0; }
+.grip-reading { font-size: var(--fs-micro); margin-bottom: var(--space-7); }
+.grip-reading strong { font-variant-numeric: tabular-nums; color: var(--accent); }
+.grip-meter { height: var(--space-5); overflow: hidden; border-radius: var(--corner-2xs); background: var(--secondary); }
+.grip-meter i { display: block; height: 100%; background: var(--accent); transform-origin: left; transition: transform var(--dur-instant) linear; }
+.grip-challenge[data-danger='true'] .grip-meter i { background: var(--warning); }
+.grip-challenge[data-danger='true'] .grip-reading { color: var(--warning); }
+.grip-controls > button { min-width: var(--grip-action-w); }
+.grip-footer { font-size: var(--fs-nano); color: var(--muted-foreground); }
+.grip-footer strong { color: var(--accent); font-variant-numeric: tabular-nums; }
+.grip-help { font-size: var(--fs-nano); color: var(--muted-foreground); line-height: var(--lh-relaxed); margin: 0; }
+@media (prefers-reduced-motion: reduce) { .race-vignette, .grip-meter i { transition: none; } }
 .scene-wrap canvas { touch-action: none; }
 .scene-overlay { position: absolute; z-index: var(--z-overlay); pointer-events: none; }
 .lap-hud { left: var(--space-10); top: var(--space-10); display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-6) var(--space-9); border-radius: var(--corner-xs); border-left: var(--stroke-2) solid var(--accent); background: color-mix(in srgb, var(--background) 92%, transparent); font-size: var(--fs-nano); letter-spacing: var(--track-caps-xl); text-transform: uppercase; color: var(--muted-foreground); font-weight: var(--fw-bold); }
@@ -490,7 +523,7 @@
 .race-reward [data-slot='button'] { flex: 0 0 auto; }
 
 /* ── garasi ─────────────────��──────────────────────── */
-.car-stage {position: relative;height:var(--stage-garage-h);margin:var(--space-md) var(--gutter) 0;overflow: hidden;border: var(--stroke) solid var(--border);border-radius: var(--corner-panel);background:
+.car-stage { position: relative; height: var(--stage-garage-h); margin: var(--space-md) var(--gutter) 0; overflow: hidden; border: var(--stroke) solid var(--border); border-radius: var(--corner-panel); background:
   radial-gradient(78% 58% at 50% 4%, color-mix(in srgb, var(--primary) 26%, transparent), transparent 70%),
   linear-gradient(180deg, var(--secondary), color-mix(in srgb, var(--background) 72%, var(--secondary))); }
 /* elliptical contact shadow so the car reads as standing on a floor */
