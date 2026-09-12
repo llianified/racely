@@ -9,6 +9,8 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { CAR_CATALOG, type CarColor } from "@/lib/car-catalog";
 import { CarColorPicker } from "../car/car-color-picker";
 import { InfoHint } from "./info-hint";
+import { BodyPartsShop } from "./body-parts-shop";
+import type { PartCommand } from "@/lib/car-parts";
 import { coins, formatCoins, lapReward, lapSeconds, modificationPreview, totalLevel, type GameState, type Upgrade } from "@/lib/game";
 
 const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
@@ -33,11 +35,13 @@ export const GaragePanel = memo(function GaragePanel({
   game,
   active = true,
   onChooseColor,
+  onPartAction,
   disabled = false,
 }: {
   game: GameState;
   active?: boolean;
   onChooseColor: (color: CarColor, name: string) => void;
+  onPartAction: (action: PartCommand) => Promise<boolean>;
   disabled?: boolean;
 }) {
   const model = game.carSelection?.model ?? "neo-falcon";
@@ -46,7 +50,7 @@ export const GaragePanel = memo(function GaragePanel({
   return (
     <section id="body-colors" tabIndex={-1} className="panel garage-panel" aria-label="Mobil kamu">
       <div className="car-stage" role="img" aria-label={`${car.name} warna ${colorName}, model 3D yang sama dengan di lintasan`}>
-        <CarPreviewScene color={game.color} model={model} levels={game.levels} active={active} />
+        <CarPreviewScene color={game.color} model={model} levels={game.levels} equipped={game.bodyParts?.equipped} active={active} />
       </div>
       <div className="car-identity">
         <div className="car-identity-head">
@@ -64,6 +68,7 @@ export const GaragePanel = memo(function GaragePanel({
         <div><dt>Kecepatan dasar</dt><dd><strong>{(192 / lapSeconds({ ...game, boostLeft: 0 })).toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</strong> km/j</dd></div>
         <div><dt>Hasil per putaran</dt><dd><strong>{formatCoins(lapReward(game))}</strong> koin</dd></div>
       </dl>
+      <BodyPartsShop game={game} active={active} disabled={disabled} onAction={onPartAction} />
     </section>
   );
 });
@@ -139,7 +144,7 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
           <div className="border-b border-border bg-background px-xl py-lg text-foreground">
             <div className="overflow-hidden rounded-xl border border-border">
               <div className="h-48" role="img" aria-label={`${showAfter ? "Setelah" : "Sebelum"} modifikasi ${title}, level ${showAfter ? nextLevel : level}${inspect ? ", bodi dilepas" : ""}`}>
-                {open && <CarPreviewScene color={game.color} model={game.carSelection?.model ?? "neo-falcon"} levels={showAfter ? { ...game.levels, [key]: nextLevel } : game.levels} inspect={inspect} />}
+                {open && <CarPreviewScene color={game.color} equipped={game.bodyParts?.equipped} model={game.carSelection?.model ?? "neo-falcon"} levels={showAfter ? { ...game.levels, [key]: nextLevel } : game.levels} inspect={inspect} />}
               </div>
               <div className="flex flex-wrap items-center justify-between gap-sm border-t border-border p-md">
                 <span aria-live="polite">{showAfter ? "Setelah" : "Sebelum"} · Lv. {showAfter ? nextLevel : level}</span>
