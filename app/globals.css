@@ -137,7 +137,7 @@
 /* ── app bar (bukan navbar desktop) ────────────────── */
 .topbar { position: sticky; top: 0; z-index: 20; height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-inline: var(--gutter); background: color-mix(in srgb, var(--background) 82%, transparent); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
 .brand { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
-.brand-mark { width: 26px; height: 26px; flex-shrink: 0; border-radius: 8px; object-fit: cover; }
+.brand-mark { width: 19px; height: auto; flex-shrink: 0; object-fit: contain; }
 .brand-word { font-size: var(--fs-title); font-weight: 950; letter-spacing: -.01em; line-height: 1; }
 .brand-sub { display: none; }
 .racer-avatar { position: relative; display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; background: var(--secondary); border: 1px solid var(--border); color: var(--foreground); font-size: var(--fs-small); font-weight: 850; }
@@ -151,13 +151,12 @@
 .coin-balance strong { display: block; font-size: var(--fs-small); font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; white-space: nowrap; }
 .coin-balance small { @apply sr-only; }
 
-/* ── page heading ──────���───────────────────────────── */
+/* ── page content ──────────────────────────────────── */
 .page-content { position: relative; padding: var(--space-md) var(--gutter) calc(var(--nav-height) + var(--safe-bottom) + var(--space-lg)); }
-/* Keeps the 3D arena mounted and correctly sized while another tab is on screen,
-   so returning to Balapan never rebuilds the WebGL context. */
-.dashboard-grid.tab-offstage { position: absolute; inset-inline: var(--gutter); top: 0; width: auto; visibility: hidden; opacity: 0; pointer-events: none; z-index: -1; }
-.page-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-xs); margin-bottom: var(--space-sm); min-height: 32px; }
-.page-heading h1 { min-width: 0; font-size: var(--fs-micro); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--subtle-foreground); }
+/* Keeps mounted 3D views correctly sized while another tab is on screen,
+   so returning to Balapan or Garasi never rebuilds their WebGL contexts. */
+.dashboard-grid.tab-offstage,
+.garage-layout.tab-offstage { position: absolute; inset-inline: var(--gutter); top: 0; width: auto; visibility: hidden; opacity: 0; pointer-events: none; z-index: -1; }
 .eyebrow { font-size: var(--fs-nano); font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--subtle-foreground); }
 .dashboard-grid, .main-column, .garage-layout { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; width: 100%; }
 .panel { border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); overflow: hidden; min-width: 0; }
@@ -206,15 +205,16 @@
 .race-actions { padding: var(--space-md) var(--gutter); border-top: 1px solid var(--border); }
 .race-battery { padding: 12px; border-top: 1px solid var(--border); background: var(--background); color: var(--foreground); font-size: 14px; line-height: 1.5; }
 .battery-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.battery-title { display: flex; align-items: center; gap: 8px; }
+.battery-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .battery-title > svg { color: var(--accent); flex-shrink: 0; }
-.battery-title strong { font-variant-numeric: tabular-nums; color: var(--accent); }
+.battery-reading { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.battery-label { color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.battery-value { color: var(--accent); font-size: 20px; font-weight: 900; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
 .battery-meter { height: 8px; overflow: hidden; border-radius: 2px; background: var(--secondary); margin-block: 8px; }
 .battery-meter > div { width: 100%; height: 100%; background: var(--accent); transform-origin: left; transition: transform .1s linear; }
 .race-battery[data-phase='charging'] .battery-meter > div { background: var(--muted-foreground); }
 .battery-caption { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; font-variant-numeric: tabular-nums; }
-.battery-caption > :last-child, .battery-help { color: var(--muted-foreground); }
-.battery-help { margin-top: 8px; }
+.battery-caption > :last-child { color: var(--muted-foreground); }
 .scene-wrap.is-inspecting { height: 300px; }
 .inspect-hud { top: 12px; left: 12px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; line-height: 1.5; }
 .inspect-hud strong { letter-spacing: .08em; }
@@ -415,12 +415,14 @@
 
 /* ── boot ──────────────────────────────────────────── */
 .boot-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; min-height: 100dvh; padding: 24px; background: var(--background); }
-.boot-logo { width: 112px; height: 112px; border-radius: 24px; object-fit: cover; animation: boot-logo-in .5s ease-out both; }
-.gate-logo { width: 96px; height: 96px; border-radius: 22px; object-fit: cover; }
+.boot-logo { width: 81px; height: auto; object-fit: contain; animation: boot-logo-in .5s ease-out both; }
+.gate-logo { width: 70px; height: auto; object-fit: contain; }
 @keyframes boot-logo-in { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
 .boot-word { font-size: 34px; font-weight: 950; letter-spacing: -.03em; line-height: 1; color: var(--foreground); }
-.boot-bar { width: min(220px, 62vw); height: 4px; border-radius: 999px; background: var(--secondary); overflow: hidden; }
-.boot-bar > span { display: block; width: 42%; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--primary), var(--accent)); animation: boot-slide 1.15s ease-in-out infinite; }
+.boot-loader { width: min(220px, 62vw); padding-top: 24px; overflow: hidden; }
+.boot-bar { height: 4px; border-radius: 999px; background: var(--secondary); }
+.boot-bar > span { position: relative; display: block; width: 42%; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--primary), var(--accent)); animation: boot-slide 1.15s ease-in-out infinite; }
+.boot-car { position: absolute; right: 0; bottom: 4px; width: 26px; height: 22px; color: var(--accent); fill: var(--background); stroke-width: 1.8; }
 @keyframes boot-slide { 0% { transform: translateX(-105%); } 100% { transform: translateX(240%); } }
 .circuit-preview { display: flex; align-items: center; gap: 12px; margin: 10px calc(var(--gutter) * -1) 0; padding: 12px var(--gutter); border-block: 1px dashed var(--border); color: var(--foreground); }
 .circuit-ticket-number { flex-shrink: 0; align-self: stretch; display: flex; align-items: center; margin-block: -12px; padding: 12px 12px 12px 0; border-right: 1px solid var(--border); color: var(--subtle-foreground); font-size: 30px; font-weight: 900; letter-spacing: -.06em; line-height: 1; }
@@ -499,4 +501,5 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
   .lap-pop { display: none; }
+  .boot-bar > span { animation: none; transform: translateX(69%); }
 }

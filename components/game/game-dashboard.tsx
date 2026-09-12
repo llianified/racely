@@ -1,11 +1,9 @@
 "use client";
 
 import { useEffect, useReducer, useRef, useState } from "react";
-import { CircleHelp } from "lucide-react";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
-import { Button } from "@/components/ui/button";
 import { GameNavigation, Topbar, type GameTab } from "./shell/game-navigation";
 import { BootScreen } from "./shell/boot-screen";
 import { GameGate } from "./shell/game-gate";
@@ -41,20 +39,13 @@ import {
 import { cn } from "@/lib/utils";
 import type { CarColor } from "@/lib/car-catalog";
 
-const TITLES: Record<GameTab, string> = {
-  menu: "Menu",
-  race: "Balapan",
-  garage: "Garasi",
-  rewards: "Hadiah",
-  wallet: "Dompet",
-};
-
 export function GameDashboard() {
   const [game, dispatch] = useReducer(gameReducer, INITIAL_GAME);
   const [tab, setTab] = useState<GameTab>("race");
   const [dialog, setDialog] = useState<DialogKind | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [raceMounted, setRaceMounted] = useState(false);
+  const [garageMounted, setGarageMounted] = useState(false);
   const { initData, clientReady } = useTelegramWebApp();
   const synced = useRef(false);
   const bootstrapped = useRef(false);
@@ -65,11 +56,12 @@ export function GameDashboard() {
   useEffect(() => {
     const targetId = navigationTarget.current;
     if (!targetId) return;
-    navigationTarget.current = null;
     const target = document.getElementById(targetId);
-    target?.focus({ preventScroll: true });
-    if (targetId !== "page-title") target?.scrollIntoView({ block: "start" });
-  }, [tab]);
+    if (!target) return;
+    navigationTarget.current = null;
+    target.focus({ preventScroll: true });
+    if (targetId !== "page-content") target.scrollIntoView({ block: "start" });
+  }, [tab, garageMounted]);
 
   useEffect(() => {
     if (raceMounted) return;
@@ -84,6 +76,13 @@ export function GameDashboard() {
     const idle = window.setTimeout(() => setRaceMounted(true), 1500);
     return () => window.clearTimeout(idle);
   }, [tab, raceMounted]);
+
+  useEffect(() => {
+    if (garageMounted || tab !== "garage") return;
+    // Mount on the first visit only, then keep the WebGL context alive off-stage.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setGarageMounted(true);
+  }, [tab, garageMounted]);
 
   const gameKey = clientReady ? (["/api/game", initData] as const) : null;
   const { data, error, isLoading, mutate } = useSWR<GameState>(
@@ -149,7 +148,7 @@ export function GameDashboard() {
   }, [sessionExpired]);
 
   const navigate = (next: GameTab, target?: string) => {
-    const targetId = target ?? "page-title";
+    const targetId = target ?? "page-content";
     window.scrollTo({ top: 0, behavior: "instant" });
     if (next === tab) {
       const element = document.getElementById(targetId);
@@ -341,13 +340,7 @@ export function GameDashboard() {
           onWallet={() => navigate("wallet")}
           onHelp={() => setDialog("help")}
         />
-        <main className="page-content" aria-busy={Boolean(busyAction)}>
-          <div className="page-heading">
-            <h1 id="page-title" tabIndex={-1} className="text-balance">{TITLES[tab]}</h1>
-            <Button variant="ghost" size="icon-sm" onClick={() => setDialog("help")} aria-label="Cara bermain">
-              <CircleHelp aria-hidden="true" />
-            </Button>
-          </div>
+        <main id="page-content" tabIndex={-1} className="page-content" aria-busy={Boolean(busyAction)}>
           {raceMounted && (
             <div
               className={cn("dashboard-grid", tab !== "race" ? "tab-offstage" : "section-enter")}
@@ -376,7 +369,25 @@ export function GameDashboard() {
               </div>
             </div>
           )}
-          {tab === "race" ? null : tab === "menu" ? (
+          {garageMounted && (
+            <div
+              className={cn("garage-layout", tab !== "garage" ? "tab-offstage" : "section-enter")}
+              inert={tab !== "garage"}
+            >
+              <GaragePanel
+                game={game}
+                active={tab === "garage"}
+                onChooseColor={chooseColor}
+                disabled={Boolean(busyAction)}
+              />
+              <UpgradePanel
+                game={game}
+                onUpgrade={upgrade}
+                disabled={Boolean(busyAction)}
+              />
+            </div>
+          )}
+          {tab === "race" || tab === "garage" ? null : tab === "menu" ? (
             <MenuPanel
               onNavigate={navigate}
               onCircuits={() => setDialog("circuits")}
@@ -384,11 +395,6 @@ export function GameDashboard() {
               onHelp={() => setDialog("help")}
               giftAvailable={!game.rewardClaimed}
             />
-          ) : tab === "garage" ? (
-            <div className="garage-layout section-enter">
-                <GaragePanel game={game} onChooseColor={chooseColor} disabled={Boolean(busyAction)} />
-                <UpgradePanel game={game} onUpgrade={upgrade} disabled={Boolean(busyAction)} />
-            </div>
           ) : tab === "wallet" ? (
             <WalletPanel
               game={game}

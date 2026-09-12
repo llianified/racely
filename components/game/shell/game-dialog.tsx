@@ -84,6 +84,7 @@ export function GameDialog({
                 <strong>Boost, klaim, lalu upgrade.</strong>
                 <span>
                   Gaspol 2× selama 10 detik, lalu isi ulang selama 25 detik.
+                  Baterai terisi otomatis dan balapan normal tetap jalan.
                 </span>
               </p>
             </div>

@@ -26,8 +26,8 @@ export function Brand() {
       <Image
         src="/racely-logo.png"
         alt=""
-        width={26}
-        height={26}
+        width={372}
+        height={248}
         priority
         className="brand-mark"
       />

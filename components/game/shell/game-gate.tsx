@@ -22,8 +22,8 @@ export function GameGate({
         <Image
           src="/racely-logo.png"
           alt="Logo Racely"
-          width={96}
-          height={96}
+          width={372}
+          height={248}
           priority
           className="gate-logo"
         />
