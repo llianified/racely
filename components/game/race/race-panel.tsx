@@ -186,7 +186,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
           <span>SUDUT OVERVIEW</span>
           <Button variant="outline" size="sm" onClick={() => setCameraMode((v) => (v + 1) % 3)} aria-label={`Ganti sudut overview, preset ${cameraMode + 1} dari 3`}>{cameraMode + 1}/3</Button>
         </div>}
-        {!inspect && <GripChallenge state={telemetry} onToggle={() => {
+        {!inspect && <GripChallenge state={telemetry} tires={game.levels.tires} onToggle={() => {
           const enabled = !driving.current.enabled;
           Object.assign(driving.current, createDrivingState(), { enabled });
           setTelemetry({ ...driving.current });

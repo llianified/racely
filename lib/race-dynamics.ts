@@ -3,6 +3,20 @@ export const PLAYER_RADIUS = 2.24;
 export const RECOVERY_SECONDS = 2.2;
 const ROAD_EDGE = 3.96 - PLAYER_RADIUS;
 
+export function gripTuning(tires = 1) {
+  const level = Number.isFinite(tires) ? Math.max(1, Math.min(10, Math.floor(tires))) : 1;
+  const upgrades = level - 1;
+  const drainReductionPercent = upgrades * 6;
+  const drainMultiplier = 1 - drainReductionPercent / 100;
+  return {
+    level,
+    drainReductionPercent,
+    cornerDrain: 14 * drainMultiplier,
+    boostedCornerDrain: 84 * drainMultiplier,
+    straightRecovery: 28 + upgrades * 2,
+  };
+}
+
 export type DrivingState = {
   grip: number;
   recovery: number;
@@ -54,9 +68,9 @@ export function stepDriving(state: DrivingState, delta: number, progress: number
     state.cornerFailed = true;
     if (state.recovery === 0) state.shield = 1.5;
   } else {
-    const tireAssist = Math.min(12, Math.max(0, tires - 1) * 1.3);
-    const drain = boosted ? 84 - tireAssist : 14 - tireAssist * .5;
-    state.grip = Math.max(0, Math.min(100, state.grip + dt * (state.offRoad ? -18 : state.shield > 0 ? 40 : corner ? -drain : 28)));
+    const tuning = gripTuning(tires);
+    const drain = boosted ? tuning.boostedCornerDrain : tuning.cornerDrain;
+    state.grip = Math.max(0, Math.min(100, state.grip + dt * (state.offRoad ? -18 : state.shield > 0 ? 40 : corner ? -drain : tuning.straightRecovery)));
     if (state.grip === 0) {
       state.recovery = RECOVERY_SECONDS;
       state.courseOuts += 1;
