@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminRequestError, adminApi } from "./admin-client";
 
@@ -37,49 +38,61 @@ export function AdminLogin({
 
   if (!configured) {
     return (
-      <div className="adm-login">
-        <h1>Panel admin belum aktif</h1>
-        <div className="adm-error">
+      <main className="admin-login">
+        <div className="admin-login-intro">
+          <span className="eyebrow">Panel admin</span>
+          <h1>Belum aktif.</h1>
           <p>
-            Set <code>RACELY_ADMIN_PASSWORD</code> (minimal 16 karakter) di env
-            file lalu jalankan ulang prosesnya.
-          </p>
-          <p className="adm-note">
-            Di produksi env file hidup di <code>/etc/racely/racely.env</code>;
-            untuk lokal pakai <code>.env.local</code>.
+            Set <code>RACELY_ADMIN_PASSWORD</code> minimal 16 karakter, lalu
+            jalankan ulang prosesnya.
           </p>
         </div>
-      </div>
+        <p className="admin-notice" data-tone="error">
+          Di produksi env file ada di <code>/etc/racely/racely.env</code>; untuk
+          lokal pakai <code>.env.local</code>.
+        </p>
+      </main>
     );
   }
 
   return (
-    <form className="adm-login" onSubmit={submit}>
-      <div>
-        <h1>Panel admin Racely</h1>
-        <p className="adm-note">
-          Antrean penarikan dan config ekonomi. Bukan halaman pemain.
-        </p>
+    <main className="admin-login">
+      <div className="admin-login-intro">
+        <span className="eyebrow">Panel admin</span>
+        <h1>Racely operasional.</h1>
+        <p>Antrean penarikan dan config ekonomi. Bukan halaman pemain.</p>
       </div>
-      <div className="adm-field">
-        <label htmlFor="admin-password">Password operator</label>
-        <input
-          id="admin-password"
-          className="adm-input"
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-        />
-      </div>
-      {error && (
-        <p className="adm-error" role="alert">
-          {error}
-        </p>
-      )}
-      <Button type="submit" size="lg" disabled={busy || !password}>
-        {busy ? "Memeriksa…" : "Masuk"}
-      </Button>
-    </form>
+      <form className="panel wallet-form-panel" onSubmit={submit}>
+        <div className="wallet-form">
+          <div className="wallet-field">
+            <label htmlFor="admin-password">Password operator</label>
+            <input
+              id="admin-password"
+              className="wallet-input"
+              type="password"
+              autoComplete="current-password"
+              inputMode="text"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </div>
+          {error && (
+            <p className="admin-notice" data-tone="error" role="alert">
+              {error}
+            </p>
+          )}
+          <Button
+            type="submit"
+            variant="gold"
+            size="lg"
+            className="w-full"
+            disabled={busy || !password}
+          >
+            <ShieldCheck data-icon="inline-start" />
+            {busy ? "Memeriksa…" : "Masuk"}
+          </Button>
+        </div>
+      </form>
+    </main>
   );
 }

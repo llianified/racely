@@ -3,8 +3,10 @@ import "./admin.css";
 
 /**
  * Panel operasional, bukan halaman publik: `robots` menahannya keluar dari
- * indeks mesin pencari. Isinya sendiri tetap dijaga sesi di `/api/admin/*` --
- * meta ini kenyamanan, bukan keamanan.
+ * indeks. Isinya tetap dijaga sesi di `/api/admin/*` -- meta ini kenyamanan,
+ * bukan keamanan.
+ *
+ * Lebarnya sama dengan app pemain (`--app-width`) karena dipakai dari HP juga.
  */
 export const metadata: Metadata = {
   title: "Racely — Panel Admin",
@@ -14,5 +16,5 @@ export const metadata: Metadata = {
 export default function AdminLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  return <main className="adm-shell">{children}</main>;
+  return <div className="admin-shell">{children}</div>;
 }

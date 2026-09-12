@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import useSWR from "swr";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { LogOut, Plus } from "lucide-react";
 import { AdminEconomy } from "./admin-economy";
 import { AdminLogin } from "./admin-login";
 import { AdminOverview } from "./admin-overview";
@@ -24,17 +26,15 @@ const TABS: { id: Tab; label: string }[] = [
  * keamanan, bukan dua yang bisa menyimpang.
  *
  * Pemuatan memakai SWR -- pola yang sama dengan game-dashboard -- supaya tidak
- * ada state yang disetel dari dalam effect, dan sesi yang berakhir di tengah
- * kerja cukup memicu pembacaan ulang, bukan penulisan state secara manual.
+ * ada state yang disetel dari dalam effect.
  */
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("queue");
   const [seeding, setSeeding] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const { data: session, mutate: recheckSession } = useSWR(
-    "admin:session",
-    () => adminApi.session(),
+  const { data: session, mutate: recheckSession } = useSWR("admin:session", () =>
+    adminApi.session(),
   );
 
   const authenticated = session?.authenticated ?? false;
@@ -64,7 +64,13 @@ export default function AdminPage() {
     },
   );
 
-  if (!session) return <p className="adm-note">Memuat panel…</p>;
+  if (!session) {
+    return (
+      <main className="admin-page">
+        <p className="wallet-empty">Memuat panel…</p>
+      </main>
+    );
+  }
 
   if (!session.authenticated) {
     return (
@@ -93,54 +99,54 @@ export default function AdminPage() {
 
   const error =
     actionError ??
-    (loadError && !(loadError instanceof AdminRequestError && loadError.status === 401)
+    (loadError &&
+    !(loadError instanceof AdminRequestError && loadError.status === 401)
       ? loadError instanceof AdminRequestError
         ? loadError.message
         : "Data panel gagal dimuat."
       : null);
 
   return (
-    <>
-      <div className="adm-top">
+    <main className="admin-page">
+      <div className="admin-topbar">
         <div>
-          <h1>Panel admin Racely</h1>
-          <p>
-            Penarikan diproses manual. Panel ini mencatat keputusannya, bukan
-            mengirim dananya.
-          </p>
+          <span className="eyebrow">Panel admin</span>
+          <h1>Racely operasional</h1>
         </div>
-        <div className="adm-top-actions">
+        <div className="admin-topbar-actions">
           {process.env.NODE_ENV !== "production" && (
             <Button
               variant="outline"
-              size="sm"
+              size="icon-sm"
               disabled={seeding}
+              aria-label="Buat penarikan uji"
+              title="Buat pemain palsu beserta penarikan pending. Hanya di luar produksi."
               onClick={() => void seed()}
-              title="Membuat pemain palsu beserta penarikan pending. Hanya di luar produksi."
             >
-              {seeding ? "Membuat…" : "Seed penarikan"}
+              <Plus aria-hidden="true" />
             </Button>
           )}
           <Button
             variant="ghost"
-            size="sm"
+            size="icon-sm"
+            aria-label="Keluar dari panel"
             onClick={async () => {
               await adminApi.logout().catch(() => undefined);
               await recheckSession();
             }}
           >
-            Keluar
+            <LogOut aria-hidden="true" />
           </Button>
         </div>
       </div>
 
-      <div className="adm-tabs" role="tablist" aria-label="Bagian panel">
+      <div className="wallet-chips" role="tablist" aria-label="Bagian panel">
         {TABS.map((item) => (
           <button
             key={item.id}
             type="button"
             role="tab"
-            className="adm-tab"
+            className={cn("wallet-chip", tab === item.id && "is-active")}
             aria-selected={tab === item.id}
             onClick={() => setTab(item.id)}
           >
@@ -150,7 +156,7 @@ export default function AdminPage() {
       </div>
 
       {error && (
-        <p className="adm-error" role="alert">
+        <p className="admin-notice" data-tone="error" role="alert">
           {error}
         </p>
       )}
@@ -160,14 +166,14 @@ export default function AdminPage() {
         (data ? (
           <AdminEconomy snapshot={data.economy} onSaved={() => void reload()} />
         ) : (
-          <p className="adm-note">Memuat config…</p>
+          <p className="wallet-empty">Memuat config…</p>
         ))}
       {tab === "overview" &&
         (data ? (
           <AdminOverview overview={data.overview} />
         ) : (
-          <p className="adm-note">Memuat ringkasan…</p>
+          <p className="wallet-empty">Memuat ringkasan…</p>
         ))}
-    </>
+    </main>
   );
 }
