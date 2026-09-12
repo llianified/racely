@@ -337,6 +337,7 @@ export function GameDashboard() {
           balance={game.balance}
           level={totalLevel(game)}
           racerName={game.player.name}
+          racerPhotoUrl={game.player.photoUrl}
           onWallet={() => navigate("wallet")}
           onHelp={() => setDialog("help")}
         />
