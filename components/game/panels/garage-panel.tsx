@@ -12,7 +12,7 @@ import { SectionCardHeading } from "../shell/section-card-heading";
 import { InfoHint } from "./info-hint";
 import { BodyPartsShop } from "./body-parts-shop";
 import type { PartCommand } from "@/lib/car-parts";
-import { gripTuning } from "@/lib/race-dynamics";
+import { gripTuning, powertrainTuning } from "@/lib/race-dynamics";
 import { coins, displaySpeedKmh, formatCoins, lapReward, lapSeconds, modificationPreview, totalLevel, type GameState, type Upgrade } from "@/lib/game";
 
 const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
@@ -107,6 +107,8 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
   const { level, nextLevel, maxed, cost, shortfall } = preview;
   const currentGrip = gripTuning(game.levels.tires);
   const nextGrip = gripTuning(key === "tires" ? nextLevel : game.levels.tires);
+  const currentPowertrain = powertrainTuning(game.levels.engine, game.levels.battery);
+  const nextPowertrain = powertrainTuning(key === "engine" ? nextLevel : game.levels.engine, key === "battery" ? nextLevel : game.levels.battery);
   const blocked = disabled || installing;
   const benefit = key === "battery"
     ? `+${formatCoins(preview.afterReward - preview.beforeReward)} koin / putaran`
@@ -131,7 +133,17 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
           <div className="upgrade-name"><Icon size={16} aria-hidden="true" /><h3>{title}</h3><span className="level-label">Lv. {level}</span></div>
           <p>{preview.currentPart} · Terpasang</p>
           <p>{maxed ? "Modifikasi maksimal" : benefit}</p>
+          {key === "engine" && <div className="upgrade-arena-info">
+            <p><strong>Akselerasi arena</strong></p>
+            <p>Respons 90%: {seconds(Math.log(10) / currentPowertrain.accelerationRate)} d{!maxed && ` → ${seconds(Math.log(10) / nextPowertrain.accelerationRate)} d`}</p>
+            <p>Lebih kecil = lebih cepat pulih setelah tikungan.</p>
+          </div>}
           {key === "tires" && <p>Grip · pengurasan −{currentGrip.drainReductionPercent}%{!maxed && ` → −${nextGrip.drainReductionPercent}%`}</p>}
+          {key === "battery" && <div className="upgrade-arena-info">
+            <p><strong>Energi boost arena</strong></p>
+            <p>Cadangan: {seconds(currentPowertrain.boostCapacitySeconds)} d{!maxed && ` → ${seconds(nextPowertrain.boostCapacitySeconds)} d`}</p>
+            <p>Terisi penuh dalam {currentPowertrain.rechargeSeconds} d tanpa Gaspol.</p>
+          </div>}
           <div className="level-segments" aria-label={`Level ${level} dari 10`}>
             {Array.from({ length: 10 }, (_, i) => <span key={i} className={i < level ? "filled" : undefined} />)}
           </div>
@@ -171,10 +183,10 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
             </div>
           </div>
           <p className="border-b border-border px-xl py-lg text-muted-foreground">{key === "engine"
-            ? "Visual: heatsink motor belakang dengan sirip pendingin yang bertambah setiap level."
+            ? "Visual: sirip heatsink bertambah setiap level. Di arena, mesin mempercepat akselerasi setelah tikungan atau kecelakaan; bodi mendongak ringan dan putaran roda serta RPM mengikuti tenaga aktual."
             : key === "tires"
               ? "Visual: ban lebih lebar, cincin velg emas, dan roller bertingkat."
-              : "Visual: dudukan baterai dengan strip emas yang bertambah setiap level. Lepas bodi untuk melihat detail sel."}</p>
+              : "Visual: strip emas dudukan baterai bertambah setiap level. Di arena, cadangan boost bertahan lebih lama dan lampu indikator meredup ketika energi menipis. Lepas bodi untuk melihat detail sel."}</p>
           <table className="w-full text-left tabular-nums">
             <caption className="px-xl pt-lg pb-sm text-left font-semibold">Simulasi performa tanpa boost</caption>
             <thead className="text-muted-foreground">
@@ -185,6 +197,24 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
               <tr className="border-y border-border"><th scope="row" className="px-xl py-sm font-normal">Koin / putaran</th><td className="text-right">{formatCoins(preview.beforeReward)}</td><td className="px-xl text-right font-bold text-accent">{formatCoins(preview.afterReward)}</td></tr>
             </tbody>
           </table>
+          {key !== "tires" && <>
+            <table className="w-full text-left tabular-nums">
+              <caption className="px-xl pt-lg pb-sm text-left font-semibold">Simulasi arena · {key === "engine" ? "akselerasi" : "energi boost"}</caption>
+              <thead className="text-muted-foreground">
+                <tr><th scope="col" className="px-xl pb-sm font-normal">Performa</th><th scope="col" className="pb-sm text-right font-normal">Saat ini</th><th scope="col" className="px-xl pb-sm text-right font-normal">Setelah</th></tr>
+              </thead>
+              <tbody>
+                <tr className="border-t border-border">
+                  <th scope="row" className="px-xl py-sm font-normal">{key === "engine" ? "Respons 90% · detik" : "Cadangan boost · detik"}</th>
+                  <td className="text-right">{seconds(key === "engine" ? Math.log(10) / currentPowertrain.accelerationRate : currentPowertrain.boostCapacitySeconds)}</td>
+                  <td className="px-xl text-right font-bold text-accent">{seconds(key === "engine" ? Math.log(10) / nextPowertrain.accelerationRate : nextPowertrain.boostCapacitySeconds)}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p className="border-y border-border px-xl py-lg text-muted-foreground">{key === "engine"
+              ? "Waktu mencapai 90% kecepatan target di lintasan lurus; lebih kecil berarti lebih responsif. RPM dan gerak bodi mengikuti akselerasi, bukan sekadar level."
+              : `Cadangan dari energi penuh, bukan tambahan durasi Gaspol. Dorongan melemah menjelang habis, tertahan saat keluar lintasan, dan terisi penuh dalam ${currentPowertrain.rechargeSeconds} detik tanpa Gaspol.`} Efek arena tidak mengubah lap, koin, baterai idle, atau timer Gaspol server.</p>
+          </>}
           {key === "tires" && <>
             <table className="w-full text-left tabular-nums">
               <caption className="px-xl pt-lg pb-sm text-left font-semibold">Grip tikungan · poin/detik</caption>
@@ -235,9 +265,10 @@ export function UpgradePanel({ game, onUpgrade, disabled = false }: UpgradePanel
         icon={Wrench}
         title="Bengkel"
         aside={
-          <InfoHint title="Modifikasi mobil">Pilih part, cek perubahan performa, lalu konfirmasi pemasangan. Mesin dan ban mempercepat putaran; ban juga memperkuat grip dan mempercepat pemulihannya di simulasi. Baterai menambah hasil koin. Setiap pemasangan menaikkan satu level, maksimal level 10.</InfoHint>
+          <InfoHint title="Modifikasi mobil">Pilih part, cek perubahan performa, lalu konfirmasi pemasangan. Mesin dan ban mempercepat putaran; baterai menambah hasil koin. Di simulasi arena, mesin mempercepat akselerasi, ban memperkuat grip, dan baterai memperpanjang cadangan boost tanpa mengubah timer Gaspol server. Setiap pemasangan menaikkan satu level, maksimal level 10.</InfoHint>
         }
       />
+      <p className="upgrade-arena-note">Info arena di bawah hanya untuk simulasi gerak. Tidak menambah koin, durasi Gaspol, atau baterai idle server.</p>
       <div className="upgrade-list">
         {PARTS.map((part) => <ModificationSlot key={part.key} part={part} game={game} onUpgrade={onUpgrade} disabled={disabled} />)}
       </div>

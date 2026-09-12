@@ -67,8 +67,12 @@ export function stepPowertrain(state: DrivingState, delta: number, boosted: bool
   if (!boosted) state.boostExhausted = false;
   state.boostPower = available && !state.boostExhausted ? Math.min(1, state.boostEnergy * tuning.boostCapacitySeconds) : 0;
   if (available && !state.boostExhausted) {
-    state.boostEnergy = Math.max(0, state.boostEnergy - dt / tuning.boostCapacitySeconds);
-    if (state.boostEnergy === 0) state.boostExhausted = true;
+    const remaining = state.boostEnergy - dt / tuning.boostCapacitySeconds;
+    state.boostEnergy = remaining > 1e-9 ? remaining : 0;
+    if (state.boostEnergy === 0) {
+      state.boostExhausted = true;
+      state.boostPower = 0;
+    }
   } else if (!boosted) {
     state.boostEnergy = Math.min(1, state.boostEnergy + dt / tuning.rechargeSeconds);
   }
@@ -105,6 +109,13 @@ export type DrivingState = {
 
 export function createDrivingState(): DrivingState {
   return { grip: 100, recovery: 0, shield: 0, cleanCorners: 0, courseOuts: 0, corner: false, cornerFailed: false, enabled: true, cornerProgress: -1, offset: 0, lateralVelocity: 0, offRoad: false, speedMultiplier: 1, visualSpeed: 1, acceleration: 0, rpm: 7200, boostEnergy: 1, boostPower: 0, boostExhausted: false };
+}
+
+export function resetGripChallenge(state: DrivingState, enabled: boolean) {
+  Object.assign(state, {
+    enabled, grip: 100, recovery: 0, shield: 0, cleanCorners: 0, courseOuts: 0,
+    cornerFailed: false, offset: 0, lateralVelocity: 0, offRoad: false, speedMultiplier: 1,
+  });
 }
 
 export function trackCornerProgress(progress: number) {
