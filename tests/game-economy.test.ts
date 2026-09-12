@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   calculateRaceSettlement,
   HEARTBEAT_CAP_SECONDS,
+  OFFLINE_CAP_SECONDS,
+  OFFLINE_RATE,
 } from "../lib/game-economy";
-import { INITIAL_GAME, batteryTelemetry, gameReducer, lapReward, lapSeconds, modificationPartName, modificationPreview, upgradeCost } from "../lib/game";
+import { INITIAL_GAME, batteryTelemetry, formatDuration, gameReducer, lapReward, lapSeconds, modificationPartName, modificationPreview, upgradeCost } from "../lib/game";
 
 const start = new Date("2026-09-11T00:00:00.000Z");
 
@@ -122,14 +124,115 @@ describe("Racely economy", () => {
     expect(result.progress).toBeCloseTo(0.5);
   });
 
-  it("caps stale heartbeats and drops excess offline time", () => {
+  it("reports no offline window while the client is heartbeating", () => {
     const result = calculateRaceSettlement(
       settlementInput(),
-      new Date(start.getTime() + 60 * 60 * 1000),
+      new Date(start.getTime() + HEARTBEAT_CAP_SECONDS * 1000),
     );
 
+    expect(result.offline).toBeNull();
     expect(result.creditedSeconds).toBe(HEARTBEAT_CAP_SECONDS);
     expect(result.completedLaps).toBe(3);
     expect(result.income).toBe(0.15);
+  });
+});
+
+/**
+ * Base settlement state laps every 8s for 0.05 coins, so the whole table below
+ * is derived from those two numbers.
+ */
+describe("Offline earnings", () => {
+  const settleAfter = (seconds: number) =>
+    calculateRaceSettlement(
+      settlementInput(),
+      new Date(start.getTime() + seconds * 1000),
+    );
+
+  it("pays ten minutes away past the heartbeat window, at half rate", () => {
+    const result = settleAfter(10 * 60);
+    // 30s online -> 3 laps; the remaining 570s at half speed -> 36 more.
+    expect(result.offline).toEqual({
+      awaySeconds: 600,
+      creditedSeconds: 570,
+      capped: false,
+      laps: 36,
+      coins: 1.8,
+    });
+    expect(result.completedLaps).toBe(39);
+    expect(result.income).toBe(1.95);
+    expect(result.creditedSeconds).toBe(600);
+  });
+
+  it("still pays every second of an absence that lands exactly on the cap", () => {
+    const result = settleAfter(OFFLINE_CAP_SECONDS);
+
+    expect(result.offline).toMatchObject({
+      awaySeconds: OFFLINE_CAP_SECONDS,
+      creditedSeconds: OFFLINE_CAP_SECONDS - HEARTBEAT_CAP_SECONDS,
+      capped: false,
+      laps: 898,
+      coins: 44.9,
+    });
+    expect(result.completedLaps).toBe(901);
+    expect(result.income).toBe(45.05);
+    expect(result.creditedSeconds).toBe(OFFLINE_CAP_SECONDS);
+  });
+
+  it("truncates a ten hour absence to the four hour cap", () => {
+    const result = settleAfter(10 * 60 * 60);
+
+    expect(result.offline).toMatchObject({
+      awaySeconds: 10 * 60 * 60,
+      creditedSeconds: OFFLINE_CAP_SECONDS,
+      capped: true,
+      laps: 900,
+      coins: 45,
+    });
+    // A full day away pays exactly the same as the capped four hours.
+    expect(settleAfter(24 * 60 * 60).offline).toMatchObject({
+      creditedSeconds: OFFLINE_CAP_SECONDS,
+      laps: 900,
+      coins: 45,
+    });
+  });
+
+  it("credits offline seconds at exactly half the online lap rate", () => {
+    const offline = settleAfter(OFFLINE_CAP_SECONDS + HEARTBEAT_CAP_SECONDS);
+    const onlineLaps = OFFLINE_CAP_SECONDS / lapSeconds(INITIAL_GAME);
+
+    expect(offline.offline?.creditedSeconds).toBe(OFFLINE_CAP_SECONDS);
+    expect(offline.offline?.laps).toBe(onlineLaps * OFFLINE_RATE);
+    expect(OFFLINE_RATE).toBe(0.5);
+  });
+
+  it("never pays a short absence less than the heartbeat window alone", () => {
+    const heartbeat = settleAfter(HEARTBEAT_CAP_SECONDS);
+    const justOver = settleAfter(HEARTBEAT_CAP_SECONDS + 10);
+
+    // 30s full rate (3.75 laps) + 10s half rate (.625) = 4.375. A single 0.5x
+    // cap over the whole 40s would have paid 2.5 laps -- less than standing still.
+    expect(heartbeat.completedLaps).toBe(3);
+    expect(justOver.completedLaps).toBe(4);
+    expect(justOver.progress).toBeCloseTo(0.375);
+    expect(justOver.offline).toMatchObject({ laps: 1, coins: 0.05 });
+  });
+
+  it("keeps a boost inside the heartbeat window it was spent in", () => {
+    const result = calculateRaceSettlement(
+      settlementInput({ boostEndsAt: new Date(start.getTime() + 10_000) }),
+      new Date(start.getTime() + 10 * 60 * 1000),
+    );
+
+    // 10s boosted (2.5 laps) + 20s normal (2.5) + 570s offline (35.625).
+    expect(result.completedLaps).toBe(40);
+    expect(result.offline).toMatchObject({ laps: 35, creditedSeconds: 570 });
+  });
+
+  it("spells the offline window the way the dialog reads it", () => {
+    expect(formatDuration(45)).toBe("45 detik");
+    expect(formatDuration(600)).toBe("10 menit");
+    expect(formatDuration(OFFLINE_CAP_SECONDS)).toBe("4 jam");
+    expect(formatDuration(4 * 60 * 60 + 25 * 60)).toBe("4 jam 25 menit");
+    expect(formatDuration(-1)).toBe("0 detik");
   });
 });
