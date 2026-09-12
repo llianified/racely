@@ -5,13 +5,14 @@ import { Banknote, Clock, Coins, Send, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { InfoHint } from "./info-hint";
+import { SectionCardHeading } from "../shell/section-card-heading";
 import { cn } from "@/lib/utils";
 import {
   accountPattern,
@@ -127,17 +128,17 @@ export function WalletPanel({
         </div>
       </section>
 
-      <Dialog open={open} onOpenChange={(next) => { setOpen(next); if (!next) setError(null); }}>
-        <DialogContent className="wallet-dialog">
-          <DialogHeader>
-            <DialogTitle>
+      <Sheet open={open} onOpenChange={(next) => { setOpen(next); if (!next) setError(null); }}>
+    <SheetContent side="bottom" className="game-sheet wallet-dialog p-lg">
+      <SheetHeader className="p-0">
+            <SheetTitle>
               <Send aria-hidden="true" />
               Tarik saldo
-            </DialogTitle>
-            <DialogDescription>
+            </SheetTitle>
+            <SheetDescription>
               Saldo {formatCoins(balance)} koin · minimal {coins(MIN_WITHDRAW_COINS)} per penarikan.
-            </DialogDescription>
-          </DialogHeader>
+            </SheetDescription>
+          </SheetHeader>
           <p className="wallet-dialog-note">
             Penarikan diverifikasi manual oleh tim Racely dalam 1×24 jam kerja.
             Pastikan nomor dan nama tujuan benar; dana yang salah kirim tidak
@@ -270,17 +271,15 @@ export function WalletPanel({
               : `Tarik ${idr(requested)}`}
           </Button>
         </form>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
       <section className="panel wallet-history-panel" aria-label="Riwayat penarikan">
-        <div className="section-card-heading">
-          <h2>
-            <Clock aria-hidden="true" />
-            Riwayat penarikan
-          </h2>
-          <span>{game.withdrawals.length} permintaan</span>
-        </div>
+        <SectionCardHeading
+          icon={Clock}
+          title="Riwayat penarikan"
+          aside={<span>{game.withdrawals.length} permintaan</span>}
+        />
         {game.withdrawals.length === 0 ? (
           <p className="wallet-empty">
             Belum ada penarikan. Riwayat kamu akan muncul di sini.

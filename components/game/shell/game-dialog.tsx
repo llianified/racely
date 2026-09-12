@@ -2,12 +2,12 @@ import { Camera, Check, Flag, Gauge, Timer, Zap } from "lucide-react";
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   coins,
   formatDuration,
@@ -109,19 +109,19 @@ export function GameDialog({
   const active = kind ?? shown.current;
 
   return (
-    <Dialog
+    <Sheet
       open={kind !== null}
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
     >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{DIALOG_COPY[active].title}</DialogTitle>
-          <DialogDescription>
+    <SheetContent side="bottom" className="game-sheet p-lg">
+      <SheetHeader className="p-0">
+          <SheetTitle>{DIALOG_COPY[active].title}</SheetTitle>
+          <SheetDescription>
             {DIALOG_COPY[active].description}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
         {active === "welcome" && offline ? (
           <WelcomeBack offline={offline} onClose={onClose} />
         ) : active === "circuits" ? (
@@ -194,7 +194,7 @@ export function GameDialog({
             </p>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

@@ -7,10 +7,11 @@ import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { Check, LoaderCircle, RotateCcw, ShoppingBag, Wind, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { PART_CATALOG, PART_IDS, PART_SLOTS, SLOT_LABELS, type PartCommand, type PartId } from "@/lib/car-parts";
 import { CAR_CATALOG } from "@/lib/car-catalog";
 import { coins, type GameState } from "@/lib/game";
+import { SectionCardHeading } from "../shell/section-card-heading";
 
 const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
   ssr: false,
@@ -130,15 +131,16 @@ export function BodyPartsShop({ game, active, disabled, onAction }: ShopProps) {
   const pending = useRef(false);
   const ownedCount = game.bodyParts?.owned.length ?? 0;
   const equippedCount = Object.keys(game.bodyParts?.equipped ?? {}).length;
-  return <Dialog open={open && active} onOpenChange={value => { if (!pending.current) setOpen(value); }}>
+  return <Sheet open={open && active} onOpenChange={value => { if (!pending.current) setOpen(value); }}>
     <div className="garage-parts">
-      <div className="garage-parts-heading">
-        <div className="garage-parts-title">
-          <div><Wind aria-hidden="true" /><h3>Aero kit</h3><Badge variant="secondary">{equippedCount} / {PART_SLOTS.length} aktif</Badge></div>
-          <p>{ownedCount} dari {PART_IDS.length} part sudah masuk koleksi.</p>
-        </div>
-        <DialogTrigger render={<Button variant="gold" disabled={disabled} />}><ShoppingBag data-icon="inline-start" />Buka toko</DialogTrigger>
-      </div>
+      <SectionCardHeading
+        icon={Wind}
+        title="Aero kit"
+        level={3}
+        className="garage-parts-heading"
+        aside={<Badge variant="secondary">{equippedCount} / {PART_SLOTS.length} aktif</Badge>}
+      />
+      <p className="garage-parts-note">{ownedCount} dari {PART_IDS.length} part sudah masuk koleksi.</p>
       <dl className="garage-parts-slots" aria-label="Slot aero kit terpasang">
         {PART_SLOTS.map(slot => {
           const id = game.bodyParts?.equipped[slot];
@@ -148,13 +150,16 @@ export function BodyPartsShop({ game, active, disabled, onAction }: ShopProps) {
           </div>;
         })}
       </dl>
+      <div className="pt-lg">
+        <SheetTrigger render={<Button variant="gold" className="w-full" disabled={disabled} />}><ShoppingBag data-icon="inline-start" />Buka toko</SheetTrigger>
+      </div>
     </div>
-    <DialogContent className="parts-shop-dialog">
-      <DialogHeader className="parts-shop-header">
-        <DialogTitle>Toko aero kit</DialogTitle>
-        <DialogDescription>Coba langsung pada mobilmu, koleksi, lalu pasang ke slot yang sesuai.</DialogDescription>
-      </DialogHeader>
+    <SheetContent side="bottom" className="game-sheet parts-shop-dialog">
+      <SheetHeader className="parts-shop-header">
+        <SheetTitle>Toko aero kit</SheetTitle>
+        <SheetDescription>Coba langsung pada mobilmu, koleksi, lalu pasang ke slot yang sesuai.</SheetDescription>
+      </SheetHeader>
       {open && active && <ShopContents game={game} disabled={disabled} onAction={onAction} onPending={value => { pending.current = value; }} />}
-    </DialogContent>
-  </Dialog>;
+    </SheetContent>
+  </Sheet>;
 }
