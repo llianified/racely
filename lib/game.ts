@@ -3,14 +3,17 @@ import type { BodyParts, PartCommand } from "./car-parts";
 import {
   DEFAULT_ECONOMY,
   boostCooldownSeconds,
-  lapRewardAt,
   lapSecondsAt,
+  raceOpponentLapSecondsAt,
+  racePositionAt,
+  raceRewardAt,
   upgradeCostAt,
   type EconomyConfig,
+  type RacePosition,
   type UpgradeKey,
 } from "./economy-config";
 
-export type { EconomyConfig };
+export type { EconomyConfig, RacePosition };
 /** Alias; definisinya hidup di `lib/economy-config.ts` bersama rumusnya. */
 export type Upgrade = UpgradeKey;
 export type PlayerProfile = {
@@ -197,11 +200,29 @@ export const upgradeCost = (
   key: Upgrade,
 ) => upgradeCostAt(s.economy, key, s.levels[key]);
 export const lapReward = (
-  s: Pick<GameState, "levels" | "circuit" | "economy">,
-) => lapRewardAt(s.economy, s.levels.battery, s.circuit);
+  s: Pick<GameState, "levels" | "circuit" | "boostLeft" | "economy">,
+) =>
+  raceRewardAt(
+    s.economy,
+    s.levels,
+    s.circuit,
+    s.boostLeft > 0,
+  );
 export const lapSeconds = (
   s: Pick<GameState, "levels" | "boostLeft" | "economy">,
 ) => lapSecondsAt(s.economy, s.levels, s.boostLeft > 0);
+export const racePosition = (
+  s: Pick<GameState, "levels" | "circuit" | "boostLeft" | "economy">,
+) =>
+  racePositionAt(
+    s.economy,
+    s.levels,
+    s.circuit,
+    s.boostLeft > 0,
+  );
+export const raceOpponentLapSeconds = (
+  s: Pick<GameState, "circuit" | "economy">,
+) => raceOpponentLapSecondsAt(s.economy, s.circuit);
 export const MODIFICATION_PARTS: Record<Upgrade, readonly string[]> = {
   engine: ["Motor standar", "Motor sport", "Motor racing", "Motor pro"],
   tires: ["Ban & roller standar", "Ban low-friction", "Roller bearing", "Ban & roller pro"],
@@ -351,22 +372,46 @@ export type GameAction =
   | { type: "tick"; delta: number }
   | { type: "hydrate"; state: GameState };
 
+export function advanceRaceProgress(
+  progress: number,
+  elapsedSeconds: number,
+  lapDurationSeconds: number,
+) {
+  const accumulated = progress + elapsedSeconds / lapDurationSeconds;
+  return {
+    completedLaps: Math.floor(accumulated),
+    progress: accumulated % 1,
+  };
+}
+
 export function gameReducer(s: GameState, action: GameAction): GameState {
   if (action.type === "hydrate") return action.state;
   if (s.carSelection?.model === null) return s;
   const delta = Math.max(0, Math.min(action.delta, 0.5));
   const boostedSeconds = Math.min(delta, Math.max(0, s.boostLeft));
   const normalSeconds = delta - boostedSeconds;
-  const normalLapSeconds = lapSeconds({ ...s, boostLeft: 0 });
-  const progress =
-    s.progress +
-    (boostedSeconds * s.economy.boostMultiplier + normalSeconds) /
-      normalLapSeconds;
-  const completed = Math.floor(progress);
-  const income = completed * lapReward(s);
+  let progress = s.progress;
+  let completed = 0;
+  let income = 0;
+
+  const advance = (elapsedSeconds: number, boosted: boolean) => {
+    if (elapsedSeconds <= 0) return;
+    const segmentState = { ...s, boostLeft: boosted ? 1 : 0 };
+    const segment = advanceRaceProgress(
+      progress,
+      elapsedSeconds,
+      lapSeconds(segmentState),
+    );
+    progress = segment.progress;
+    completed += segment.completedLaps;
+    income += segment.completedLaps * lapReward(segmentState);
+  };
+
+  advance(boostedSeconds, true);
+  advance(normalSeconds, false);
   return {
     ...s,
-    progress: progress % 1,
+    progress,
     laps: s.laps + completed,
     pending: roundCoins(s.pending + income),
     earned: roundCoins(s.earned + income),
