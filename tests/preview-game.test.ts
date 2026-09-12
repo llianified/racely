@@ -32,6 +32,36 @@ describe("Workshop installation", () => {
   });
 });
 
+describe("Preview body parts", () => {
+  it("persists purchases and equipped slots across reload, without double charging retries", () => {
+    const fresh = getPreviewGameState(request(), identity);
+    const selected = action(fresh.cookieValue, selectLuna);
+    const requestId = randomUUID();
+    const purchased = action(selected.cookieValue, { type: "buy-part", partId: "vented-hood" }, requestId);
+    expect(purchased.state.balance).toBe(selected.state.balance - 8);
+    expect(purchased.state.bodyParts).toEqual({ owned: ["vented-hood"], equipped: {} });
+    expect(action(purchased.cookieValue, { type: "buy-part", partId: "vented-hood" }, requestId).state).toEqual(purchased.state);
+    expect(action(purchased.cookieValue, { type: "buy-part", partId: "vented-hood" }).state).toEqual(purchased.state);
+    const equipped = action(purchased.cookieValue, { type: "equip-part", partId: "vented-hood" });
+    expect(equipped.state.bodyParts?.equipped).toEqual({ hood: "vented-hood" });
+    expect(getPreviewGameState(request(equipped.cookieValue), identity).state.bodyParts).toEqual(equipped.state.bodyParts);
+    const removed = action(equipped.cookieValue, { type: "unequip-part", slot: "hood" });
+    expect(removed.state.bodyParts).toEqual({ owned: ["vented-hood"], equipped: {} });
+    expect(removed.state.balance).toBe(purchased.state.balance);
+    expect(removed.state.color).toBe(selected.state.color);
+    expect(removed.state.levels).toEqual(selected.state.levels);
+  });
+
+  it("requires onboarding, sufficient coins, and ownership", () => {
+    const fresh = getPreviewGameState(request(), identity);
+    expect(() => action(fresh.cookieValue, { type: "buy-part", partId: "vented-hood" })).toThrow("Pilih mobilmu");
+    const selected = action(fresh.cookieValue, selectLuna);
+    expect(() => action(selected.cookieValue, { type: "buy-part", partId: "gt-wing" })).toThrow("Koin belum cukup");
+    expect(() => action(selected.cookieValue, { type: "equip-part", partId: "vented-hood" })).toThrow("Beli part");
+    expect(getPreviewGameState(request(selected.cookieValue), identity).state).toEqual(selected.state);
+  });
+});
+
 describe("Preview check-in harian", () => {
   const racing = () => {
     const fresh = getPreviewGameState(request(), identity);

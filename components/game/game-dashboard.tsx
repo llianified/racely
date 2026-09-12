@@ -39,6 +39,7 @@ import {
 } from "@/lib/game";
 import { cn } from "@/lib/utils";
 import type { CarColor } from "@/lib/car-catalog";
+import { PART_CATALOG, SLOT_LABELS, type PartCommand } from "@/lib/car-parts";
 
 export function GameDashboard() {
   const [game, dispatch] = useReducer(gameReducer, INITIAL_GAME);
@@ -226,6 +227,18 @@ export function GameDashboard() {
         },
       );
     return Boolean(next);
+  };
+  const modifyBodyPart = async (action: PartCommand) => {
+    const next = await runAction(action);
+    if (!next) return false;
+    toast.success(action.type === "unequip-part"
+      ? `${SLOT_LABELS[action.slot]} dikembalikan ke bawaan`
+      : `${PART_CATALOG[action.partId].name} ${action.type === "buy-part" ? "dibeli" : "terpasang"}`, {
+      description: action.type === "buy-part"
+        ? "Masuk koleksi. Pasang kapan saja tanpa biaya tambahan."
+        : "Tersimpan dan langsung terlihat di garasi serta lintasan.",
+    });
+    return true;
   };
   const claim = async () => {
     const amount = Math.floor(game.pending);
@@ -420,6 +433,7 @@ export function GameDashboard() {
                 game={game}
                 active={tab === "garage"}
                 onChooseColor={chooseColor}
+                onPartAction={modifyBodyPart}
                 disabled={Boolean(busyAction)}
               />
               <UpgradePanel
