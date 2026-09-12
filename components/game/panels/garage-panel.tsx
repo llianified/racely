@@ -7,11 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { CAR_CATALOG, type CarColor } from "@/lib/car-catalog";
-import { CarColorPicker } from "./car-color-picker";
+import { CarColorPicker } from "../car/car-color-picker";
 import { InfoHint } from "./info-hint";
 import { coins, formatCoins, lapReward, lapSeconds, modificationPreview, totalLevel, type GameState, type Upgrade } from "@/lib/game";
 
-const CarPreviewScene = dynamic(() => import("./car-preview-scene"), { ssr: false });
+const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), { ssr: false });
 
 export const PARTS = [
   { key: "engine" as Upgrade, title: "Mesin", subtitle: "+15% tenaga dasar", icon: Cog },

@@ -33,15 +33,11 @@ export default defineConfig([
      * react-three-fiber drives the scene graph by mutating Three.js objects in
      * useFrame/useLayoutEffect -- that is the library's programming model, not a
      * bug. react-hooks/immutability is written for plain React state and flags
-     * every camera, material and texture write in these files. Scoped off here
-     * rather than globally, so the rule still guards ordinary components.
+     * every camera, material and texture write in these files. Scoped to the
+     * scene/ directory -- which holds the r3f layer and nothing else -- so the
+     * rule still guards every ordinary component.
      */
-    files: [
-      "components/game/race-scene.tsx",
-      "components/game/car-preview-scene.tsx",
-      "components/game/car-lighting.tsx",
-      "components/game/mini-car.tsx",
-    ],
+    files: ["components/game/scene/**"],
     rules: { "react-hooks/immutability": "off" },
   },
 
