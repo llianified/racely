@@ -879,8 +879,11 @@
 .notification-dot { width: var(--space-5); height: var(--space-5); border-radius: var(--corner-round); background: var(--accent); position: absolute; right: -4px; top: -2px; }
 
 /* ── scene states ──────────────────────────────────── */
-.scene-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100%; gap: var(--space-6); padding: var(--space-md); text-align: center; background: var(--card); color: var(--foreground); }
-.scene-loading > svg { width: var(--icon-xl); height: var(--icon-xl); color: var(--accent); flex-shrink: 0; }
+  .scene-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100%; gap: var(--space-6); padding: var(--space-md); text-align: center; background: var(--card); color: var(--foreground); }
+  .car-preview-root { position: relative; width: 100%; height: 100%; overflow: hidden; }
+  .car-preview-loading { position: absolute; inset: 0; z-index: var(--z-overlay); }
+  .car-preview-hint { position: absolute; right: var(--space-sm); bottom: var(--space-sm); z-index: var(--z-overlay); pointer-events: none; padding: var(--space-5) var(--space-sm); border: var(--stroke) solid var(--border); border-radius: var(--corner-pill); background: color-mix(in srgb, var(--background) 88%, transparent); color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-semibold); line-height: var(--lh-none); }
+  .scene-loading > svg { width: var(--icon-xl); height: var(--icon-xl); color: var(--accent); flex-shrink: 0; }
 .scene-loading strong { font-size: var(--fs-small); font-weight: var(--fw-bold); }
 .scene-loading span { font-size: var(--fs-micro); color: var(--muted-foreground); max-width: var(--scene-hint-max-w); }
 .scene-loading button { font-size: var(--fs-small); min-height: var(--space-36); padding: var(--space-sm) var(--space-14); border-radius: var(--corner-xl); background: var(--secondary); color: var(--foreground); }

@@ -11,7 +11,15 @@ import { Button } from "@/components/ui/button";
 import { CAR_CATALOG, CAR_MODEL_IDS, isCarColor, type CarColor, type CarModelId } from "@/lib/car-catalog";
 import { CarColorPicker } from "./car-color-picker";
 
-const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), { ssr: false });
+const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
+  ssr: false,
+  loading: () => (
+    <div className="scene-loading" role="status">
+      <LoaderCircle className="animate-spin" aria-hidden="true" />
+      <strong>Menyiapkan mobil 3D…</strong>
+    </div>
+  ),
+});
 
 export function CarSelection({ developmentPreview, returningPlayer, initialColor, saving, onConfirm }: {
   developmentPreview: boolean;
@@ -86,7 +94,7 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
           <span>{car.chassis}</span>
           <Badge variant="outline">Gratis</Badge>
         </div>
-        <div className="selection-stage" role="img" aria-label={`${car.name}, warna ${colorName}, model 3D berputar`}>
+        <div className="selection-stage" role="img" aria-label={`${car.name}, warna ${colorName}. Geser untuk memutar mobil 3D.`}>
           <CarPreviewScene model={model} color={color} />
         </div>
         <div className="selection-details" aria-live="polite" aria-atomic="true">
