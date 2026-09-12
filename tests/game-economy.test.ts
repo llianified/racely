@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   calculateRaceSettlement,
+  dailyCheckIn,
+  dailyRewardFor,
   HEARTBEAT_CAP_SECONDS,
   OFFLINE_CAP_SECONDS,
   OFFLINE_RATE,
+  racingDayKey,
 } from "../lib/game-economy";
-import { INITIAL_GAME, batteryTelemetry, formatDuration, gameReducer, lapReward, lapSeconds, modificationPartName, modificationPreview, upgradeCost } from "../lib/game";
+import { DAILY_REWARDS, INITIAL_GAME, batteryTelemetry, formatDuration, gameReducer, lapReward, lapSeconds, modificationPartName, modificationPreview, upgradeCost } from "../lib/game";
 
 const start = new Date("2026-09-11T00:00:00.000Z");
 
@@ -234,5 +237,64 @@ describe("Offline earnings", () => {
     expect(formatDuration(OFFLINE_CAP_SECONDS)).toBe("4 jam");
     expect(formatDuration(4 * 60 * 60 + 25 * 60)).toBe("4 jam 25 menit");
     expect(formatDuration(-1)).toBe("0 detik");
+  });
+});
+
+describe("Check-in harian", () => {
+  // 12:00 WIB pada 12 September 2026.
+  const siang = new Date("2026-09-12T05:00:00.000Z");
+  const cek = (hari: string[], now = siang) => dailyCheckIn(hari, now);
+
+  it("mengganti hari tengah malam WIB, bukan UTC", () => {
+    expect(racingDayKey(new Date("2026-09-11T16:59:00.000Z"))).toBe("2026-09-11");
+    expect(racingDayKey(new Date("2026-09-11T17:00:00.000Z"))).toBe("2026-09-12");
+    expect(racingDayKey(siang)).toBe("2026-09-12");
+  });
+
+  it("menaik lalu mentok, berapa pun panjang streak", () => {
+    expect(DAILY_REWARDS.map((_, i) => dailyRewardFor(i + 1))).toEqual([...DAILY_REWARDS]);
+    expect(dailyRewardFor(8)).toBe(10);
+    expect(dailyRewardFor(365)).toBe(10);
+    // Hari ke-0 dan negatif tetap membayar rung pertama, bukan undefined.
+    expect(dailyRewardFor(0)).toBe(1);
+    expect(dailyRewardFor(-3)).toBe(1);
+  });
+
+  it("pemain baru langsung bisa klaim hari pertama", () => {
+    expect(cek([])).toEqual({ streak: 0, claimedToday: false, reward: 1, nextReward: 2 });
+  });
+
+  it("menyambung streak dari kemarin, bukan memulai ulang", () => {
+    expect(cek(["2026-09-11"])).toEqual({ streak: 1, claimedToday: false, reward: 2, nextReward: 3 });
+  });
+
+  it("tidak membayar dua kali di hari yang sama", () => {
+    expect(cek(["2026-09-12", "2026-09-11", "2026-09-10"])).toEqual({
+      streak: 3, claimedToday: true, reward: 0, nextReward: 4,
+    });
+  });
+
+  it("mereset streak kalau ada hari yang bolong", () => {
+    expect(cek(["2026-09-09", "2026-09-08"])).toEqual({
+      streak: 0, claimedToday: false, reward: 1, nextReward: 2,
+    });
+  });
+
+  it("melewati pergantian bulan", () => {
+    const awalBulan = new Date("2026-09-01T05:00:00.000Z");
+    expect(cek(["2026-08-31", "2026-08-30"], awalBulan)).toMatchObject({ streak: 2, reward: 3 });
+  });
+
+  it("menahan hadiah di rung terakhir untuk streak panjang", () => {
+    const sepuluhHari = Array.from({ length: 10 }, (_, i) => {
+      const d = new Date("2026-09-12T00:00:00.000Z");
+      d.setUTCDate(d.getUTCDate() - i);
+      return d.toISOString().slice(0, 10);
+    });
+    expect(cek(sepuluhHari)).toEqual({
+      streak: 10, claimedToday: true, reward: 0, nextReward: 10,
+    });
+    // Belum klaim hari ini, streak 7 -> hadiah hari ke-8 tetap 10.
+    expect(cek(sepuluhHari.slice(1, 8))).toMatchObject({ streak: 7, reward: 10 });
   });
 });

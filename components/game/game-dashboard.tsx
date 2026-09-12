@@ -236,6 +236,15 @@ export function GameDashboard() {
         duration: 2200,
       });
   };
+  const daily = async () => {
+    if (game.daily.claimedToday) return;
+    const amount = game.daily.reward;
+    if (await runAction({ type: "daily" }))
+      toast.success(`Check-in harian! +${coins(amount)}`, {
+        description: "Balik lagi besok supaya streak-nya tidak putus.",
+        duration: 2400,
+      });
+  };
   const gift = async () => {
     if (game.rewardClaimed) return;
     if (await runAction({ type: "gift" }))
@@ -258,6 +267,7 @@ export function GameDashboard() {
     const total = claimableTotal(game);
     if (total <= 0) return;
     if (game.pending >= 1 && !(await runAction({ type: "claim" }))) return;
+    if (!game.daily.claimedToday && !(await runAction({ type: "daily" }))) return;
     if (!game.rewardClaimed && !(await runAction({ type: "gift" }))) return;
     for (const item of MISSIONS) {
       const ready =
@@ -420,6 +430,7 @@ export function GameDashboard() {
             <RewardsPanel
               game={game}
               onClaimRace={claim}
+              onClaimDaily={daily}
               onClaimGift={gift}
               onClaimMission={mission}
               onClaimAll={claimAll}

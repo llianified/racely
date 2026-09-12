@@ -32,6 +32,45 @@ describe("Workshop installation", () => {
   });
 });
 
+describe("Preview check-in harian", () => {
+  const racing = () => {
+    const fresh = getPreviewGameState(request(), identity);
+    return action(fresh.cookieValue, selectLuna).cookieValue;
+  };
+
+  it("membayar sekali per hari dan menyambung streak besoknya", () => {
+    const cookie = racing();
+    const awal = getPreviewGameState(request(cookie), identity).state;
+    expect(awal.daily).toMatchObject({ streak: 0, claimedToday: false, reward: 1 });
+
+    const hari1 = action(cookie, { type: "daily" });
+    expect(hari1.state.balance).toBe(awal.balance + 1);
+    expect(hari1.state.daily).toMatchObject({ streak: 1, claimedToday: true, nextReward: 2 });
+
+    // Klaim kedua di hari yang sama tidak menambah koin.
+    const lagi = action(hari1.cookieValue, { type: "daily" });
+    expect(lagi.state.balance).toBe(hari1.state.balance);
+    expect(lagi.state.daily.streak).toBe(1);
+
+    vi.advanceTimersByTime(24 * 60 * 60 * 1000);
+    const hari2 = action(lagi.cookieValue, { type: "daily" });
+    expect(hari2.state.daily).toMatchObject({ streak: 2, claimedToday: true, nextReward: 3 });
+    expect(hari2.state.balance).toBe(hari1.state.balance + 2);
+  });
+
+  it("mereset streak setelah satu hari terlewat", () => {
+    const hari1 = action(racing(), { type: "daily" });
+    vi.advanceTimersByTime(2 * 24 * 60 * 60 * 1000);
+    const setelahBolong = action(hari1.cookieValue, { type: "daily" });
+    expect(setelahBolong.state.daily).toMatchObject({ streak: 1, claimedToday: true });
+  });
+
+  it("tidak menyimpan riwayat klaim ke dalam state yang dikirim ke client", () => {
+    const klaim = action(racing(), { type: "daily" });
+    expect("dailyClaims" in klaim.state).toBe(false);
+  });
+});
+
 describe("Preview offline earnings", () => {
   const racing = () => {
     const fresh = getPreviewGameState(request(), identity);
