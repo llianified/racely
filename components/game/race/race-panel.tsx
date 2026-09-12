@@ -1,11 +1,11 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import { Camera, ChevronDown, Coins, Flag, Gauge, LoaderCircle, Maximize, Minimize, RotateCcw, Timer, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { batteryTelemetry, BOOST_DURATION_SECONDS, coins, displaySpeedKmh, FASTEST_LAP_SECONDS, formatCoins, lapReward, lapSeconds, type GameState } from "@/lib/game";
+import { batteryTelemetry, coins, displaySpeedKmh, formatCoins, lapReward, lapSeconds, type GameState } from "@/lib/game";
 import { RaceBattery } from "./race-battery";
 import { cn } from "@/lib/utils";
 import { createDrivingState } from "@/lib/race-dynamics";
@@ -30,40 +30,6 @@ function subscribeMotionPreference(onChange: () => void) {
 function subscribeFullscreen(onChange: () => void) {
   document.addEventListener("fullscreenchange", onChange);
   return () => document.removeEventListener("fullscreenchange", onChange);
-}
-
-function LapFeedback({ laps, reward, active }: { laps: number; reward: number; active: boolean }) {
-  const previous = useRef({ laps, active });
-  const [completed, setCompleted] = useState<{ lap: number; reward: number } | null>(null);
-
-  useEffect(() => {
-    const was = previous.current;
-    previous.current = { laps, active };
-    // Only celebrate a new visible lap, never hydration or background catch-up.
-    if (active && was.active && !document.hidden && laps === was.laps + 1) {
-      setCompleted({ lap: laps, reward });
-    } else if (!active || document.hidden || laps !== was.laps) {
-      setCompleted(null);
-    }
-  }, [laps, reward, active]);
-
-  useEffect(() => {
-    if (!completed) return;
-    const hide = () => { if (document.hidden) setCompleted(null); };
-    const timeout = window.setTimeout(() => setCompleted(null), 1600);
-    document.addEventListener("visibilitychange", hide);
-    return () => {
-      window.clearTimeout(timeout);
-      document.removeEventListener("visibilitychange", hide);
-    };
-  }, [completed]);
-
-  return completed && active ? (
-    <div key={completed.lap} className="lap-pop" aria-hidden="true">
-      <Flag />
-      <div>+{formatCoins(completed.reward)}<span>LAP {String(completed.lap).padStart(3, "0")} SELESAI</span></div>
-    </div>
-  ) : null;
 }
 
 export function RacePanel({ game, onBoost, onCircuits, active = true, disabled = false, boosting = false }: {
@@ -144,26 +110,9 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
       </div>
       <div className={cn("scene-wrap", inspect && "is-inspecting", !inspect && cinematic && "is-cinematic", !inspect && telemetry.recovery > 0 && "is-course-out", !inspect && telemetry.grip < 40 && "is-grip-critical")}>
         {!inspect && <div className="race-vignette" aria-hidden="true" />}
-        {!inspect && <div className="scene-overlay race-reward-hud"><span>REWARD / LAP</span><strong>+{formatCoins(lapReward(game))}<Coins aria-hidden="true" /></strong></div>}
-        {!inspect && <div className="scene-overlay race-line-status" data-danger={telemetry.recovery > 0 || telemetry.grip < 40} role="status">
-          {!telemetry.enabled ? 'AUTOPILOT / BALAPAN OTOMATIS' : telemetry.recovery > 0 ? telemetry.offRoad ? 'OFF-ROAD / GRIP RENDAH' : 'RECOVERY / KEMBALI KE LINE' : telemetry.grip < 40 ? 'TRACTION LOST / GRIP RENDAH' : telemetry.corner ? 'CORNER / TIKUNGAN' : 'FLAT OUT / LINTASAN LURUS'}
-        </div>}
-        {inspect ? <div className="scene-overlay inspect-hud"><strong>{bodyVisible ? "DETAIL MOBIL" : "DI BALIK BODI"}</strong><span>{bodyVisible ? "Cat metalik · ban · aero kit" : "2 sel · motor · penggerak 4WD"}</span></div> : <div className="scene-overlay lap-hud">
-          <span>Lap server</span><strong>{String(game.laps + 1).padStart(3, "0")}</strong>
-        </div>}
+        {inspect && <div className="scene-overlay inspect-hud"><strong>{bodyVisible ? "DETAIL MOBIL" : "DI BALIK BODI"}</strong><span>{bodyVisible ? "Cat metalik · ban · aero kit" : "2 sel · motor · penggerak 4WD"}</span></div>}
         <RaceScene equipped={game.bodyParts?.equipped} driving={driving} onTelemetry={setTelemetry} cinematic={cinematic && !reducedMotion} levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.progress} seconds={seconds} color={game.color} boosted={boosted} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
-        <div className={cn("scene-overlay boost-hud", boosted && "boost-hud-active")} aria-hidden={!boosted}>
-          <Zap aria-hidden="true" /><strong>2×</strong><span>GASPOL</span>
-          <i style={{ transform: `scaleX(${Math.max(0, Math.min(1, game.boostLeft / BOOST_DURATION_SECONDS))})` }} />
-        </div>
-        {!inspect && <div className="scene-overlay race-speed-hud" aria-label="Kecepatan mobil di arena">
-          <span><i style={{ backgroundColor: game.color }} />MOBILMU / 01</span>
-          <strong>{displaySpeedKmh(seconds).toFixed(1)}<small>KM/J</small></strong>
-          {/* Seberapa dekat ke putaran tercepat yang mungkin: naik saat diupgrade, penuh saat Gaspol. */}
-          <div className="race-speed-meter" aria-hidden="true"><i style={{ transform: `scaleX(${Math.min(1, FASTEST_LAP_SECONDS / seconds)})` }} /></div>
-        </div>}
         {inspect && <div className="scene-overlay inspect-hint">Geser untuk memutar · balapan tetap jalan</div>}
-        <LapFeedback laps={game.laps} reward={lapReward(game)} active={active && !inspect} />
       </div>
       <div className="lap-progress" role="progressbar" aria-label="Progres putaran saat ini" aria-valuenow={Math.round(game.progress * 100)} aria-valuemin={0} aria-valuemax={100}>
         <div style={{ transform: `scaleX(${game.progress})` }} />
