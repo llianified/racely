@@ -1,7 +1,9 @@
 import {
+  DAILY_REWARDS,
   lapReward,
   lapSeconds,
   roundCoins,
+  type DailyCheckIn,
   type GameState,
   type OfflineEarnings,
 } from "./game";
@@ -78,6 +80,7 @@ export function calculateRaceSettlement(
     color: "#4275ff",
     player: { name: "", username: null, photoUrl: null },
     withdrawals: [],
+    daily: { streak: 0, claimedToday: false, reward: 0, nextReward: 0 },
   } satisfies GameState;
   const lapDurationMs = lapSeconds(economyState) * 1000;
   const reward = lapReward(economyState);
@@ -109,5 +112,70 @@ export function calculateRaceSettlement(
             coins: offlineIncome,
           }
         : null,
+  };
+}
+
+/**
+ * Hari balapan berganti tengah malam WIB, bukan UTC. Tanpa ini pemain Indonesia
+ * kehilangan atau mendapat satu hari ekstra tiap kali melewati jam 07:00 pagi.
+ */
+export const RACING_DAY_OFFSET_MINUTES = 7 * 60;
+
+/** Berapa hari ke belakang yang dibaca untuk menghitung streak. */
+export const DAILY_HISTORY_DAYS = 30;
+
+export const DAILY_CLAIM_PREFIX = "daily:";
+/**
+ * Batas atas eksklusif untuk memindai kunci `daily:*` sebagai rentang. Dipakai
+ * ganti `LIKE 'daily:%'` karena btree hanya melayani prefix LIKE pada collation
+ * tertentu, sedangkan perbandingan rentang selalu memakai indeks.
+ */
+export const DAILY_CLAIM_END = "daily;";
+
+/** Kunci hari balapan, "YYYY-MM-DD" menurut WIB. */
+export function racingDayKey(now: Date) {
+  return new Date(now.getTime() + RACING_DAY_OFFSET_MINUTES * 60_000)
+    .toISOString()
+    .slice(0, 10);
+}
+
+function previousDay(key: string) {
+  const day = new Date(`${key}T00:00:00.000Z`);
+  day.setUTCDate(day.getUTCDate() - 1);
+  return day.toISOString().slice(0, 10);
+}
+
+/** Hadiah untuk hari ke-`day` dalam sebuah streak (1-based), mentok di rung terakhir. */
+export function dailyRewardFor(day: number) {
+  const rung = Math.min(Math.max(1, Math.floor(day)), DAILY_REWARDS.length);
+  return DAILY_REWARDS[rung - 1];
+}
+
+/**
+ * `claimedDays` adalah kunci hari yang sudah diklaim, urutan bebas. Streak
+ * dihitung mundur dari hari ini kalau sudah diklaim, atau dari kemarin kalau
+ * belum -- supaya klaim hari ini menyambung, bukan memulai ulang.
+ */
+export function dailyCheckIn(
+  claimedDays: readonly string[],
+  now: Date,
+): DailyCheckIn {
+  const today = racingDayKey(now);
+  const claimed = new Set(claimedDays);
+  const claimedToday = claimed.has(today);
+
+  let streak = 0;
+  let cursor = claimedToday ? today : previousDay(today);
+  // Dibatasi DAILY_HISTORY_DAYS karena hanya sebanyak itu riwayat yang dibaca.
+  while (claimed.has(cursor) && streak < DAILY_HISTORY_DAYS) {
+    streak += 1;
+    cursor = previousDay(cursor);
+  }
+
+  return {
+    streak,
+    claimedToday,
+    reward: claimedToday ? 0 : dailyRewardFor(streak + 1),
+    nextReward: dailyRewardFor(streak + (claimedToday ? 1 : 2)),
   };
 }
