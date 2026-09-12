@@ -108,7 +108,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
             <ChevronDown data-icon="inline-end" />
           </Button>
         </h2>
-        <span className="live-tag" aria-label={`Posisi ${position} dari 3, balapan langsung`}>P{position} · LIVE</span>
+        <span className="live-tag" aria-label={`Posisi ${position} dari 3, balapan langsung`}>Pos {position} · LIVE</span>
       </div>
       <div className={cn("scene-wrap", inspect && "is-inspecting", !inspect && cinematic && "is-cinematic", !inspect && telemetry.recovery > 0 && "is-course-out", !inspect && telemetry.grip < 40 && "is-grip-critical")}>
         {!inspect && <div className="race-vignette" aria-hidden="true" />}
