@@ -297,8 +297,9 @@ export function GameDashboard() {
     return true;
   };
   const chooseCircuit = async (circuit: 1) => {
-    if (game.circuit >= circuit || game.laps < game.economy.circuitUnlockLaps) return;
+    if (game.circuit >= circuit || game.laps < 25) return;
     if (await runAction({ type: "circuit", circuit })) {
+      setDialog(null);
       navigate("race");
       toast.success("Midnight aktif");
     }
@@ -381,7 +382,7 @@ export function GameDashboard() {
                   active={tab === "race"}
                   onBoost={boost}
                   boosting={busyAction === "boost"}
-                  onChooseCircuit={chooseCircuit}
+                  onCircuits={() => setDialog("circuits")}
                   disabled={Boolean(busyAction)}
                 />
                 <RaceReward
@@ -420,7 +421,7 @@ export function GameDashboard() {
           {tab === "race" || tab === "garage" ? null : tab === "menu" ? (
             <MenuPanel
               onNavigate={navigate}
-              onCircuits={() => navigate("race", "circuit-selector")}
+              onCircuits={() => setDialog("circuits")}
               onWallet={() => navigate("wallet")}
               onHelp={() => setDialog("help")}
               giftAvailable={!game.rewardClaimed}
@@ -453,6 +454,8 @@ export function GameDashboard() {
         }}
         game={game}
         offline={welcomeBack}
+        onChooseCircuit={chooseCircuit}
+        disabled={Boolean(busyAction)}
       />
     </div>
   );
