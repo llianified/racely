@@ -2,17 +2,9 @@
 
 import dynamic from "next/dynamic";
 import { useRef, useState, useSyncExternalStore } from "react";
-import { Camera, ChevronDown, Coins, Flag, LoaderCircle, Maximize, Minimize, RotateCcw, Zap } from "lucide-react";
+import { Camera, ChevronDown, Coins, Flag, Gauge, LoaderCircle, Maximize, Minimize, RotateCcw, Timer, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { batteryTelemetry, coins, displaySpeedKmh, formatCoins, lapReward, lapSeconds, raceOpponentLapSeconds, racePosition, type GameState } from "@/lib/game";
 import { RaceBattery } from "./race-battery";
 import { cn } from "@/lib/utils";
@@ -40,19 +32,14 @@ function subscribeFullscreen(onChange: () => void) {
   return () => document.removeEventListener("fullscreenchange", onChange);
 }
 
-export function RacePanel({ game, onBoost, onChooseCircuit, active = true, disabled = false, boosting = false }: {
+export function RacePanel({ game, onBoost, onCircuits, active = true, disabled = false, boosting = false }: {
   game: GameState;
   onBoost: () => void;
-  onChooseCircuit: (circuit: 1) => void;
+  onCircuits: () => void;
   active?: boolean;
   disabled?: boolean;
   boosting?: boolean;
 }) {
-  const unlockLaps = game.economy.circuitUnlockLaps;
-  const circuitItems = [
-    { label: "Jakarta Raceway", value: "0" },
-    { label: "Midnight Speedway", value: "1" },
-  ];
   const reducedMotion = useSyncExternalStore(subscribeMotionPreference, () => window.matchMedia("(prefers-reduced-motion: reduce)").matches, () => true);
   const driving = useRef(createDrivingState());
   const [telemetry, setTelemetry] = useState(createDrivingState);
@@ -104,70 +91,27 @@ export function RacePanel({ game, onBoost, onChooseCircuit, active = true, disab
       toast.info("Layar penuh tak tersedia");
     }
   };
+  const openCircuits = async () => {
+    if (document.fullscreenElement) {
+      try { await document.exitFullscreen(); }
+      catch { toast.info("Tutup layar penuh dulu"); return; }
+    }
+    onCircuits();
+  };
   return (
     <section className="panel track-panel" ref={panel} aria-label="Balapan otomatis">
       <div className="track-top">
         <span className="circuit-number" aria-label={`Sirkuit ${game.circuit + 1}`}>{String(game.circuit + 1).padStart(2, "0")}</span>
         <h2 className="track-title">
-          <Select
-            items={circuitItems}
-            value={String(game.circuit)}
-            onValueChange={(value) => {
-              if (value === "1" && game.circuit === 0) onChooseCircuit(1);
-            }}
-            disabled={disabled}
-          >
-            <SelectTrigger
-              id="circuit-selector"
-              className="circuit-trigger"
-              aria-label={`Pilih sirkuit, saat ini ${game.circuit ? "Midnight Speedway" : "Jakarta Raceway"}`}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="circuit-options" align="start" alignItemWithTrigger={false}>
-              <SelectGroup>
-                {circuitItems.map((item) => (
-                  <SelectItem
-                    key={item.value}
-                    value={item.value}
-                    className="circuit-option"
-                    disabled={item.value === "0" ? game.circuit === 1 : game.circuit === 0 && game.laps < unlockLaps}
-                  >
-                    <span>{item.label}</span>
-                    <small>
-                      {item.value === "0"
-                        ? game.circuit === 0 ? "Aktif" : "Trek lama"
-                        : game.circuit === 1 ? "Aktif" : game.laps < unlockLaps ? `${game.laps}/${unlockLaps}` : "Terbuka"}
-                    </small>
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+          <Button variant="ghost" size="sm" className="circuit-trigger" onClick={openCircuits} aria-label={`Pilih sirkuit: ${game.circuit ? "Midnight Speedway" : "Jakarta Raceway"}`} aria-haspopup="dialog">
+            {game.circuit ? "Midnight Speedway" : "Jakarta Raceway"}
+            <ChevronDown data-icon="inline-end" />
+          </Button>
         </h2>
+        <span className="live-tag" aria-label={`Posisi ${position} dari 3, balapan langsung`}>Pos {position} · LIVE</span>
       </div>
       <div className={cn("scene-wrap", inspect && "is-inspecting", !inspect && cinematic && "is-cinematic", !inspect && telemetry.recovery > 0 && "is-course-out", !inspect && telemetry.grip < 40 && "is-grip-critical")}>
         {!inspect && <div className="race-vignette" aria-hidden="true" />}
-        {!inspect && (
-          <div className="scene-overlay race-overview-hud" aria-label={`Kecepatan ${displaySpeedKmh(seconds).toFixed(1)} kilometer per jam, waktu per putaran ${seconds.toFixed(2)} detik, koin per putaran ${formatCoins(lapReward(game))}, posisi ${position} dari 3`}>
-            <div>
-              <span>Kecepatan</span>
-              <strong>{displaySpeedKmh(seconds).toFixed(1)} <small>km/j</small></strong>
-            </div>
-            <div>
-              <span>Waktu/lap</span>
-              <strong>{seconds.toFixed(2)} <small>d</small></strong>
-            </div>
-            <div data-reward>
-              <span>Koin/lap</span>
-              <strong>{formatCoins(lapReward(game))}</strong>
-            </div>
-            <div>
-              <span>Pos</span>
-              <strong>{position}</strong>
-            </div>
-          </div>
-        )}
         {inspect && <div className="scene-overlay inspect-hud"><strong>{bodyVisible ? "DETAIL MOBIL" : "DI BALIK BODI"}</strong><span>{bodyVisible ? "Cat metalik · ban · aero kit" : "2 sel · motor · penggerak 4WD"}</span></div>}
         <RaceScene equipped={game.bodyParts?.equipped} driving={driving} onTelemetry={setTelemetry} cinematic={cinematic && !reducedMotion} levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.progress} seconds={seconds} opponentSeconds={opponents} color={game.color} boosted={boosted} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
         {inspect && <div className="scene-overlay inspect-hint">Geser untuk memutar · balapan tetap jalan</div>}
@@ -206,6 +150,20 @@ export function RacePanel({ game, onBoost, onChooseCircuit, active = true, disab
             {!boosting && (boosted || game.cooldown > 0) && <small>{Math.ceil(boosted ? game.boostLeft : game.cooldown)}s</small>}
           </Button>}
           <span className="sr-only" role="status" aria-live="polite">{controlFeedback}</span>
+      </div>
+      <div className="track-stats">
+        <div className="track-stat">
+          <div className="track-stat-label"><Gauge aria-hidden="true" />Kecepatan</div>
+          <div className="track-stat-value">{displaySpeedKmh(seconds).toFixed(1)} <small>km/j</small></div>
+        </div>
+        <div className="track-stat">
+          <div className="track-stat-label"><Timer aria-hidden="true" />Waktu/lap</div>
+          <div className="track-stat-value">{seconds.toFixed(2)} <small>d</small></div>
+        </div>
+        <div className="track-stat">
+          <div className="track-stat-label"><Coins aria-hidden="true" />Koin/lap</div>
+          <div className="track-stat-value reward-value">{formatCoins(lapReward(game))}</div>
+        </div>
       </div>
       <RaceBattery game={game} inspect={inspect} onInspect={() => {
         setInspect(value => !value);
