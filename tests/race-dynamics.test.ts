@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createDrivingState, isTrackCorner, RECOVERY_SECONDS, stepDriving } from '../lib/race-dynamics';
+import { createDrivingState, gripTuning, isTrackCorner, RECOVERY_SECONDS, stepDriving } from '../lib/race-dynamics';
 
 describe('session grip challenge', () => {
   it('identifies both curves and handles wrapped progress', () => {
@@ -102,11 +102,78 @@ describe('session grip challenge', () => {
     expect(state.offRoad).toBe(false);
     expect(state.speedMultiplier).toBe(1);
   });
-  it('uses tire upgrades to improve grip', () => {
-    const starter = createDrivingState();
-    const upgraded = createDrivingState();
-    stepDriving(starter, .1, .35, true, 1);
-    stepDriving(upgraded, .1, .35, true, 10);
-    expect(upgraded.grip).toBeGreaterThan(starter.grip);
+  it('improves corner grip and straight recovery at every tire level', () => {
+    for (let level = 1; level < 10; level++) {
+      for (const boosted of [false, true]) {
+        const current = createDrivingState();
+        const upgraded = createDrivingState();
+        stepDriving(current, .1, .35, boosted, level);
+        stepDriving(upgraded, .1, .35, boosted, level + 1);
+        expect(upgraded.grip).toBeGreaterThan(current.grip);
+        current.grip = upgraded.grip = 50;
+        stepDriving(current, .1, .1, boosted, level);
+        stepDriving(upgraded, .1, .1, boosted, level + 1);
+        expect(upgraded.grip).toBeGreaterThan(current.grip);
+      }
+    }
+  });
+  it('uses the same rates shown by the upgrade preview', () => {
+    for (let level = 1; level <= 10; level++) {
+      const tuning = gripTuning(level);
+      for (const boosted of [false, true]) {
+        const state = createDrivingState();
+        stepDriving(state, .1, .35, boosted, level);
+        expect(state.grip).toBeCloseTo(100 - .1 * (boosted ? tuning.boostedCornerDrain : tuning.cornerDrain));
+        state.grip = 50;
+        stepDriving(state, .1, .1, boosted, level);
+        expect(state.grip).toBeCloseTo(50 + .1 * tuning.straightRecovery);
+      }
+    }
+    expect(gripTuning(1).drainReductionPercent).toBe(0);
+    expect(gripTuning(10).drainReductionPercent).toBe(54);
+    expect(gripTuning(10).straightRecovery).toBe(46);
+  });
+  it('bounds invalid and out-of-range tire levels', () => {
+    for (const level of [-1, 0, NaN, Infinity, -Infinity]) {
+      expect(gripTuning(level)).toEqual(gripTuning(1));
+    }
+    expect(gripTuning(100)).toEqual(gripTuning(10));
+    expect(gripTuning(3.9)).toEqual(gripTuning(3));
+  });
+  it('delays course outs without granting immunity at maximum grip', () => {
+    const framesUntilCourseOut = (level: number) => {
+      const state = createDrivingState();
+      let frames = 0;
+      while (state.courseOuts === 0 && frames < 600) {
+        stepDriving(state, 1 / 60, .35, true, level);
+        frames++;
+      }
+      expect(state.courseOuts).toBe(1);
+      return frames;
+    };
+    expect(framesUntilCourseOut(10)).toBeGreaterThan(framesUntilCourseOut(1) * 2);
+  });
+  it('applies upgrades to an ongoing run without refilling grip or resetting counters', () => {
+    const state = createDrivingState();
+    state.grip = 50;
+    state.cleanCorners = 3;
+    state.courseOuts = 2;
+    stepDriving(state, .1, .35, true, 10);
+    expect(state.grip).toBeCloseTo(50 - gripTuning(10).boostedCornerDrain * .1);
+    expect(state.cleanCorners).toBe(3);
+    expect(state.courseOuts).toBe(2);
+  });
+  it('keeps grip bounded and autopilot unaffected at every level', () => {
+    for (let level = 1; level <= 10; level++) {
+      const state = createDrivingState();
+      state.grip = 99;
+      stepDriving(state, .1, .1, false, level);
+      expect(state.grip).toBe(100);
+      state.enabled = false;
+      for (let frame = 0; frame < 60; frame++) stepDriving(state, 1 / 60, .35, true, level);
+      expect(state.grip).toBe(100);
+      expect(state.courseOuts).toBe(0);
+      expect(state.speedMultiplier).toBe(1);
+    }
   });
 });
