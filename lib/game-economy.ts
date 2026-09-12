@@ -1,4 +1,5 @@
 import {
+  advanceRaceProgress,
   lapReward,
   lapSeconds,
   roundCoins,
@@ -69,31 +70,41 @@ export function calculateRaceSettlement(
   // dengan jendela itu.
   const boostedMs = Math.max(0, Math.min(onlineEnd, boostEnd) - intervalStart);
   const normalMs = onlineMs - boostedMs;
-  // lapSeconds dan lapReward hanya membaca levels, circuit dan boostLeft.
-  // Sebelumnya di sini dirakit GameState utuh yang harus ditambal tiap kali ada
-  // field baru; sekarang cukup yang dipakai.
-  const economyState = { ...state, boostLeft: 0 };
-  const lapDurationMs = lapSeconds(economyState) * 1000;
-  const reward = lapReward(economyState);
+  const normalState = { ...state, boostLeft: 0 };
+  const boostedState = { ...state, boostLeft: 1 };
 
-  const onlineLaps =
-    state.progress +
-    normalMs / lapDurationMs +
-    boostedMs / (lapDurationMs / economy.boostMultiplier);
-  const accumulatedLaps =
-    onlineLaps + (offlineMs / lapDurationMs) * economy.offlineRate;
-  const completedLaps = Math.floor(accumulatedLaps);
+  const boosted = advanceRaceProgress(
+    state.progress,
+    boostedMs / 1000,
+    lapSeconds(boostedState),
+  );
+  const normal = advanceRaceProgress(
+    boosted.progress,
+    normalMs / 1000,
+    lapSeconds(normalState),
+  );
+  const onlineCompletedLaps = boosted.completedLaps + normal.completedLaps;
+  const offline = advanceRaceProgress(
+    normal.progress,
+    (offlineMs / 1000) * economy.offlineRate,
+    lapSeconds(normalState),
+  );
+  const completedLaps = onlineCompletedLaps + offline.completedLaps;
   // Attribute to the away window only the laps the heartbeat would not have
   // closed on its own, so the summary matches what the balance actually gained.
-  const offlineLaps = completedLaps - Math.floor(onlineLaps);
-  const offlineIncome = roundCoins(offlineLaps * reward);
+  const offlineLaps = offline.completedLaps;
+  const boostedIncome = roundCoins(
+    boosted.completedLaps * lapReward(boostedState),
+  );
+  const normalIncome = roundCoins(
+    normal.completedLaps * lapReward(normalState),
+  );
+  const offlineIncome = roundCoins(offlineLaps * lapReward(normalState));
 
   return {
     completedLaps,
-    income: roundCoins(
-      roundCoins((completedLaps - offlineLaps) * reward) + offlineIncome,
-    ),
-    progress: accumulatedLaps % 1,
+    income: roundCoins(boostedIncome + normalIncome + offlineIncome),
+    progress: offline.progress,
     creditedSeconds: (onlineMs + offlineMs) / 1000,
     offline:
       offlineMs > 0

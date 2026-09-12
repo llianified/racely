@@ -5,7 +5,7 @@ import { useRef, useState, useSyncExternalStore } from "react";
 import { Camera, ChevronDown, Coins, Flag, Gauge, LoaderCircle, Maximize, Minimize, RotateCcw, Timer, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { batteryTelemetry, coins, displaySpeedKmh, formatCoins, lapReward, lapSeconds, type GameState } from "@/lib/game";
+import { batteryTelemetry, coins, displaySpeedKmh, formatCoins, lapReward, lapSeconds, raceOpponentLapSeconds, racePosition, type GameState } from "@/lib/game";
 import { RaceBattery } from "./race-battery";
 import { cn } from "@/lib/utils";
 import { createDrivingState } from "@/lib/race-dynamics";
@@ -59,6 +59,8 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
     () => false,
   );
   const seconds = lapSeconds(game);
+  const opponents = raceOpponentLapSeconds(game);
+  const position = racePosition(game);
   const boosted = game.boostLeft > 0;
   const boostLabel = boosting
     ? "Memulai…"
@@ -106,12 +108,12 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
             <ChevronDown data-icon="inline-end" />
           </Button>
         </h2>
-        <span className="live-tag">LIVE</span>
+        <span className="live-tag" aria-label={`Posisi ${position} dari 3, balapan langsung`}>P{position} · LIVE</span>
       </div>
       <div className={cn("scene-wrap", inspect && "is-inspecting", !inspect && cinematic && "is-cinematic", !inspect && telemetry.recovery > 0 && "is-course-out", !inspect && telemetry.grip < 40 && "is-grip-critical")}>
         {!inspect && <div className="race-vignette" aria-hidden="true" />}
         {inspect && <div className="scene-overlay inspect-hud"><strong>{bodyVisible ? "DETAIL MOBIL" : "DI BALIK BODI"}</strong><span>{bodyVisible ? "Cat metalik · ban · aero kit" : "2 sel · motor · penggerak 4WD"}</span></div>}
-        <RaceScene equipped={game.bodyParts?.equipped} driving={driving} onTelemetry={setTelemetry} cinematic={cinematic && !reducedMotion} levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.progress} seconds={seconds} color={game.color} boosted={boosted} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
+        <RaceScene equipped={game.bodyParts?.equipped} driving={driving} onTelemetry={setTelemetry} cinematic={cinematic && !reducedMotion} levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.progress} seconds={seconds} opponentSeconds={opponents} color={game.color} boosted={boosted} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
         {inspect && <div className="scene-overlay inspect-hint">Geser untuk memutar · balapan tetap jalan</div>}
       </div>
       <div className="lap-progress" role="progressbar" aria-label="Progres putaran saat ini" aria-valuenow={Math.round(game.progress * 100)} aria-valuemin={0} aria-valuemax={100}>

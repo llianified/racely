@@ -55,6 +55,7 @@ const GROUPS: Group[] = [
       { key: "lapTiresPerLevel", label: "Laju per level ban", step: "0.01" },
       { key: "lapRewardPerBattery", label: "Koin per level baterai", step: "0.01" },
       { key: "lapRewardPerCircuit", label: "Koin per tingkat sirkuit", step: "0.01" },
+      { key: "racePositionRewardStep", label: "Selisih hadiah per posisi", hint: "P1 +nilai, P3 −nilai", step: "0.05" },
     ],
   },
   {
