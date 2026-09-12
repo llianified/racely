@@ -139,6 +139,74 @@ describeDatabase("Neon Postgres persistence", () => {
     expect(row.amountIdr).toBe(150 * 100);
   });
 
+  it("keeps withdrawal account data out of the action receipt table", async () => {
+    await db!
+      .update(schema.players)
+      .set({ balance: 800 })
+      .where(drizzle.eq(schema.players.userId, identity.userId));
+    await gameServer.performGameAction(identity, randomUUID(), {
+      type: "withdraw",
+      method: "bca",
+      account: "1234509876",
+      accountName: "Integration Racer",
+      coins: 200,
+    });
+    // Any later action used to re-copy the withdrawal history -- account number
+    // and holder name included -- into a table nothing ever reads back.
+    const after = await gameServer.performGameAction(identity, randomUUID(), {
+      type: "color",
+      color: "#e9eef7",
+    });
+    expect(after.withdrawals[0]).toMatchObject({ account: "1234509876" });
+
+    const receipts = await db!
+      .select()
+      .from(schema.actionReceipts)
+      .where(drizzle.eq(schema.actionReceipts.userId, identity.userId));
+    expect(receipts.length).toBeGreaterThan(0);
+    expect(receipts.every((row) => row.response === null)).toBe(true);
+    expect(JSON.stringify(receipts)).not.toContain("1234509876");
+  });
+
+  it("replays a repeated requestId without granting the reward twice", async () => {
+    const requestId = randomUUID();
+    const first = await gameServer.performGameAction(identity, requestId, {
+      type: "gift",
+    });
+    const replay = await gameServer.performGameAction(identity, requestId, {
+      type: "gift",
+    });
+    expect(replay.rewardClaimed).toBe(true);
+    expect(replay.balance).toBe(first.balance);
+  });
+
+  it("prunes action receipts past the retention window", async () => {
+    const stale = randomUUID();
+    await db!.execute(drizzle.sql`
+      insert into racely_action_receipts (user_id, request_id, action_type, created_at)
+      values (${identity.userId}, ${stale}, 'boost', now() - interval '30 days')
+    `);
+
+    // Force the probabilistic prune instead of waiting for a 2% roll.
+    const random = Math.random;
+    Math.random = () => 0;
+    try {
+      // Rose is in the Luna GT palette this identity confirmed above.
+      await gameServer.performGameAction(identity, randomUUID(), {
+        type: "color",
+        color: "#e6a4ba",
+      });
+    } finally {
+      Math.random = random;
+    }
+
+    const [survivor] = await db!
+      .select()
+      .from(schema.actionReceipts)
+      .where(drizzle.eq(schema.actionReceipts.requestId, stale));
+    expect(survivor).toBeUndefined();
+  });
+
   it("claims a Telegram update exactly once, even across processes", async () => {
     const updateId = Date.now();
     claimedUpdateIds.push(updateId);

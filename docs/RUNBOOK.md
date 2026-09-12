@@ -25,6 +25,7 @@ dibaca dari direktori repo.
 ```bash
 cd /srv/racely
 git fetch origin && git checkout main && git pull --ff-only
+set -a && source /etc/racely/racely.env && set +a   # WAJIB sebelum build
 pnpm install --frozen-lockfile
 pnpm run typecheck && pnpm test
 pnpm run db:migrate            # idempoten, aman diulang
@@ -33,6 +34,13 @@ pnpm run pm2:reload            # zero-downtime reload, --update-env
 pm2 save
 curl -fsS http://127.0.0.1:3000/api/health
 ```
+
+`source` di baris ketiga bukan opsional. Halaman `/` di-prerender saat build,
+jadi `PUBLIC_APP_URL` harus sudah ada di environment **saat `build:standalone`
+jalan** — bukan hanya saat PM2 start. Tanpa itu `metadataBase` kosong, Next
+jatuh ke `http://localhost:3000`, dan setiap link Racely yang dibagikan tampil
+dengan preview gambar rusak. Build akan memberi peringatan
+`metadataBase property in metadata export is not set` kalau ini terlewat.
 
 Catatan: `instances: 1` dan `exec_mode: "fork"` disengaja — dedupe webhook
 fallback dan rate limiter bersifat per-proses. Jangan naikkan jumlah instance

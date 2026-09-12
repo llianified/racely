@@ -11,6 +11,7 @@ import {
   sessionCookieOptions,
   TelegramAuthError,
 } from "@/lib/telegram-auth";
+import { consumeRateLimit, GAME_STATE_RULE } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,6 +20,26 @@ export async function GET(request: Request) {
   try {
     const preview = getOrCreatePreviewIdentity(request);
     const identity = preview?.identity ?? authenticateTelegramRequest(request);
+
+    // Reading state still costs a locked row and a pool connection, so throttle
+    // it per player the same way the mutating route does.
+    const limit = consumeRateLimit(
+      `state:${identity.userId}`,
+      GAME_STATE_RULE,
+    );
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Terlalu banyak permintaan. Tunggu sebentar." },
+        {
+          status: 429,
+          headers: {
+            "Cache-Control": "no-store",
+            "Retry-After": String(limit.retryAfterSeconds),
+          },
+        },
+      );
+    }
+
     const previewGame = preview
       ? getPreviewGameState(request, identity)
       : null;

@@ -81,16 +81,37 @@ function requestHeaders(initData: string) {
   return initData ? { Authorization: `tma ${initData}` } : undefined;
 }
 
+class GameRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = "GameRequestError";
+  }
+}
+
 async function readGameResponse(response: Response): Promise<GameState> {
   const result = (await response.json()) as GameState | { error?: string };
   if (!response.ok) {
-    throw new Error(
+    throw new GameRequestError(
       "error" in result && result.error
         ? result.error
         : "Progres Racely belum bisa dimuat.",
+      response.status,
     );
   }
   return result as GameState;
+}
+
+/**
+ * initData is signed once when the Mini App opens and the server rejects it
+ * after 24h. Without this check a long-lived session keeps polling into 401s
+ * while the local reducer goes on adding coins that will never be saved, so the
+ * player races into a void. Treat it as terminal and send them back to Telegram.
+ */
+function isSessionExpired(error: unknown) {
+  return error instanceof GameRequestError && error.status === 401;
 }
 
 function BootScreen() {
@@ -171,6 +192,7 @@ export function GameDashboard() {
   const bootstrapped = useRef(false);
   const mutationLocked = useRef(false);
   const navigationTarget = useRef<string | null>(null);
+  const expired = useRef(false);
 
   useEffect(() => {
     const targetId = navigationTarget.current;
@@ -222,8 +244,11 @@ export function GameDashboard() {
       refreshInterval: (latest) => latest?.carSelection?.model === null || mutationLocked.current ? 0 : 5000,
       refreshWhenHidden: false,
       revalidateOnFocus: game.carSelection?.model !== null,
-      isPaused: () => mutationLocked.current,
+      isPaused: () => mutationLocked.current || expired.current,
       dedupingInterval: 1000,
+      // A rejected initData will be rejected again: retrying only burns the
+      // player's rate-limit bucket until they reopen the app from Telegram.
+      shouldRetryOnError: (retryError) => !isSessionExpired(retryError),
     },
   );
 
@@ -247,7 +272,15 @@ export function GameDashboard() {
     dispatch({ type: "hydrate", state: data });
   }, [data]);
 
+  const sessionExpired = isSessionExpired(error);
+
+  // isPaused() reads a ref because SWR calls it outside the render pass.
   useEffect(() => {
+    expired.current = sessionExpired;
+  }, [sessionExpired]);
+
+  useEffect(() => {
+    if (sessionExpired) return;
     let last = performance.now();
     const id = window.setInterval(() => {
       const now = performance.now();
@@ -256,7 +289,7 @@ export function GameDashboard() {
       last = now;
     }, 100);
     return () => clearInterval(id);
-  }, []);
+  }, [sessionExpired]);
 
   const navigate = (next: GameTab, target?: string) => {
     const targetId = target ?? "page-title";
@@ -410,11 +443,11 @@ export function GameDashboard() {
   };
 
   if (!clientReady || (isLoading && !data)) return <BootScreen />;
-  if (error && !data) {
+  if (sessionExpired || (error && !data)) {
     return (
       <GameGate
         error={error}
-        onRetry={initData ? () => void mutate() : undefined}
+        onRetry={initData && !sessionExpired ? () => void mutate() : undefined}
       />
     );
   }
