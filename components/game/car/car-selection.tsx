@@ -75,9 +75,11 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
         </div>
         <ol className="selection-steps" aria-label="Langkah onboarding">
           <li aria-current={step === 1 ? "step" : undefined} data-complete={step === 2 || undefined}>
-            <span>{step === 2 ? <Check className="size-4" aria-label="Selesai" /> : "01"} Pilih mobil</span>
+            <span><span className="selection-step-number">{step === 2 ? <Check className="size-4" aria-label="Selesai" /> : "01"}</span> Pilih mobil</span>
           </li>
-          <li aria-current={step === 2 ? "step" : undefined}><span>02 Sentuhanmu</span></li>
+          <li aria-current={step === 2 ? "step" : undefined}>
+            <span><span className="selection-step-number">02</span> Sentuhanmu</span>
+          </li>
         </ol>
         <div className="selection-intro">
           <h1 ref={headingRef} tabIndex={-1}>
