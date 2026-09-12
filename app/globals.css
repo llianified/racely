@@ -306,14 +306,19 @@
 .gold-button:hover:not(:disabled) { filter: brightness(1.08); }
 .gold-button:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 var(--gold-shadow); }
 
+/* `transition-all` bawaan tombol ikut menganimasikan warna, jadi emasnya masih
+   tertinggal beberapa ratus milidetik setelah tombol jadi disabled. Batasi ke
+   properti gerak saja — sama seperti tombol boost. */
+[data-slot='button'], .gold-button, .wallet-chip, .color-swatch { transition-property: transform, translate, filter; transition-duration: .1s; }
+[data-slot='button']:disabled, .gold-button:disabled, .wallet-chip:disabled, .color-swatch:disabled { transition: none; transform: none; translate: none; }
+
 /* satu bahasa disabled untuk semua tombol: rata, solid, tanpa peredupan opacity */
 [data-slot='button']:disabled, .gold-button:disabled, .wallet-chip:disabled, .color-swatch:disabled { background: var(--secondary); color: var(--muted-foreground); border-color: var(--border); border-top-color: var(--border); box-shadow: none; opacity: 1; filter: none; cursor: not-allowed; }
 [data-slot='button']:disabled svg, .wallet-chip:disabled svg { color: var(--muted-foreground); }
 /* varian kecil: bevel lebih tipis biar proporsional */
 .gold-button[data-size='sm']:not(:disabled), .gold-button[data-size='xs']:not(:disabled) { box-shadow: 0 2px 0 var(--gold-shadow), inset 0 1px 0 var(--gold-highlight); }
 .gold-button[data-size='sm']:active:not(:disabled), .gold-button[data-size='xs']:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 1px 0 var(--gold-shadow); }
-.boost-button { width: 100%; position: relative; overflow: hidden; transition-property: transform, translate; transition-duration: .1s; }
-.boost-button:disabled { transition: none; transform: none; translate: none; }
+.boost-button { width: 100%; position: relative; overflow: hidden; }
 .boost-button small { min-width: 34px; padding: 2px 6px; background: color-mix(in srgb, currentColor 14%, transparent); border-radius: 999px; font-size: var(--fs-nano); font-weight: 800; font-variant-numeric: tabular-nums; text-align: center; }
 /* boost punya status sendiri (isi ulang & sedang ngacir), jadi tetap berwarna walau disabled */
 .boost-button:disabled::after { content: ''; position: absolute; bottom: 0; height: 3px; width: var(--charge); background: var(--primary); left: 0; }
