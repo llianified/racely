@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
-import { ArrowLeft, ArrowRight, Check, Flag, LoaderCircle, LockKeyhole } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Flag, LoaderCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CAR_CATALOG, CAR_MODEL_IDS, isCarColor, type CarColor, type CarModelId } from "@/lib/car-catalog";
@@ -85,9 +85,9 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
           </h1>
           <p>{step === 1
             ? returningPlayer
-              ? "Koin, upgrade, dan progresmu tetap aman."
-              : `Dua karakter. Satu pilihan. Mana jagoanmu?${developmentPreview ? " Progres preview disimpan di browser ini." : ""}`
-            : "Sentuhan terakhir sebelum turun ke lintasan."}</p>
+              ? "Koin, upgrade, dan progresmu tetap aman. Model hanya dipilih sekali."
+              : `Dua karakter. Satu pilihan. Mana jagoanmu? Model hanya dipilih sekali.${developmentPreview ? " Progres preview disimpan di browser ini." : ""}`
+            : "Sentuhan terakhir sebelum turun ke lintasan. Model tetap, warna bisa diganti."}</p>
         </div>
       </header>
 
@@ -146,10 +146,6 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
             {step === 1 && <ArrowRight data-icon="inline-end" />}
           </Button>
         </div>
-        <p className="selection-hint">
-          <LockKeyhole className="size-4" aria-hidden="true" />
-          <span>{step === 1 ? "Model dipilih sekali." : "Model tetap; warna bisa diganti."}</span>
-        </p>
       </footer>
     </main>
   );
