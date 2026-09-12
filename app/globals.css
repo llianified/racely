@@ -180,7 +180,7 @@
 .brand-mark { width: 32px; height: auto; flex-shrink: 0; object-fit: contain; }
 .brand-word { font-size: 24px; font-weight: 1000; font-style: italic; letter-spacing: -.065em; line-height: 1; }
 .brand-word > span { color: var(--accent); }
-.racer-avatar { display: flex; flex-direction: column; align-items: stretch; justify-content: center; flex-shrink: 0; min-width: 36px; height: 40px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--primary) 55%, var(--background)); border-radius: 12px; background: color-mix(in srgb, var(--primary) 18%, var(--background)); color: var(--foreground); text-align: center; }
+.racer-avatar { display: flex; flex-direction: column; align-items: stretch; justify-content: center; flex-shrink: 0; min-width: 36px; height: 32px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--primary) 55%, var(--background)); border-radius: 12px; background: color-mix(in srgb, var(--primary) 18%, var(--background)); color: var(--foreground); text-align: center; }
 .racer-avatar:hover { background: color-mix(in srgb, var(--primary) 30%, var(--background)); border-color: var(--primary); }
 .racer-initial { padding: 0 8px; font-size: 16px; font-weight: 850; line-height: 1.25; }
 .racer-level { padding: 0 6px; background: var(--accent); color: var(--background); font-size: 14px; font-weight: 800; line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; }
