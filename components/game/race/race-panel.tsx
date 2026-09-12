@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { batteryTelemetry, BOOST_DURATION_SECONDS, coins, formatCoins, lapReward, lapSeconds, type GameState } from "@/lib/game";
 import { RaceBattery } from "./race-battery";
 import { cn } from "@/lib/utils";
-import { createDrivingState, stabilizeCar } from "@/lib/race-dynamics";
+import { createDrivingState } from "@/lib/race-dynamics";
 import { GripChallenge } from "./grip-challenge";
 
 const RaceScene = dynamic(() => import("../scene/race-scene"), {
@@ -114,8 +114,8 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
       <div className={cn("scene-wrap", inspect && "is-inspecting", !inspect && cinematic && "is-cinematic", !inspect && telemetry.recovery > 0 && "is-course-out", !inspect && telemetry.grip < 40 && "is-grip-critical")}>
         {!inspect && <div className="race-vignette" aria-hidden="true" />}
         {!inspect && <div className="scene-overlay race-reward-hud"><span>REWARD / LAP</span><strong>+{formatCoins(lapReward(game))}<Coins aria-hidden="true" /></strong></div>}
-        {!inspect && <div className="scene-overlay race-line-status" data-danger={telemetry.recovery > 0 || telemetry.grip < 40} data-perfect={telemetry.lineLocked || telemetry.perfectBoost > 0} role="status">
-          {telemetry.recovery > 0 ? telemetry.offRoad ? 'OFF-ROAD / GRIP RENDAH' : 'RECOVERY / KEMBALI KE LINE' : telemetry.perfectBoost > 0 ? 'PERFECT EXIT / +22% AKSELERASI' : telemetry.lineLocked ? 'APEX LOCKED / SIAP MELAJU' : telemetry.grip < 40 ? 'TRACTION LOST / STABILKAN' : telemetry.corner ? 'CORNER / CARI APEX' : 'FLAT OUT / SIAPKAN TIKUNGAN'}
+        {!inspect && <div className="scene-overlay race-line-status" data-danger={telemetry.recovery > 0 || telemetry.grip < 40} role="status">
+          {!telemetry.enabled ? 'AUTOPILOT / BALAPAN OTOMATIS' : telemetry.recovery > 0 ? telemetry.offRoad ? 'OFF-ROAD / GRIP RENDAH' : 'RECOVERY / KEMBALI KE LINE' : telemetry.grip < 40 ? 'TRACTION LOST / GRIP RENDAH' : telemetry.corner ? 'CORNER / TIKUNGAN' : 'FLAT OUT / LINTASAN LURUS'}
         </div>}
         {inspect ? <div className="scene-overlay inspect-hud"><strong>{bodyVisible ? "DETAIL MOBIL" : "DI BALIK BODI"}</strong><span>{bodyVisible ? "Cat metalik · ban · aero kit" : "2 sel · motor · penggerak 4WD"}</span></div> : <div className="scene-overlay lap-hud">
           <span>Lap server</span><strong>{String(game.laps + 1).padStart(3, "0")}</strong>
@@ -167,9 +167,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
         <span>{followCamera ? 'CHASE CAM' : `OVERVIEW / 0${cameraMode + 1}`}<i />{reducedMotion ? 'REDUCED MOTION' : cinematic ? 'DIRECTOR LIVE' : 'KAMERA STABIL'}</span>
         <Button variant="ghost" size="xs" aria-pressed={cinematic && !reducedMotion} disabled={reducedMotion} onClick={() => setCinematic(value => !value)}>Sinematik {cinematic && !reducedMotion ? 'on' : 'off'}</Button>
       </div>
-      {!inspect && <GripChallenge state={telemetry} active={active} onStabilize={() => {
-        if (active && stabilizeCar(driving.current)) setTelemetry({ ...driving.current });
-      }} onToggle={() => {
+      {!inspect && <GripChallenge state={telemetry} onToggle={() => {
         const enabled = !driving.current.enabled;
         Object.assign(driving.current, createDrivingState(), { enabled });
         setTelemetry({ ...driving.current });
