@@ -1,4 +1,5 @@
 import type { CarColor, CarModelId } from "./car-catalog";
+import type { BodyParts, PartCommand } from "./car-parts";
 
 export type Upgrade = "engine" | "tires" | "battery";
 export type PlayerProfile = {
@@ -104,6 +105,7 @@ export type ReferralSummary = {
 };
 
 export type GameState = {
+  bodyParts?: BodyParts;
   // Optional only so legacy preview cookies can be upgraded without losing progress.
   carSelection?: { model: CarModelId | null; returningPlayer: boolean };
   developmentPreview: boolean;
@@ -272,6 +274,7 @@ export const missionValue = (
   id === "laps" ? s.laps : id === "upgrade" ? totalLevel(s) - 1 : s.earned;
 
 export type GameCommand =
+  | PartCommand
   | { type: "sync" }
   | { type: "upgrade"; key: Upgrade }
   | { type: "claim" | "boost" | "gift" | "daily" }
