@@ -21,8 +21,14 @@ try {
   process.exit(1);
 }
 
-if (connectionUrl.searchParams.get("sslmode") === "require") {
-  connectionUrl.searchParams.set("sslmode", "verify-full");
+// Mirrors lib/db/index.ts: a DSN without `sslmode` would migrate over a
+// plaintext connection, so force verified TLS for every remote host.
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]", ""]);
+if (!LOCAL_HOSTS.has(connectionUrl.hostname)) {
+  const sslmode = connectionUrl.searchParams.get("sslmode");
+  if (!sslmode || sslmode === "require" || sslmode === "prefer") {
+    connectionUrl.searchParams.set("sslmode", "verify-full");
+  }
 }
 
 const pool = new Pool({

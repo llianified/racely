@@ -17,6 +17,17 @@ export const GAME_ACTION_RULE: RateLimitRule = {
   refillPerSecond: 2,
 };
 
+/**
+ * GET /api/game also opens a `SELECT ... FOR UPDATE` transaction, and a signed
+ * initData stays valid for 24h, so a single player can replay it against the
+ * pool indefinitely. The client only calls this once per boot (it syncs through
+ * the action route afterwards), so a generous bucket is invisible in normal use.
+ */
+export const GAME_STATE_RULE: RateLimitRule = {
+  capacity: 30,
+  refillPerSecond: 1,
+};
+
 type Bucket = { tokens: number; updatedAt: number };
 
 const IDLE_TTL_MS = 10 * 60 * 1000;
