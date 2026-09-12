@@ -120,10 +120,6 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
         ) : (
           <CarColorPicker model={model} color={color} disabled={busy} onChoose={(next) => { setColor(next); setFailed(false); }} />
         )}
-        <p className="selection-hint">
-          <LockKeyhole className="size-4" aria-hidden="true" />
-          {step === 1 ? "Model hanya bisa dipilih sekali." : "Model permanen. Warna bisa diganti di garasi."}
-        </p>
       </div>
 
       <footer className="selection-footer">
@@ -140,6 +136,10 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
             {step === 1 && <ArrowRight data-icon="inline-end" />}
           </Button>
         </div>
+        <p className="selection-hint">
+          <LockKeyhole className="size-4" aria-hidden="true" />
+          {step === 1 ? "Model hanya bisa dipilih sekali." : "Model permanen. Warna bisa diganti di garasi."}
+        </p>
         <p className="selection-save-note">{developmentPreview
           ? "Preview saja · progres lokal di browser ini."
           : "Tersimpan ke akun Telegram kamu."}</p>
