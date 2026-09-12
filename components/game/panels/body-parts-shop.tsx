@@ -134,7 +134,6 @@ export function BodyPartsShop({ game, active, disabled, onAction }: ShopProps) {
     <div className="garage-parts">
       <div className="garage-parts-heading">
         <div className="garage-parts-title">
-          <span className="eyebrow">AERODINAMIKA</span>
           <div><Wind aria-hidden="true" /><h3>Aero kit</h3><Badge variant="secondary">{equippedCount} / {PART_SLOTS.length} aktif</Badge></div>
           <p>{ownedCount} dari {PART_IDS.length} part sudah masuk koleksi.</p>
         </div>
@@ -152,7 +151,6 @@ export function BodyPartsShop({ game, active, disabled, onAction }: ShopProps) {
     </div>
     <DialogContent className="parts-shop-dialog">
       <DialogHeader className="parts-shop-header">
-        <span className="eyebrow">GARASI / AERODINAMIKA</span>
         <DialogTitle>Toko aero kit</DialogTitle>
         <DialogDescription>Coba langsung pada mobilmu, koleksi, lalu pasang ke slot yang sesuai.</DialogDescription>
       </DialogHeader>
