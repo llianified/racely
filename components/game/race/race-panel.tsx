@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useRef, useState, useSyncExternalStore } from "react";
-import { Camera, ChevronDown, Coins, Flag, Gauge, LoaderCircle, Maximize, Minimize, RotateCcw, Timer, Zap } from "lucide-react";
+import { Camera, ChevronDown, Coins, Flag, LoaderCircle, Maximize, Minimize, RotateCcw, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -164,7 +164,7 @@ export function RacePanel({ game, onBoost, onChooseCircuit, active = true, disab
             </div>
             <div>
               <span>Pos</span>
-              <strong>{position}<small>/3</small></strong>
+              <strong>{position}</strong>
             </div>
           </div>
         )}
@@ -206,20 +206,6 @@ export function RacePanel({ game, onBoost, onChooseCircuit, active = true, disab
             {!boosting && (boosted || game.cooldown > 0) && <small>{Math.ceil(boosted ? game.boostLeft : game.cooldown)}s</small>}
           </Button>}
           <span className="sr-only" role="status" aria-live="polite">{controlFeedback}</span>
-      </div>
-      <div className="track-stats">
-        <div className="track-stat">
-          <div className="track-stat-label"><Gauge aria-hidden="true" />Kecepatan</div>
-          <div className="track-stat-value">{displaySpeedKmh(seconds).toFixed(1)} <small>km/j</small></div>
-        </div>
-        <div className="track-stat">
-          <div className="track-stat-label"><Timer aria-hidden="true" />Waktu/lap</div>
-          <div className="track-stat-value">{seconds.toFixed(2)} <small>d</small></div>
-        </div>
-        <div className="track-stat">
-          <div className="track-stat-label"><Coins aria-hidden="true" />Koin/lap</div>
-          <div className="track-stat-value reward-value">{formatCoins(lapReward(game))}</div>
-        </div>
       </div>
       <RaceBattery game={game} inspect={inspect} onInspect={() => {
         setInspect(value => !value);
