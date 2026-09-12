@@ -19,6 +19,11 @@ export type PlayerIdentity = {
   username: string | null;
   displayName: string;
   photoUrl: string | null;
+  /**
+   * `start_param` dari deep link, sudah lolos HMAC bersama initData lainnya --
+   * jadi tidak bisa dipalsukan pemain. Dipakai untuk ikatan referral.
+   */
+  startParam: string | null;
 };
 
 export const PREVIEW_SESSION_COOKIE = "racely-preview-session";
@@ -56,6 +61,7 @@ function getPreviewSessionId(request: Request) {
 function createPreviewIdentity(sessionId: string): PlayerIdentity {
   return {
     userId: `preview:${sessionId}`,
+    startParam: null,
     username: "preview",
     displayName: "Preview Racer",
     photoUrl: null,
@@ -191,8 +197,12 @@ export function authenticateTelegramRequest(request: Request): PlayerIdentity {
     throw new TelegramAuthError("Data pemain Telegram tidak valid.");
   }
 
+  const startParam = params.get("start_param");
+
   return {
     userId: String(user.data.id),
+    startParam:
+      startParam && /^[\w-]{1,64}$/.test(startParam) ? startParam : null,
     username: user.data.username ?? null,
     displayName: [user.data.first_name, user.data.last_name]
       .filter(Boolean)

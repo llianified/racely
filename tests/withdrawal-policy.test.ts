@@ -21,6 +21,7 @@ const identity = {
   displayName: "Preview Racer",
   username: "preview",
   photoUrl: null,
+  startParam: null,
 };
 const request = (cookie?: string) =>
   new Request("http://localhost/api/game", {

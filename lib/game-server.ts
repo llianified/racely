@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq, gte, lt } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import {
@@ -23,6 +23,10 @@ import { CAR_MODEL_IDS, isCarColor } from "@/lib/car-catalog";
 import {
   accountPattern,
   COIN_TO_IDR,
+  REFERRAL_MILESTONE_LAPS,
+  REFERRAL_PARAM_PREFIX,
+  REFERRAL_REWARD_INVITEE,
+  REFERRAL_REWARD_INVITER,
   MIN_WITHDRAW_COINS,
   MISSIONS,
   missionValue,
@@ -32,6 +36,7 @@ import {
   WITHDRAW_METHODS,
   type DailyCheckIn,
   type GameState,
+  type ReferralSummary,
   type OfflineEarnings,
   type Upgrade,
   type WithdrawalRecord,
@@ -39,6 +44,7 @@ import {
   type WithdrawStatus,
 } from "@/lib/game";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
+import { referralLink } from "@/lib/telegram-bot";
 
 const carColorSchema = z.string().regex(/^#[0-9a-f]{6}$/i);
 const METHOD_IDS = WITHDRAW_METHODS.map((method) => method.id) as [
@@ -46,6 +52,9 @@ const METHOD_IDS = WITHDRAW_METHODS.map((method) => method.id) as [
   ...WithdrawMethod[],
 ];
 const HISTORY_LIMIT = 8;
+const INVITER_CLAIM_PREFIX = "ref-referrer:";
+const INVITER_CLAIM_END = "ref-referrer;";
+const INVITEE_CLAIM_PREFIX = "ref-referee:";
 /**
  * Receipts only have to outlive a client retry, which happens within seconds.
  * Keep a generous window and prune probabilistically, like the Telegram update
@@ -156,6 +165,11 @@ function stateFromRow(
   history: WithdrawalRow[] = [],
   offlineEarnings: OfflineEarnings | null = null,
   daily: DailyCheckIn = dailyCheckIn([], now),
+  referral: ReferralSummary = {
+    link: referralLink(row.userId),
+    invited: 0,
+    earned: 0,
+  },
 ): GameState {
   return {
     developmentPreview: false,
@@ -169,6 +183,7 @@ function stateFromRow(
     },
     withdrawals: history.map(withdrawalRecord),
     daily,
+    referral,
     balance: row.balance,
     pending: row.pending,
     earned: row.earned,
@@ -222,6 +237,129 @@ async function readDailyClaims(tx: Transaction, userId: string) {
     .orderBy(desc(rewardClaims.rewardKey))
     .limit(DAILY_HISTORY_DAYS);
   return rows.map((row) => row.rewardKey.slice(DAILY_CLAIM_PREFIX.length));
+}
+
+
+/**
+ * Ikatan referral hanya boleh terjadi sebelum putaran pertama. Setelah pemain
+ * benar-benar bermain, tidak ada lagi yang bisa mengklaim telah mengajaknya.
+ */
+async function bindReferrer(
+  tx: Transaction,
+  row: PlayerRow,
+  startParam: string | null,
+): Promise<PlayerRow> {
+  if (row.referredBy !== null || row.laps > 0) return row;
+  if (!startParam?.startsWith(REFERRAL_PARAM_PREFIX)) return row;
+
+  const inviterId = startParam.slice(REFERRAL_PARAM_PREFIX.length);
+  if (!inviterId || inviterId === row.userId) return row;
+
+  const [inviter] = await tx
+    .select({ userId: players.userId })
+    .from(players)
+    .where(eq(players.userId, inviterId))
+    .limit(1);
+  if (!inviter) return row;
+
+  const [bound] = await tx
+    .update(players)
+    .set({ referredBy: inviterId })
+    .where(and(eq(players.userId, row.userId), isNull(players.referredBy)))
+    .returning();
+  return bound ?? row;
+}
+
+/** Sisi yang diajak dibayar di transaksinya sendiri -- barisnya sudah terkunci. */
+async function payInviteeMilestone(
+  tx: Transaction,
+  row: PlayerRow,
+): Promise<PlayerRow> {
+  if (!row.referredBy || row.laps < REFERRAL_MILESTONE_LAPS) return row;
+  const inserted = await tx
+    .insert(rewardClaims)
+    .values({
+      userId: row.userId,
+      rewardKey: `${INVITEE_CLAIM_PREFIX}${row.userId}`,
+      amount: REFERRAL_REWARD_INVITEE,
+    })
+    .onConflictDoNothing()
+    .returning({ id: rewardClaims.id });
+  return inserted.length > 0
+    ? { ...row, balance: row.balance + REFERRAL_REWARD_INVITEE }
+    : row;
+}
+
+/**
+ * Sisi pengajak dibayar SETELAH transaksi pemain yang diajak selesai. Keduanya
+ * baris racely_players; mengunci keduanya sekaligus bisa deadlock kalau dua
+ * pemain saling mengajak. `referral_paid_at` yang membuat percobaan ulangnya
+ * aman: gagal berarti dicoba lagi pada sync berikutnya, berhasil berarti
+ * berhenti.
+ */
+async function payInviter(row: PlayerRow) {
+  if (!row.referredBy) return;
+  if (row.laps < REFERRAL_MILESTONE_LAPS || row.referralPaidAt) return;
+
+  const inviterId = row.referredBy;
+  await getDatabase()
+    .transaction(async (tx) => {
+      const [inviter] = await tx
+        .select({ userId: players.userId })
+        .from(players)
+        .where(eq(players.userId, inviterId))
+        .limit(1);
+
+      // Pengajak yang barisnya sudah hilang tidak berutang apa pun; tandai
+      // lunas supaya tidak dicoba ulang tiap sync selamanya.
+      if (inviter) {
+        const inserted = await tx
+          .insert(rewardClaims)
+          .values({
+            userId: inviterId,
+            rewardKey: `${INVITER_CLAIM_PREFIX}${row.userId}`,
+            amount: REFERRAL_REWARD_INVITER,
+          })
+          .onConflictDoNothing()
+          .returning({ id: rewardClaims.id });
+        if (inserted.length > 0) {
+          await tx
+            .update(players)
+            .set({
+              balance: sql`${players.balance} + ${REFERRAL_REWARD_INVITER}`,
+            })
+            .where(eq(players.userId, inviterId));
+        }
+      }
+
+      await tx
+        .update(players)
+        .set({ referralPaidAt: new Date() })
+        .where(eq(players.userId, row.userId));
+    })
+    .catch(() => undefined);
+}
+
+/** Satu perjalanan: berapa yang diajak, dan berapa ajakan yang sudah dibayar. */
+async function readReferralSummary(
+  tx: Transaction,
+  userId: string,
+): Promise<ReferralSummary> {
+  const result = await tx.execute<{ invited: number; paid: number }>(sql`
+    select
+      (select count(*)::int from racely_players
+         where referred_by = ${userId}) as invited,
+      (select count(*)::int from racely_reward_claims
+         where user_id = ${userId}
+           and reward_key >= ${INVITER_CLAIM_PREFIX}
+           and reward_key < ${INVITER_CLAIM_END}) as paid
+  `);
+  const row = result.rows[0];
+  return {
+    link: referralLink(userId),
+    invited: Number(row?.invited ?? 0),
+    earned: Number(row?.paid ?? 0) * REFERRAL_REWARD_INVITER,
+  };
 }
 
 export type SettledPlayer = {
@@ -306,7 +444,7 @@ export async function getGameState(
 ): Promise<GameState> {
   const now = new Date();
 
-  return getDatabase().transaction(async (tx) => {
+  const result = await getDatabase().transaction(async (tx) => {
     await tx
       .insert(players)
       .values(playerValues(identity))
@@ -326,10 +464,13 @@ export async function getGameState(
       .where(eq(players.userId, identity.userId))
       .for("update");
 
-    const settled = settlePlayerRow(locked, now);
+    const bound = await bindReferrer(tx, locked, identity.startParam);
+    const settled = settlePlayerRow(bound, now);
+    const rewarded = await payInviteeMilestone(tx, settled.row);
     const [saved] = await tx
       .update(players)
       .set({
+        balance: rewarded.balance,
         pending: settled.row.pending,
         earned: settled.row.earned,
         laps: settled.row.laps,
@@ -350,9 +491,16 @@ export async function getGameState(
       await readDailyClaims(tx, identity.userId),
       now,
     );
+    const referral = await readReferralSummary(tx, identity.userId);
 
-    return stateFromRow(saved, now, history, settled.offline, daily);
+    return {
+      state: stateFromRow(saved, now, history, settled.offline, daily, referral),
+      saved,
+    };
   });
+
+  await payInviter(result.saved);
+  return result.state;
 }
 
 /**
@@ -399,8 +547,9 @@ export async function performGameAction(
       .where(eq(players.userId, identity.userId))
       .for("update");
 
-    const settled = settlePlayerRow(locked, now);
-    let next = settled.row;
+    const bound = await bindReferrer(tx, locked, identity.startParam);
+    const settled = settlePlayerRow(bound, now);
+    let next = await payInviteeMilestone(tx, settled.row);
     let dailyClaims = await readDailyClaims(tx, identity.userId);
 
     if (action.type !== "sync") {
@@ -419,6 +568,7 @@ export async function performGameAction(
         const [saved] = await tx
           .update(players)
           .set({
+            balance: next.balance,
             pending: next.pending,
             earned: next.earned,
             laps: next.laps,
@@ -434,13 +584,17 @@ export async function performGameAction(
           .where(eq(withdrawals.userId, identity.userId))
           .orderBy(desc(withdrawals.createdAt))
           .limit(HISTORY_LIMIT);
-        return stateFromRow(
+        return {
+          state: stateFromRow(
+            saved,
+            now,
+            replayHistory,
+            settled.offline,
+            dailyCheckIn(dailyClaims, now),
+            await readReferralSummary(tx, identity.userId),
+          ),
           saved,
-          now,
-          replayHistory,
-          settled.offline,
-          dailyCheckIn(dailyClaims, now),
-        );
+        };
       }
     }
 
@@ -613,6 +767,7 @@ export async function performGameAction(
       history,
       settled.offline,
       dailyCheckIn(dailyClaims, now),
+      await readReferralSummary(tx, identity.userId),
     );
     if (action.type !== "sync") {
       // Deliberately no response snapshot: (userId, requestId) is the whole
@@ -625,12 +780,15 @@ export async function performGameAction(
       });
     }
 
-    return response;
+    return { state: response, saved };
   });
+
+  // Di luar transaksi pemain: lihat payInviter untuk alasan urutan penguncian.
+  await payInviter(result.saved);
 
   if (action.type !== "sync" && Math.random() < RECEIPT_PRUNE_PROBABILITY) {
     await pruneActionReceipts(now);
   }
 
-  return result;
+  return result.state;
 }
