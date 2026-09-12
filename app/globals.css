@@ -151,13 +151,12 @@
 .coin-balance strong { display: block; font-size: var(--fs-small); font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; white-space: nowrap; }
 .coin-balance small { @apply sr-only; }
 
-/* ── page heading ──────���───────────────────────────── */
+/* ── page content ──────────────────────────────────── */
 .page-content { position: relative; padding: var(--space-md) var(--gutter) calc(var(--nav-height) + var(--safe-bottom) + var(--space-lg)); }
-/* Keeps the 3D arena mounted and correctly sized while another tab is on screen,
-   so returning to Balapan never rebuilds the WebGL context. */
-.dashboard-grid.tab-offstage { position: absolute; inset-inline: var(--gutter); top: 0; width: auto; visibility: hidden; opacity: 0; pointer-events: none; z-index: -1; }
-.page-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-xs); margin-bottom: var(--space-sm); min-height: 32px; }
-.page-heading h1 { min-width: 0; font-size: var(--fs-micro); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--subtle-foreground); }
+/* Keeps mounted 3D views correctly sized while another tab is on screen,
+   so returning to Balapan or Garasi never rebuilds their WebGL contexts. */
+.dashboard-grid.tab-offstage,
+.garage-layout.tab-offstage { position: absolute; inset-inline: var(--gutter); top: 0; width: auto; visibility: hidden; opacity: 0; pointer-events: none; z-index: -1; }
 .eyebrow { font-size: var(--fs-nano); font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--subtle-foreground); }
 .dashboard-grid, .main-column, .garage-layout { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; width: 100%; }
 .panel { border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); overflow: hidden; min-width: 0; }
@@ -206,15 +205,16 @@
 .race-actions { padding: var(--space-md) var(--gutter); border-top: 1px solid var(--border); }
 .race-battery { padding: 12px; border-top: 1px solid var(--border); background: var(--background); color: var(--foreground); font-size: 14px; line-height: 1.5; }
 .battery-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.battery-title { display: flex; align-items: center; gap: 8px; }
+.battery-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .battery-title > svg { color: var(--accent); flex-shrink: 0; }
-.battery-title strong { font-variant-numeric: tabular-nums; color: var(--accent); }
+.battery-reading { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.battery-label { color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.battery-value { color: var(--accent); font-size: 20px; font-weight: 900; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
 .battery-meter { height: 8px; overflow: hidden; border-radius: 2px; background: var(--secondary); margin-block: 8px; }
 .battery-meter > div { width: 100%; height: 100%; background: var(--accent); transform-origin: left; transition: transform .1s linear; }
 .race-battery[data-phase='charging'] .battery-meter > div { background: var(--muted-foreground); }
 .battery-caption { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; font-variant-numeric: tabular-nums; }
-.battery-caption > :last-child, .battery-help { color: var(--muted-foreground); }
-.battery-help { margin-top: 8px; }
+.battery-caption > :last-child { color: var(--muted-foreground); }
 .scene-wrap.is-inspecting { height: 300px; }
 .inspect-hud { top: 12px; left: 12px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; line-height: 1.5; }
 .inspect-hud strong { letter-spacing: .08em; }
