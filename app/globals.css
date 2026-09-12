@@ -212,7 +212,7 @@
   --space-xl: var(--space-24);
   --gutter: var(--space-md);
 }
-.garage-parts { padding: var(--space-lg); border-top: var(--stroke) solid var(--border); background: color-mix(in srgb, var(--background) 22%, var(--card)); font-size: var(--fs-read); line-height: var(--lh-normal); }
+.garage-parts { padding: var(--space-lg); background: color-mix(in srgb, var(--background) 22%, var(--card)); font-size: var(--fs-read); line-height: var(--lh-normal); }
 .garage-parts-note { margin-top: var(--space-3); color: var(--muted-foreground); text-wrap: pretty; }
 .garage-parts-slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-sm); margin-top: var(--space-lg); }
 .garage-parts-slots > div { min-width: 0; padding: var(--space-md); border: var(--stroke) solid var(--border); border-radius: var(--corner-md); background: var(--card); }
