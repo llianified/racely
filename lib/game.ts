@@ -50,6 +50,22 @@ export const accountPattern = (id: WithdrawMethod) =>
     ? /^\d{8,18}$/
     : /^08\d{8,12}$/;
 
+/**
+ * What the race earned while the player was away, summarised for the
+ * welcome-back dialog. Transient: the server recomputes it per response and it
+ * is never persisted, so it appears on exactly the one state that credited it.
+ */
+export type OfflineEarnings = {
+  /** Real time since the last settlement, before any cap. */
+  awaySeconds: number;
+  /** Offline seconds that actually paid out, after the cap. */
+  creditedSeconds: number;
+  /** True when the absence outran the cap and the tail was dropped. */
+  capped: boolean;
+  laps: number;
+  coins: number;
+};
+
 export type GameState = {
   // Optional only so legacy preview cookies can be upgraded without losing progress.
   carSelection?: { model: CarModelId | null; returningPlayer: boolean };
@@ -68,6 +84,7 @@ export type GameState = {
   circuit: number;
   player: PlayerProfile;
   withdrawals: WithdrawalRecord[];
+  offlineEarnings?: OfflineEarnings;
 };
 
 export const INITIAL_GAME: GameState = {
@@ -100,6 +117,16 @@ export const formatCoins = (value: number) => {
       });
 };
 export const coins = (value: number) => `${formatCoins(value)} koin`;
+/** Rough, human duration for offline summaries: "4 jam", "12 menit", "45 detik". */
+export const formatDuration = (seconds: number) => {
+  const total = Math.max(0, Math.round(seconds));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  if (hours > 0)
+    return minutes > 0 ? `${hours} jam ${minutes} menit` : `${hours} jam`;
+  if (minutes > 0) return `${minutes} menit`;
+  return `${total} detik`;
+};
 export const idr = (value: number) =>
   `Rp${Math.round(value * COIN_TO_IDR).toLocaleString("id-ID")}`;
 
