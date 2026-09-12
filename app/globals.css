@@ -392,7 +392,7 @@
 .car-model-option[data-pressed] { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 18%, var(--background)); color: var(--foreground); }
 .selection-check { visibility: hidden; flex-shrink: 0; color: var(--accent); }
 .car-model-option[data-pressed] .selection-check { visibility: visible; }
-.car-selection .garage-customize { padding: 0; }
+.car-selection .garage-customize { padding: var(--space-9) var(--space-10); border: var(--stroke) solid transparent; border-radius: var(--corner-panel); background: var(--secondary); }
 .car-selection .garage-color-label { font-size: var(--fs-read); }
 .car-selection .color-swatch { width: var(--space-44); height: var(--space-44); }
 .car-selection [data-slot='button'], .car-selection [data-slot='badge'] { font-size: var(--fs-read); }
