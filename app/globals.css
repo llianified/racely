@@ -559,6 +559,17 @@
 .race-hud-telemetry .race-hud-speed dd { font-size: var(--fs-5xl); font-weight: var(--fw-black); }
 .race-hud-telemetry small { font-size: var(--fs-read); font-weight: var(--fw-medium); letter-spacing: var(--track-flat); color: var(--muted-foreground); }
 .race-hud-reward { color: var(--accent); }
+.race-hud-bottom { display: flex; flex-direction: column; gap: var(--space-xs); }
+.race-hud-powertrain { display: flex; border: var(--stroke) solid var(--border); border-radius: var(--corner-md); background: color-mix(in srgb, var(--background) 88%, transparent); color: var(--foreground); }
+.race-hud-gauge { flex: 1; min-width: 0; padding: var(--space-6) var(--space-10); font-size: var(--fs-read); line-height: var(--lh-normal); }
+.race-hud-gauge + .race-hud-gauge { border-left: var(--stroke) solid var(--border); }
+.race-hud-gauge > div:first-child { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--space-xs); }
+.race-hud-gauge strong { font-weight: var(--fw-bold); }
+.race-hud-gauge span:not(.race-hud-meter > span) { color: var(--muted-foreground); }
+.race-hud-meter { height: var(--space-xs); margin-top: var(--space-xs); overflow: hidden; border-radius: var(--corner-round); background: var(--secondary); }
+.race-hud-meter > span { display: block; width: 100%; height: 100%; transform-origin: left; background: var(--accent); }
+.race-hud-energy-status { display: block; margin-top: var(--space-3); }
+.race-powertrain-note { padding: var(--space-md); color: var(--muted-foreground); font-size: var(--fs-read); line-height: var(--lh-normal); text-wrap: pretty; }
 @media (max-width: 359px) { .race-hud-telemetry > div { padding-inline: var(--space-6); } .race-hud-telemetry .race-hud-speed dd { font-size: var(--fs-4xl); } }
 .reward-value { color: var(--accent); }
 .race-actions { padding: var(--space-md) var(--gutter); border-top: var(--stroke) solid var(--border); }

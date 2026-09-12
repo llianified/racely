@@ -13,7 +13,7 @@ import { PLAYER_RADIUS, TRACK_HALF, RECOVERY_SECONDS, courseOutPose, stepDriving
 import { RacingEffects } from './racing-effects'
 
 const HALF = TRACK_HALF
-export type SceneProps = { equipped?: NonNullable<GameState['bodyParts']>['equipped']; driving?: RefObject<DrivingState>; onTelemetry?: (state: DrivingState) => void; cinematic?: boolean; levels?: GameState['levels']; model?: CarModelId; progress: number; seconds: number; opponentSeconds: readonly [number, number]; color: string; boosted: boolean; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean }
+export type SceneProps = { equipped?: NonNullable<GameState['bodyParts']>['equipped']; driving?: RefObject<DrivingState>; onTelemetry?: (state: DrivingState) => void; cinematic?: boolean; levels?: GameState['levels']; model?: CarModelId; progress: number; seconds: number; baseSeconds: number; opponentSeconds: readonly [number, number]; color: string; boosted: boolean; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean }
 
 function trackPoint(t: number, radius: number) {
   const straight = HALF * 2
@@ -48,7 +48,7 @@ function Ribbon({ inner, outer, height = .12, color, y = 0, glow = false }: { in
   </mesh>
 }
 
-function Racer({ lane, color, model, progress, seconds, boosted, playerRef, levels, driving, onTelemetry, reducedMotion, equipped }: { levels?: GameState['levels']; model?: CarModelId; lane: number; color: string; progress: number; seconds: number; boosted: boolean; playerRef?: RefObject<THREE.Group | null> } & Pick<SceneProps, 'driving' | 'onTelemetry' | 'reducedMotion' | 'equipped'>) {
+function Racer({ lane, color, model, progress, seconds, baseSeconds, boosted, playerRef, levels, driving, onTelemetry, reducedMotion, equipped }: { levels?: GameState['levels']; model?: CarModelId; lane: number; color: string; progress: number; seconds: number; baseSeconds: number; boosted: boolean; playerRef?: RefObject<THREE.Group | null> } & Pick<SceneProps, 'driving' | 'onTelemetry' | 'reducedMotion' | 'equipped'>) {
   const ownRef = useRef<THREE.Group>(null)
   const group = playerRef ?? ownRef
   const phase = useRef(lane === 0 ? progress : lane * .32)
@@ -67,9 +67,9 @@ function Racer({ lane, color, model, progress, seconds, boosted, playerRef, leve
       stepPowertrain(state, dt, boosted, levels?.engine, levels?.battery)
     }
     const recovering = !!state && state.recovery > 0
-    const motionRatio = state ? state.visualSpeed / (boosted ? 2 : 1) : 1
-    if (!recovering) phase.current = (phase.current + dt / seconds * motionRatio) % 1
-    wheelSpeed.current = recovering ? 0 : (HALF * 4 + Math.PI * 2 * (PLAYER_RADIUS + lane * .68)) / seconds / .85 * motionRatio
+    const lapsPerSecond = state ? state.visualSpeed / baseSeconds : 1 / seconds
+    if (!recovering) phase.current = (phase.current + dt * lapsPerSecond) % 1
+    wheelSpeed.current = recovering ? 0 : (HALF * 4 + Math.PI * 2 * (PLAYER_RADIUS + lane * .68)) / .85 * lapsPerSecond
     if (lane === 0 && !recovering) {
       // Transient acceleration is visual; reconcile gradually to paid server laps.
       // Bound correction so recovery never looks like an instant extra boost.
@@ -432,11 +432,13 @@ export default function RaceScene(props: SceneProps) {
       {props.inspect ? <CarInspector equipped={props.equipped} levels={props.levels} color={props.color} model={props.model} charge={props.charge} reducedMotion={props.reducedMotion} bodyVisible={props.bodyVisible} /> : <>
       <Grid position={[0, -.145, 0]} args={[36, 36]} infiniteGrid cellSize={1} cellThickness={.35} cellColor="#2c2852" sectionSize={5} sectionThickness={.6} sectionColor="#463e7a" fadeDistance={60} fadeStrength={2} />
       <Circuit circuit={props.circuit} />
-      {[0, 1, 2].map(lane => <Racer key={lane} equipped={lane === 0 ? props.equipped : undefined} lane={lane} driving={lane === 0 ? props.driving : undefined} onTelemetry={props.onTelemetry} reducedMotion={props.reducedMotion} levels={lane === 0 ? props.levels : undefined} model={lane === 0 ? props.model : 'neo-falcon'} playerRef={lane === 0 ? playerRef : undefined} color={lane === 0 ? props.color : lane === 1 ? COLORS.gold : COLORS.white} progress={props.progress} seconds={lane === 0 ? props.seconds : (props.opponentSeconds[lane - 1] ?? props.seconds)} boosted={props.boosted} />)}
       <RacingLine playerRef={playerRef} driving={props.driving} />
-      <RacingEffects playerRef={playerRef} driving={props.driving} boosted={props.boosted} reducedMotion={props.reducedMotion ?? false} />
+      <RacingEffects playerRef={playerRef} driving={props.driving} reducedMotion={props.reducedMotion ?? false} />
       <CameraRig cinematic={props.cinematic} driving={props.driving} mode={props.cameraMode} follow={follow} resetKey={props.resetKey} playerRef={playerRef} active={visible && props.active !== false} boosted={props.boosted} reducedMotion={props.reducedMotion ?? false} />
       </>}
+      <group visible={!props.inspect}>
+        {[0, 1, 2].map(lane => <Racer key={lane} equipped={lane === 0 ? props.equipped : undefined} lane={lane} driving={lane === 0 ? props.driving : undefined} onTelemetry={props.onTelemetry} reducedMotion={props.reducedMotion} levels={lane === 0 ? props.levels : undefined} model={lane === 0 ? props.model : 'neo-falcon'} playerRef={lane === 0 ? playerRef : undefined} color={lane === 0 ? props.color : lane === 1 ? COLORS.gold : COLORS.white} progress={props.progress} seconds={lane === 0 ? props.seconds : (props.opponentSeconds[lane - 1] ?? props.seconds)} baseSeconds={props.baseSeconds} boosted={props.boosted} />)}
+      </group>
       <ContextMonitor onLost={() => setLost(true)} />
     </Canvas>
   </SceneBoundary>
