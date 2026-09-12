@@ -9,7 +9,7 @@ import * as THREE from 'three'
 import { COLORS, MiniCar } from './mini-car'
 import type { CarModelId } from '@/lib/car-catalog'
 import type { GameState } from '@/lib/game'
-import { PLAYER_RADIUS, TRACK_HALF, RECOVERY_SECONDS, stepDriving, type DrivingState } from '@/lib/race-dynamics'
+import { PLAYER_RADIUS, TRACK_HALF, stepDriving, type DrivingState } from '@/lib/race-dynamics'
 import { RacingEffects } from './racing-effects'
 
 const HALF = TRACK_HALF
@@ -53,35 +53,28 @@ function Racer({ lane, color, model, progress, seconds, boosted, playerRef, leve
   const group = playerRef ?? ownRef
   const phase = useRef(lane === 0 ? progress : lane * .32)
   const publishAfter = useRef(0)
-  useFrame(({ clock }, delta) => {
+  useFrame((_, delta) => {
     if (!group.current || document.hidden) return
-    if (lane === 0) {
-      const distance = ((progress - phase.current + 1.5) % 1) - .5
-      phase.current = (phase.current + Math.min(delta, .1) / seconds + distance * Math.min(delta * 4, 1) + 1) % 1
-    } else phase.current = (phase.current + Math.min(delta, .1) / (seconds * (1.16 + lane * .08))) % 1
+    const dt = Math.min(delta, .1)
+    const state = lane === 0 ? driving?.current : undefined
+    if (state) stepDriving(state, dt, phase.current, boosted, levels?.tires)
+    // Local racing distance must not be pulled back to server progress: that cancels grip penalties.
+    phase.current = (phase.current + dt * (state?.speedMultiplier ?? 1) / (seconds * (lane === 0 ? 1 : 1.16 + lane * .08))) % 1
     const p = trackPoint(phase.current, PLAYER_RADIUS + lane * .68)
-    let offset = 0, lift = 0, roll = 0, yaw = 0
-    if (lane === 0 && driving) {
-      const state = driving.current
-      stepDriving(state, delta, phase.current, boosted, levels?.tires)
-      if (state.recovery > 0) {
-        const t = 1 - state.recovery / RECOVERY_SECONDS
-        const excursion = Math.sin(Math.PI * t)
-        offset = excursion * 2.9
-        lift = Math.sin(Math.PI * Math.min(t * 2, 1)) * 1.15
-        if (!reducedMotion) { roll = Math.sin(t * Math.PI * 4) * excursion * .7; yaw = Math.sin(t * Math.PI * 2) * 1.2 }
-      } else if (!reducedMotion) {
-        const stress = (100 - state.grip) / 100
-        offset = state.corner ? stress * .16 : 0
-        roll = state.corner ? -stress * .16 : 0
-        yaw = Math.sin(clock.elapsedTime * 32) * stress * .07
-      }
-      publishAfter.current += Math.min(delta, .1)
-      if (publishAfter.current >= .12) { onTelemetry?.({ ...state }); publishAfter.current = 0 }
-    }
-    group.current.position.set(p.x + Math.cos(p.angle) * offset, .14 + lift, p.z - Math.sin(p.angle) * offset)
+    const offset = state?.offset ?? 0
+    const slip = state ? Math.max(0, (65 - state.grip) / 65) : 0
+    const yaw = state ? THREE.MathUtils.clamp(state.lateralVelocity * .09 + (state.corner ? slip * .22 : 0), -.32, .32) : 0
+    const roll = reducedMotion ? 0 : state?.corner ? -slip * .06 : 0
+    const ground = state?.offRoad ? -.08 : .14
+    group.current.position.set(p.x + Math.cos(p.angle) * offset, THREE.MathUtils.lerp(group.current.position.y, ground, 1 - Math.exp(-14 * dt)), p.z - Math.sin(p.angle) * offset)
     group.current.rotation.set(0, p.angle + yaw, roll)
     group.current.userData.trackHeading = p.angle
+    group.current.userData.phase = phase.current
+    group.current.userData.speed = (boosted ? 2 : 1) * (state?.speedMultiplier ?? 1)
+    if (state) {
+      publishAfter.current += dt
+      if (publishAfter.current >= .1) { onTelemetry?.({ ...state }); publishAfter.current = 0 }
+    }
   }, -2)
   return <group ref={group}>
     <MiniCar color={color} model={model} levels={levels} scale={.85} speed={(HALF * 4 + Math.PI * 2 * (2.24 + lane * .68)) / (seconds * (lane === 0 ? 1 : 1.16 + lane * .08)) / .85} />
@@ -160,23 +153,19 @@ const Circuit = memo(function Circuit({ circuit }: { circuit: number }) {
     <Ribbon inner={1.7} outer={4.1} height={.12} y={-.14} color="#090c1d" />
     <Ribbon inner={1.85} outer={3.96} height={.10} color="#2c2852" />
     {[0, 1, 2].map(i => <Ribbon key={i} inner={1.9 + i * .68} outer={2.57 + i * .68} height={.11} color={i === 1 ? '#463e7a' : '#2c2852'} />)}
-    {[1.88, 2.56, 3.24, 3.92].map((r, i) => <Ribbon key={r} inner={r} outer={r + .055} height={i === 0 || i === 3 ? .28 : .2} color={i === 0 || i === 3 ? '#5027a7' : '#9789cd'} />)}
-    {[1.88, 3.92].map(r => <Ribbon key={r} inner={r} outer={r + .06} height={.018} y={.28} glow color={circuit ? COLORS.gold : '#a37ef2'} />)}
+    <Ribbon inner={4.12} outer={5.25} height={.015} y={-.14} color="#393044" />
+    {[1.88, 2.56, 3.24, 3.92].map((r, i) => <Ribbon key={r} inner={r} outer={r + .035} height={.012} y={.115} color={i === 0 || i === 3 ? '#5027a7' : '#9789cd'} />)}
+    {[1.88, 3.92].map(r => <Ribbon key={r} inner={r} outer={r + .045} height={.008} y={.13} glow color={circuit ? COLORS.gold : '#a37ef2'} />)}
     <TrackBrand />
     <TrackMarkings />
-    {Array.from({ length: 32 }, (_, i) => {
-      const p = trackPoint(i / 32, PLAYER_RADIUS)
-      return <mesh key={`racing-line-${i}`} position={[p.x, .126, p.z]} rotation={[0, p.angle, 0]}>
-        <boxGeometry args={[.035, .006, .24]} /><meshBasicMaterial color={COLORS.blue} transparent opacity={.5} toneMapped={false} />
-      </mesh>
-    })}
+
     <group position={[-1.55, 0, -2.95]}>
       {[-1.12, 1.12].map(z => <mesh key={z} position={[0, .85, z]} castShadow><boxGeometry args={[.16, 1.7, .16]} /><meshStandardMaterial color={COLORS.blue} /></mesh>)}
       <mesh position={[0, 1.75, 0]} castShadow><boxGeometry args={[.22, .32, 2.48]} /><meshStandardMaterial color={COLORS.navy} /></mesh>
       {Array.from({ length: 12 }, (_, i) => <mesh key={i} position={[.12, 1.75, -1.1 + i * .2]}><boxGeometry args={[.025, .24, .16]} /><meshStandardMaterial color={i % 2 === 0 ? COLORS.white : COLORS.blue} /></mesh>)}
       {Array.from({ length: 22 }, (_, i) => <mesh key={i} position={[(i % 2) * .15 - .08, .128, -1 + Math.floor(i / 2) * .19]}><boxGeometry args={[.15, .012, .19]} /><meshStandardMaterial color={(Math.floor(i / 2) + i % 2) % 2 === 0 ? COLORS.navy : COLORS.white} /></mesh>)}
     </group>
-    {[-5, -3, -1, 1, 3, 5].map((x, i) => <group key={x} position={[x, 0, 4.45]}>
+    {[-5, -3, -1, 1, 3, 5].map((x, i) => <group key={x} position={[x, 0, 5.5]}>
       <mesh position={[0, .19, 0]} castShadow><boxGeometry args={[1.65, .38, .13]} /><meshStandardMaterial color={i % 2 ? COLORS.white : COLORS.blue} /></mesh>
       {[-.65, .65].map(dx => <mesh key={dx} position={[dx, .045, 0]}><boxGeometry args={[.16, .09, .4]} /><meshStandardMaterial color={COLORS.navy} /></mesh>)}
     </group>)}
@@ -187,7 +176,33 @@ const Circuit = memo(function Circuit({ circuit }: { circuit: number }) {
   </group>
 })
 
-function CameraRig({ mode, follow, resetKey, playerRef, active, boosted, reducedMotion, cinematic, driving }: { mode: number; follow: boolean; resetKey: number; playerRef: RefObject<THREE.Group | null>; active: boolean; boosted: boolean; reducedMotion: boolean } & Pick<SceneProps, 'cinematic' | 'driving'>) {
+function RacingLine({ playerRef, driving }: { playerRef: RefObject<THREE.Group | null>; driving?: RefObject<DrivingState> }) {
+  const line = useRef<THREE.InstancedMesh>(null)
+  const transform = useMemo(() => new THREE.Object3D(), [])
+  useFrame(() => {
+    if (!line.current || !playerRef.current) return
+    const state = driving?.current
+    line.current.visible = !!state?.enabled && !state.recovery
+    if (!line.current.visible) return
+    const material = line.current.material as THREE.MeshBasicMaterial
+    material.color.set(state?.lineLocked || state?.perfectBoost ? '#64e300' : state && state.grip < 40 ? COLORS.gold : COLORS.sky)
+    for (let i = 0; i < 32; i++) {
+      const progress = (playerRef.current.userData.phase ?? 0) + .018 + i * .004
+      const p = trackPoint(progress, PLAYER_RADIUS)
+      transform.position.set(p.x, .142, p.z)
+      transform.rotation.set(0, p.angle, 0)
+      transform.scale.setScalar(1 - i / 42)
+      transform.updateMatrix()
+      line.current.setMatrixAt(i, transform.matrix)
+    }
+    line.current.instanceMatrix.needsUpdate = true
+  }, -1)
+  return <instancedMesh ref={line} args={[undefined, undefined, 32]} frustumCulled={false}>
+    <boxGeometry args={[.075, .008, .065]} /><meshBasicMaterial transparent opacity={.6} depthWrite={false} toneMapped={false} />
+  </instancedMesh>
+}
+
+function CameraRig({ mode, follow, resetKey, playerRef, active, reducedMotion, cinematic, driving }: { mode: number; follow: boolean; resetKey: number; playerRef: RefObject<THREE.Group | null>; active: boolean; boosted: boolean; reducedMotion: boolean } & Pick<SceneProps, 'cinematic' | 'driving'>) {
   const { camera, size } = useThree()
   const [overviewCamera] = useState(() => camera)
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null)
@@ -196,6 +211,8 @@ function CameraRig({ mode, follow, resetKey, playerRef, active, boosted, reduced
   const manualUntil = useRef(0)
   const bank = useRef(0)
   const cameraDistance = useRef(0)
+  const previousOuts = useRef(0)
+  const impact = useRef(0)
   const up = useMemo(() => new THREE.Vector3(0, 1, 0), [])
   const overviewReady = useRef(false)
   const transitioning = useRef(false)
@@ -252,7 +269,14 @@ function CameraRig({ mode, follow, resetKey, playerRef, active, boosted, reduced
       if (overviewCamera.position.distanceToSquared(overviewTarget) < .0001) transitioning.current = false
     }
     if (!follow || !playerRef.current || !chaseCamera.current) return
-    const nextFov = THREE.MathUtils.lerp(chaseCamera.current.fov, dramatic ? recovering ? 60 : boosted ? 56 : 46 : 42, damping)
+    const speed = playerRef.current.userData.speed ?? 1
+    const state = driving?.current
+    if (state && state.courseOuts !== previousOuts.current) {
+      previousOuts.current = state.courseOuts
+      impact.current = dramatic ? .32 : 0
+    }
+    impact.current = Math.max(0, impact.current - Math.min(delta, .1))
+    const nextFov = THREE.MathUtils.lerp(chaseCamera.current.fov, dramatic ? 45 + Math.min(1.5, Math.max(0, speed - .65)) * 7 : 44, damping)
     if (Math.abs(chaseCamera.current.fov - nextFov) > .001) {
       chaseCamera.current.fov = nextFov
       chaseCamera.current.updateProjectionMatrix()
@@ -263,18 +287,17 @@ function CameraRig({ mode, follow, resetKey, playerRef, active, boosted, reduced
       pose.heading.copy(pose.rotation)
       initialize.current = false
     } else {
-      pose.heading.slerp(pose.rotation, 1 - Math.exp(-(boosted ? 22 : 16) * delta))
+      pose.heading.slerp(pose.rotation, 1 - Math.exp(-(dramatic ? 9 : 18) * Math.min(delta, .1)))
     }
 
-    // Anchor translation to the actual car: damp only heading, so boost cannot leave it behind.
-    // Stay above the 1.91-unit gate and lane walls, including the near clipping plane.
-    cameraDistance.current = THREE.MathUtils.lerp(cameraDistance.current, dramatic && recovering ? 1.8 : 0, damping)
-    const tension = dramatic && boosted ? Math.sin(clock.elapsedTime * 23) * .012 : 0
-    pose.offset.set(dramatic ? -.35 : -.55, 2.15 + cameraDistance.current * .5 + tension, -2.35 - cameraDistance.current).applyQuaternion(pose.heading)
-    pose.target.set(0, .12, dramatic ? 1.05 : .65).applyQuaternion(pose.heading).add(pose.position)
+    // Bounded spring-arm lag keeps the car framed even at boost speed; no continuous shake.
+    cameraDistance.current = THREE.MathUtils.lerp(cameraDistance.current, dramatic ? Math.max(0, speed - 1) * .55 + (recovering ? .35 : 0) : 0, 1 - Math.exp(-3 * Math.min(delta, .1)))
+    const impulse = dramatic ? Math.sin(clock.elapsedTime * 35) * impact.current * .07 : 0
+    pose.offset.set(-.2 + impulse, 2.2 + cameraDistance.current * .18, -2.7 - cameraDistance.current).applyQuaternion(pose.heading)
+    pose.target.set(dramatic && state?.corner ? -.18 : 0, .12, dramatic ? 1.25 : .8).applyQuaternion(pose.heading).add(pose.position)
     chaseCamera.current.position.copy(pose.position).add(pose.offset)
     chaseCamera.current.lookAt(pose.target)
-    bank.current = THREE.MathUtils.lerp(bank.current, dramatic && driving?.current.corner && !recovering ? -.045 : 0, damping)
+    bank.current = THREE.MathUtils.lerp(bank.current, dramatic && state?.corner && !recovering ? -.018 : 0, damping)
     chaseCamera.current.rotateZ(bank.current)
   }, -.5)
 
@@ -349,6 +372,7 @@ export default function RaceScene(props: SceneProps) {
       <Grid position={[0, -.145, 0]} args={[36, 36]} cellSize={1} cellThickness={.35} cellColor="#2c2852" sectionSize={5} sectionThickness={.6} sectionColor="#463e7a" fadeDistance={23} fadeStrength={3} />
       <Circuit circuit={props.circuit} />
       {[0, 1, 2].map(lane => <Racer key={lane} lane={lane} driving={lane === 0 ? props.driving : undefined} onTelemetry={props.onTelemetry} reducedMotion={props.reducedMotion} levels={lane === 0 ? props.levels : undefined} model={lane === 0 ? props.model : 'neo-falcon'} playerRef={lane === 0 ? playerRef : undefined} color={lane === 0 ? props.color : lane === 1 ? COLORS.gold : COLORS.white} progress={props.progress} seconds={props.seconds} boosted={props.boosted} />)}
+      <RacingLine playerRef={playerRef} driving={props.driving} />
       <RacingEffects playerRef={playerRef} driving={props.driving} boosted={props.boosted} reducedMotion={props.reducedMotion ?? false} />
       <CameraRig cinematic={props.cinematic} driving={props.driving} mode={props.cameraMode} follow={follow} resetKey={props.resetKey} playerRef={playerRef} active={visible && props.active !== false} boosted={props.boosted} reducedMotion={props.reducedMotion ?? false} />
       </>}
