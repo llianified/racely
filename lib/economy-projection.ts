@@ -1,6 +1,6 @@
 import {
-  lapRewardAt,
   lapSecondsAt,
+  raceRewardAt,
   upgradeCostAt,
   UPGRADE_KEYS,
   type EconomyConfig,
@@ -37,7 +37,7 @@ function rowFor(
   circuit: number,
 ): PayoutRow {
   const secondsPerLap = lapSecondsAt(e, levels, false);
-  const coinsPerLap = lapRewardAt(e, levels.battery, circuit);
+  const coinsPerLap = raceRewardAt(e, levels, circuit, false);
   const coinsPerHour =
     secondsPerLap > 0 ? (3600 / secondsPerLap) * coinsPerLap : 0;
   const idleHours = e.offlineCapSeconds / 3600;
