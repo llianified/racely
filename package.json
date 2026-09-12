@@ -2,6 +2,10 @@
   "name": "racely",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "dev": "next dev",
     "db:migrate": "node scripts/migrate.mjs",
@@ -13,6 +17,7 @@
     "pm2:start": "pm2 start ecosystem.config.cjs --update-env",
     "pm2:reload": "pm2 reload ecosystem.config.cjs --update-env",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
     "test": "vitest run"
   },
   "dependencies": {
@@ -46,6 +51,8 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/three": "^0.185.4",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "16.3.3",
     "postcss": "^8.5",
     "shadcn": "^4.11.0",
     "tailwindcss": "^4.3.3",
