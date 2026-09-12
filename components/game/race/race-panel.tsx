@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Camera, ChevronDown, Coins, Flag, Gauge, LoaderCircle, Maximize, RotateCcw, Timer, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -109,21 +109,35 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
             <ChevronDown data-icon="inline-end" />
           </Button>
         </h2>
-        <span className="live-tag">AUTO</span>
+        <span className="live-tag">LIVE</span>
       </div>
       <div className={cn("scene-wrap", inspect && "is-inspecting", !inspect && cinematic && "is-cinematic", !inspect && telemetry.recovery > 0 && "is-course-out", !inspect && telemetry.grip < 40 && "is-grip-critical")}>
         {!inspect && <div className="race-vignette" aria-hidden="true" />}
-        {!inspect && telemetry.recovery > 0 && <div className="course-out-callout" role="status"><strong>COURSE OUT</strong><span>Kembali ke lintasan…</span></div>}
+        {!inspect && <div className="scene-overlay race-reward-hud"><span>REWARD / LAP</span><strong>+{formatCoins(lapReward(game))}<Coins aria-hidden="true" /></strong></div>}
+        {!inspect && <div className="scene-overlay race-line-status" data-danger={telemetry.recovery > 0 || telemetry.grip < 40} data-perfect={telemetry.lineLocked || telemetry.perfectBoost > 0} role="status">
+          {telemetry.recovery > 0 ? telemetry.offRoad ? 'OFF-ROAD / GRIP RENDAH' : 'RECOVERY / KEMBALI KE LINE' : telemetry.perfectBoost > 0 ? 'PERFECT EXIT / +22% AKSELERASI' : telemetry.lineLocked ? 'APEX LOCKED / SIAP MELAJU' : telemetry.grip < 40 ? 'TRACTION LOST / STABILKAN' : telemetry.corner ? 'CORNER / CARI APEX' : 'FLAT OUT / SIAPKAN TIKUNGAN'}
+        </div>}
         {inspect ? <div className="scene-overlay inspect-hud"><strong>{bodyVisible ? "DETAIL MOBIL" : "DI BALIK BODI"}</strong><span>{bodyVisible ? "Cat metalik · ban · aero kit" : "2 sel · motor · penggerak 4WD"}</span></div> : <div className="scene-overlay lap-hud">
-          <span>Lap</span><strong>{String(game.laps + 1).padStart(3, "0")}</strong>
+          <span>Lap server</span><strong>{String(game.laps + 1).padStart(3, "0")}</strong>
         </div>}
         <RaceScene driving={driving} onTelemetry={setTelemetry} cinematic={cinematic && !reducedMotion} levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.progress} seconds={seconds} color={game.color} boosted={boosted} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
         <div className={cn("scene-overlay boost-hud", boosted && "boost-hud-active")} aria-hidden={!boosted}>
           <Zap aria-hidden="true" /><strong>2×</strong><span>GASPOL</span>
           <i style={{ transform: `scaleX(${Math.max(0, Math.min(1, game.boostLeft / BOOST_DURATION_SECONDS))})` }} />
         </div>
-        {!inspect && <div className="scene-overlay lane-hud"><i style={{ backgroundColor: game.color }} />JALUR 01<span>MOBILMU</span></div>}
+        {!inspect && <div className="scene-overlay race-speed-hud" aria-label="Kecepatan mobil di arena">
+          <span><i style={{ backgroundColor: game.color }} />MOBILMU / 01</span>
+          <strong>{(192 / seconds * telemetry.speedMultiplier).toFixed(1)}<small>KM/J</small></strong>
+          <div className="race-speed-meter" aria-hidden="true"><i style={{ transform: `scaleX(${Math.min(1, telemetry.speedMultiplier * (boosted ? 1 : .5))})` }} /></div>
+        </div>}
         {inspect && <div className="scene-overlay inspect-hint">Geser untuk memutar · balapan tetap jalan</div>}
+        {!inspect && <div className="scene-boost-action">
+          <Button variant="gold" size="sm" onClick={onBoost} disabled={disabled || boosting || !battery.canBoost} aria-busy={boosting}>
+            {boosting ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <Zap data-icon="inline-start" fill="currentColor" />}
+            <span>{boosting ? 'Memulai…' : boosted ? 'Ngacir!' : game.cooldown > 0 ? 'Isi daya' : 'Gaspol 2×'}</span>
+            {!boosting && <small>{boosted ? `${Math.ceil(game.boostLeft)}s` : game.cooldown > 0 ? `${Math.ceil(game.cooldown)}s` : '10s'}</small>}
+          </Button>
+        </div>}
         <div className="scene-controls">
           {inspect ? <>
             <Button variant="outline" size="sm" onClick={() => setBodyVisible(value => !value)} aria-pressed={bodyVisible} aria-label={bodyVisible ? "Lepas bodi untuk melihat baterai" : "Pasang bodi untuk melihat detail mobil"}>{bodyVisible ? "Lepas bodi" : "Pasang bodi"}</Button>
@@ -163,7 +177,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
       <div className="track-stats">
         <div className="track-stat">
           <div className="track-stat-label"><Gauge aria-hidden="true" />Kecepatan</div>
-          <div className="track-stat-value">{(192 / seconds).toFixed(1)} <small>km/j</small></div>
+          <div className="track-stat-value">{(192 / seconds * telemetry.speedMultiplier).toFixed(1)} <small>km/j</small></div>
         </div>
         <div className="track-stat">
           <div className="track-stat-label"><Timer aria-hidden="true" />Waktu/lap</div>
@@ -178,13 +192,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
         setInspect(value => !value);
         panel.current?.scrollIntoView({ block: "start", behavior: reducedMotion ? "instant" : "smooth" });
       }} />
-      <div className="race-actions">
-        <Button variant="gold" size="lg" className="boost-button" onClick={onBoost} disabled={disabled || boosting || !battery.canBoost} aria-busy={boosting} style={{ "--charge": `${battery.percent}%` } as CSSProperties}>
-          {boosting ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <Zap data-icon="inline-start" fill="currentColor" />}
-          <span>{boosting ? "Menyalakan boost…" : boosted ? "Ngacir!" : game.cooldown > 0 ? "Mengisi baterai" : "Gaspol 2×"}</span>
-          {!boosting && <small>{boosted ? `${Math.ceil(game.boostLeft)}s` : game.cooldown > 0 ? `${Math.ceil(game.cooldown)}s` : "10s"}</small>}
-        </Button>
-      </div>
+
     </section>
   );
 }
