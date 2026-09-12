@@ -11,14 +11,16 @@ import { Toaster } from "@/components/ui/sonner";
 export function GameGate({
   error,
   onRetry,
+  retrying = false,
 }: {
   error: Error;
   onRetry?: () => void;
+  retrying?: boolean;
 }) {
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-background px-6 text-center text-foreground">
+    <main className="game-gate font-sans">
       <Toaster theme="dark" position="top-center" />
-      <section className="panel flex w-full max-w-md flex-col items-center gap-5 p-8">
+      <section className="panel gate-panel" aria-labelledby="gate-title">
         <Image
           src="/racely-logo.png"
           alt="Logo Racely"
@@ -27,25 +29,25 @@ export function GameGate({
           priority
           className="gate-logo"
         />
-        <div>
-          <p className="eyebrow">RACELY TELEGRAM MINI APP</p>
-          <h1 className="mt-2 text-2xl font-semibold">
-            Start your engine in Telegram.
+        <div className="gate-copy">
+          <p className="boot-eyebrow">RACELY TELEGRAM MINI APP</p>
+          <h1 id="gate-title" className="text-3xl text-balance">
+            {onRetry ? "Progres belum bisa dimuat" : "Buka Racely lewat Telegram"}
           </h1>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            {error.message}
+          <p role="status" className="text-read leading-relaxed text-muted-foreground">
+            {retrying ? "Sedang menyinkronkan progresmu…" : error.message}
           </p>
         </div>
         {onRetry ? (
-          <Button variant="gold" size="lg" className="w-full" onClick={onRetry}>
-            Coba sinkronkan lagi
+          <Button variant="gold" size="lg" className="w-full whitespace-normal" onClick={onRetry} disabled={retrying} aria-busy={retrying}>
+            {retrying ? "Menyinkronkan…" : "Coba sinkronkan lagi"}
           </Button>
         ) : (
           <a
             href="https://t.me/RacelyBot?startapp=play"
             target="_blank"
             rel="noreferrer"
-            className={buttonVariants({ variant: "gold", size: "lg", className: "w-full" })}
+            className={buttonVariants({ variant: "gold", size: "lg", className: "w-full whitespace-normal" })}
           >
             Buka @RacelyBot
             <ArrowUpRight data-icon="inline-end" />
