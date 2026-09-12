@@ -92,6 +92,25 @@ throttle lewat `consumeRateLimit`, dan baca body dengan `readJsonBody`
 (`lib/http-body.ts`) yang punya batas ukuran — jangan `request.json()`
 langsung.
 
+### Mengubah tampilan: spacing, tipografi, warna, sudut
+
+Semua nilai desain hidup sebagai token di `:root` (`app/globals.css`). **Jangan
+menulis angka langsung di call site** — cari rung yang cocok di tangga token,
+dan kalau memang belum ada, tambahkan rung baru di `:root` dulu. Tangganya:
+`--space-*` (ukuran & jarak), `--fs-*` (huruf), `--fw-*`, `--lh-*`, `--track-*`,
+`--icon-*`, `--corner-*`, plus `--stroke*`, `--focus-*`, `--z-*`, `--dur-*`.
+
+Yang tetap literal dan memang boleh: nilai struktural (`0`, `1`, `auto`,
+`100%`, rasio flex, track grid), keyframe, dan persentase `color-mix`.
+
+**Jangan memakai awalan `--leading-*` atau `--tracking-*` untuk token baru.**
+Keduanya namespace tema Tailwind v4; Tailwind meng-emit defaultnya ke `:root`,
+jadi menimpanya diam-diam mengubah utility `leading-tight`/`leading-relaxed`
+di seluruh app. Itu sebabnya token di sini bernama `--lh-*` dan `--track-*`.
+
+Di TSX pakai utility yang bersumber token (`px-xl`, `gap-md`, `text-read`) atau
+`py-(--space-20)` untuk nilai di luar alias — bukan `px-6`/`text-[14px]`.
+
 ### Menambah komponen
 
 `components/game/shell/` kerangka · `scene/` react-three-fiber ·

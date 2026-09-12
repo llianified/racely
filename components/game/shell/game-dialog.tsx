@@ -115,7 +115,7 @@ export function GameDialog({
         if (!open) onClose();
       }}
     >
-      <DialogContent className="max-h-[85dvh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{DIALOG_COPY[active].title}</DialogTitle>
           <DialogDescription>
@@ -125,7 +125,7 @@ export function GameDialog({
         {active === "welcome" && offline ? (
           <WelcomeBack offline={offline} onClose={onClose} />
         ) : active === "circuits" ? (
-          <div className="flex flex-col gap-3">
+          <div className="circuit-choices">
             <Button
               variant="circuit"
               disabled={disabled}
@@ -146,7 +146,7 @@ export function GameDialog({
             </Button>
           </div>
         ) : (
-          <div className="flex flex-col gap-5 text-sm">
+          <div className="help-steps">
             <div className="help-step">
               <Flag />
               <p>
@@ -188,7 +188,7 @@ export function GameDialog({
                 </span>
               </p>
             </div>
-            <p className="rounded-lg border border-border p-3 text-muted-foreground">
+            <p className="help-footnote">
               Semua hadiah dan transaksi dihitung oleh server Racely. Progres
               terikat ke akun Telegram yang membuka Mini App.
             </p>
