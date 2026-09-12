@@ -672,9 +672,8 @@
 .section-card-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-sm); min-height: var(--space-28); }
 .panel:not(.circuit-panel) > .section-card-heading { margin-inline: calc(var(--section-divider-inset, var(--gutter)) * -1); padding: 0 var(--section-divider-inset, var(--gutter)) var(--space-md); border-bottom: var(--stroke) solid var(--border); }
 /* Panel ini tidak punya padding sendiri -- 16px-nya ada di .upgrade-row.
-   Judulnya harus ikut baris itu, bukan menempel ke tepi kartu; pull-out
-   divider tetap memakai inset yang sama supaya garisnya penuh. */
-.panel.upgrade-panel > .section-card-heading { padding-inline: calc(var(--section-divider-inset, var(--gutter)) + var(--space-lg)); }
+   Header memakai inset yang sama agar judul, tombol info, dan isi baris sejajar. */
+.panel.upgrade-panel > .section-card-heading { margin-inline: 0; padding: var(--space-md) var(--space-lg); }
 .section-card-heading :is(h2, h3) { display: flex; align-items: center; gap: var(--space-7); min-width: 0; font-size: var(--fs-lead); font-weight: var(--fw-heavy); }
 .section-card-heading :is(h2, h3) svg { width: var(--icon-base); height: var(--icon-base); color: var(--accent); flex-shrink: 0; }
 .heading-aside { display: flex; align-items: center; gap: var(--space-xs); min-width: 0; }
