@@ -1,6 +1,7 @@
 "use client";
 
 import { CalendarCheck, Check, Coins, Copy, Flag, Gift, LockKeyhole, Trophy, UserPlus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { InfoHint } from "./info-hint";
@@ -70,9 +71,9 @@ function ReferralCard({
         icon={UserPlus}
         title="Ajak teman"
         aside={
-          <span>
+          <Badge variant="secondary">
             {referral.invited} diajak · {coins(referral.earned)} didapat
-          </span>
+          </Badge>
         }
       />
       <p className="referral-note">
@@ -204,7 +205,7 @@ export function RewardsPanel({
           icon={Gift}
           title="Rincian hadiah"
           aside={
-            <span>{game.missionsClaimed.length}/{MISSIONS.length} misi diklaim</span>
+            <Badge variant="secondary">{game.missionsClaimed.length}/{MISSIONS.length} misi diklaim</Badge>
           }
         />
         <ul className="reward-list">
