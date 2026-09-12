@@ -23,7 +23,7 @@ export function RaceBattery({ game, inspect, onInspect }: { game: GameState; ins
             <span className="battery-status">{status}</span>
           </span>
         </div>
-        <Button variant="ghost" size="sm" onClick={onInspect} aria-pressed={inspect} aria-label={inspect ? "Tutup inspeksi sasis" : "Lihat baterai dan sasis mobil"}>
+        <Button variant="outline" size="sm" onClick={onInspect} aria-pressed={inspect} aria-label={inspect ? "Tutup inspeksi sasis" : "Lihat baterai dan sasis mobil"}>
           <ScanLine data-icon="inline-start" aria-hidden="true" />{inspect ? "Tutup sasis" : "Lihat sasis"}
         </Button>
       </div>
