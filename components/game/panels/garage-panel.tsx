@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { memo, useRef, useState } from "react";
-import { ArrowUp, BatteryMedium, Check, Cog, CircleDot, LoaderCircle, Wrench } from "lucide-react";
+import { ArrowUp, BatteryMedium, CarFront, Check, Cog, CircleDot, LoaderCircle, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -11,7 +11,15 @@ import { CarColorPicker } from "../car/car-color-picker";
 import { InfoHint } from "./info-hint";
 import { coins, formatCoins, lapReward, lapSeconds, modificationPreview, totalLevel, type GameState, type Upgrade } from "@/lib/game";
 
-const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), { ssr: false });
+const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
+  ssr: false,
+  loading: () => (
+    <div className="scene-loading" role="status">
+      <CarFront aria-hidden="true" />
+      <strong>Menyiapkan mobil 3D…</strong>
+    </div>
+  ),
+});
 
 export const PARTS = [
   { key: "engine" as Upgrade, title: "Mesin", subtitle: "+15% tenaga dasar", icon: Cog },
@@ -23,10 +31,12 @@ export const BODY_COLORS = CAR_CATALOG["neo-falcon"].colors;
 
 export const GaragePanel = memo(function GaragePanel({
   game,
+  active = true,
   onChooseColor,
   disabled = false,
 }: {
   game: GameState;
+  active?: boolean;
   onChooseColor: (color: CarColor, name: string) => void;
   disabled?: boolean;
 }) {
@@ -36,7 +46,7 @@ export const GaragePanel = memo(function GaragePanel({
   return (
     <section id="body-colors" tabIndex={-1} className="panel garage-panel" aria-label="Mobil kamu">
       <div className="car-stage" role="img" aria-label={`${car.name} warna ${colorName}, model 3D yang sama dengan di lintasan`}>
-        <CarPreviewScene color={game.color} model={model} levels={game.levels} />
+        <CarPreviewScene color={game.color} model={model} levels={game.levels} active={active} />
       </div>
       <div className="car-identity">
         <div className="car-identity-head">

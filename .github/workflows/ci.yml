@@ -42,9 +42,9 @@ jobs:
     env:
       # localhost stays plaintext under lib/db/connection-url.ts, so no TLS setup.
       DATABASE_URL: postgresql://racely:racely@127.0.0.1:5432/racely
-      # Baked into the prerendered page's metadataBase; a placeholder is enough
-      # to prove the build resolves absolute OG URLs instead of localhost.
-      PUBLIC_APP_URL: https://racely.example.com
+      # Baked into the prerendered page's metadataBase; use the public production
+      # URL to prove the build resolves absolute OG URLs instead of localhost.
+      PUBLIC_APP_URL: https://racely.fun
       NEXT_TELEMETRY_DISABLED: "1"
 
     steps:
