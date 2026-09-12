@@ -13,6 +13,7 @@ export function GripChallenge({ state, onToggle }: { state: DrivingState; onTogg
       <span><Gauge aria-hidden="true" /> GRIP MOBIL</span>
       <Button variant="ghost" size="xs" aria-pressed={state.enabled} aria-label="Aktifkan simulasi grip" onClick={onToggle}>{state.enabled ? 'Aktif' : 'Nonaktif'}</Button>
     </div>
+    {state.enabled && <>
     <div className="grip-controls">
       <div className="grip-telemetry">
         <div className="grip-reading"><span role="status">{status}</span><strong>{Math.ceil(state.grip)}%</strong></div>
@@ -20,6 +21,7 @@ export function GripChallenge({ state, onToggle }: { state: DrivingState; onTogg
       </div>
     </div>
     <div className="grip-footer"><span><strong>{state.cleanCorners}×</strong> tikungan bersih</span><span>{state.courseOuts} course out</span></div>
-    <p className="grip-help">Grip dan pemulihan berjalan otomatis. Boost berisiko selip; upgrade ban membantu grip. Simulasi sesi; koin &amp; lap server tidak berubah.</p>
+    </>}
+    <p className="grip-help">Boost berisiko selip; ban membantu grip. Simulasi tidak memengaruhi koin &amp; lap server.</p>
   </div>
 }
