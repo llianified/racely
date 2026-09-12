@@ -23,6 +23,8 @@ import { CAR_MODEL_IDS, isCarColor } from "@/lib/car-catalog";
 import { applyPartCommand, PART_IDS, PART_SLOTS, PartRuleError } from "@/lib/car-parts";
 import {
   accountPattern,
+  BOOST_COOLDOWN_SECONDS,
+  BOOST_DURATION_SECONDS,
   COIN_TO_IDR,
   REFERRAL_MILESTONE_LAPS,
   REFERRAL_PARAM_PREFIX,
@@ -345,6 +347,44 @@ async function payInviter(row: PlayerRow) {
     .catch(() => undefined);
 }
 
+/**
+ * Penarikan yang ditolak operator mengembalikan koinnya ke saldo. Saldo dipotong
+ * saat permintaan dibuat, jadi tanpa ini 'rejected' menghanguskan koin pemain
+ * diam-diam -- tidak ada kode yang mengembalikannya dan tidak ada satu kalimat
+ * pun yang memberitahukannya.
+ *
+ * Ini BUKAN pelonggaran aturan antrean manual: tidak ada rupiah yang berpindah,
+ * status penarikan tidak pernah disentuh, dan tidak ada penarikan yang bisa maju
+ * menuju 'paid' dari sini. Satu-satunya tulisan balik adalah stempel
+ * `refunded_at`, dan `IS NULL` pada klausa WHERE adalah seluruh penjaganya:
+ * RETURNING hanya menyerahkan baris yang benar-benar ditandai oleh pernyataan
+ * ini, jadi dua permintaan bersamaan tidak bisa membayar dua kali.
+ *
+ * Mode preview tidak punya pasangannya karena penarikan di dalam cookie selalu
+ * 'pending' -- tidak ada operator yang bisa menolaknya di sana.
+ */
+async function refundRejectedWithdrawals(
+  tx: Transaction,
+  row: PlayerRow,
+  now: Date,
+): Promise<PlayerRow> {
+  const refunded = await tx
+    .update(withdrawals)
+    .set({ refundedAt: now })
+    .where(
+      and(
+        eq(withdrawals.userId, row.userId),
+        eq(withdrawals.status, "rejected"),
+        isNull(withdrawals.refundedAt),
+      ),
+    )
+    .returning({ coins: withdrawals.coins });
+
+  if (refunded.length === 0) return row;
+  const total = refunded.reduce((sum, item) => sum + item.coins, 0);
+  return { ...row, balance: row.balance + total };
+}
+
 /** Satu perjalanan: berapa yang diajak, dan berapa ajakan yang sudah dibayar. */
 async function readReferralSummary(
   tx: Transaction,
@@ -471,7 +511,11 @@ export async function getGameState(
 
     const bound = await bindReferrer(tx, locked, identity.startParam);
     const settled = settlePlayerRow(bound, now);
-    const rewarded = await payInviteeMilestone(tx, settled.row);
+    const rewarded = await refundRejectedWithdrawals(
+      tx,
+      await payInviteeMilestone(tx, settled.row),
+      now,
+    );
     const [saved] = await tx
       .update(players)
       .set({
@@ -554,7 +598,11 @@ export async function performGameAction(
 
     const bound = await bindReferrer(tx, locked, identity.startParam);
     const settled = settlePlayerRow(bound, now);
-    let next = await payInviteeMilestone(tx, settled.row);
+    let next = await refundRejectedWithdrawals(
+      tx,
+      await payInviteeMilestone(tx, settled.row),
+      now,
+    );
     let dailyClaims = await readDailyClaims(tx, identity.userId);
 
     if (action.type !== "sync") {
@@ -613,14 +661,23 @@ export async function performGameAction(
 
     if (action.type === "select-car") {
       if (next.carModel !== null) {
-        throw new GameRuleError(
-          "Model sudah dikonfirmasi dan tidak dapat diganti.",
-        );
+        if (next.carModel !== action.model) {
+          throw new GameRuleError(
+            "Model sudah dikonfirmasi dan tidak dapat diganti.",
+          );
+        }
+        // Mengulang model yang sama bukan pelanggaran, cuma tidak ada yang
+        // berubah: jaringan yang putus setelah server menyimpan membuat klien
+        // mencoba lagi dengan requestId baru, dan tanda terima tidak mengenali
+        // percobaan itu. Sengaja tidak menyentuh warna -- warna garasi yang
+        // dipilih belakangan tidak boleh tersetel ulang ke warna pendaftaran.
+        // Mode preview sudah berperilaku begini sejak awal.
+      } else {
+        if (!isCarColor(action.model, action.color)) {
+          throw new GameRuleError("Model atau warna mobil tidak valid.", 400);
+        }
+        next = { ...next, carModel: action.model, color: action.color };
       }
-      if (!isCarColor(action.model, action.color)) {
-        throw new GameRuleError("Model atau warna mobil tidak valid.", 400);
-      }
-      next = { ...next, carModel: action.model, color: action.color };
     } else if (action.type === "buy-part" || action.type === "equip-part" || action.type === "unequip-part") {
       try {
         next = { ...next, ...applyPartCommand(next, action) };
@@ -663,8 +720,12 @@ export async function performGameAction(
       }
       next = {
         ...next,
-        boostEndsAt: new Date(now.getTime() + 10_000),
-        cooldownEndsAt: new Date(now.getTime() + 35_000),
+        boostEndsAt: new Date(
+          now.getTime() + BOOST_DURATION_SECONDS * 1000,
+        ),
+        cooldownEndsAt: new Date(
+          now.getTime() + BOOST_COOLDOWN_SECONDS * 1000,
+        ),
       };
     } else if (action.type === "gift") {
       if (!next.rewardClaimed) {

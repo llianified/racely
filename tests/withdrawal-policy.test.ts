@@ -100,9 +100,37 @@ describe("Withdrawals stay a manual, pending-only queue", () => {
     expect(insertPayload).not.toMatch(/status\s*:/);
     expect(insertPayload).not.toMatch(/processedAt/);
 
-    expect(gameServerSource).not.toMatch(/update\(withdrawals\)/);
     expect(gameServerSource).not.toMatch(/delete\(withdrawals\)/);
     expect(gameServerSource).not.toMatch(/disburse|payout|transfer/i);
+  });
+
+  it("writes nothing back to a withdrawal except the refund stamp", () => {
+    // Dulu larangannya mutlak: tidak boleh ada `update(withdrawals)` sama
+    // sekali. Pengembalian koin untuk penarikan yang ditolak memerlukan satu --
+    // dan hanya satu -- tulisan balik, jadi larangannya dipersempit, bukan
+    // dicabut. Status dan processed_at tetap milik operator; tidak ada
+    // penarikan yang boleh maju menuju 'paid' dari dalam app.
+    const writes = [
+      ...gameServerSource.matchAll(/update\(withdrawals\)\s*\.set\(\{([^}]*)\}\)/g),
+    ].map(([, body]) => body);
+
+    expect(writes).toHaveLength(1);
+    expect(writes[0]).toContain("refundedAt");
+    expect(writes[0]).not.toMatch(/status\s*:/);
+    expect(writes[0]).not.toMatch(/processedAt/);
+    expect(writes[0]).not.toMatch(/coins\s*:/);
+    expect(writes[0]).not.toMatch(/account/i);
+  });
+
+  it("only ever refunds a rejected withdrawal once", () => {
+    // `IS NULL` pada klausa WHERE adalah seluruh penjaganya: tanpa itu setiap
+    // sync akan mengembalikan koin yang sama berulang kali.
+    const guard = gameServerSource.slice(
+      gameServerSource.indexOf("async function refundRejectedWithdrawals"),
+      gameServerSource.indexOf("returning({ coins: withdrawals.coins })"),
+    );
+    expect(guard).toContain('eq(withdrawals.status, "rejected")');
+    expect(guard).toContain("isNull(withdrawals.refundedAt)");
   });
 
   it("rejects a withdrawal that exceeds the balance", () => {

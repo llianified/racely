@@ -229,6 +229,135 @@ describeDatabase("Neon Postgres persistence", () => {
     expect(survivor).toBeUndefined();
   });
 
+  it("commits the actions 0001 could not record: daily check-in and aero kit", async () => {
+    // The CHECK on action_type shipped in 0001 with nine values and never grew.
+    // Every one of these four aborted its own transaction in production -- the
+    // reward credit, the purchase and the race settlement rolled back together
+    // -- until migration 0007 widened the list.
+    await db!
+      .update(schema.players)
+      .set({ balance: 500 })
+      .where(drizzle.eq(schema.players.userId, identity.userId));
+
+    const before = await gameServer.performGameAction(identity, randomUUID(), {
+      type: "sync",
+    });
+    const claimed = await gameServer.performGameAction(identity, randomUUID(), {
+      type: "daily",
+    });
+    expect(claimed.daily.claimedToday).toBe(true);
+    expect(claimed.balance).toBeGreaterThan(before.balance);
+
+    const bought = await gameServer.performGameAction(identity, randomUUID(), {
+      type: "buy-part",
+      partId: "vented-hood",
+    });
+    expect(bought.bodyParts?.owned).toContain("vented-hood");
+    expect(bought.balance).toBe(claimed.balance - 8);
+
+    const fitted = await gameServer.performGameAction(identity, randomUUID(), {
+      type: "equip-part",
+      partId: "vented-hood",
+    });
+    expect(fitted.bodyParts?.equipped.hood).toBe("vented-hood");
+
+    const bare = await gameServer.performGameAction(identity, randomUUID(), {
+      type: "unequip-part",
+      slot: "hood",
+    });
+    expect(bare.bodyParts?.equipped.hood).toBeUndefined();
+    // Unequipping returns the part to the collection, it never refunds or deletes.
+    expect(bare.bodyParts?.owned).toContain("vented-hood");
+
+    const recorded = await db!
+      .select({ actionType: schema.actionReceipts.actionType })
+      .from(schema.actionReceipts)
+      .where(drizzle.eq(schema.actionReceipts.userId, identity.userId));
+    const types = new Set(recorded.map((row) => row.actionType));
+    for (const type of ["daily", "buy-part", "equip-part", "unequip-part"]) {
+      expect(types.has(type)).toBe(true);
+    }
+  });
+
+  it("refunds a rejected withdrawal exactly once", async () => {
+    await db!
+      .update(schema.players)
+      .set({ balance: 500 })
+      .where(drizzle.eq(schema.players.userId, identity.userId));
+
+    await gameServer.performGameAction(identity, randomUUID(), {
+      type: "withdraw",
+      method: "dana",
+      account: "081234567890",
+      accountName: "Integration Racer",
+      coins: 120,
+    });
+    expect((await gameServer.getGameState(identity)).balance).toBe(380);
+
+    // An operator rejecting the request is the only way this status moves.
+    await db!
+      .update(schema.withdrawals)
+      .set({ status: "rejected" })
+      .where(
+        drizzle.and(
+          drizzle.eq(schema.withdrawals.userId, identity.userId),
+          drizzle.eq(schema.withdrawals.coins, 120),
+        ),
+      );
+
+    const refunded = await gameServer.getGameState(identity);
+    expect(refunded.balance).toBe(500);
+    expect(refunded.withdrawals[0]).toMatchObject({
+      status: "rejected",
+      coins: 120,
+    });
+
+    // Without the refunded_at guard every later sync would pay it again.
+    expect((await gameServer.getGameState(identity)).balance).toBe(500);
+    const synced = await gameServer.performGameAction(identity, randomUUID(), {
+      type: "sync",
+    });
+    expect(synced.balance).toBe(500);
+
+    const [row] = await db!
+      .select()
+      .from(schema.withdrawals)
+      .where(
+        drizzle.and(
+          drizzle.eq(schema.withdrawals.userId, identity.userId),
+          drizzle.eq(schema.withdrawals.coins, 120),
+        ),
+      );
+    expect(row.refundedAt).not.toBeNull();
+    // The refund never advances the queue or touches the operator's columns.
+    expect(row.status).toBe("rejected");
+    expect(row.processedAt).toBeNull();
+  });
+
+  it("accepts re-confirming the same car, still refuses a different one", async () => {
+    // A network drop after the server saved makes the client retry with a new
+    // requestId, which the receipt cannot recognise. The server used to answer
+    // that retry with a 409 while preview mode let it through -- production and
+    // `pnpm dev` disagreeing about the same request.
+    const before = await gameServer.getGameState(identity);
+    const again = await gameServer.performGameAction(identity, randomUUID(), {
+      type: "select-car",
+      model: "luna-gt",
+      color: "#b9a1ed",
+    });
+    expect(again.carSelection?.model).toBe("luna-gt");
+    // A colour chosen later in the garage must survive the retry.
+    expect(again.color).toBe(before.color);
+
+    await expect(
+      gameServer.performGameAction(identity, randomUUID(), {
+        type: "select-car",
+        model: "neo-falcon",
+        color: "#4275ff",
+      }),
+    ).rejects.toThrow("Model sudah dikonfirmasi");
+  });
+
   it("claims a Telegram update exactly once, even across processes", async () => {
     const updateId = Date.now();
     claimedUpdateIds.push(updateId);
