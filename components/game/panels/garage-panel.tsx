@@ -61,10 +61,14 @@ export const GaragePanel = memo(function GaragePanel({
         </div>
         <div className="car-identity">
           <div className="car-identity-head">
-            <div className="car-identity-title">
-              <h2>{car.name}</h2>
-              <Badge variant="secondary" className="car-level-chip">Lv. {totalLevel(game)}</Badge>
-              <InfoHint title="Mobil kamu">Kecepatan dasar tanpa boost. Model 3D ini sama dengan mobil di lintasan. Ganti warna bodi gratis dan langsung aktif.</InfoHint>
+            <div className="car-identity-heading">
+              <div className="car-identity-title">
+                <h2>{car.name}</h2>
+                <Badge variant="secondary" className="car-level-chip">Lv. {totalLevel(game)}</Badge>
+              </div>
+              <div className="heading-aside">
+                <InfoHint title="Mobil kamu">Kecepatan dasar tanpa boost. Model 3D ini sama dengan mobil di lintasan. Ganti warna bodi gratis dan langsung aktif.</InfoHint>
+              </div>
             </div>
             <p>{car.chassis}</p>
             <p>{car.description}</p>
