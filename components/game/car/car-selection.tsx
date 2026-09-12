@@ -84,7 +84,9 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
             {step === 1 ? <>{returningPlayer ? "Kembali ke garasi." : "Mobil pertamamu."}<br /><span>Awal cerita baru.</span></> : <>Pilih warnanya.<br /><span>Tunjukkan gayamu.</span></>}
           </h1>
           <p>{step === 1
-            ? returningPlayer ? "Koin, upgrade, dan progresmu tetap aman." : "Dua karakter. Satu pilihan. Mana jagoanmu?"
+            ? returningPlayer
+              ? "Koin, upgrade, dan progresmu tetap aman."
+              : `Dua karakter. Satu pilihan. Mana jagoanmu?${developmentPreview ? " Progres preview disimpan di browser ini." : ""}`
             : "Sentuhan terakhir sebelum turun ke lintasan."}</p>
         </div>
       </header>
@@ -146,10 +148,7 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
         </div>
         <p className="selection-hint">
           <LockKeyhole className="size-4" aria-hidden="true" />
-          <span>
-            {step === 1 ? "Model dipilih sekali." : "Model tetap; warna bisa diganti."}
-            {developmentPreview && " Preview saja · progres lokal di browser ini."}
-          </span>
+          <span>{step === 1 ? "Model dipilih sekali." : "Model tetap; warna bisa diganti."}</span>
         </p>
       </footer>
     </main>
