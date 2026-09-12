@@ -9,7 +9,7 @@ import { batteryTelemetry, coins, formatCoins, lapReward, lapSeconds, raceOppone
 import { RaceOverviewHud } from "./race-overview-hud";
 import { RaceBattery } from "./race-battery";
 import { cn } from "@/lib/utils";
-import { createDrivingState } from "@/lib/race-dynamics";
+import { createDrivingState, resetGripChallenge } from "@/lib/race-dynamics";
 import { GripChallenge } from "./grip-challenge";
 
 const RaceScene = dynamic(() => import("../scene/race-scene"), {
@@ -60,6 +60,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
     () => false,
   );
   const seconds = lapSeconds(game);
+  const baseSeconds = lapSeconds({ ...game, boostLeft: 0 });
   const opponents = raceOpponentLapSeconds(game);
   const position = racePosition(game);
   const boosted = game.boostLeft > 0;
@@ -112,9 +113,9 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
       </div>
       <div className={cn("scene-wrap", inspect && "is-inspecting", !inspect && cinematic && "is-cinematic", !inspect && telemetry.recovery > 0 && "is-course-out", !inspect && telemetry.grip < 40 && "is-grip-critical")}>
         {!inspect && <div className="race-vignette" aria-hidden="true" />}
-        {!inspect && <RaceOverviewHud seconds={seconds} reward={lapReward(game)} position={position} followCamera={followCamera} recovering={telemetry.recovery > 0} />}
+        {!inspect && <RaceOverviewHud seconds={seconds} baseSeconds={baseSeconds} reward={lapReward(game)} position={position} followCamera={followCamera} telemetry={telemetry} boosted={boosted} batteryLevel={game.levels.battery} />}
         {inspect && <div className="scene-overlay inspect-hud"><strong>{bodyVisible ? "DETAIL MOBIL" : "DI BALIK BODI"}</strong><span>{bodyVisible ? "Cat metalik · ban · aero kit" : "2 sel · motor · penggerak 4WD"}</span></div>}
-        <RaceScene equipped={game.bodyParts?.equipped} driving={driving} onTelemetry={setTelemetry} cinematic={cinematic && !reducedMotion} levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.progress} seconds={seconds} opponentSeconds={opponents} color={game.color} boosted={boosted} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
+        <RaceScene equipped={game.bodyParts?.equipped} driving={driving} onTelemetry={setTelemetry} cinematic={cinematic && !reducedMotion} levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.progress} seconds={seconds} baseSeconds={baseSeconds} opponentSeconds={opponents} color={game.color} boosted={boosted} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
         {inspect && <div className="scene-overlay inspect-hint">Geser untuk memutar · balapan tetap jalan</div>}
       </div>
       <div className="lap-progress" role="progressbar" aria-label="Progres putaran saat ini" aria-valuenow={Math.round(game.progress * 100)} aria-valuemin={0} aria-valuemax={100}>
@@ -158,6 +159,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
       }} />
       <details className="race-settings">
         <summary>Pengaturan balapan<ChevronDown aria-hidden="true" /></summary>
+        <p className="race-powertrain-note">Mesin mempercepat akselerasi setelah tikungan dan pemulihan. Baterai memperpanjang dorongan boost di arena; energi pulih saat Gaspol tidak aktif. Laju, RPM, dan energi arena hanya simulasi, terpisah dari baterai idle dan timer Gaspol server. Lap dan koin tetap mengikuti server.</p>
         <div className="race-director-bar">
           <span>{reducedMotion ? 'GERAK DIKURANGI' : 'KAMERA SINEMATIK'}</span>
           <Button variant="ghost" size="xs" aria-label="Kamera sinematik" aria-pressed={cinematic && !reducedMotion} disabled={reducedMotion} onClick={() => setCinematic(value => !value)}>{cinematic && !reducedMotion ? 'Aktif' : 'Nonaktif'}</Button>
@@ -168,7 +170,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
         </div>}
         {!inspect && <GripChallenge state={telemetry} tires={game.levels.tires} onToggle={() => {
           const enabled = !driving.current.enabled;
-          Object.assign(driving.current, createDrivingState(), { enabled });
+          resetGripChallenge(driving.current, enabled);
           setTelemetry({ ...driving.current });
         }} />}
       </details>

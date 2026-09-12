@@ -8,7 +8,7 @@ import { COLORS } from './mini-car'
 
 const PARTICLES = 48
 
-export function RacingEffects({ playerRef, driving, boosted, reducedMotion }: { playerRef: RefObject<THREE.Group | null>; driving?: RefObject<DrivingState>; boosted: boolean; reducedMotion: boolean }) {
+export function RacingEffects({ playerRef, driving, reducedMotion }: { playerRef: RefObject<THREE.Group | null>; driving?: RefObject<DrivingState>; reducedMotion: boolean }) {
   const trail = useRef<THREE.InstancedMesh>(null)
   const dust = useRef<THREE.InstancedMesh>(null)
   const streaks = useRef<THREE.InstancedMesh>(null)
@@ -45,6 +45,8 @@ export function RacingEffects({ playerRef, driving, boosted, reducedMotion }: { 
     }
     trail.current.visible = !reducedMotion && speed > 1.15 && !state?.recovery
     if (trail.current.visible) {
+      const material = trail.current.material as THREE.MeshBasicMaterial
+      material.color.set((state?.boostPower ?? 0) > 0 ? COLORS.gold : COLORS.azure)
       for (let i = 0; i < samples.length; i++) {
         transform.position.copy(samples[i]); transform.position.y = .145
         const size = (1 - i / samples.length) * .085
@@ -126,7 +128,7 @@ export function RacingEffects({ playerRef, driving, boosted, reducedMotion }: { 
   }, -1)
   return <>
     <instancedMesh ref={trail} args={[undefined, undefined, 28]} frustumCulled={false}>
-      <boxGeometry args={[1, 1, 1]} /><meshBasicMaterial color={boosted ? COLORS.gold : COLORS.azure} transparent opacity={.45} toneMapped={false} depthWrite={false} />
+      <boxGeometry args={[1, 1, 1]} /><meshBasicMaterial color={COLORS.azure} transparent opacity={.45} toneMapped={false} depthWrite={false} />
     </instancedMesh>
     <instancedMesh ref={dust} args={[undefined, undefined, PARTICLES]} frustumCulled={false}>
       <icosahedronGeometry args={[1, 0]} /><meshBasicMaterial transparent opacity={.38} depthWrite={false} />
