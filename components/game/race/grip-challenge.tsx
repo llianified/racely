@@ -10,7 +10,7 @@ export function GripChallenge({ state, active, onStabilize, onToggle }: { state:
   const status = !state.enabled ? 'Autopilot aman' : recovering ? 'Course out · recovery' : state.shield > 0 ? 'Grip terlindungi' : danger ? 'Grip kritis · stabilkan!' : state.corner ? 'Tikungan · jaga grip' : 'Lurus · grip pulih'
   return <div className="grip-challenge" data-danger={danger || recovering}>
     <div className="grip-heading">
-      <span><ShieldCheck size={14} aria-hidden="true" /> TANTANGAN GRIP</span>
+      <span><ShieldCheck aria-hidden="true" /> TANTANGAN GRIP</span>
       <Button variant="ghost" size="xs" aria-pressed={state.enabled} onClick={onToggle}>{state.enabled ? 'Aktif' : 'Nonaktif'}</Button>
     </div>
     <div className="grip-controls">

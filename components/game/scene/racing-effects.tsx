@@ -4,6 +4,7 @@ import { useMemo, useRef, type RefObject } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { DrivingState } from '@/lib/race-dynamics'
+import { COLORS } from './mini-car'
 
 export function RacingEffects({ playerRef, driving, boosted, reducedMotion }: { playerRef: RefObject<THREE.Group | null>; driving?: RefObject<DrivingState>; boosted: boolean; reducedMotion: boolean }) {
   const trail = useRef<THREE.InstancedMesh>(null)
@@ -47,17 +48,17 @@ export function RacingEffects({ playerRef, driving, boosted, reducedMotion }: { 
     marker.current.position.set(player.position.x, .14, player.position.z)
     marker.current.visible = !state?.recovery
     const material = marker.current.material as THREE.MeshBasicMaterial
-    material.color.set(state && state.shield > 0 ? '#ffce00' : '#8db5ff')
+    material.color.set(state && state.shield > 0 ? COLORS.gold : COLORS.sky)
   }, -1)
   return <>
     <instancedMesh ref={trail} args={[undefined, undefined, 28]} frustumCulled={false}>
-      <boxGeometry args={[1, 1, 1]} /><meshBasicMaterial color={boosted ? '#ffce00' : '#4275ff'} transparent opacity={.65} toneMapped={false} depthWrite={false} />
+      <boxGeometry args={[1, 1, 1]} /><meshBasicMaterial color={boosted ? COLORS.gold : COLORS.azure} transparent opacity={.65} toneMapped={false} depthWrite={false} />
     </instancedMesh>
     <instancedMesh ref={sparks} args={[undefined, undefined, 18]} frustumCulled={false}>
-      <boxGeometry args={[1, 1, 1]} /><meshBasicMaterial color="#ffce00" toneMapped={false} />
+      <boxGeometry args={[1, 1, 1]} /><meshBasicMaterial color={COLORS.gold} toneMapped={false} />
     </instancedMesh>
     <mesh ref={marker} rotation={[-Math.PI / 2, 0, 0]}>
-      <ringGeometry args={[.27, .3, 32]} /><meshBasicMaterial color="#8db5ff" transparent opacity={.6} depthWrite={false} toneMapped={false} />
+      <ringGeometry args={[.27, .3, 32]} /><meshBasicMaterial color={COLORS.sky} transparent opacity={.6} depthWrite={false} toneMapped={false} />
     </mesh>
   </>
 }
