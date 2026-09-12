@@ -28,6 +28,17 @@ export const GAME_STATE_RULE: RateLimitRule = {
   refillPerSecond: 1,
 };
 
+/**
+ * Login panel admin. Jauh lebih ketat daripada aturan pemain: satu password
+ * menjaga seluruh antrean pembayaran, jadi embernya kecil dan isi ulangnya
+ * lambat supaya menebak password lewat jaringan tidak sepadan. Dikunci per
+ * alamat, bukan per sesi -- penyerang belum punya sesi.
+ */
+export const ADMIN_LOGIN_RULE: RateLimitRule = {
+  capacity: 5,
+  refillPerSecond: 1 / 20,
+};
+
 type Bucket = { tokens: number; updatedAt: number };
 
 const IDLE_TTL_MS = 10 * 60 * 1000;

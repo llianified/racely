@@ -4,14 +4,11 @@ import { Buffer } from "node:buffer";
 import { z } from "zod";
 import {
   accountPattern,
-  BOOST_COOLDOWN_SECONDS,
-  BOOST_DURATION_SECONDS,
+  boostCooldownSeconds,
   INITIAL_GAME,
-  MISSIONS,
+  missions,
   missionValue,
   roundCoins,
-  STARTER_GIFT,
-  upgradeCost,
   WITHDRAW_METHODS,
   type GameCommand,
   type GameState,
@@ -19,6 +16,7 @@ import {
   type Upgrade,
   type WithdrawMethod,
 } from "./game";
+import { upgradeCostAt, type EconomyConfig } from "./economy-config";
 import {
   calculateRaceSettlement,
   DAILY_HISTORY_DAYS,
@@ -114,6 +112,14 @@ export class PreviewGameRuleError extends Error {
   }
 }
 
+/**
+ * `economy` sengaja tidak ikut ke dalam cookie. Ia config server, bukan progres
+ * pemain: menyimpannya berarti membekukan snapshot yang langsung basi begitu
+ * ekonomi disetel dari panel, dan menggelembungkan cookie di tiap permintaan.
+ * `previewResult` yang menyuntikkannya ke respons, sama seperti `daily`.
+ */
+const { economy: _initialEconomy, ...INITIAL_PREVIEW_STATE } = INITIAL_GAME;
+
 function initialPreviewGame(identity: PlayerIdentity, now: number): PreviewGame {
   return {
     version: 1,
@@ -122,7 +128,7 @@ function initialPreviewGame(identity: PlayerIdentity, now: number): PreviewGame 
     receipts: [],
     dailyClaims: [],
     state: {
-      ...INITIAL_GAME,
+      ...INITIAL_PREVIEW_STATE,
       developmentPreview: true,
       carSelection: { model: null, returningPlayer: false },
       levels: { ...INITIAL_GAME.levels },
@@ -146,7 +152,11 @@ function readCookie(request: Request, name: string) {
   return cookie ? decodeURIComponent(cookie.slice(name.length + 1)) : "";
 }
 
-function readPreviewGame(request: Request, identity: PlayerIdentity) {
+function readPreviewGame(
+  request: Request,
+  identity: PlayerIdentity,
+  economy: EconomyConfig,
+) {
   const encoded = readCookie(request, PREVIEW_GAME_COOKIE);
   if (!encoded) return initialPreviewGame(identity, Date.now());
 
@@ -159,7 +169,7 @@ function readPreviewGame(request: Request, identity: PlayerIdentity) {
     }
     if (!parsed.data.state.carSelection) {
       // Credit time owed before the offer, then freeze without resetting progress.
-      const { game } = settlePreviewGame(parsed.data, Date.now());
+      const { game } = settlePreviewGame(parsed.data, Date.now(), economy);
       return {
         ...game,
         state: { ...game.state, carSelection: { model: null, returningPlayer: true } },
@@ -179,7 +189,11 @@ type SettledPreview = { game: PreviewGame; offline: OfflineEarnings | null };
  * cookie stores boost as seconds left, so it is converted to the deadline the
  * settlement expects.
  */
-function settlePreviewGame(game: PreviewGame, now: number): SettledPreview {
+function settlePreviewGame(
+  game: PreviewGame,
+  now: number,
+  economy: EconomyConfig,
+): SettledPreview {
   if (game.state.carSelection?.model === null) {
     return { game: { ...game, updatedAt: now }, offline: null };
   }
@@ -191,6 +205,7 @@ function settlePreviewGame(game: PreviewGame, now: number): SettledPreview {
       progress: game.state.progress,
       levels: game.state.levels,
       circuit: game.state.circuit,
+      economy,
       lastSettledAt: new Date(game.updatedAt),
       boostEndsAt:
         game.state.boostLeft > 0
@@ -229,10 +244,12 @@ function previewResult(
   game: PreviewGame,
   offline: OfflineEarnings | null,
   now: number,
+  economy: EconomyConfig,
 ): { state: GameState; cookieValue: string } {
   const state: GameState = {
     ...game.state,
-    daily: dailyCheckIn(game.dailyClaims, new Date(now)),
+    economy,
+    daily: dailyCheckIn(game.dailyClaims, new Date(now), economy),
     // Mode preview hanya punya satu pemain di dalam cookie, jadi tidak ada yang
     // bisa diajak dan tidak ada yang bisa dibayar. Linknya tetap dibangun
     // supaya tata letak kartu ajakan bisa dicek saat `pnpm dev`.
@@ -248,14 +265,18 @@ function serializePreviewGame(game: PreviewGame) {
   return Buffer.from(JSON.stringify(game), "utf8").toString("base64url");
 }
 
-function applyUpgrade(state: PreviewState, key: Upgrade) {
+function applyUpgrade(
+  state: PreviewState,
+  key: Upgrade,
+  economy: EconomyConfig,
+) {
   const level = state.levels[key];
-  if (level >= 10) {
+  if (level >= economy.maxUpgradeLevel) {
     throw new PreviewGameRuleError(
       "Upgrade ini sudah mencapai level maksimal.",
     );
   }
-  const cost = upgradeCost(key, level);
+  const cost = upgradeCostAt(economy, key, level);
   if (state.balance < cost) {
     throw new PreviewGameRuleError("Koin belum cukup untuk upgrade ini.");
   }
@@ -269,13 +290,15 @@ function applyUpgrade(state: PreviewState, key: Upgrade) {
 export function getPreviewGameState(
   request: Request,
   identity: PlayerIdentity,
+  economy: EconomyConfig,
 ) {
   const now = Date.now();
   const { game, offline } = settlePreviewGame(
-    readPreviewGame(request, identity),
+    readPreviewGame(request, identity, economy),
     now,
+    economy,
   );
-  return previewResult(game, offline, now);
+  return previewResult(game, offline, now, economy);
 }
 
 export function performPreviewGameAction(
@@ -283,9 +306,14 @@ export function performPreviewGameAction(
   identity: PlayerIdentity,
   requestId: string,
   action: GameCommand | z.infer<typeof previewCarActionSchema>["action"],
+  economy: EconomyConfig,
 ) {
   const now = Date.now();
-  const settled = settlePreviewGame(readPreviewGame(request, identity), now);
+  const settled = settlePreviewGame(
+    readPreviewGame(request, identity, economy),
+    now,
+    economy,
+  );
   const { offline } = settled;
   let game = settled.game;
   const selection = game.state.carSelection;
@@ -299,7 +327,7 @@ export function performPreviewGameAction(
         throw new PreviewGameRuleError("Model sudah dikonfirmasi dan tidak dapat diganti.");
       }
       // A retry must not reset a later garage color or grant any progress.
-      return previewResult(game, offline, now);
+      return previewResult(game, offline, now, economy);
     }
   } else if (selection?.model === null && action.type !== "sync") {
     throw new PreviewGameRuleError("Pilih mobilmu sebelum mulai bermain.");
@@ -309,7 +337,7 @@ export function performPreviewGameAction(
   }
 
   if (action.type !== "sync" && game.receipts.includes(requestId)) {
-    return previewResult(game, offline, now);
+    return previewResult(game, offline, now, economy);
   }
 
   let state = game.state;
@@ -328,7 +356,7 @@ export function performPreviewGameAction(
       throw error;
     }
   } else if (action.type === "upgrade") {
-    state = applyUpgrade(state, action.key);
+    state = applyUpgrade(state, action.key, economy);
   } else if (action.type === "claim" && Math.floor(state.pending) > 0) {
     const settled = Math.floor(state.pending);
     state = {
@@ -337,6 +365,17 @@ export function performPreviewGameAction(
       pending: roundCoins(state.pending - settled),
     };
   } else if (action.type === "withdraw") {
+    // Sama seperti server: batas config ditegakkan di sini, bukan di skema.
+    if (action.coins < economy.minWithdrawCoins) {
+      throw new PreviewGameRuleError(
+        `Penarikan minimal ${economy.minWithdrawCoins} koin.`,
+      );
+    }
+    if (action.coins > economy.maxWithdrawCoins) {
+      throw new PreviewGameRuleError(
+        `Penarikan maksimal ${economy.maxWithdrawCoins} koin per permintaan.`,
+      );
+    }
     if (state.balance < action.coins) {
       throw new PreviewGameRuleError(
         "Saldo koin tidak cukup untuk penarikan ini.",
@@ -369,17 +408,17 @@ export function performPreviewGameAction(
     }
     state = {
       ...state,
-      boostLeft: BOOST_DURATION_SECONDS,
-      cooldown: BOOST_COOLDOWN_SECONDS,
+      boostLeft: economy.boostDurationSeconds,
+      cooldown: boostCooldownSeconds(economy),
     };
   } else if (action.type === "gift" && !state.rewardClaimed) {
     state = {
       ...state,
       rewardClaimed: true,
-      balance: state.balance + STARTER_GIFT,
+      balance: state.balance + economy.starterGift,
     };
   } else if (action.type === "daily") {
-    const status = dailyCheckIn(game.dailyClaims, new Date(now));
+    const status = dailyCheckIn(game.dailyClaims, new Date(now), economy);
     if (!status.claimedToday) {
       state = { ...state, balance: state.balance + status.reward };
       dailyClaims = [racingDayKey(new Date(now)), ...game.dailyClaims].slice(
@@ -393,7 +432,7 @@ export function performPreviewGameAction(
     // tercapai", pesan yang menuduh hal yang keliru dan hanya muncul di
     // `pnpm dev`, sehingga perilakunya menyimpang dari produksi.
     if (!state.missionsClaimed.includes(action.id)) {
-      const mission = MISSIONS.find((item) => item.id === action.id);
+      const mission = missions(economy).find((item) => item.id === action.id);
       if (!mission || missionValue(state, action.id) < mission.target) {
         throw new PreviewGameRuleError("Target misi belum tercapai.");
       }
@@ -409,9 +448,9 @@ export function performPreviewGameAction(
     if (action.circuit < state.circuit) {
       throw new PreviewGameRuleError("Trek lama tidak bisa dipilih lagi.");
     }
-    if (action.circuit === 1 && state.laps < 25) {
+    if (action.circuit === 1 && state.laps < economy.circuitUnlockLaps) {
       throw new PreviewGameRuleError(
-        "Selesaikan 25 putaran untuk membuka sirkuit ini.",
+        `Selesaikan ${economy.circuitUnlockLaps} putaran untuk membuka sirkuit ini.`,
       );
     }
     state = { ...state, circuit: action.circuit };
@@ -427,5 +466,5 @@ export function performPreviewGameAction(
         ? game.receipts
         : [...game.receipts, requestId].slice(-MAX_RECEIPTS),
   };
-  return previewResult(game, offline, now);
+  return previewResult(game, offline, now, economy);
 }

@@ -1,33 +1,34 @@
 import type { CarColor, CarModelId } from "./car-catalog";
 import type { BodyParts, PartCommand } from "./car-parts";
+import {
+  DEFAULT_ECONOMY,
+  boostCooldownSeconds,
+  lapRewardAt,
+  lapSecondsAt,
+  upgradeCostAt,
+  type EconomyConfig,
+  type UpgradeKey,
+} from "./economy-config";
 
-export type Upgrade = "engine" | "tires" | "battery";
+export type { EconomyConfig };
+/** Alias; definisinya hidup di `lib/economy-config.ts` bersama rumusnya. */
+export type Upgrade = UpgradeKey;
 export type PlayerProfile = {
   name: string;
   username: string | null;
   photoUrl: string | null;
 };
 
-/** One coin is worth this many rupiah when a player withdraws. */
-export const COIN_TO_IDR = 100;
-export const MIN_WITHDRAW_COINS = 100;
-export const STARTER_GIFT = 15;
-
 /**
- * Hadiah check-in harian per hari streak (1-based), menaik lalu mentok di rung
- * terakhir. Batas atas itu disengaja: setiap koin adalah kewajiban rupiah, jadi
- * hadiah harian harus terhitung berapa pun panjang streak pemain.
+ * Angka ekonomi -- nilai koin, hadiah, biaya, batas idle -- dulu berupa
+ * konstanta modul di sini dan diimpor langsung oleh UI. Sekarang semuanya hidup
+ * di `EconomyConfig` dan ikut di `GameState.economy`, jadi panel admin bisa
+ * menyetelnya tanpa deploy dan tampilan tidak bisa menyimpang dari server.
+ * Lihat `lib/economy-config.ts`.
+ *
+ * `REFERRAL_PARAM_PREFIX` tetap konstanta: itu bentuk deep link Telegram, bukan
+ * angka ekonomi.
  */
-export const DAILY_REWARDS = [1, 2, 3, 4, 5, 6, 10] as const;
-
-/**
- * Referral dibayar pada capaian, bukan saat mendaftar. Mendaftar itu gratis;
- * 100 putaran butuh belasan menit bermain sungguhan, dan itulah yang membuat
- * membuat akun palsu tidak sepadan.
- */
-export const REFERRAL_MILESTONE_LAPS = 100;
-export const REFERRAL_REWARD_INVITER = 25;
-export const REFERRAL_REWARD_INVITEE = 10;
 /** Awalan `start_param` pada deep link Telegram: `?startapp=ref_<userId>`. */
 export const REFERRAL_PARAM_PREFIX = "ref_";
 
@@ -109,6 +110,12 @@ export type GameState = {
   // Optional only so legacy preview cookies can be upgraded without losing progress.
   carSelection?: { model: CarModelId | null; returningPlayer: boolean };
   developmentPreview: boolean;
+  /**
+   * Config ekonomi yang dipakai respons ini. Ikut di setiap payload supaya
+   * client menghitung dengan angka yang sama persis dengan server -- bukan
+   * dengan konstanta yang dibekukan saat build.
+   */
+  economy: EconomyConfig;
   balance: number;
   pending: number;
   earned: number;
@@ -144,12 +151,13 @@ export const INITIAL_GAME: GameState = {
   circuit: 0,
   player: { name: "Rookie racer", username: null, photoUrl: null },
   withdrawals: [],
+  economy: DEFAULT_ECONOMY,
   // Nilai streak-nol; server dan mode preview selalu menimpanya.
   daily: {
     streak: 0,
     claimedToday: false,
-    reward: DAILY_REWARDS[0],
-    nextReward: DAILY_REWARDS[1],
+    reward: DEFAULT_ECONOMY.dailyRewards[0],
+    nextReward: DEFAULT_ECONOMY.dailyRewards[1] ?? DEFAULT_ECONOMY.dailyRewards[0],
   },
   referral: { link: "", invited: 0, earned: 0 },
 };
@@ -176,19 +184,24 @@ export const formatDuration = (seconds: number) => {
   if (minutes > 0) return `${minutes} menit`;
   return `${total} detik`;
 };
-export const idr = (value: number) =>
-  `Rp${Math.round(value * COIN_TO_IDR).toLocaleString("id-ID")}`;
+export const idr = (value: number, e: EconomyConfig) =>
+  `Rp${Math.round(value * e.coinToIdr).toLocaleString("id-ID")}`;
 
-export const upgradeCost = (key: Upgrade, level: number) =>
-  Math.round(
-    { engine: 25, tires: 15, battery: 20 }[key] * Math.pow(1.65, level - 1),
-  );
-export const lapReward = (s: Pick<GameState, "levels" | "circuit">) =>
-  roundCoins(0.05 + (s.levels.battery - 1) * 0.01 + s.circuit * 0.02);
-export const lapSeconds = (s: Pick<GameState, "levels" | "boostLeft">) =>
-  8 /
-  (1 + (s.levels.engine - 1) * 0.15 + (s.levels.tires - 1) * 0.1) /
-  (s.boostLeft > 0 ? 2 : 1);
+/**
+ * Pembungkus yang menerima state, dipakai UI. Rumusnya sendiri ada di
+ * `lib/economy-config.ts` supaya proyeksi panel admin memakai rumus yang sama
+ * dan tidak ada salinan kedua yang bisa menyimpang.
+ */
+export const upgradeCost = (
+  s: Pick<GameState, "economy" | "levels">,
+  key: Upgrade,
+) => upgradeCostAt(s.economy, key, s.levels[key]);
+export const lapReward = (
+  s: Pick<GameState, "levels" | "circuit" | "economy">,
+) => lapRewardAt(s.economy, s.levels.battery, s.circuit);
+export const lapSeconds = (
+  s: Pick<GameState, "levels" | "boostLeft" | "economy">,
+) => lapSecondsAt(s.economy, s.levels, s.boostLeft > 0);
 export const MODIFICATION_PARTS: Record<Upgrade, readonly string[]> = {
   engine: ["Motor standar", "Motor sport", "Motor racing", "Motor pro"],
   tires: ["Ban & roller standar", "Ban low-friction", "Roller bearing", "Ban & roller pro"],
@@ -201,12 +214,13 @@ export function modificationPartName(key: Upgrade, level: number) {
 }
 
 export function modificationPreview(game: GameState, key: Upgrade) {
+  const ceiling = game.economy.maxUpgradeLevel;
   const level = game.levels[key];
-  const maxed = level >= 10;
-  const nextLevel = Math.min(10, level + 1);
+  const maxed = level >= ceiling;
+  const nextLevel = Math.min(ceiling, level + 1);
   const before = { ...game, boostLeft: 0 };
   const after = { ...before, levels: { ...game.levels, [key]: nextLevel } };
-  const cost = maxed ? 0 : upgradeCost(key, level);
+  const cost = maxed ? 0 : upgradeCost(game, key);
   return {
     level,
     nextLevel,
@@ -222,18 +236,6 @@ export function modificationPreview(game: GameState, key: Upgrade) {
   };
 }
 
-export const BOOST_DURATION_SECONDS = 10;
-export const BATTERY_RECHARGE_SECONDS = 25;
-/**
- * Jeda sampai Gaspol berikutnya, diukur dari saat tombol ditekan -- bukan dari
- * saat boost habis. Turunan, bukan angka ketiga yang berdiri sendiri:
- * `batteryTelemetry` membaca sisa cooldown sebagai sisa waktu pengisian, jadi
- * begitu cooldown tidak lagi sama dengan durasi + isi ulang, meteran baterai
- * langsung berbohong. Server dan mode preview sama-sama memakai ini.
- */
-export const BOOST_COOLDOWN_SECONDS =
-  BOOST_DURATION_SECONDS + BATTERY_RECHARGE_SECONDS;
-
 /**
  * Kecepatan yang ditampilkan diturunkan dari waktu per putaran, satu-satunya
  * besaran yang benar-benar menentukan penghasilan. Faktornya memetakan "satu
@@ -248,19 +250,15 @@ const KMH_PER_LAP_PER_SECOND = 192;
 export const displaySpeedKmh = (secondsPerLap: number) =>
   KMH_PER_LAP_PER_SECOND / secondsPerLap;
 
-/** Putaran tercepat yang mungkin: seluruh upgrade maksimal, boost menyala. */
-export const FASTEST_LAP_SECONDS = lapSeconds({
-  levels: { engine: 10, tires: 10, battery: 10 },
-  boostLeft: BOOST_DURATION_SECONDS,
-});
-
 // Derive reserve from the authoritative boost timers, so reloads cannot refill it.
-export function batteryTelemetry(s: Pick<GameState, "boostLeft" | "cooldown">) {
+export function batteryTelemetry(
+  s: Pick<GameState, "boostLeft" | "cooldown" | "economy">,
+) {
   const discharging = s.boostLeft > 0;
   const charging = !discharging && s.cooldown > 0;
   const charge = Math.max(0, Math.min(1, discharging
-    ? s.boostLeft / BOOST_DURATION_SECONDS
-    : 1 - s.cooldown / BATTERY_RECHARGE_SECONDS));
+    ? s.boostLeft / s.economy.boostDurationSeconds
+    : 1 - s.cooldown / s.economy.batteryRechargeSeconds));
   return {
     charge,
     percent: Math.round(charge * 100),
@@ -273,32 +271,63 @@ export function batteryTelemetry(s: Pick<GameState, "boostLeft" | "cooldown">) {
 export const totalLevel = (s: Pick<GameState, "levels">) =>
   Object.values(s.levels).reduce((a, b) => a + b, 0) - 2;
 
-export const MISSIONS = [
-  {
-    id: "laps",
+export const MISSION_IDS = ["laps", "upgrade", "earn"] as const;
+export type MissionId = (typeof MISSION_IDS)[number];
+
+/**
+ * Judul dan kalimatnya tetap di kode, bukan di config: itu teks UI, bukan angka
+ * ekonomi. Yang datang dari config hanya target dan hadiahnya -- dan kalimatnya
+ * dibangun dari target itu, supaya menaikkan target lewat panel admin tidak
+ * meninggalkan kalimat yang menyebut angka lama.
+ */
+const MISSION_COPY: Record<
+  MissionId,
+  { title: string; description: (target: number) => string }
+> = {
+  laps: {
     title: "Pemanasan dulu, bos",
-    description: "Selesaikan 10 putaran",
-    target: 10,
-    reward: 5,
+    description: (target) => `Selesaikan ${target} putaran`,
   },
-  {
-    id: "upgrade",
+  upgrade: {
     title: "Bukan mobil standar",
-    description: "Lakukan 3 upgrade",
-    target: 3,
-    reward: 10,
+    description: (target) => `Lakukan ${target} upgrade`,
   },
-  {
-    id: "earn",
+  earn: {
     title: "Pelan-pelan jadi sultan",
-    description: "Kumpulkan 25 koin dari balapan",
-    target: 25,
-    reward: 15,
+    description: (target) => `Kumpulkan ${formatCoins(target)} koin dari balapan`,
   },
-];
+};
+
+export type Mission = {
+  id: MissionId;
+  title: string;
+  description: string;
+  target: number;
+  reward: number;
+};
+
+export function missions(e: EconomyConfig): Mission[] {
+  const tuned: { id: MissionId; target: number; reward: number }[] = [
+    { id: "laps", target: e.missionLapsTarget, reward: e.missionLapsReward },
+    {
+      id: "upgrade",
+      target: e.missionUpgradeTarget,
+      reward: e.missionUpgradeReward,
+    },
+    { id: "earn", target: e.missionEarnTarget, reward: e.missionEarnReward },
+  ];
+  return tuned.map(({ id, target, reward }) => ({
+    id,
+    target,
+    reward,
+    title: MISSION_COPY[id].title,
+    description: MISSION_COPY[id].description(target),
+  }));
+}
+
 export const missionValue = (
   s: Pick<GameState, "laps" | "levels" | "earned">,
-  id: string,
+  id: MissionId,
 ) =>
   id === "laps" ? s.laps : id === "upgrade" ? totalLevel(s) - 1 : s.earned;
 
@@ -307,7 +336,7 @@ export type GameCommand =
   | { type: "sync" }
   | { type: "upgrade"; key: Upgrade }
   | { type: "claim" | "boost" | "gift" | "daily" }
-  | { type: "mission"; id: string }
+  | { type: "mission"; id: MissionId }
   | { type: "select-car"; model: CarModelId; color: CarColor }
   | { type: "color"; color: CarColor }
   | { type: "circuit"; circuit: 0 | 1 }
@@ -329,7 +358,10 @@ export function gameReducer(s: GameState, action: GameAction): GameState {
   const boostedSeconds = Math.min(delta, Math.max(0, s.boostLeft));
   const normalSeconds = delta - boostedSeconds;
   const normalLapSeconds = lapSeconds({ ...s, boostLeft: 0 });
-  const progress = s.progress + (boostedSeconds * 2 + normalSeconds) / normalLapSeconds;
+  const progress =
+    s.progress +
+    (boostedSeconds * s.economy.boostMultiplier + normalSeconds) /
+      normalLapSeconds;
   const completed = Math.floor(progress);
   const income = completed * lapReward(s);
   return {
@@ -342,3 +374,6 @@ export function gameReducer(s: GameState, action: GameAction): GameState {
     cooldown: Math.max(0, s.cooldown - delta),
   };
 }
+
+/** Re-export supaya konsumen `lib/game.ts` tidak perlu mengimpor dua modul. */
+export { boostCooldownSeconds };

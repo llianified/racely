@@ -1,5 +1,5 @@
 import { formatDuration } from "./game";
-import { OFFLINE_CAP_SECONDS } from "./game-economy";
+import type { EconomyConfig } from "./economy-config";
 
 /**
  * Bagian murni dari pemberitahuan idle: kapan seorang pemain layak dikirimi
@@ -9,8 +9,15 @@ import { OFFLINE_CAP_SECONDS } from "./game-economy";
 
 /** Sisa waktu saat pemain diingatkan, sebelum jendela offline penuh. */
 export const IDLE_NOTIFY_LEAD_SECONDS = 30 * 60;
-export const IDLE_NOTIFY_AFTER_SECONDS =
-  OFFLINE_CAP_SECONDS - IDLE_NOTIFY_LEAD_SECONDS;
+
+/**
+ * Turunan dari jendela offline, yang sekarang bisa disetel dari panel admin --
+ * jadi ini fungsi, bukan konstanta. Dijaga tidak negatif: jendela offline yang
+ * disetel lebih pendek dari lead time akan membuat ambangnya minus, dan setiap
+ * pemain langsung dianggap layak dikirimi pesan.
+ */
+export const idleNotifyAfterSeconds = (e: EconomyConfig) =>
+  Math.max(0, e.offlineCapSeconds - IDLE_NOTIFY_LEAD_SECONDS);
 
 export type IdleCandidate = {
   /** Pemain yang belum memilih mobil tidak pernah mengumpulkan koin. */
@@ -28,9 +35,13 @@ export function idleSecondsOf(candidate: IdleCandidate, now: Date) {
  * kuncinya: begitu pemain kembali dan hasilnya diselesaikan, last_settled_at
  * melompat melewati tanda notifikasi dan periode berikutnya layak lagi.
  */
-export function shouldNotifyIdle(candidate: IdleCandidate, now: Date) {
+export function shouldNotifyIdle(
+  candidate: IdleCandidate,
+  now: Date,
+  e: EconomyConfig,
+) {
   if (!candidate.carModel) return false;
-  if (idleSecondsOf(candidate, now) < IDLE_NOTIFY_AFTER_SECONDS) return false;
+  if (idleSecondsOf(candidate, now) < idleNotifyAfterSeconds(e)) return false;
   return (
     candidate.idleNotifiedAt === null ||
     candidate.idleNotifiedAt.getTime() < candidate.lastSettledAt.getTime()
@@ -42,9 +53,9 @@ export function shouldNotifyIdle(candidate: IdleCandidate, now: Date) {
  * teksnya menyesuaikan: mengingatkan kalau masih sempat, memberi tahu kalau
  * jendelanya sudah penuh. Keduanya tetap mengajak balik, bukan menyalahkan.
  */
-export function idleNotificationText(idleSeconds: number) {
-  const remaining = OFFLINE_CAP_SECONDS - idleSeconds;
+export function idleNotificationText(idleSeconds: number, e: EconomyConfig) {
+  const remaining = e.offlineCapSeconds - idleSeconds;
   return remaining > 0
     ? `Mobilmu berhenti ngumpulin koin ${formatDuration(remaining)} lagi. Buka Racely buat klaim hasil offline dan lanjut balapan.`
-    : `Jendela offline ${formatDuration(OFFLINE_CAP_SECONDS)} sudah penuh — mobilmu berhenti ngumpulin koin. Buka Racely buat klaim hasilnya dan lanjut ngegas.`;
+    : `Jendela offline ${formatDuration(e.offlineCapSeconds)} sudah penuh — mobilmu berhenti ngumpulin koin. Buka Racely buat klaim hasilnya dan lanjut ngegas.`;
 }
