@@ -22,3 +22,6 @@ pnpm-debug.log*
 .DS_Store
 *.pem
 coverage
+
+# ESLint only writes this with --cache, but it should never be committed.
+.eslintcache

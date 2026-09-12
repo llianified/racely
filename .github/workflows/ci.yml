@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A new push to a PR makes the in-flight run pointless.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: typecheck, lint, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # The database tests self-skip without DATABASE_URL, which would quietly
+    # drop the coverage that matters most (balances, withdrawals, idempotency,
+    # receipt retention). A throwaway container needs no secrets and keeps them
+    # running on every PR.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: racely
+          POSTGRES_PASSWORD: racely
+          POSTGRES_DB: racely
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U racely -d racely"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # localhost stays plaintext under lib/db/connection-url.ts, so no TLS setup.
+      DATABASE_URL: postgresql://racely:racely@127.0.0.1:5432/racely
+      # Baked into the prerendered page's metadataBase; a placeholder is enough
+      # to prove the build resolves absolute OG URLs instead of localhost.
+      PUBLIC_APP_URL: https://racely.example.com
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm run typecheck
+
+      - run: pnpm run lint
+
+      - run: pnpm run db:migrate
+
+      # tests/database.test.ts asserts DATABASE_URL is present whenever CI is set,
+      # so a misconfigured service fails the run instead of silently skipping.
+      - run: pnpm test
+
+      - run: pnpm run build

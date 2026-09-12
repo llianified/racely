@@ -11,6 +11,7 @@ import {
   claimTelegramUpdate,
   releaseTelegramUpdate,
 } from "@/lib/telegram-updates";
+import { readTextBody, RequestBodyTooLargeError } from "@/lib/http-body";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,26 +39,18 @@ export async function POST(request: Request) {
     );
   }
 
-  const declaredLength = Number(request.headers.get("content-length") ?? 0);
-  if (declaredLength > MAX_TELEGRAM_UPDATE_BYTES) {
-    return NextResponse.json(
-      { error: "Payload terlalu besar." },
-      { status: 413, headers: noStoreHeaders },
-    );
-  }
-
-  const source = await request.text();
-  if (Buffer.byteLength(source, "utf8") > MAX_TELEGRAM_UPDATE_BYTES) {
-    return NextResponse.json(
-      { error: "Payload terlalu besar." },
-      { status: 413, headers: noStoreHeaders },
-    );
-  }
-
   let payload: unknown;
   try {
-    payload = JSON.parse(source);
-  } catch {
+    payload = JSON.parse(
+      await readTextBody(request, MAX_TELEGRAM_UPDATE_BYTES),
+    );
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return NextResponse.json(
+        { error: "Payload terlalu besar." },
+        { status: 413, headers: noStoreHeaders },
+      );
+    }
     return NextResponse.json(
       { error: "Payload tidak valid." },
       { status: 400, headers: noStoreHeaders },
