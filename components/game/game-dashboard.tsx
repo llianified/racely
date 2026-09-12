@@ -1,38 +1,29 @@
 "use client";
 
-import {
-  useEffect,
-  useReducer,
-  useRef,
-  useState,
-} from "react";
-import {
-  ArrowUpRight,
-  Camera,
-  Check,
-  CircleHelp,
-  Flag,
-  Zap,
-} from "lucide-react";
-import Image from "next/image";
+import { useEffect, useReducer, useRef, useState } from "react";
+import { CircleHelp } from "lucide-react";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { GameNavigation, Topbar, type GameTab } from "./shell/game-navigation";
+import { BootScreen } from "./shell/boot-screen";
+import { GameGate } from "./shell/game-gate";
+import { GameDialog, type DialogKind } from "./shell/game-dialog";
+import { MenuPanel } from "./shell/menu-panel";
+import { GaragePanel, UpgradePanel } from "./panels/garage-panel";
+import { RewardsPanel, claimableTotal } from "./panels/rewards-panel";
+import { WalletPanel, type WithdrawPayload } from "./panels/wallet-panel";
+import { CircuitPanel } from "./race/circuit-panel";
+import { RacePanel, RaceReward } from "./race/race-panel";
+import { CarSelection } from "./car/car-selection";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { GameNavigation, Topbar, type GameTab } from "./game-navigation";
-import { GaragePanel, UpgradePanel } from "./garage-panel";
-import { CircuitPanel } from "./circuit-panel";
-import { RacePanel, RaceReward } from "./race-panel";
-import { RewardsPanel, claimableTotal } from "./rewards-panel";
-import { MenuPanel } from "./menu-panel";
-import { WalletPanel, type WithdrawPayload } from "./wallet-panel";
+  isSessionExpired,
+  readGameResponse,
+  requestHeaders,
+  type GameKey,
+} from "./game-client";
+import { telegramHaptic, useTelegramWebApp } from "./use-telegram-webapp";
 import {
   coins,
   gameReducer,
@@ -49,25 +40,6 @@ import {
 } from "@/lib/game";
 import { cn } from "@/lib/utils";
 import type { CarColor } from "@/lib/car-catalog";
-import { CarSelection } from "./car-selection";
-
-type TelegramWebApp = {
-  ready: () => void;
-  expand: () => void;
-  platform: string;
-  initData: string;
-  isVersionAtLeast: (version: string) => boolean;
-  setHeaderColor: (color: string) => void;
-  setBackgroundColor: (color: string) => void;
-  HapticFeedback?: { impactOccurred: (style: "light" | "medium") => void };
-};
-declare global {
-  interface Window {
-    Telegram?: { WebApp?: TelegramWebApp };
-  }
-}
-
-type GameKey = readonly [url: string, initData: string];
 
 const TITLES: Record<GameTab, string> = {
   menu: "Menu",
@@ -77,117 +49,13 @@ const TITLES: Record<GameTab, string> = {
   wallet: "Dompet",
 };
 
-function requestHeaders(initData: string) {
-  return initData ? { Authorization: `tma ${initData}` } : undefined;
-}
-
-class GameRequestError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-  ) {
-    super(message);
-    this.name = "GameRequestError";
-  }
-}
-
-async function readGameResponse(response: Response): Promise<GameState> {
-  const result = (await response.json()) as GameState | { error?: string };
-  if (!response.ok) {
-    throw new GameRequestError(
-      "error" in result && result.error
-        ? result.error
-        : "Progres Racely belum bisa dimuat.",
-      response.status,
-    );
-  }
-  return result as GameState;
-}
-
-/**
- * initData is signed once when the Mini App opens and the server rejects it
- * after 24h. Without this check a long-lived session keeps polling into 401s
- * while the local reducer goes on adding coins that will never be saved, so the
- * player races into a void. Treat it as terminal and send them back to Telegram.
- */
-function isSessionExpired(error: unknown) {
-  return error instanceof GameRequestError && error.status === 401;
-}
-
-function BootScreen() {
-  return (
-    <main className="boot-screen">
-      <Image
-        src="/racely-logo.png"
-        alt=""
-        width={112}
-        height={112}
-        priority
-        className="boot-logo"
-      />
-      <h1 className="boot-word">RACELY</h1>
-      <div
-        className="boot-bar"
-        role="progressbar"
-        aria-label="Memuat Racely"
-        aria-busy="true"
-      >
-        <span />
-      </div>
-    </main>
-  );
-}
-
-function GameGate({ error, onRetry }: { error: Error; onRetry?: () => void }) {
-  return (
-    <main className="flex min-h-dvh items-center justify-center bg-background px-6 text-center text-foreground">
-      <Toaster theme="dark" position="top-center" />
-      <section className="panel flex w-full max-w-md flex-col items-center gap-5 p-8">
-        <Image
-          src="/racely-logo.png"
-          alt="Logo Racely"
-          width={96}
-          height={96}
-          priority
-          className="gate-logo"
-        />
-        <div>
-          <p className="eyebrow">RACELY TELEGRAM MINI APP</p>
-          <h1 className="mt-2 text-2xl font-semibold">
-            Start your engine in Telegram.
-          </h1>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            {error.message}
-          </p>
-        </div>
-        {onRetry ? (
-          <Button variant="gold" size="lg" className="w-full" onClick={onRetry}>
-            Coba sinkronkan lagi
-          </Button>
-        ) : (
-          <a
-            href="https://t.me/RacelyBot?startapp=play"
-            target="_blank"
-            rel="noreferrer"
-            className={buttonVariants({ variant: "gold", size: "lg", className: "w-full" })}
-          >
-            Buka @RacelyBot
-            <ArrowUpRight data-icon="inline-end" />
-          </a>
-        )}
-      </section>
-    </main>
-  );
-}
-
 export function GameDashboard() {
   const [game, dispatch] = useReducer(gameReducer, INITIAL_GAME);
   const [tab, setTab] = useState<GameTab>("race");
-  const [dialog, setDialog] = useState<"help" | "circuits" | null>(null);
-  const [clientReady, setClientReady] = useState(false);
-  const [initData, setInitData] = useState("");
+  const [dialog, setDialog] = useState<DialogKind | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [raceMounted, setRaceMounted] = useState(false);
+  const { initData, clientReady } = useTelegramWebApp();
   const synced = useRef(false);
   const bootstrapped = useRef(false);
   const mutationLocked = useRef(false);
@@ -256,24 +124,6 @@ export function GameDashboard() {
   );
 
   useEffect(() => {
-    const app = window.Telegram?.WebApp;
-    if (app && app.platform !== "unknown") {
-      app.ready();
-      app.expand();
-      // window.Telegram.WebApp is injected by an external script and never
-      // changes afterwards, so there is nothing to subscribe to -- reading it
-      // once on mount is the only way in.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setInitData(app.initData ?? "");
-      if (app.isVersionAtLeast("6.9")) {
-        app.setHeaderColor("#090c1d");
-        app.setBackgroundColor("#090c1d");
-      }
-    }
-    setClientReady(true);
-  }, []);
-
-  useEffect(() => {
     if (!data) return;
     synced.current = true;
     dispatch({ type: "hydrate", state: data });
@@ -310,11 +160,6 @@ export function GameDashboard() {
     navigationTarget.current = targetId;
     setTab(next);
   };
-  const haptic = () => {
-    const app = window.Telegram?.WebApp;
-    if (app?.isVersionAtLeast("6.1"))
-      app.HapticFeedback?.impactOccurred("light");
-  };
 
   const runAction = async (
     action: GameCommand,
@@ -337,7 +182,7 @@ export function GameDashboard() {
       const next = await readGameResponse(response);
       dispatch({ type: "hydrate", state: next });
       await mutate(next, { revalidate: false });
-      haptic();
+      telegramHaptic();
       return next;
     } catch (actionError) {
       toast.error(
@@ -562,85 +407,13 @@ export function GameDashboard() {
           )}
         </main>
       </div>
-      <Dialog
-        open={dialog !== null}
-        onOpenChange={(open) => {
-          if (!open) setDialog(null);
-        }}
-      >
-        <DialogContent className="max-h-[85dvh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {dialog === "circuits"
-                ? "Pilih tempat ngegas"
-                : "Mobil kecil. Langsung jalan."}
-            </DialogTitle>
-            <DialogDescription>
-              {dialog === "circuits"
-                ? "Selesaikan putaran untuk membuka lintasan baru."
-                : "Racely adalah game mini 4WD 3D independen dan tidak berafiliasi dengan produsen kendaraan atau mainan mana pun."}
-            </DialogDescription>
-          </DialogHeader>
-          {dialog === "circuits" ? (
-            <div className="flex flex-col gap-3">
-              <Button
-                variant="circuit"
-                disabled={Boolean(busyAction)}
-                onClick={() => chooseCircuit(0)}
-              >
-                Jakarta Raceway
-                {game.circuit === 0 && <Check data-icon="inline-end" />}
-              </Button>
-              <Button
-                variant="circuit"
-                disabled={Boolean(busyAction) || game.laps < 25}
-                onClick={() => chooseCircuit(1)}
-              >
-                Midnight Speedway
-                <span>
-                  {game.circuit === 1 ? "Aktif" : game.laps >= 25 ? "Terbuka" : `${game.laps}/25 putaran`}
-                </span>
-              </Button>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-5 text-sm">
-              <div className="help-step">
-                <Flag />
-                <p>
-                  <strong>Balapan otomatis.</strong>
-                  <span>
-                    Koin terkumpul setiap putaran dan tersimpan di server. Dua
-                    mobil lain adalah bot latihan.
-                  </span>
-                </p>
-              </div>
-              <div className="help-step">
-                <Zap />
-                <p>
-                  <strong>Boost, klaim, lalu upgrade.</strong>
-                  <span>
-                    Gaspol 2× selama 10 detik, lalu isi ulang selama 25 detik.
-                  </span>
-                </p>
-              </div>
-              <div className="help-step">
-                <Camera />
-                <p>
-                  <strong>Lintasanmu, dari semua sudut.</strong>
-                  <span>
-                    Geser untuk orbit. Cubit untuk zoom. Gunakan tombol kamera
-                    untuk berganti sudut.
-                  </span>
-                </p>
-              </div>
-              <p className="rounded-lg border border-border p-3 text-muted-foreground">
-                Semua hadiah dan transaksi dihitung oleh server Racely. Progres
-                terikat ke akun Telegram yang membuka Mini App.
-              </p>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <GameDialog
+        kind={dialog}
+        onClose={() => setDialog(null)}
+        game={game}
+        onChooseCircuit={chooseCircuit}
+        disabled={Boolean(busyAction)}
+      />
     </div>
   );
 }

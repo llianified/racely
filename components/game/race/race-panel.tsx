@@ -9,7 +9,7 @@ import { batteryTelemetry, BOOST_DURATION_SECONDS, coins, formatCoins, lapReward
 import { RaceBattery } from "./race-battery";
 import { cn } from "@/lib/utils";
 
-const RaceScene = dynamic(() => import("./race-scene"), {
+const RaceScene = dynamic(() => import("../scene/race-scene"), {
   ssr: false,
   loading: () => (
     <div className="scene-loading" role="status">
