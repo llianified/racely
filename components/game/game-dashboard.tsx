@@ -88,7 +88,7 @@ export function GameDashboard() {
   }, [tab, garageMounted]);
 
   const gameKey = clientReady ? (["/api/game", initData] as const) : null;
-  const { data, error, isLoading, mutate } = useSWR<GameState>(
+  const { data, error, isLoading, isValidating, mutate } = useSWR<GameState>(
     gameKey,
     async ([url, signedInitData]: GameKey) => {
       const response = bootstrapped.current
@@ -333,12 +333,13 @@ export function GameDashboard() {
       toast.success(`Bodi ${name} terpasang dan tersimpan`);
   };
 
-  if (!clientReady || (isLoading && !data)) return <BootScreen />;
+  if (!clientReady || (isLoading && !data && !error)) return <BootScreen />;
   if (sessionExpired || (error && !data)) {
     return (
       <GameGate
         error={error}
-        onRetry={initData && !sessionExpired ? () => void mutate() : undefined}
+        retrying={isValidating}
+        onRetry={initData && !sessionExpired ? () => void mutate().catch(() => undefined) : undefined}
       />
     );
   }

@@ -292,8 +292,14 @@ function CameraRig({ mode, follow, resetKey, playerRef, active, reducedMotion, c
     // Bounded spring-arm lag keeps the car framed even at boost speed; no continuous shake.
     cameraDistance.current = THREE.MathUtils.lerp(cameraDistance.current, dramatic ? Math.max(0, speed - 1) * .55 + (recovering ? .35 : 0) : 0, 1 - Math.exp(-3 * Math.min(delta, .1)))
     const impulse = dramatic ? Math.sin(clock.elapsedTime * 35) * impact.current * .07 : 0
-    pose.offset.set(-.2 + impulse, 2.2 + cameraDistance.current * .18, -2.7 - cameraDistance.current).applyQuaternion(pose.heading)
-    pose.target.set(dramatic && state?.corner ? -.18 : 0, .12, dramatic ? 1.25 : .8).applyQuaternion(pose.heading).add(pose.position)
+    pose.offset.set(-.2 + impulse, 2.2 + cameraDistance.current * .18, -2.7 - cameraDistance.current)
+    pose.target.set(dramatic && state?.corner ? -.18 : 0, .12, dramatic ? 1.25 : .8)
+    // Keep the top of the frustum aimed at the arena, even at maximum boost FOV.
+    const minimumPitch = THREE.MathUtils.degToRad(chaseCamera.current.fov / 2 + 8)
+    const targetDistance = Math.hypot(pose.target.x - pose.offset.x, pose.target.z - pose.offset.z)
+    pose.offset.y = Math.max(pose.offset.y, pose.target.y + Math.tan(minimumPitch) * targetDistance)
+    pose.offset.applyQuaternion(pose.heading)
+    pose.target.applyQuaternion(pose.heading).add(pose.position)
     chaseCamera.current.position.copy(pose.position).add(pose.offset)
     chaseCamera.current.lookAt(pose.target)
     bank.current = THREE.MathUtils.lerp(bank.current, dramatic && state?.corner && !recovering ? -.018 : 0, damping)
@@ -360,15 +366,16 @@ export default function RaceScene(props: SceneProps) {
   return <SceneBoundary key={attempt} onRetry={retry}>
     {!ready && <div className="scene-loading absolute inset-0" role="status"><Flag /><strong>Menyalakan lampu sirkuit.</strong><span>Menyiapkan lintasan 3D…</span></div>}
     <Canvas orthographic dpr={[1, 1.25]} frameloop={visible && props.active !== false ? 'always' : 'never'} shadows="percentage" camera={{ position: [9, 12.5, 12], zoom: 30, near: .1, far: 100 }} gl={{ antialias: true, alpha: false, powerPreference: 'default' }} fallback={<SceneError onRetry={retry} />} onCreated={() => setReady(true)} aria-label={props.inspect ? 'Inspeksi sasis dan dua sel baterai mobil. Geser untuk memutar, cubit untuk zoom. Balapan tetap berlangsung.' : follow ? 'Arena mini 4WD 3D. Kamera mengikuti mobilmu. Pilih Overview untuk melihat seluruh lintasan.' : 'Arena mini 4WD 3D. Kamera overview. Geser untuk memutar, cubit untuk zoom.'}>
-      <color attach="background" args={['#191939']} />
+      <color attach="background" args={[COLORS.navy]} />
+      {!props.inspect && <fog attach="fog" args={[COLORS.navy, 30, 85]} />}
       <CarLighting />
       <ambientLight intensity={.3} />
       <hemisphereLight args={[COLORS.white, COLORS.navy, .65]} />
       <directionalLight position={[2, 10, 7]} intensity={2.2} castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={props.inspect ? -1.5 : -10} shadow-camera-right={props.inspect ? 1.5 : 10} shadow-camera-top={props.inspect ? 1.5 : 10} shadow-camera-bottom={props.inspect ? -1.5 : -10} shadow-normalBias={.006} shadow-bias={-.0001} />
       <directionalLight position={[-8, 5, -6]} intensity={.8} color={COLORS.white} />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -.16, 0]} receiveShadow><planeGeometry args={[80, 80]} /><meshStandardMaterial color="#090c1d" roughness={.85} /></mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -.16, 0]} receiveShadow><planeGeometry args={[240, 240]} /><meshStandardMaterial color="#090c1d" roughness={.85} /></mesh>
       {props.inspect ? <CarInspector levels={props.levels} color={props.color} model={props.model} charge={props.charge} reducedMotion={props.reducedMotion} bodyVisible={props.bodyVisible} /> : <>
-      <Grid position={[0, -.145, 0]} args={[36, 36]} cellSize={1} cellThickness={.35} cellColor="#2c2852" sectionSize={5} sectionThickness={.6} sectionColor="#463e7a" fadeDistance={23} fadeStrength={3} />
+      <Grid position={[0, -.145, 0]} args={[36, 36]} infiniteGrid cellSize={1} cellThickness={.35} cellColor="#2c2852" sectionSize={5} sectionThickness={.6} sectionColor="#463e7a" fadeDistance={60} fadeStrength={2} />
       <Circuit circuit={props.circuit} />
       {[0, 1, 2].map(lane => <Racer key={lane} lane={lane} driving={lane === 0 ? props.driving : undefined} onTelemetry={props.onTelemetry} reducedMotion={props.reducedMotion} levels={lane === 0 ? props.levels : undefined} model={lane === 0 ? props.model : 'neo-falcon'} playerRef={lane === 0 ? playerRef : undefined} color={lane === 0 ? props.color : lane === 1 ? COLORS.gold : COLORS.white} progress={props.progress} seconds={props.seconds} boosted={props.boosted} />)}
       <RacingLine playerRef={playerRef} driving={props.driving} />
