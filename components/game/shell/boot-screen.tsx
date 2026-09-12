@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { Car } from "lucide-react";
 
 export function BootScreen() {
   return (
@@ -13,12 +14,16 @@ export function BootScreen() {
       />
       <h1 className="boot-word">RACELY</h1>
       <div
-        className="boot-bar"
+        className="boot-loader"
         role="progressbar"
         aria-label="Memuat Racely"
         aria-busy="true"
       >
-        <span />
+        <div className="boot-bar" aria-hidden="true">
+          <span>
+            <Car className="boot-car" aria-hidden="true" />
+          </span>
+        </div>
       </div>
     </main>
   );

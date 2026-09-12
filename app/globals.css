@@ -419,8 +419,10 @@
 .gate-logo { width: 70px; height: auto; object-fit: contain; }
 @keyframes boot-logo-in { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
 .boot-word { font-size: 34px; font-weight: 950; letter-spacing: -.03em; line-height: 1; color: var(--foreground); }
-.boot-bar { width: min(220px, 62vw); height: 4px; border-radius: 999px; background: var(--secondary); overflow: hidden; }
-.boot-bar > span { display: block; width: 42%; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--primary), var(--accent)); animation: boot-slide 1.15s ease-in-out infinite; }
+.boot-loader { width: min(220px, 62vw); padding-top: 24px; overflow: hidden; }
+.boot-bar { height: 4px; border-radius: 999px; background: var(--secondary); }
+.boot-bar > span { position: relative; display: block; width: 42%; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--primary), var(--accent)); animation: boot-slide 1.15s ease-in-out infinite; }
+.boot-car { position: absolute; right: 0; bottom: 4px; width: 26px; height: 22px; color: var(--accent); fill: var(--background); stroke-width: 1.8; }
 @keyframes boot-slide { 0% { transform: translateX(-105%); } 100% { transform: translateX(240%); } }
 .circuit-preview { display: flex; align-items: center; gap: 12px; margin: 10px calc(var(--gutter) * -1) 0; padding: 12px var(--gutter); border-block: 1px dashed var(--border); color: var(--foreground); }
 .circuit-ticket-number { flex-shrink: 0; align-self: stretch; display: flex; align-items: center; margin-block: -12px; padding: 12px 12px 12px 0; border-right: 1px solid var(--border); color: var(--subtle-foreground); font-size: 30px; font-weight: 900; letter-spacing: -.06em; line-height: 1; }
@@ -499,4 +501,5 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
   .lap-pop { display: none; }
+  .boot-bar > span { animation: none; transform: translateX(69%); }
 }
