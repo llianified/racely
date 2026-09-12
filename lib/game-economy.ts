@@ -13,7 +13,7 @@ import {
  * still "someone is watching the race". It has to be generous enough to absorb
  * a slow round trip without paying for time nobody was there for.
  */
-export const HEARTBEAT_CAP_SECONDS = 30;
+export const HEARTBEAT_CAP_SECONDS = 2 * 60;
 /**
  * Time past the heartbeat window is time the player was away. It still pays --
  * that is the idle reward -- but only this far back, so a week offline is not a
@@ -46,8 +46,8 @@ export function calculateRaceSettlement(
 ): RaceSettlement {
   const intervalStart = state.lastSettledAt.getTime();
   const awayMs = Math.max(0, now.getTime() - intervalStart);
-  // Splitting instead of choosing one cap keeps the payout continuous: a 40s
-  // absence pays the full 30s plus 10s at half rate, never less than a 30s one.
+  // Splitting instead of choosing one cap keeps the payout continuous: time
+  // inside the heartbeat window pays in full, then only the remainder pays half.
   const onlineMs = Math.min(awayMs, HEARTBEAT_CAP_SECONDS * 1000);
   const offlineMs = Math.min(awayMs - onlineMs, OFFLINE_CAP_SECONDS * 1000);
 
