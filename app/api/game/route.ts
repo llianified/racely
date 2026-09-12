@@ -12,6 +12,7 @@ import {
   TelegramAuthError,
 } from "@/lib/telegram-auth";
 import { consumeRateLimit, GAME_STATE_RULE } from "@/lib/rate-limit";
+import { readEconomyConfig } from "@/lib/economy-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,7 +42,7 @@ export async function GET(request: Request) {
     }
 
     const previewGame = preview
-      ? getPreviewGameState(request, identity)
+      ? getPreviewGameState(request, identity, await readEconomyConfig())
       : null;
     const game = previewGame?.state ?? (await getGameState(identity));
     const response = NextResponse.json(game, {

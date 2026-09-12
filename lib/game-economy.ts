@@ -1,5 +1,4 @@
 import {
-  DAILY_REWARDS,
   lapReward,
   lapSeconds,
   roundCoins,
@@ -7,25 +6,23 @@ import {
   type GameState,
   type OfflineEarnings,
 } from "./game";
+import type { EconomyConfig } from "./economy-config";
 
 /**
- * An open client re-syncs every few seconds, so anything inside this window is
- * still "someone is watching the race". It has to be generous enough to absorb
- * a slow round trip without paying for time nobody was there for.
+ * Tiga batas yang dulu jadi konstanta di sini -- jendela heartbeat, jendela
+ * offline, dan laju offline -- sekarang datang dari `EconomyConfig`:
+ *
+ * - `heartbeatCapSeconds`: client yang terbuka menyinkron tiap beberapa detik,
+ *   jadi apa pun di dalam jendela ini masih dihitung "ada yang menonton".
+ * - `offlineCapSeconds`: waktu di luar jendela itu tetap dibayar -- itulah
+ *   hadiah idle-nya -- tapi hanya sampai sejauh ini, supaya seminggu offline
+ *   bukan jackpot.
+ * - `offlineRate`: laju bayaran di luar jendela heartbeat, di bawah 1 supaya
+ *   bermain aktif selalu lebih menguntungkan.
  */
-export const HEARTBEAT_CAP_SECONDS = 2 * 60;
-/**
- * Time past the heartbeat window is time the player was away. It still pays --
- * that is the idle reward -- but only this far back, so a week offline is not a
- * jackpot.
- */
-export const OFFLINE_CAP_SECONDS = 4 * 60 * 60;
-/** Offline laps run at half speed, so playing actively always pays better. */
-export const OFFLINE_RATE = 0.5;
-
 export type RaceSettlementInput = Pick<
   GameState,
-  "progress" | "levels" | "circuit"
+  "progress" | "levels" | "circuit" | "economy"
 > & {
   lastSettledAt: Date;
   boostEndsAt: Date | null;
@@ -44,12 +41,17 @@ export function calculateRaceSettlement(
   state: RaceSettlementInput,
   now: Date,
 ): RaceSettlement {
+  const economy = state.economy;
   const intervalStart = state.lastSettledAt.getTime();
   const awayMs = Math.max(0, now.getTime() - intervalStart);
   // Splitting instead of choosing one cap keeps the payout continuous: time
-  // inside the heartbeat window pays in full, then only the remainder pays half.
-  const onlineMs = Math.min(awayMs, HEARTBEAT_CAP_SECONDS * 1000);
-  const offlineMs = Math.min(awayMs - onlineMs, OFFLINE_CAP_SECONDS * 1000);
+  // inside the heartbeat window pays in full, then only the remainder pays at
+  // the offline rate.
+  const onlineMs = Math.min(awayMs, economy.heartbeatCapSeconds * 1000);
+  const offlineMs = Math.min(
+    awayMs - onlineMs,
+    economy.offlineCapSeconds * 1000,
+  );
 
   if (onlineMs + offlineMs === 0) {
     return {
@@ -63,7 +65,8 @@ export function calculateRaceSettlement(
 
   const onlineEnd = intervalStart + onlineMs;
   const boostEnd = state.boostEndsAt?.getTime() ?? intervalStart;
-  // A boost lasts 10s, so it can only ever overlap the heartbeat window.
+  // Boost jauh lebih pendek dari jendela heartbeat, jadi hanya bisa bertumpang
+  // dengan jendela itu.
   const boostedMs = Math.max(0, Math.min(onlineEnd, boostEnd) - intervalStart);
   const normalMs = onlineMs - boostedMs;
   // lapSeconds dan lapReward hanya membaca levels, circuit dan boostLeft.
@@ -74,9 +77,11 @@ export function calculateRaceSettlement(
   const reward = lapReward(economyState);
 
   const onlineLaps =
-    state.progress + normalMs / lapDurationMs + boostedMs / (lapDurationMs / 2);
+    state.progress +
+    normalMs / lapDurationMs +
+    boostedMs / (lapDurationMs / economy.boostMultiplier);
   const accumulatedLaps =
-    onlineLaps + (offlineMs / lapDurationMs) * OFFLINE_RATE;
+    onlineLaps + (offlineMs / lapDurationMs) * economy.offlineRate;
   const completedLaps = Math.floor(accumulatedLaps);
   // Attribute to the away window only the laps the heartbeat would not have
   // closed on its own, so the summary matches what the balance actually gained.
@@ -95,7 +100,7 @@ export function calculateRaceSettlement(
         ? {
             awaySeconds: awayMs / 1000,
             creditedSeconds: offlineMs / 1000,
-            capped: awayMs - onlineMs > OFFLINE_CAP_SECONDS * 1000,
+            capped: awayMs - onlineMs > economy.offlineCapSeconds * 1000,
             laps: offlineLaps,
             coins: offlineIncome,
           }
@@ -134,9 +139,10 @@ function previousDay(key: string) {
 }
 
 /** Hadiah untuk hari ke-`day` dalam sebuah streak (1-based), mentok di rung terakhir. */
-export function dailyRewardFor(day: number) {
-  const rung = Math.min(Math.max(1, Math.floor(day)), DAILY_REWARDS.length);
-  return DAILY_REWARDS[rung - 1];
+export function dailyRewardFor(day: number, e: EconomyConfig) {
+  const rungs = e.dailyRewards;
+  const rung = Math.min(Math.max(1, Math.floor(day)), rungs.length);
+  return rungs[rung - 1];
 }
 
 /**
@@ -147,6 +153,7 @@ export function dailyRewardFor(day: number) {
 export function dailyCheckIn(
   claimedDays: readonly string[],
   now: Date,
+  e: EconomyConfig,
 ): DailyCheckIn {
   const today = racingDayKey(now);
   const claimed = new Set(claimedDays);
@@ -163,7 +170,7 @@ export function dailyCheckIn(
   return {
     streak,
     claimedToday,
-    reward: claimedToday ? 0 : dailyRewardFor(streak + 1),
-    nextReward: dailyRewardFor(streak + (claimedToday ? 1 : 2)),
+    reward: claimedToday ? 0 : dailyRewardFor(streak + 1, e),
+    nextReward: dailyRewardFor(streak + (claimedToday ? 1 : 2), e),
   };
 }

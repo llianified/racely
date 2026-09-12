@@ -3,12 +3,17 @@ import {
   calculateRaceSettlement,
   dailyCheckIn,
   dailyRewardFor,
-  HEARTBEAT_CAP_SECONDS,
-  OFFLINE_CAP_SECONDS,
-  OFFLINE_RATE,
   racingDayKey,
 } from "../lib/game-economy";
-import { DAILY_REWARDS, INITIAL_GAME, batteryTelemetry, formatDuration, gameReducer, lapReward, lapSeconds, modificationPartName, modificationPreview, upgradeCost } from "../lib/game";
+import { INITIAL_GAME, batteryTelemetry, formatDuration, gameReducer, lapReward, lapSeconds, modificationPartName, modificationPreview } from "../lib/game";
+import { DEFAULT_ECONOMY, upgradeCostAt } from "../lib/economy-config";
+
+/**
+ * Angka ekonomi sekarang bisa disetel dari panel admin, jadi berkas ini mengunci
+ * nilai BAWAAN-nya: tabel di bawah diturunkan dari DEFAULT_ECONOMY, dan default
+ * yang bergeser tanpa sengaja akan memerahkan test ini.
+ */
+const E = DEFAULT_ECONOMY;
 
 const start = new Date("2026-09-11T00:00:00.000Z");
 
@@ -19,6 +24,7 @@ function settlementInput(
     progress: 0,
     levels: { engine: 1, tires: 1, battery: 1 },
     circuit: 0,
+    economy: E,
     lastSettledAt: start,
     boostEndsAt: null,
     ...overrides,
@@ -31,17 +37,17 @@ describe("Boost battery", () => {
   });
 
   it("drains only during boost, then recharges from empty", () => {
-    expect(batteryTelemetry({ boostLeft: 10, cooldown: 35 }).percent).toBe(100);
-    expect(batteryTelemetry({ boostLeft: 5, cooldown: 30 })).toMatchObject({ percent: 50, phase: "discharging", canBoost: false });
-    expect(batteryTelemetry({ boostLeft: 0, cooldown: 25 })).toMatchObject({ percent: 0, phase: "charging", readyIn: 25 });
-    expect(batteryTelemetry({ boostLeft: 0, cooldown: 12.5 }).percent).toBe(50);
-    expect(batteryTelemetry({ boostLeft: 0, cooldown: 0 }).canBoost).toBe(true);
+    expect(batteryTelemetry({ boostLeft: 10, cooldown: 35, economy: E }).percent).toBe(100);
+    expect(batteryTelemetry({ boostLeft: 5, cooldown: 30, economy: E })).toMatchObject({ percent: 50, phase: "discharging", canBoost: false });
+    expect(batteryTelemetry({ boostLeft: 0, cooldown: 25, economy: E })).toMatchObject({ percent: 0, phase: "charging", readyIn: 25 });
+    expect(batteryTelemetry({ boostLeft: 0, cooldown: 12.5, economy: E }).percent).toBe(50);
+    expect(batteryTelemetry({ boostLeft: 0, cooldown: 0, economy: E }).canBoost).toBe(true);
   });
 
   it("clamps stale timer values and never unlocks a running boost", () => {
-    expect(batteryTelemetry({ boostLeft: 20, cooldown: 0 })).toMatchObject({ percent: 100, canBoost: false });
-    expect(batteryTelemetry({ boostLeft: 0, cooldown: 35 }).percent).toBe(0);
-    expect(batteryTelemetry({ boostLeft: 0, cooldown: -1 }).percent).toBe(100);
+    expect(batteryTelemetry({ boostLeft: 20, cooldown: 0, economy: E })).toMatchObject({ percent: 100, canBoost: false });
+    expect(batteryTelemetry({ boostLeft: 0, cooldown: 35, economy: E }).percent).toBe(0);
+    expect(batteryTelemetry({ boostLeft: 0, cooldown: -1, economy: E }).percent).toBe(100);
   });
 
   it("splits a tick exactly when boost ends and keeps racing during recharge", () => {
@@ -59,7 +65,7 @@ describe("Modification workshop", () => {
     const state = { ...INITIAL_GAME, balance: 40, boostLeft: 10, levels: { engine: 2, tires: 3, battery: 4 } };
     const original = structuredClone(state);
     const preview = modificationPreview(state, "engine");
-    expect(preview.cost).toBe(upgradeCost("engine", 2));
+    expect(preview.cost).toBe(upgradeCostAt(E, "engine", 2));
     expect(preview.beforeSeconds).toBe(lapSeconds({ ...state, boostLeft: 0 }));
     expect(preview.afterSeconds).toBeLessThan(preview.beforeSeconds);
     expect(preview.afterReward).toBe(preview.beforeReward);
@@ -101,9 +107,9 @@ describe("Racely economy", () => {
   it("keeps the base lap time, coin rewards, and upgrade costs", () => {
     expect(lapSeconds(INITIAL_GAME)).toBe(8);
     expect(lapReward(INITIAL_GAME)).toBe(0.05);
-    expect(upgradeCost("engine", 1)).toBe(25);
-    expect(upgradeCost("tires", 1)).toBe(15);
-    expect(upgradeCost("battery", 1)).toBe(20);
+    expect(upgradeCostAt(E, "engine", 1)).toBe(25);
+    expect(upgradeCostAt(E, "tires", 1)).toBe(15);
+    expect(upgradeCostAt(E, "battery", 1)).toBe(20);
   });
 
   it("settles completed laps and carries fractional progress", () => {
@@ -130,11 +136,11 @@ describe("Racely economy", () => {
   it("reports no offline window while the client is heartbeating", () => {
     const result = calculateRaceSettlement(
       settlementInput(),
-      new Date(start.getTime() + HEARTBEAT_CAP_SECONDS * 1000),
+      new Date(start.getTime() + E.heartbeatCapSeconds * 1000),
     );
 
     expect(result.offline).toBeNull();
-    expect(result.creditedSeconds).toBe(HEARTBEAT_CAP_SECONDS);
+    expect(result.creditedSeconds).toBe(E.heartbeatCapSeconds);
     expect(result.completedLaps).toBe(15);
     expect(result.income).toBe(0.75);
   });
@@ -167,18 +173,18 @@ describe("Offline earnings", () => {
   });
 
   it("still pays every second of an absence that lands exactly on the cap", () => {
-    const result = settleAfter(OFFLINE_CAP_SECONDS);
+    const result = settleAfter(E.offlineCapSeconds);
 
     expect(result.offline).toMatchObject({
-      awaySeconds: OFFLINE_CAP_SECONDS,
-      creditedSeconds: OFFLINE_CAP_SECONDS - HEARTBEAT_CAP_SECONDS,
+      awaySeconds: E.offlineCapSeconds,
+      creditedSeconds: E.offlineCapSeconds - E.heartbeatCapSeconds,
       capped: false,
       laps: 892,
       coins: 44.6,
     });
     expect(result.completedLaps).toBe(907);
     expect(result.income).toBe(45.35);
-    expect(result.creditedSeconds).toBe(OFFLINE_CAP_SECONDS);
+    expect(result.creditedSeconds).toBe(E.offlineCapSeconds);
   });
 
   it("truncates a ten hour absence to the four hour cap", () => {
@@ -186,31 +192,31 @@ describe("Offline earnings", () => {
 
     expect(result.offline).toMatchObject({
       awaySeconds: 10 * 60 * 60,
-      creditedSeconds: OFFLINE_CAP_SECONDS,
+      creditedSeconds: E.offlineCapSeconds,
       capped: true,
       laps: 900,
       coins: 45,
     });
     // A full day away pays exactly the same as the capped four hours.
     expect(settleAfter(24 * 60 * 60).offline).toMatchObject({
-      creditedSeconds: OFFLINE_CAP_SECONDS,
+      creditedSeconds: E.offlineCapSeconds,
       laps: 900,
       coins: 45,
     });
   });
 
   it("credits offline seconds at exactly half the online lap rate", () => {
-    const offline = settleAfter(OFFLINE_CAP_SECONDS + HEARTBEAT_CAP_SECONDS);
-    const onlineLaps = OFFLINE_CAP_SECONDS / lapSeconds(INITIAL_GAME);
+    const offline = settleAfter(E.offlineCapSeconds + E.heartbeatCapSeconds);
+    const onlineLaps = E.offlineCapSeconds / lapSeconds(INITIAL_GAME);
 
-    expect(offline.offline?.creditedSeconds).toBe(OFFLINE_CAP_SECONDS);
-    expect(offline.offline?.laps).toBe(onlineLaps * OFFLINE_RATE);
-    expect(OFFLINE_RATE).toBe(0.5);
+    expect(offline.offline?.creditedSeconds).toBe(E.offlineCapSeconds);
+    expect(offline.offline?.laps).toBe(onlineLaps * E.offlineRate);
+    expect(E.offlineRate).toBe(0.5);
   });
 
   it("never pays a short absence less than the heartbeat window alone", () => {
-    const heartbeat = settleAfter(HEARTBEAT_CAP_SECONDS);
-    const justOver = settleAfter(HEARTBEAT_CAP_SECONDS + 10);
+    const heartbeat = settleAfter(E.heartbeatCapSeconds);
+    const justOver = settleAfter(E.heartbeatCapSeconds + 10);
 
     // 120s full rate (15 laps) + 10s half rate (.625 laps) keeps every lap
     // already earned in the heartbeat window and carries the remainder forward.
@@ -234,7 +240,7 @@ describe("Offline earnings", () => {
   it("spells the offline window the way the dialog reads it", () => {
     expect(formatDuration(45)).toBe("45 detik");
     expect(formatDuration(600)).toBe("10 menit");
-    expect(formatDuration(OFFLINE_CAP_SECONDS)).toBe("4 jam");
+    expect(formatDuration(E.offlineCapSeconds)).toBe("4 jam");
     expect(formatDuration(4 * 60 * 60 + 25 * 60)).toBe("4 jam 25 menit");
     expect(formatDuration(-1)).toBe("0 detik");
   });
@@ -243,7 +249,7 @@ describe("Offline earnings", () => {
 describe("Check-in harian", () => {
   // 12:00 WIB pada 12 September 2026.
   const siang = new Date("2026-09-12T05:00:00.000Z");
-  const cek = (hari: string[], now = siang) => dailyCheckIn(hari, now);
+  const cek = (hari: string[], now = siang) => dailyCheckIn(hari, now, E);
 
   it("mengganti hari tengah malam WIB, bukan UTC", () => {
     expect(racingDayKey(new Date("2026-09-11T16:59:00.000Z"))).toBe("2026-09-11");
@@ -252,12 +258,12 @@ describe("Check-in harian", () => {
   });
 
   it("menaik lalu mentok, berapa pun panjang streak", () => {
-    expect(DAILY_REWARDS.map((_, i) => dailyRewardFor(i + 1))).toEqual([...DAILY_REWARDS]);
-    expect(dailyRewardFor(8)).toBe(10);
-    expect(dailyRewardFor(365)).toBe(10);
+    expect(E.dailyRewards.map((_, i) => dailyRewardFor(i + 1, E))).toEqual([...E.dailyRewards]);
+    expect(dailyRewardFor(8, E)).toBe(10);
+    expect(dailyRewardFor(365, E)).toBe(10);
     // Hari ke-0 dan negatif tetap membayar rung pertama, bukan undefined.
-    expect(dailyRewardFor(0)).toBe(1);
-    expect(dailyRewardFor(-3)).toBe(1);
+    expect(dailyRewardFor(0, E)).toBe(1);
+    expect(dailyRewardFor(-3, E)).toBe(1);
   });
 
   it("pemain baru langsung bisa klaim hari pertama", () => {

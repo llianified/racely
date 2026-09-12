@@ -17,6 +17,7 @@ import {
   TelegramAuthError,
 } from "@/lib/telegram-auth";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { readEconomyConfig } from "@/lib/economy-store";
 import { readJsonBody, RequestBodyTooLargeError } from "@/lib/http-body";
 
 const MAX_ACTION_BODY_BYTES = 2048;
@@ -54,15 +55,17 @@ export async function POST(request: Request) {
         { status: 400 },
       );
 
-    const previewGame =
-      isCookiePreview
-        ? performPreviewGameAction(
-            request,
-            identity,
-            body.data.requestId,
-            body.data.action,
-          )
-        : null;
+    const previewGame = isCookiePreview
+      ? performPreviewGameAction(
+          request,
+          identity,
+          body.data.requestId,
+          body.data.action,
+          // Mode preview memakai config yang sama dengan produksi, jadi ekonomi
+          // yang disetel dari panel ikut terasa saat `pnpm dev`.
+          await readEconomyConfig(),
+        )
+      : null;
     const game =
       previewGame?.state ??
       (await performGameAction(

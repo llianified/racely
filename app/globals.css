@@ -35,6 +35,13 @@
   /* Kiblatnya tombol Gaspol: 6px. Semua sudut besar bersumber dari sini. */
   --radius: .375rem;
   --app-width: 480px;
+  /* Panel admin dibuka di browser desktop untuk kerja operasional, bukan di
+     dalam Telegram, jadi ia punya lebar sendiri dan tidak ikut --app-width. */
+  --admin-width: 1040px;
+  /* Lebar minimum tabel antrean. Di bawah ini kolomnya mulai memecah angka
+     rupiah dan nomor rekening, jadi tabelnya menahan lebar dan wadahnya yang
+     digeser -- bukan sebaliknya. */
+  --admin-table-min: 860px;
 
   /* ── tangga ukuran (px) ──────────────────────────────────────────────────
      SATU tangga untuk gap, padding, margin, offset, dan dimensi chrome kecil.
