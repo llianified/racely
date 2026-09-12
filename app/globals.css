@@ -424,19 +424,7 @@
 .race-speed-meter i { display: block; height: 100%; background: var(--accent); transform-origin: left; transition: transform var(--dur-fast) linear; }
 .grip-challenge[data-perfect='true'] .grip-meter i { background: var(--success); }
 .grip-challenge[data-perfect='true'] .grip-heading > span, .grip-challenge[data-perfect='true'] .grip-reading > span { color: var(--success); }
-.race-dashboard { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: center; gap: var(--space-md); padding: var(--space-md); background: var(--background); border-bottom: var(--stroke) solid var(--border); }
-.race-dashboard .lap-hud { grid-area: 1 / 1; padding: 0; border: none; background: none; }
-.race-dashboard .race-reward-hud { grid-area: 1 / 2; text-shadow: none; }
-.race-dashboard .race-speed-hud { grid-area: 2 / 1; text-shadow: none; }
-.race-dashboard .race-speed-hud > strong { font-size: var(--fs-6xl); }
-.race-dashboard .race-line-status { grid-area: 3 / 1 / auto / -1; text-shadow: none; line-height: var(--lh-relaxed); }
-.race-dashboard .boost-hud { position: relative; inset: auto; grid-column: 1 / -1; display: none; transform: none; }
-.race-dashboard .boost-hud-active { display: flex; }
-.race-dashboard .inspect-hud, .race-dashboard .inspect-hint { position: static; grid-column: 1 / -1; transform: none; }
-.race-lap-feedback { grid-column: 1 / -1; }
-.race-lap-feedback:empty { display: none; }
-.race-dashboard .lap-pop { position: static; transform: none; animation: none; }
-.scene-boost-action { grid-area: 2 / 2; justify-self: end; }
+.scene-boost-action { position: absolute; right: var(--space-md); bottom: var(--space-56); z-index: var(--z-overlay); }
 .scene-boost-action small { font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) { .race-speed-meter i { transition: none; } }
 .race-vignette { position: absolute; inset: 0; z-index: var(--z-base); pointer-events: none; background: var(--race-hud-gradient); box-shadow: var(--vignette); transition: box-shadow var(--dur-slower); }
