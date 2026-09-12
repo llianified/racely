@@ -138,13 +138,13 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
         </div>
       </div>
       <SheetContent side="bottom" className="game-sheet gap-0 p-0 font-sans" showCloseButton={!installing}>
-        <SheetHeader className="border-b border-border px-xl py-(--space-20) pr-12">
+        <SheetHeader className="border-b border-border px-xl py-(--space-20) pr-(--space-56)">
           <SheetTitle>Modifikasi {title.toLowerCase()}</SheetTitle>
           <SheetDescription>Pilih peningkatan permanen untuk mobilmu. Koin hanya dipotong setelah pemasangan berhasil.</SheetDescription>
         </SheetHeader>
         <div className="flex flex-col text-read leading-relaxed">
           <div className="flex items-center gap-md border-b border-border bg-background px-xl py-lg text-foreground">
-            <Icon className="size-6 shrink-0 text-accent" aria-hidden="true" />
+            <Icon className="size-(--icon-xl) shrink-0 text-accent" aria-hidden="true" />
             <div className="min-w-0">
               <p className="font-bold">{preview.nextPart}</p>
               <p className="text-muted-foreground">Level {level} → {nextLevel} · {part.subtitle}</p>
@@ -152,7 +152,7 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
           </div>
           <div className="border-b border-border bg-background px-xl py-lg text-foreground">
             <div className="overflow-hidden rounded-xl border border-border">
-              <div className="h-48" role="img" aria-label={`${showAfter ? "Setelah" : "Sebelum"} modifikasi ${title}, level ${showAfter ? nextLevel : level}${inspect ? ", bodi dilepas" : ""}`}>
+              <div className="h-(--stage-inspect-h)" role="img" aria-label={`${showAfter ? "Setelah" : "Sebelum"} modifikasi ${title}, level ${showAfter ? nextLevel : level}${inspect ? ", bodi dilepas" : ""}`}>
                 {open && <CarPreviewScene color={game.color} equipped={game.bodyParts?.equipped} model={game.carSelection?.model ?? "neo-falcon"} levels={showAfter ? { ...game.levels, [key]: nextLevel } : game.levels} inspect={inspect} />}
               </div>
               <div className="flex flex-wrap items-center justify-between gap-sm border-t border-border p-md">

@@ -96,7 +96,7 @@ export function WalletPanel({
   };
 
   return (
-    <div className="wallet-layout section-enter flex flex-col gap-4">
+    <div className="wallet-layout section-enter flex flex-col gap-lg">
       <section className="wallet-hero" aria-label="Saldo koin">
         <div className="wallet-balance">
           <span className="eyebrow">Saldo tersedia</span>
