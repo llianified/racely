@@ -132,7 +132,7 @@ export function BodyPartsShop({ game, active, disabled, onAction }: ShopProps) {
   const ownedCount = game.bodyParts?.owned.length ?? 0;
   const equippedCount = Object.keys(game.bodyParts?.equipped ?? {}).length;
   return <Sheet open={open && active} onOpenChange={value => { if (!pending.current) setOpen(value); }}>
-    <div className="garage-parts">
+    <section className="panel garage-parts" aria-label="Aero kit">
       <SectionCardHeading
         icon={Wind}
         title="Aero kit"
@@ -153,7 +153,7 @@ export function BodyPartsShop({ game, active, disabled, onAction }: ShopProps) {
       <div className="pt-lg">
         <SheetTrigger render={<Button variant="gold" className="w-full" disabled={disabled} />}><ShoppingBag data-icon="inline-start" />Buka toko</SheetTrigger>
       </div>
-    </div>
+    </section>
     <SheetContent side="bottom" className="game-sheet parts-shop-dialog">
       <SheetHeader className="parts-shop-header">
         <SheetTitle>Toko aero kit</SheetTitle>
