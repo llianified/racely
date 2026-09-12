@@ -182,7 +182,9 @@
 .brand-word > span { color: var(--accent); }
 .racer-avatar { display: flex; align-items: stretch; justify-content: center; flex-shrink: 0; min-width: 36px; height: 32px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--primary) 55%, var(--background)); border-radius: 12px; background: color-mix(in srgb, var(--primary) 18%, var(--background)); color: var(--foreground); text-align: center; }
 .racer-avatar:hover { background: color-mix(in srgb, var(--primary) 30%, var(--background)); border-color: var(--primary); }
-.racer-initial { display: flex; align-items: center; padding: 0 8px; font-size: 16px; font-weight: 850; line-height: 1.25; }
+.racer-photo, .racer-initial { width: 32px; height: 32px; aspect-ratio: 1; flex-shrink: 0; }
+.racer-photo { object-fit: cover; }
+.racer-initial { display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 850; line-height: 1.25; }
 .racer-level { display: flex; align-items: center; padding: 0 8px; background: var(--accent); color: var(--background); font-size: 14px; font-weight: 800; line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .topbar-right { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .coin-balance { display: inline-flex; align-items: center; gap: 8px; height: 32px; min-width: 0; padding-inline: 10px; border-radius: 12px; color: var(--foreground); background: color-mix(in srgb, var(--accent) 6%, var(--background)); border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent); text-align: left; }
@@ -522,7 +524,7 @@
 .help-step p strong { font-size: var(--fs-body); }
 .help-step p span { display: block; color: var(--muted-foreground); margin-top: 2px; font-size: var(--fs-micro); line-height: 1.5; }
 
-/* ── bottom nav ────────────────────────────────────── */
+/* ── bottom nav ────────────────────────────────────���─ */
 .mobile-nav { display: flex; position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: var(--app-width); z-index: 30; border-top: 1px solid var(--border); background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(14px); padding: 4px 4px calc(4px + var(--safe-bottom)); }
 .nav-item { position: relative; display: flex; flex: 1; min-width: 0; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: calc(var(--nav-height) - 10px); padding-inline: 2px; border-radius: 10px; color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: 800; letter-spacing: 0; }
 .nav-item > span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
