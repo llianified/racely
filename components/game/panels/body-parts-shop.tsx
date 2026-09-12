@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { PART_CATALOG, PART_IDS, PART_SLOTS, SLOT_LABELS, type PartCommand, type PartId } from "@/lib/car-parts";
 import { CAR_CATALOG } from "@/lib/car-catalog";
 import { coins, type GameState } from "@/lib/game";
+import { SectionCardHeading } from "../shell/section-card-heading";
 
 const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
   ssr: false,
@@ -132,12 +133,14 @@ export function BodyPartsShop({ game, active, disabled, onAction }: ShopProps) {
   const equippedCount = Object.keys(game.bodyParts?.equipped ?? {}).length;
   return <Sheet open={open && active} onOpenChange={value => { if (!pending.current) setOpen(value); }}>
     <div className="garage-parts">
-      <div className="garage-parts-heading">
-        <div className="garage-parts-title">
-          <div><Wind aria-hidden="true" /><h3>Aero kit</h3><Badge variant="secondary">{equippedCount} / {PART_SLOTS.length} aktif</Badge></div>
-          <p>{ownedCount} dari {PART_IDS.length} part sudah masuk koleksi.</p>
-        </div>
-      </div>
+      <SectionCardHeading
+        icon={Wind}
+        title="Aero kit"
+        level={3}
+        className="garage-parts-heading"
+        aside={<Badge variant="secondary">{equippedCount} / {PART_SLOTS.length} aktif</Badge>}
+      />
+      <p className="garage-parts-note">{ownedCount} dari {PART_IDS.length} part sudah masuk koleksi.</p>
       <dl className="garage-parts-slots" aria-label="Slot aero kit terpasang">
         {PART_SLOTS.map(slot => {
           const id = game.bodyParts?.equipped[slot];

@@ -4,6 +4,7 @@ import { CalendarCheck, Check, Coins, Copy, Flag, Gift, LockKeyhole, Trophy, Use
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { InfoHint } from "./info-hint";
+import { SectionCardHeading } from "../shell/section-card-heading";
 import { cn } from "@/lib/utils";
 import {
   coins,
@@ -65,15 +66,15 @@ function ReferralCard({
 }) {
   return (
     <section className="panel referral-card" aria-label="Ajak teman">
-      <div className="section-card-heading">
-        <h2>
-          <UserPlus aria-hidden="true" />
-          Ajak teman
-        </h2>
-        <span>
-          {referral.invited} diajak · {coins(referral.earned)} didapat
-        </span>
-      </div>
+      <SectionCardHeading
+        icon={UserPlus}
+        title="Ajak teman"
+        aside={
+          <span>
+            {referral.invited} diajak · {coins(referral.earned)} didapat
+          </span>
+        }
+      />
       <p className="referral-note">
         Kamu dapat {coins(REFERRAL_REWARD_INVITER)} dan temanmu{" "}
         {coins(REFERRAL_REWARD_INVITEE)} begitu dia menyelesaikan{" "}
@@ -199,15 +200,13 @@ export function RewardsPanel({
       />
 
       <section className="panel rewards-list-panel" aria-label="Rincian hadiah">
-        <div className="section-card-heading">
-          <h2>
-            <Gift aria-hidden="true" />
-            Rincian hadiah
-          </h2>
-          <div className="heading-aside">
+        <SectionCardHeading
+          icon={Gift}
+          title="Rincian hadiah"
+          aside={
             <span>{game.missionsClaimed.length}/{MISSIONS.length} misi diklaim</span>
-          </div>
-        </div>
+          }
+        />
         <ul className="reward-list">
           {rows.map((row) => (
             <li

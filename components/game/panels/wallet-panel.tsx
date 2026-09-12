@@ -12,6 +12,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { InfoHint } from "./info-hint";
+import { SectionCardHeading } from "../shell/section-card-heading";
 import { cn } from "@/lib/utils";
 import {
   accountPattern,
@@ -274,13 +275,11 @@ export function WalletPanel({
       </Sheet>
 
       <section className="panel wallet-history-panel" aria-label="Riwayat penarikan">
-        <div className="section-card-heading">
-          <h2>
-            <Clock aria-hidden="true" />
-            Riwayat penarikan
-          </h2>
-          <span>{game.withdrawals.length} permintaan</span>
-        </div>
+        <SectionCardHeading
+          icon={Clock}
+          title="Riwayat penarikan"
+          aside={<span>{game.withdrawals.length} permintaan</span>}
+        />
         {game.withdrawals.length === 0 ? (
           <p className="wallet-empty">
             Belum ada penarikan. Riwayat kamu akan muncul di sini.

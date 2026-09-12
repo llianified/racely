@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { CAR_CATALOG, type CarColor } from "@/lib/car-catalog";
 import { CarColorPicker } from "../car/car-color-picker";
+import { SectionCardHeading } from "../shell/section-card-heading";
 import { InfoHint } from "./info-hint";
 import { BodyPartsShop } from "./body-parts-shop";
 import type { PartCommand } from "@/lib/car-parts";
@@ -220,10 +221,13 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
 export function UpgradePanel({ game, onUpgrade, disabled = false }: UpgradePanelProps) {
   return (
     <section id="upgrades" tabIndex={-1} className="panel upgrade-panel" aria-label="Bengkel modifikasi">
-      <div className="panel-heading">
-        <h2><Wrench aria-hidden="true" />Bengkel modifikasi</h2>
-        <InfoHint title="Modifikasi mobil">Pilih part, cek perubahan performa, lalu konfirmasi pemasangan. Mesin dan ban mempercepat putaran; ban juga memperkuat grip dan mempercepat pemulihannya di simulasi. Baterai menambah hasil koin. Setiap pemasangan menaikkan satu level, maksimal level 10.</InfoHint>
-      </div>
+      <SectionCardHeading
+        icon={Wrench}
+        title="Bengkel modifikasi"
+        aside={
+          <InfoHint title="Modifikasi mobil">Pilih part, cek perubahan performa, lalu konfirmasi pemasangan. Mesin dan ban mempercepat putaran; ban juga memperkuat grip dan mempercepat pemulihannya di simulasi. Baterai menambah hasil koin. Setiap pemasangan menaikkan satu level, maksimal level 10.</InfoHint>
+        }
+      />
       <div className="upgrade-list">
         {PARTS.map((part) => <ModificationSlot key={part.key} part={part} game={game} onUpgrade={onUpgrade} disabled={disabled} />)}
       </div>
