@@ -2,8 +2,22 @@ import "server-only";
 
 import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
+import { REFERRAL_PARAM_PREFIX } from "./game";
 
 export const MAX_TELEGRAM_UPDATE_BYTES = 64 * 1024;
+
+const DEFAULT_BOT_USERNAME = "RacelyBot";
+
+/** Username bot untuk membangun deep link. Staging cukup override lewat env. */
+export function botUsername() {
+  const raw = process.env.TELEGRAM_BOT_USERNAME?.trim().replace(/^@/, "");
+  return raw && /^[A-Za-z0-9_]{5,32}$/.test(raw) ? raw : DEFAULT_BOT_USERNAME;
+}
+
+/** `startapp` membuka Mini App langsung, bukan cuma chat botnya. */
+export function referralLink(userId: string) {
+  return `https://t.me/${botUsername()}?startapp=${REFERRAL_PARAM_PREFIX}${userId}`;
+}
 
 const telegramMessageSchema = z
   .object({

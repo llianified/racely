@@ -24,6 +24,7 @@ import {
   racingDayKey,
 } from "./game-economy";
 import { CAR_MODEL_IDS, isCarColor } from "./car-catalog";
+import { referralLink } from "./telegram-bot";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
 
 export const previewCarActionSchema = z.object({
@@ -228,6 +229,10 @@ function previewResult(
   const state: GameState = {
     ...game.state,
     daily: dailyCheckIn(game.dailyClaims, new Date(now)),
+    // Mode preview hanya punya satu pemain di dalam cookie, jadi tidak ada yang
+    // bisa diajak dan tidak ada yang bisa dibayar. Linknya tetap dibangun
+    // supaya tata letak kartu ajakan bisa dicek saat `pnpm dev`.
+    referral: { link: referralLink(game.userId), invited: 0, earned: 0 },
   };
   return {
     state: offline ? { ...state, offlineEarnings: offline } : state,

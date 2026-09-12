@@ -42,6 +42,8 @@ export const players = pgTable("racely_players", {
     .notNull()
     .defaultNow(),
   idleNotifiedAt: timestamp("idle_notified_at", { withTimezone: true }),
+  referredBy: text("referred_by"),
+  referralPaidAt: timestamp("referral_paid_at", { withTimezone: true }),
   version: integer("version").notNull().default(1),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

@@ -24,6 +24,7 @@ const identity = {
   displayName: "Integration Racer",
   username: "integration_racer",
   photoUrl: null,
+  startParam: null,
 };
 
 describeDatabase("Neon Postgres persistence", () => {
@@ -33,7 +34,7 @@ describeDatabase("Neon Postgres persistence", () => {
   let updates: typeof import("@/lib/telegram-updates");
   let drizzle: typeof import("drizzle-orm");
   const claimedUpdateIds: number[] = [];
-  const botChatUserIds: string[] = [];
+  const extraUserIds: string[] = [];
 
   beforeAll(async () => {
     [db, schema, gameServer, updates, drizzle] = await Promise.all([
@@ -51,7 +52,7 @@ describeDatabase("Neon Postgres persistence", () => {
     await db
       .delete(schema.players)
       .where(drizzle.eq(schema.players.userId, identity.userId));
-    for (const userId of botChatUserIds) {
+    for (const userId of extraUserIds) {
       await db
         .delete(schema.players)
         .where(drizzle.eq(schema.players.userId, userId));
@@ -243,6 +244,81 @@ describeDatabase("Neon Postgres persistence", () => {
     expect(await updates.claimTelegramUpdate(updateId)).toBe(true);
   });
 
+  it("mengikat pengajak sekali, membayar keduanya sekali, di capaian", async () => {
+    const game = await import("@/lib/game");
+    const player = (suffix: string, startParam: string | null = null) => {
+      const userId = `test-ref-${suffix}-${randomUUID()}`;
+      extraUserIds.push(userId);
+      return { userId, displayName: `Ref ${suffix}`, username: null, photoUrl: null, startParam };
+    };
+    const balanceOf = async (userId: string) => {
+      const [row] = await db!
+        .select({ balance: schema.players.balance, referredBy: schema.players.referredBy })
+        .from(schema.players)
+        .where(drizzle.eq(schema.players.userId, userId));
+      return row;
+    };
+
+    const inviter = player("inviter");
+    await gameServer.getGameState(inviter);
+    const inviterStart = (await balanceOf(inviter.userId))!.balance;
+
+    // Diri sendiri tidak bisa jadi pengajak.
+    const selfie = player("self");
+    await gameServer.getGameState({ ...selfie, startParam: `ref_${selfie.userId}` });
+    expect((await balanceOf(selfie.userId))!.referredBy).toBeNull();
+
+    // Pengajak yang tidak ada diabaikan, bukan bikin baris menggantung.
+    const orphan = player("orphan", "ref_test-ref-tidak-ada");
+    await gameServer.getGameState(orphan);
+    expect((await balanceOf(orphan.userId))!.referredBy).toBeNull();
+
+    const invitee = player("invitee", `ref_${inviter.userId}`);
+    const bound = await gameServer.getGameState(invitee);
+    expect((await balanceOf(invitee.userId))!.referredBy).toBe(inviter.userId);
+    // Belum mencapai 100 putaran -> belum ada yang dibayar.
+    expect(bound.referral.earned).toBe(0);
+    expect((await balanceOf(inviter.userId))!.balance).toBe(inviterStart);
+
+    const inviteeStart = (await balanceOf(invitee.userId))!.balance;
+    await db!
+      .update(schema.players)
+      .set({ laps: game.REFERRAL_MILESTONE_LAPS })
+      .where(drizzle.eq(schema.players.userId, invitee.userId));
+
+    await gameServer.getGameState(invitee);
+    expect((await balanceOf(invitee.userId))!.balance).toBe(
+      inviteeStart + game.REFERRAL_REWARD_INVITEE,
+    );
+    expect((await balanceOf(inviter.userId))!.balance).toBe(
+      inviterStart + game.REFERRAL_REWARD_INVITER,
+    );
+
+    // Sync berikutnya tidak boleh membayar lagi.
+    await gameServer.getGameState(invitee);
+    await gameServer.getGameState(invitee);
+    expect((await balanceOf(inviter.userId))!.balance).toBe(
+      inviterStart + game.REFERRAL_REWARD_INVITER,
+    );
+
+    const inviterState = await gameServer.getGameState(inviter);
+    expect(inviterState.referral).toMatchObject({
+      invited: 1,
+      earned: game.REFERRAL_REWARD_INVITER,
+    });
+    expect(inviterState.referral.link).toContain(`ref_${inviter.userId}`);
+
+    // Sudah pernah balapan -> tidak bisa diikat belakangan.
+    const veteran = player("veteran");
+    await gameServer.getGameState(veteran);
+    await db!
+      .update(schema.players)
+      .set({ laps: 5 })
+      .where(drizzle.eq(schema.players.userId, veteran.userId));
+    await gameServer.getGameState({ ...veteran, startParam: `ref_${inviter.userId}` });
+    expect((await balanceOf(veteran.userId))!.referredBy).toBeNull();
+  });
+
   /**
    * Sapuan pemberitahuan idle: bagian yang tidak bisa dicakup unit test adalah
    * query-nya sendiri -- join ke racely_bot_chats, predikat "satu pesan per
@@ -262,7 +338,7 @@ describeDatabase("Neon Postgres persistence", () => {
     );
     const chatId = 900000000 + (Date.now() % 10000);
     const userId = String(chatId);
-    botChatUserIds.push(userId);
+    extraUserIds.push(userId);
 
     await db!
       .insert(schema.players)

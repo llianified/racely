@@ -66,22 +66,10 @@ export function calculateRaceSettlement(
   // A boost lasts 10s, so it can only ever overlap the heartbeat window.
   const boostedMs = Math.max(0, Math.min(onlineEnd, boostEnd) - intervalStart);
   const normalMs = onlineMs - boostedMs;
-  const economyState = {
-    ...state,
-    developmentPreview: false,
-    balance: 0,
-    pending: 0,
-    earned: 0,
-    laps: 0,
-    boostLeft: 0,
-    cooldown: 0,
-    rewardClaimed: false,
-    missionsClaimed: [],
-    color: "#4275ff",
-    player: { name: "", username: null, photoUrl: null },
-    withdrawals: [],
-    daily: { streak: 0, claimedToday: false, reward: 0, nextReward: 0 },
-  } satisfies GameState;
+  // lapSeconds dan lapReward hanya membaca levels, circuit dan boostLeft.
+  // Sebelumnya di sini dirakit GameState utuh yang harus ditambal tiap kali ada
+  // field baru; sekarang cukup yang dipakai.
+  const economyState = { ...state, boostLeft: 0 };
   const lapDurationMs = lapSeconds(economyState) * 1000;
   const reward = lapReward(economyState);
 
