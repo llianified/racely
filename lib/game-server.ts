@@ -23,19 +23,12 @@ import { CAR_MODEL_IDS, isCarColor } from "@/lib/car-catalog";
 import { applyPartCommand, PART_IDS, PART_SLOTS, PartRuleError } from "@/lib/car-parts";
 import {
   accountPattern,
-  BOOST_COOLDOWN_SECONDS,
-  BOOST_DURATION_SECONDS,
-  COIN_TO_IDR,
-  REFERRAL_MILESTONE_LAPS,
-  REFERRAL_PARAM_PREFIX,
-  REFERRAL_REWARD_INVITEE,
-  REFERRAL_REWARD_INVITER,
-  MIN_WITHDRAW_COINS,
-  MISSIONS,
+  boostCooldownSeconds,
+  MISSION_IDS,
+  missions,
   missionValue,
+  REFERRAL_PARAM_PREFIX,
   roundCoins,
-  STARTER_GIFT,
-  upgradeCost,
   WITHDRAW_METHODS,
   type DailyCheckIn,
   type GameState,
@@ -46,6 +39,12 @@ import {
   type WithdrawMethod,
   type WithdrawStatus,
 } from "@/lib/game";
+import {
+  UPGRADE_KEYS,
+  upgradeCostAt,
+  type EconomyConfig,
+} from "@/lib/economy-config";
+import { readEconomyConfig } from "@/lib/economy-store";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
 import { referralLink } from "@/lib/telegram-bot";
 
@@ -74,7 +73,7 @@ const commandSchema = z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("upgrade"),
-      key: z.enum(["engine", "tires", "battery"]),
+      key: z.enum(UPGRADE_KEYS as unknown as [Upgrade, ...Upgrade[]]),
     })
     .strict(),
   z.object({ type: z.literal("claim") }).strict(),
@@ -84,7 +83,7 @@ const commandSchema = z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("mission"),
-      id: z.enum(["laps", "upgrade", "earn"]),
+      id: z.enum(MISSION_IDS),
     })
     .strict(),
   z
@@ -109,7 +108,14 @@ const commandSchema = z.discriminatedUnion("type", [
       method: z.enum(METHOD_IDS),
       account: z.string().trim().regex(/^\d{8,18}$/),
       accountName: z.string().trim().min(2).max(60),
-      coins: z.number().int().min(MIN_WITHDRAW_COINS).max(1_000_000),
+      /**
+       * Pagar mutlak, bukan aturan bisnisnya. Skema ini dibangun sekali saat
+       * modul dimuat, sedangkan batas penarikan bisa berubah kapan saja dari
+       * panel admin -- jadi `minWithdrawCoins` dan `maxWithdrawCoins` ditegakkan
+       * di `performGameAction`, tempat config tersedia. Di sini cukup menolak
+       * angka yang tidak masuk akal bagi tipe kolomnya.
+       */
+      coins: z.number().int().min(1).max(1_000_000_000),
     })
     .strict(),
 ]);
@@ -150,9 +156,13 @@ function withdrawalRecord(row: WithdrawalRow): WithdrawalRecord {
   };
 }
 
-function hasExistingProgress(row: PlayerRow, history: WithdrawalRow[]) {
+function hasExistingProgress(
+  row: PlayerRow,
+  history: WithdrawalRow[],
+  economy: EconomyConfig,
+) {
   return (
-    row.balance !== 10 ||
+    row.balance !== economy.startingBalance ||
     row.pending > 0 ||
     row.earned > 0 ||
     row.laps > 0 ||
@@ -168,9 +178,10 @@ function hasExistingProgress(row: PlayerRow, history: WithdrawalRow[]) {
 function stateFromRow(
   row: PlayerRow,
   now: Date,
+  economy: EconomyConfig,
   history: WithdrawalRow[] = [],
   offlineEarnings: OfflineEarnings | null = null,
-  daily: DailyCheckIn = dailyCheckIn([], now),
+  daily: DailyCheckIn = dailyCheckIn([], now, economy),
   referral: ReferralSummary = {
     link: referralLink(row.userId),
     invited: 0,
@@ -179,6 +190,7 @@ function stateFromRow(
 ): GameState {
   return {
     developmentPreview: false,
+    economy,
     bodyParts: row.bodyParts,
     // Left off the payload entirely when there is nothing to report, so the
     // client can treat its presence as "show the welcome-back dialog".
@@ -186,7 +198,7 @@ function stateFromRow(
     carSelection: {
       model: row.carModel,
       returningPlayer:
-        row.carModel === null && hasExistingProgress(row, history),
+        row.carModel === null && hasExistingProgress(row, history, economy),
     },
     withdrawals: history.map(withdrawalRecord),
     daily,
@@ -281,19 +293,20 @@ async function bindReferrer(
 async function payInviteeMilestone(
   tx: Transaction,
   row: PlayerRow,
+  economy: EconomyConfig,
 ): Promise<PlayerRow> {
-  if (!row.referredBy || row.laps < REFERRAL_MILESTONE_LAPS) return row;
+  if (!row.referredBy || row.laps < economy.referralMilestoneLaps) return row;
   const inserted = await tx
     .insert(rewardClaims)
     .values({
       userId: row.userId,
       rewardKey: `${INVITEE_CLAIM_PREFIX}${row.userId}`,
-      amount: REFERRAL_REWARD_INVITEE,
+      amount: economy.referralRewardInvitee,
     })
     .onConflictDoNothing()
     .returning({ id: rewardClaims.id });
   return inserted.length > 0
-    ? { ...row, balance: row.balance + REFERRAL_REWARD_INVITEE }
+    ? { ...row, balance: row.balance + economy.referralRewardInvitee }
     : row;
 }
 
@@ -304,9 +317,9 @@ async function payInviteeMilestone(
  * aman: gagal berarti dicoba lagi pada sync berikutnya, berhasil berarti
  * berhenti.
  */
-async function payInviter(row: PlayerRow) {
+async function payInviter(row: PlayerRow, economy: EconomyConfig) {
   if (!row.referredBy) return;
-  if (row.laps < REFERRAL_MILESTONE_LAPS || row.referralPaidAt) return;
+  if (row.laps < economy.referralMilestoneLaps || row.referralPaidAt) return;
 
   const inviterId = row.referredBy;
   await getDatabase()
@@ -325,7 +338,7 @@ async function payInviter(row: PlayerRow) {
           .values({
             userId: inviterId,
             rewardKey: `${INVITER_CLAIM_PREFIX}${row.userId}`,
-            amount: REFERRAL_REWARD_INVITER,
+            amount: economy.referralRewardInviter,
           })
           .onConflictDoNothing()
           .returning({ id: rewardClaims.id });
@@ -333,7 +346,7 @@ async function payInviter(row: PlayerRow) {
           await tx
             .update(players)
             .set({
-              balance: sql`${players.balance} + ${REFERRAL_REWARD_INVITER}`,
+              balance: sql`${players.balance} + ${economy.referralRewardInviter}`,
             })
             .where(eq(players.userId, inviterId));
         }
@@ -389,6 +402,7 @@ async function refundRejectedWithdrawals(
 async function readReferralSummary(
   tx: Transaction,
   userId: string,
+  economy: EconomyConfig,
 ): Promise<ReferralSummary> {
   const result = await tx.execute<{ invited: number; paid: number }>(sql`
     select
@@ -403,7 +417,7 @@ async function readReferralSummary(
   return {
     link: referralLink(userId),
     invited: Number(row?.invited ?? 0),
-    earned: Number(row?.paid ?? 0) * REFERRAL_REWARD_INVITER,
+    earned: Number(row?.paid ?? 0) * economy.referralRewardInviter,
   };
 }
 
@@ -412,7 +426,11 @@ export type SettledPlayer = {
   offline: OfflineEarnings | null;
 };
 
-export function settlePlayerRow(row: PlayerRow, now: Date): SettledPlayer {
+export function settlePlayerRow(
+  row: PlayerRow,
+  now: Date,
+  economy: EconomyConfig,
+): SettledPlayer {
   if (row.carModel === null) {
     return {
       row: { ...row, lastSettledAt: now, updatedAt: now },
@@ -429,6 +447,7 @@ export function settlePlayerRow(row: PlayerRow, now: Date): SettledPlayer {
         battery: row.batteryLevel,
       },
       circuit: row.circuit,
+      economy,
       lastSettledAt: row.lastSettledAt,
       boostEndsAt: row.boostEndsAt,
     },
@@ -449,12 +468,19 @@ export function settlePlayerRow(row: PlayerRow, now: Date): SettledPlayer {
   };
 }
 
-function playerValues(identity: PlayerIdentity) {
+/**
+ * Saldo awal ikut disetel eksplisit, bukan dibiarkan ke `DEFAULT 10` di kolom:
+ * `startingBalance` bisa disetel dari panel, dan default kolom tidak ikut
+ * berubah. `onConflictDoUpdate` di pemanggilnya tidak menyentuh balance, jadi
+ * pemain yang sudah ada tetap aman.
+ */
+function playerValues(identity: PlayerIdentity, economy: EconomyConfig) {
   return {
     userId: identity.userId,
     telegramUsername: identity.username,
     displayName: identity.displayName,
     photoUrl: identity.photoUrl,
+    balance: economy.startingBalance,
   };
 }
 
@@ -464,13 +490,13 @@ function levelFor(row: PlayerRow, key: Upgrade) {
   return row.batteryLevel;
 }
 
-function applyUpgrade(row: PlayerRow, key: Upgrade) {
+function applyUpgrade(row: PlayerRow, key: Upgrade, economy: EconomyConfig) {
   const level = levelFor(row, key);
-  if (level >= 10) {
+  if (level >= economy.maxUpgradeLevel) {
     throw new GameRuleError("Upgrade ini sudah mencapai level maksimal.");
   }
 
-  const cost = upgradeCost(key, level);
+  const cost = upgradeCostAt(economy, key, level);
   if (row.balance < cost) {
     throw new GameRuleError("Koin belum cukup untuk upgrade ini.");
   }
@@ -488,11 +514,14 @@ export async function getGameState(
   identity: PlayerIdentity,
 ): Promise<GameState> {
   const now = new Date();
+  // Dibaca sebelum transaksi dibuka: transaksi ini menahan `FOR UPDATE` pada
+  // baris pemain, dan pembacaan config tidak ada urusannya dengan lock itu.
+  const economy = await readEconomyConfig();
 
   const result = await getDatabase().transaction(async (tx) => {
     await tx
       .insert(players)
-      .values(playerValues(identity))
+      .values(playerValues(identity, economy))
       .onConflictDoUpdate({
         target: players.userId,
         set: {
@@ -510,10 +539,10 @@ export async function getGameState(
       .for("update");
 
     const bound = await bindReferrer(tx, locked, identity.startParam);
-    const settled = settlePlayerRow(bound, now);
+    const settled = settlePlayerRow(bound, now, economy);
     const rewarded = await refundRejectedWithdrawals(
       tx,
-      await payInviteeMilestone(tx, settled.row),
+      await payInviteeMilestone(tx, settled.row, economy),
       now,
     );
     const [saved] = await tx
@@ -539,16 +568,25 @@ export async function getGameState(
     const daily = dailyCheckIn(
       await readDailyClaims(tx, identity.userId),
       now,
+      economy,
     );
-    const referral = await readReferralSummary(tx, identity.userId);
+    const referral = await readReferralSummary(tx, identity.userId, economy);
 
     return {
-      state: stateFromRow(saved, now, history, settled.offline, daily, referral),
+      state: stateFromRow(
+        saved,
+        now,
+        economy,
+        history,
+        settled.offline,
+        daily,
+        referral,
+      ),
       saved,
     };
   });
 
-  await payInviter(result.saved);
+  await payInviter(result.saved, economy);
   return result.state;
 }
 
@@ -575,11 +613,13 @@ export async function performGameAction(
   action: GameCommand,
 ): Promise<GameState> {
   const now = new Date();
+  // Sama seperti getGameState: di luar transaksi, sebelum lock diambil.
+  const economy = await readEconomyConfig();
 
   const result = await getDatabase().transaction(async (tx) => {
     await tx
       .insert(players)
-      .values(playerValues(identity))
+      .values(playerValues(identity, economy))
       .onConflictDoUpdate({
         target: players.userId,
         set: {
@@ -597,10 +637,10 @@ export async function performGameAction(
       .for("update");
 
     const bound = await bindReferrer(tx, locked, identity.startParam);
-    const settled = settlePlayerRow(bound, now);
+    const settled = settlePlayerRow(bound, now, economy);
     let next = await refundRejectedWithdrawals(
       tx,
-      await payInviteeMilestone(tx, settled.row),
+      await payInviteeMilestone(tx, settled.row, economy),
       now,
     );
     let dailyClaims = await readDailyClaims(tx, identity.userId);
@@ -641,10 +681,11 @@ export async function performGameAction(
           state: stateFromRow(
             saved,
             now,
+            economy,
             replayHistory,
             settled.offline,
-            dailyCheckIn(dailyClaims, now),
-            await readReferralSummary(tx, identity.userId),
+            dailyCheckIn(dailyClaims, now, economy),
+            await readReferralSummary(tx, identity.userId, economy),
           ),
           saved,
         };
@@ -686,7 +727,7 @@ export async function performGameAction(
         throw error;
       }
     } else if (action.type === "upgrade") {
-      next = applyUpgrade(next, action.key);
+      next = applyUpgrade(next, action.key, economy);
     } else if (action.type === "claim") {
       // Only whole coins move into the withdrawable balance; the remainder keeps accruing.
       const settled = Math.floor(next.pending);
@@ -698,6 +739,18 @@ export async function performGameAction(
         };
       }
     } else if (action.type === "withdraw") {
+      // Batas penarikan ditegakkan di sini, bukan di skema zod: skema dibangun
+      // saat modul dimuat, sedangkan angka ini bisa berubah dari panel admin.
+      if (action.coins < economy.minWithdrawCoins) {
+        throw new GameRuleError(
+          `Penarikan minimal ${economy.minWithdrawCoins} koin.`,
+        );
+      }
+      if (action.coins > economy.maxWithdrawCoins) {
+        throw new GameRuleError(
+          `Penarikan maksimal ${economy.maxWithdrawCoins} koin per permintaan.`,
+        );
+      }
       if (next.balance < action.coins) {
         throw new GameRuleError("Saldo koin tidak cukup untuk penarikan ini.");
       }
@@ -708,7 +761,7 @@ export async function performGameAction(
         userId: identity.userId,
         requestId,
         coins: action.coins,
-        amountIdr: action.coins * COIN_TO_IDR,
+        amountIdr: action.coins * economy.coinToIdr,
         method: action.method,
         account: action.account,
         accountName: action.accountName,
@@ -721,10 +774,10 @@ export async function performGameAction(
       next = {
         ...next,
         boostEndsAt: new Date(
-          now.getTime() + BOOST_DURATION_SECONDS * 1000,
+          now.getTime() + economy.boostDurationSeconds * 1000,
         ),
         cooldownEndsAt: new Date(
-          now.getTime() + BOOST_COOLDOWN_SECONDS * 1000,
+          now.getTime() + boostCooldownSeconds(economy) * 1000,
         ),
       };
     } else if (action.type === "gift") {
@@ -734,18 +787,19 @@ export async function performGameAction(
           .values({
             userId: identity.userId,
             rewardKey: "starter-gift",
-            amount: STARTER_GIFT,
+            amount: economy.starterGift,
           })
           .onConflictDoNothing()
           .returning({ id: rewardClaims.id });
         next = {
           ...next,
           rewardClaimed: true,
-          balance: next.balance + (inserted.length > 0 ? STARTER_GIFT : 0),
+          balance:
+            next.balance + (inserted.length > 0 ? economy.starterGift : 0),
         };
       }
     } else if (action.type === "daily") {
-      const status = dailyCheckIn(dailyClaims, now);
+      const status = dailyCheckIn(dailyClaims, now, economy);
       if (!status.claimedToday) {
         const today = racingDayKey(now);
         // The unique (user_id, reward_key) index is the whole guard: a double
@@ -765,12 +819,13 @@ export async function performGameAction(
         }
       }
     } else if (action.type === "mission") {
-      const mission = MISSIONS.find((item) => item.id === action.id);
+      const mission = missions(economy).find((item) => item.id === action.id);
       const alreadyClaimed = next.missionsClaimed.includes(action.id);
       if (!alreadyClaimed) {
         if (
           !mission ||
-          missionValue(stateFromRow(next, now), mission.id) < mission.target
+          missionValue(stateFromRow(next, now, economy), mission.id) <
+            mission.target
         ) {
           throw new GameRuleError("Target misi belum tercapai.");
         }
@@ -798,9 +853,9 @@ export async function performGameAction(
       if (action.circuit < next.circuit) {
         throw new GameRuleError("Trek lama tidak bisa dipilih lagi.");
       }
-      if (action.circuit === 1 && next.laps < 25) {
+      if (action.circuit === 1 && next.laps < economy.circuitUnlockLaps) {
         throw new GameRuleError(
-          "Selesaikan 25 putaran untuk membuka sirkuit ini.",
+          `Selesaikan ${economy.circuitUnlockLaps} putaran untuk membuka sirkuit ini.`,
         );
       }
       next = { ...next, circuit: action.circuit };
@@ -841,10 +896,11 @@ export async function performGameAction(
     const response = stateFromRow(
       saved,
       now,
+      economy,
       history,
       settled.offline,
-      dailyCheckIn(dailyClaims, now),
-      await readReferralSummary(tx, identity.userId),
+      dailyCheckIn(dailyClaims, now, economy),
+      await readReferralSummary(tx, identity.userId, economy),
     );
     if (action.type !== "sync") {
       // Deliberately no response snapshot: (userId, requestId) is the whole
@@ -861,7 +917,7 @@ export async function performGameAction(
   });
 
   // Di luar transaksi pemain: lihat payInviter untuk alasan urutan penguncian.
-  await payInviter(result.saved);
+  await payInviter(result.saved, economy);
 
   if (action.type !== "sync" && Math.random() < RECEIPT_PRUNE_PROBABILITY) {
     await pruneActionReceipts(now);

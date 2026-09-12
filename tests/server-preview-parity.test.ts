@@ -1,12 +1,18 @@
 import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
-import {
-  BATTERY_RECHARGE_SECONDS,
-  BOOST_COOLDOWN_SECONDS,
-  BOOST_DURATION_SECONDS,
-  batteryTelemetry,
-} from "../lib/game";
+import { batteryTelemetry, boostCooldownSeconds } from "../lib/game";
+import { DEFAULT_ECONOMY } from "../lib/economy-config";
+
+/**
+ * Timing boost sekarang datang dari config ekonomi, bukan konstanta modul.
+ * Test ini mengunci nilai BAWAAN-nya dan -- lebih penting -- tetap mengunci
+ * bahwa kedua penulis membaca config itu, bukan milidetik yang ditulis lepas.
+ */
+const E = DEFAULT_ECONOMY;
+const BOOST_DURATION_SECONDS = E.boostDurationSeconds;
+const BATTERY_RECHARGE_SECONDS = E.batteryRechargeSeconds;
+const BOOST_COOLDOWN_SECONDS = boostCooldownSeconds(E);
 
 vi.mock("server-only", () => ({}));
 import {
@@ -40,9 +46,9 @@ const act = (
   cookie: string,
   command: Parameters<typeof performPreviewGameAction>[3],
   id = randomUUID(),
-) => performPreviewGameAction(request(cookie), identity, id, command);
+) => performPreviewGameAction(request(cookie), identity, id, command, E);
 const onboarded = () =>
-  act(getPreviewGameState(request(), identity).cookieValue, {
+  act(getPreviewGameState(request(), identity, E).cookieValue, {
     type: "select-car",
     model: "luna-gt",
     color: "#b9a1ed",
@@ -50,7 +56,7 @@ const onboarded = () =>
 
 /** Pola yang sama dipakai withdrawal-policy.test.ts: lompati grinding koin. */
 function fundedCookie(balance: number) {
-  const fresh = getPreviewGameState(request(), identity);
+  const fresh = getPreviewGameState(request(), identity, E);
   const decoded = JSON.parse(
     Buffer.from(fresh.cookieValue, "base64url").toString("utf8"),
   );
@@ -73,6 +79,7 @@ describe("Boost timing has one source of truth", () => {
     const justBoosted = batteryTelemetry({
       boostLeft: BOOST_DURATION_SECONDS,
       cooldown: BOOST_COOLDOWN_SECONDS,
+      economy: E,
     });
     expect(justBoosted.phase).toBe("discharging");
     expect(justBoosted.percent).toBe(100);
@@ -80,12 +87,13 @@ describe("Boost timing has one source of truth", () => {
     const boostSpent = batteryTelemetry({
       boostLeft: 0,
       cooldown: BATTERY_RECHARGE_SECONDS,
+      economy: E,
     });
     expect(boostSpent.phase).toBe("charging");
     expect(boostSpent.percent).toBe(0);
     expect(boostSpent.canBoost).toBe(false);
 
-    const recharged = batteryTelemetry({ boostLeft: 0, cooldown: 0 });
+    const recharged = batteryTelemetry({ boostLeft: 0, cooldown: 0, economy: E });
     expect(recharged.phase).toBe("ready");
     expect(recharged.percent).toBe(100);
     expect(recharged.canBoost).toBe(true);
@@ -96,8 +104,10 @@ describe("Boost timing has one source of truth", () => {
     // konstanta di lib/game.ts hanya dibaca UI -- mengubah konstanta itu tidak
     // mengubah permainan sama sekali, hanya membuat meterannya berbohong.
     for (const source of [gameServerSource, previewSource]) {
-      expect(source).toContain("BOOST_DURATION_SECONDS");
-      expect(source).toContain("BOOST_COOLDOWN_SECONDS");
+      // Nama berubah saat timing boost pindah ke config; yang dijaga tetap
+      // sama: keduanya membaca satu sumber, bukan angka yang ditulis lepas.
+      expect(source).toContain("economy.boostDurationSeconds");
+      expect(source).toContain("boostCooldownSeconds(");
     }
     expect(gameServerSource).not.toContain("35_000");
   });
@@ -114,7 +124,7 @@ describe("Boost timing has one source of truth", () => {
 
 describe("Circuit progression only moves forward", () => {
   it("keeps the higher-reward circuit after it has been selected", () => {
-    const fresh = getPreviewGameState(request(), identity);
+    const fresh = getPreviewGameState(request(), identity, E);
     const decoded = JSON.parse(
       Buffer.from(fresh.cookieValue, "base64url").toString("utf8"),
     );
