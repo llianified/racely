@@ -132,6 +132,12 @@ export const withdrawals = pgTable(
       .notNull()
       .defaultNow(),
     processedAt: timestamp("processed_at", { withTimezone: true }),
+    /**
+     * Diisi saat koin sebuah penarikan 'rejected' dikembalikan ke saldo.
+     * `IS NULL` adalah penjaga sekali-jalan-nya; lihat 0008 dan
+     * `refundRejectedWithdrawals` di lib/game-server.ts.
+     */
+    refundedAt: timestamp("refunded_at", { withTimezone: true }),
   },
   (table) => [
     // Matches the history query: filter on user_id, newest first.

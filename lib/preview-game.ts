@@ -4,6 +4,8 @@ import { Buffer } from "node:buffer";
 import { z } from "zod";
 import {
   accountPattern,
+  BOOST_COOLDOWN_SECONDS,
+  BOOST_DURATION_SECONDS,
   INITIAL_GAME,
   MISSIONS,
   missionValue,
@@ -365,7 +367,11 @@ export function performPreviewGameAction(
     if (state.cooldown > 0) {
       throw new PreviewGameRuleError("Boost masih mengisi ulang.");
     }
-    state = { ...state, boostLeft: 10, cooldown: 35 };
+    state = {
+      ...state,
+      boostLeft: BOOST_DURATION_SECONDS,
+      cooldown: BOOST_COOLDOWN_SECONDS,
+    };
   } else if (action.type === "gift" && !state.rewardClaimed) {
     state = {
       ...state,
@@ -382,19 +388,21 @@ export function performPreviewGameAction(
       );
     }
   } else if (action.type === "mission") {
-    const mission = MISSIONS.find((item) => item.id === action.id);
-    if (
-      !mission ||
-      state.missionsClaimed.includes(action.id) ||
-      missionValue(state, action.id) < mission.target
-    ) {
-      throw new PreviewGameRuleError("Target misi belum tercapai.");
+    // Misi yang sudah diklaim bukan kesalahan, hanya tidak ada yang berubah --
+    // sama seperti server. Sebelumnya cabang ini melempar "Target misi belum
+    // tercapai", pesan yang menuduh hal yang keliru dan hanya muncul di
+    // `pnpm dev`, sehingga perilakunya menyimpang dari produksi.
+    if (!state.missionsClaimed.includes(action.id)) {
+      const mission = MISSIONS.find((item) => item.id === action.id);
+      if (!mission || missionValue(state, action.id) < mission.target) {
+        throw new PreviewGameRuleError("Target misi belum tercapai.");
+      }
+      state = {
+        ...state,
+        balance: state.balance + mission.reward,
+        missionsClaimed: [...state.missionsClaimed, action.id],
+      };
     }
-    state = {
-      ...state,
-      balance: state.balance + mission.reward,
-      missionsClaimed: [...state.missionsClaimed, action.id],
-    };
   } else if (action.type === "color") {
     state = { ...state, color: action.color };
   } else if (action.type === "circuit") {
