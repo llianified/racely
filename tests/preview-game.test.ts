@@ -32,6 +32,58 @@ describe("Workshop installation", () => {
   });
 });
 
+describe("Preview offline earnings", () => {
+  const racing = () => {
+    const fresh = getPreviewGameState(request(), identity);
+    return action(fresh.cookieValue, selectLuna).cookieValue;
+  };
+
+  it("credits ten minutes away at half rate and reports it once", () => {
+    const cookie = racing();
+    vi.advanceTimersByTime(10 * 60 * 1000);
+    const back = action(cookie, { type: "sync" });
+
+    // Same split the database path uses: 30s online (3 laps) + 570s at half
+    // speed (36 laps), all landing straight in pending.
+    expect(back.state.offlineEarnings).toEqual({
+      awaySeconds: 600,
+      creditedSeconds: 570,
+      capped: false,
+      laps: 36,
+      coins: 1.8,
+    });
+    expect(back.state.laps).toBe(39);
+    expect(back.state.pending).toBe(1.95);
+
+    // The summary rides the response, never the cookie, so it is not replayed.
+    expect(
+      getPreviewGameState(request(back.cookieValue), identity).state
+        .offlineEarnings,
+    ).toBeUndefined();
+  });
+
+  it("caps a ten hour absence at four hours, like the database path", () => {
+    const cookie = racing();
+    vi.advanceTimersByTime(10 * 60 * 60 * 1000);
+    const back = action(cookie, { type: "sync" });
+
+    expect(back.state.offlineEarnings).toMatchObject({
+      awaySeconds: 36000,
+      creditedSeconds: 4 * 60 * 60,
+      capped: true,
+      laps: 900,
+      coins: 45,
+    });
+    expect(back.state.pending).toBe(45.15);
+  });
+
+  it("says nothing about an absence a heartbeat could have covered", () => {
+    const cookie = racing();
+    vi.advanceTimersByTime(8000);
+    expect(action(cookie, { type: "sync" }).state.offlineEarnings).toBeUndefined();
+  });
+});
+
 describe("Preview car selection", () => {
   it("accepts all catalog colors only for their models", () => {
     for (const model of CAR_MODEL_IDS) {

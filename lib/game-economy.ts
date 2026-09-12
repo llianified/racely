@@ -1,6 +1,25 @@
-import { lapReward, lapSeconds, roundCoins, type GameState } from "./game";
+import {
+  lapReward,
+  lapSeconds,
+  roundCoins,
+  type GameState,
+  type OfflineEarnings,
+} from "./game";
 
+/**
+ * An open client re-syncs every few seconds, so anything inside this window is
+ * still "someone is watching the race". It has to be generous enough to absorb
+ * a slow round trip without paying for time nobody was there for.
+ */
 export const HEARTBEAT_CAP_SECONDS = 30;
+/**
+ * Time past the heartbeat window is time the player was away. It still pays --
+ * that is the idle reward -- but only this far back, so a week offline is not a
+ * jackpot.
+ */
+export const OFFLINE_CAP_SECONDS = 4 * 60 * 60;
+/** Offline laps run at half speed, so playing actively always pays better. */
+export const OFFLINE_RATE = 0.5;
 
 export type RaceSettlementInput = Pick<
   GameState,
@@ -15,33 +34,36 @@ export type RaceSettlement = {
   income: number;
   progress: number;
   creditedSeconds: number;
+  /** Only set when part of the interval fell outside the heartbeat window. */
+  offline: OfflineEarnings | null;
 };
 
 export function calculateRaceSettlement(
   state: RaceSettlementInput,
   now: Date,
-  capSeconds = HEARTBEAT_CAP_SECONDS,
 ): RaceSettlement {
   const intervalStart = state.lastSettledAt.getTime();
-  const availableMs = Math.max(0, now.getTime() - intervalStart);
-  const creditedMs = Math.min(availableMs, Math.max(0, capSeconds) * 1000);
+  const awayMs = Math.max(0, now.getTime() - intervalStart);
+  // Splitting instead of choosing one cap keeps the payout continuous: a 40s
+  // absence pays the full 30s plus 10s at half rate, never less than a 30s one.
+  const onlineMs = Math.min(awayMs, HEARTBEAT_CAP_SECONDS * 1000);
+  const offlineMs = Math.min(awayMs - onlineMs, OFFLINE_CAP_SECONDS * 1000);
 
-  if (creditedMs === 0) {
+  if (onlineMs + offlineMs === 0) {
     return {
       completedLaps: 0,
       income: 0,
       progress: state.progress,
       creditedSeconds: 0,
+      offline: null,
     };
   }
 
-  const intervalEnd = intervalStart + creditedMs;
+  const onlineEnd = intervalStart + onlineMs;
   const boostEnd = state.boostEndsAt?.getTime() ?? intervalStart;
-  const boostedMs = Math.max(
-    0,
-    Math.min(intervalEnd, boostEnd) - intervalStart,
-  );
-  const normalMs = creditedMs - boostedMs;
+  // A boost lasts 10s, so it can only ever overlap the heartbeat window.
+  const boostedMs = Math.max(0, Math.min(onlineEnd, boostEnd) - intervalStart);
+  const normalMs = onlineMs - boostedMs;
   const economyState = {
     ...state,
     developmentPreview: false,
@@ -58,14 +80,34 @@ export function calculateRaceSettlement(
     withdrawals: [],
   } satisfies GameState;
   const lapDurationMs = lapSeconds(economyState) * 1000;
-  const accumulatedLaps =
+  const reward = lapReward(economyState);
+
+  const onlineLaps =
     state.progress + normalMs / lapDurationMs + boostedMs / (lapDurationMs / 2);
+  const accumulatedLaps =
+    onlineLaps + (offlineMs / lapDurationMs) * OFFLINE_RATE;
   const completedLaps = Math.floor(accumulatedLaps);
+  // Attribute to the away window only the laps the heartbeat would not have
+  // closed on its own, so the summary matches what the balance actually gained.
+  const offlineLaps = completedLaps - Math.floor(onlineLaps);
+  const offlineIncome = roundCoins(offlineLaps * reward);
 
   return {
     completedLaps,
-    income: roundCoins(completedLaps * lapReward(economyState)),
+    income: roundCoins(
+      roundCoins((completedLaps - offlineLaps) * reward) + offlineIncome,
+    ),
     progress: accumulatedLaps % 1,
-    creditedSeconds: creditedMs / 1000,
+    creditedSeconds: (onlineMs + offlineMs) / 1000,
+    offline:
+      offlineMs > 0
+        ? {
+            awaySeconds: awayMs / 1000,
+            creditedSeconds: offlineMs / 1000,
+            capped: awayMs - onlineMs > OFFLINE_CAP_SECONDS * 1000,
+            laps: offlineLaps,
+            coins: offlineIncome,
+          }
+        : null,
   };
 }
