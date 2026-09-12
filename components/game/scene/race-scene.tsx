@@ -185,7 +185,7 @@ function RacingLine({ playerRef, driving }: { playerRef: RefObject<THREE.Group |
     line.current.visible = !!state?.enabled && !state.recovery
     if (!line.current.visible) return
     const material = line.current.material as THREE.MeshBasicMaterial
-    material.color.set(state?.lineLocked || state?.perfectBoost ? '#64e300' : state && state.grip < 40 ? COLORS.gold : COLORS.sky)
+    material.color.set(state && state.grip < 40 ? COLORS.gold : COLORS.sky)
     for (let i = 0; i < 32; i++) {
       const progress = (playerRef.current.userData.phase ?? 0) + .018 + i * .004
       const p = trackPoint(progress, PLAYER_RADIUS)
