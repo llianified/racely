@@ -206,6 +206,9 @@ export function GameDashboard() {
   useEffect(() => {
     if (raceMounted) return;
     if (tab === "race") {
+      // Mounting the WebGL arena is the side effect; raceMounted is a latch that
+      // only ever flips false -> true, so this cannot cascade.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRaceMounted(true);
       return;
     }
@@ -257,6 +260,10 @@ export function GameDashboard() {
     if (app && app.platform !== "unknown") {
       app.ready();
       app.expand();
+      // window.Telegram.WebApp is injected by an external script and never
+      // changes afterwards, so there is nothing to subscribe to -- reading it
+      // once on mount is the only way in.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setInitData(app.initData ?? "");
       if (app.isVersionAtLeast("6.9")) {
         app.setHeaderColor("#090c1d");
@@ -452,6 +459,10 @@ export function GameDashboard() {
     );
   }
 
+  // synced.current is set in the same effect that dispatches "hydrate", so the
+  // dispatch -- not the ref -- is what re-renders us past this gate. Reading it
+  // here only avoids one frame of INITIAL_GAME leaking into the dashboard.
+  // eslint-disable-next-line react-hooks/refs
   if (!data || !synced.current) return <BootScreen />;
   if (game.carSelection?.model === null) {
     return (

@@ -9,6 +9,16 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 const hasDatabase = Boolean(process.env.DATABASE_URL);
 const describeDatabase = hasDatabase ? describe : describe.skip;
 
+// Skipping is the right default locally, but in CI it would turn the coverage
+// that matters most -- balances, withdrawals, idempotency, retention -- into a
+// silent no-op while the run still reports green. The workflow provisions a
+// Postgres service, so a missing DATABASE_URL there is a broken workflow.
+describe("Database coverage", () => {
+  it("is not silently skipped in CI", () => {
+    if (process.env.CI) expect(hasDatabase).toBe(true);
+  });
+});
+
 const identity = {
   userId: `test:${randomUUID()}`,
   displayName: "Integration Racer",
