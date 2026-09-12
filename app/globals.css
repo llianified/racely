@@ -207,9 +207,9 @@
 .panel-heading h2 { min-width: 0; font-size: var(--fs-body); font-weight: 800; }
 
 /* ── track ───���������─────────────────────────────────────── */
-.track-panel { position: relative; transition: border-color .3s; border-radius: 12px; }
-.track-panel.is-boosted { border-color: var(--accent); }
-.track-panel.is-boosted::after { content: ''; position: absolute; inset: 0; z-index: 3; padding: 2px; border-radius: inherit; pointer-events: none; background: repeating-linear-gradient(120deg, var(--accent) 0 12px, var(--foreground) 12px 18px, var(--accent) 18px 30px, transparent 30px 42px); background-size: 97px 100%; mask: linear-gradient(var(--foreground) 0 0) content-box, linear-gradient(var(--foreground) 0 0); mask-composite: exclude; animation: boost-border-drive 1.6s linear infinite; }
+.track-panel { position: relative; border-radius: 12px; }
+.track-panel.is-boosted { border-color: transparent; }
+.track-panel.is-boosted::after { content: ''; position: absolute; inset: 0; z-index: 3; padding: 1px; border-radius: inherit; pointer-events: none; background: repeating-linear-gradient(120deg, var(--accent) 0 12px, var(--foreground) 12px 18px, var(--accent) 18px 30px, transparent 30px 42px); background-size: 97px 100%; mask: linear-gradient(var(--foreground) 0 0) content-box, linear-gradient(var(--foreground) 0 0); mask-composite: exclude; animation: boost-border-drive 1.6s linear infinite; }
 @keyframes boost-border-drive { to { background-position: 97px 0; } }
 @media (prefers-reduced-motion: reduce) { .track-panel.is-boosted::after { animation: none; } }
 .track-top { display: flex; align-items: center; gap: 4px; min-height: 48px; padding: 6px 12px 6px 10px; border-bottom: 1px solid var(--border); }
@@ -288,7 +288,8 @@
 /* varian kecil: bevel lebih tipis biar proporsional */
 .gold-button[data-size='sm']:not(:disabled), .gold-button[data-size='xs']:not(:disabled) { box-shadow: 0 2px 0 var(--gold-shadow), inset 0 1px 0 var(--gold-highlight); }
 .gold-button[data-size='sm']:active:not(:disabled), .gold-button[data-size='xs']:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 1px 0 var(--gold-shadow); }
-.boost-button { width: 100%; position: relative; overflow: hidden; }
+.boost-button { width: 100%; position: relative; overflow: hidden; transition-property: transform, translate; transition-duration: .1s; }
+.boost-button:disabled { transition: none; transform: none; translate: none; }
 .boost-button small { min-width: 34px; padding: 2px 6px; background: color-mix(in srgb, currentColor 14%, transparent); border-radius: 999px; font-size: var(--fs-nano); font-weight: 800; font-variant-numeric: tabular-nums; text-align: center; }
 /* boost punya status sendiri (isi ulang & sedang ngacir), jadi tetap berwarna walau disabled */
 .boost-button:disabled::after { content: ''; position: absolute; bottom: 0; height: 3px; width: var(--charge); background: var(--primary); left: 0; }
