@@ -8,7 +8,7 @@ vi.mock("server-only", () => ({}));
 import { getPreviewGameState, performPreviewGameAction, PREVIEW_GAME_COOKIE, previewCarActionSchema } from "../lib/preview-game";
 
 const now = new Date("2026-09-12T00:00:00Z");
-const identity = { userId: `preview:${randomUUID()}`, displayName: "Preview Racer", username: "preview", photoUrl: null };
+const identity = { userId: `preview:${randomUUID()}`, displayName: "Preview Racer", username: "preview", photoUrl: null, startParam: null };
 const request = (cookie?: string) => new Request("http://localhost/api/game", { headers: cookie ? { cookie: `${PREVIEW_GAME_COOKIE}=${cookie}` } : {} });
 const action = (cookie: string, command: Parameters<typeof performPreviewGameAction>[3], id = randomUUID()) => performPreviewGameAction(request(cookie), identity, id, command);
 const selectLuna = { type: "select-car", model: "luna-gt", color: "#b9a1ed" } as const;
@@ -29,6 +29,45 @@ describe("Workshop installation", () => {
     expect(action(installed.cookieValue, { type: "upgrade", key: "engine" }, id).state).toEqual(installed.state);
     expect(getPreviewGameState(request(installed.cookieValue), identity).state.levels).toEqual(installed.state.levels);
     expect(() => action(installed.cookieValue, { type: "upgrade", key: "tires" })).toThrow("Koin belum cukup");
+  });
+});
+
+describe("Preview check-in harian", () => {
+  const racing = () => {
+    const fresh = getPreviewGameState(request(), identity);
+    return action(fresh.cookieValue, selectLuna).cookieValue;
+  };
+
+  it("membayar sekali per hari dan menyambung streak besoknya", () => {
+    const cookie = racing();
+    const awal = getPreviewGameState(request(cookie), identity).state;
+    expect(awal.daily).toMatchObject({ streak: 0, claimedToday: false, reward: 1 });
+
+    const hari1 = action(cookie, { type: "daily" });
+    expect(hari1.state.balance).toBe(awal.balance + 1);
+    expect(hari1.state.daily).toMatchObject({ streak: 1, claimedToday: true, nextReward: 2 });
+
+    // Klaim kedua di hari yang sama tidak menambah koin.
+    const lagi = action(hari1.cookieValue, { type: "daily" });
+    expect(lagi.state.balance).toBe(hari1.state.balance);
+    expect(lagi.state.daily.streak).toBe(1);
+
+    vi.advanceTimersByTime(24 * 60 * 60 * 1000);
+    const hari2 = action(lagi.cookieValue, { type: "daily" });
+    expect(hari2.state.daily).toMatchObject({ streak: 2, claimedToday: true, nextReward: 3 });
+    expect(hari2.state.balance).toBe(hari1.state.balance + 2);
+  });
+
+  it("mereset streak setelah satu hari terlewat", () => {
+    const hari1 = action(racing(), { type: "daily" });
+    vi.advanceTimersByTime(2 * 24 * 60 * 60 * 1000);
+    const setelahBolong = action(hari1.cookieValue, { type: "daily" });
+    expect(setelahBolong.state.daily).toMatchObject({ streak: 1, claimedToday: true });
+  });
+
+  it("tidak menyimpan riwayat klaim ke dalam state yang dikirim ke client", () => {
+    const klaim = action(racing(), { type: "daily" });
+    expect("dailyClaims" in klaim.state).toBe(false);
   });
 });
 
@@ -145,10 +184,22 @@ describe("Preview car selection", () => {
     const state: GameState = { ...INITIAL_GAME, balance: 250, pending: 3.25, earned: 29.25, laps: 80, progress: .4, levels: { engine: 3, tires: 2, battery: 4 }, rewardClaimed: true, missionsClaimed: ["laps"], color: "#f4b65b", withdrawals: [{ id: randomUUID(), coins: 100, method: "dana", account: "081234567890", accountName: "Preview Racer", status: "pending", createdAt: now.toISOString() }] };
     const cookie = Buffer.from(JSON.stringify({ version: 1, userId: identity.userId, updatedAt: now.getTime(), receipts: [], state })).toString("base64url");
     const offered = getPreviewGameState(request(cookie), identity);
-    expect(offered.state).toEqual({ ...state, carSelection: { model: null, returningPlayer: true } });
+    expect(offered.state).toEqual({
+      ...state,
+      carSelection: { model: null, returningPlayer: true },
+      referral: offered.state.referral,
+    });
+    // Mode preview cuma punya satu pemain, jadi tidak ada ajakan yang terhitung.
+    expect(offered.state.referral).toMatchObject({ invited: 0, earned: 0 });
+    expect(offered.state.referral.link).toContain("startapp=ref_");
     vi.advanceTimersByTime(3600000);
     const selected = action(offered.cookieValue, selectLuna);
-    expect(selected.state).toEqual({ ...state, color: selectLuna.color, carSelection: { model: "luna-gt", returningPlayer: true } });
+    expect(selected.state).toEqual({
+      ...state,
+      color: selectLuna.color,
+      carSelection: { model: "luna-gt", returningPlayer: true },
+      referral: selected.state.referral,
+    });
   });
 
   it("credits time owed before the legacy offer, then pauses", () => {

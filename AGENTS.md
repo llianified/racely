@@ -31,8 +31,10 @@ dua salinan pasti melenceng.
   **dan** `NODE_ENV !== "production"`.
 - Migrasi bersifat additive dan idempoten. Untuk membatalkan sesuatu, tulis
   migrasi maju baru — **jangan** mengedit file migrasi yang sudah dijalankan.
-- PM2 dikunci `instances: 1`, `exec_mode: "fork"`. Rate limiter dan dedupe
-  webhook bersifat per-proses; menambah instance akan merusak keduanya.
+- PM2 dikunci `instances: 1`, `exec_mode: "fork"`. Rate limiter, dedupe webhook,
+  **dan penyapu pemberitahuan idle** (`lib/idle-notifier.ts`, dinyalakan dari
+  `instrumentation.ts`) bersifat per-proses; menambah instance akan merusak
+  ketiganya — khusus penyapu, pemain akan dikirimi pesan ganda.
 - Jangan pernah menulis token, connection string, atau secret ke repo, log,
   atau commit message.
 
