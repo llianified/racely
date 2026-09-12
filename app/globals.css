@@ -98,11 +98,11 @@
   --car-showcase-w: 76px;
   --car-showcase-h: 70px;
 
-  --scene-h: 300px;
-  --scene-h-fluid: 49svh;
-  --scene-h-max: 420px;
+  --scene-h: 280px;
+  --scene-h-fluid: 47svh;
+  --scene-h-max: 400px;
   --race-hud-gradient: linear-gradient(0deg, #090c1de6, #090c1d00 48%, #090c1d66);
-  --scene-h-inspect: 300px;
+  --scene-h-inspect: 280px;
   --stage-inspect-h: 192px;
   --scene-h-alert: 220px;
   --scene-h-fullscreen: 144px;
