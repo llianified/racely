@@ -218,7 +218,31 @@
 .circuit-trigger { max-width: 100%; white-space: normal; text-align: left; padding-inline: 8px; font-size: var(--fs-body); font-weight: 800; }
 .live-tag { display: inline-flex; align-items: center; gap: 5px; color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: 800; letter-spacing: .12em; white-space: nowrap; }
 .live-tag::before { content: ''; width: 5px; height: 5px; flex-shrink: 0; border-radius: 50%; background: var(--accent); }
-.scene-wrap { height: clamp(150px, calc(100svh - 390px - var(--safe-top) - var(--safe-bottom)), min(62vw, 280px)); position: relative; background: var(--card); isolation: isolate; }
+.scene-wrap { height: clamp(240px, 42svh, 380px); position: relative; background: var(--card); isolation: isolate; overflow: hidden; }
+.race-vignette { position: absolute; inset: 0; z-index: 1; pointer-events: none; box-shadow: inset 0 0 50px 8px #090c1d55; transition: box-shadow .4s; }
+.is-cinematic .race-vignette { box-shadow: inset 0 0 65px 12px #090c1d99; }
+.is-grip-critical .race-vignette, .is-course-out .race-vignette { box-shadow: inset 0 0 45px 4px color-mix(in srgb, var(--warning) 35%, transparent); }
+.course-out-callout { position: absolute; top: 31%; left: 50%; transform: translateX(-50%); z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 3px; pointer-events: none; padding: 8px 16px; background: color-mix(in srgb, var(--background) 88%, transparent); border-left: 3px solid var(--warning); white-space: nowrap; }
+.course-out-callout strong { color: var(--warning); font-size: 20px; font-weight: 900; font-style: italic; letter-spacing: .08em; }
+.course-out-callout span { color: var(--foreground); font-size: 11px; }
+.race-director-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; background: var(--background); border-bottom: 1px solid var(--border); }
+.race-director-bar > span { display: flex; align-items: center; gap: 6px; color: var(--muted-foreground); font-size: 8px; font-weight: 800; letter-spacing: .06em; }
+.race-director-bar i { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
+.grip-challenge { display: flex; flex-direction: column; gap: 9px; padding: 10px 12px 12px; background: color-mix(in srgb, var(--background) 40%, var(--card)); border-bottom: 1px solid var(--border); }
+.grip-heading, .grip-controls, .grip-reading, .grip-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.grip-heading > span { display: flex; align-items: center; gap: 6px; color: var(--muted-foreground); font-size: 10px; font-weight: 800; letter-spacing: .1em; }
+.grip-telemetry { flex: 1; min-width: 0; }
+.grip-reading { font-size: 11px; margin-bottom: 7px; }
+.grip-reading strong { font-variant-numeric: tabular-nums; color: var(--accent); }
+.grip-meter { height: 5px; overflow: hidden; border-radius: 2px; background: var(--secondary); }
+.grip-meter i { display: block; height: 100%; background: var(--accent); transform-origin: left; transition: transform .12s linear; }
+.grip-challenge[data-danger='true'] .grip-meter i { background: var(--warning); }
+.grip-challenge[data-danger='true'] .grip-reading { color: var(--warning); }
+.grip-controls > button { min-width: 108px; }
+.grip-footer { font-size: 10px; color: var(--muted-foreground); }
+.grip-footer strong { color: var(--accent); font-variant-numeric: tabular-nums; }
+.grip-help { font-size: 10px; color: var(--muted-foreground); line-height: 1.6; margin: 0; }
+@media (prefers-reduced-motion: reduce) { .race-vignette, .grip-meter i { transition: none; } }
 .scene-wrap canvas { touch-action: none; }
 .scene-overlay { position: absolute; z-index: 2; pointer-events: none; }
 .lap-hud { left: 10px; top: 10px; display: flex; align-items: center; gap: 8px; padding: 6px 9px; border-radius: 3px; border-left: 2px solid var(--accent); background: color-mix(in srgb, var(--background) 92%, transparent); font-size: var(--fs-nano); letter-spacing: .12em; text-transform: uppercase; color: var(--muted-foreground); font-weight: 700; }
@@ -307,7 +331,7 @@
 .reward-copy > strong { display: block; font-size: var(--fs-display); font-weight: 850; line-height: 1.25; letter-spacing: -.03em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .race-reward [data-slot='button'] { flex: 0 0 auto; }
 
-/* ── garasi ────────────────────────────────────────── */
+/* ── garasi ─────────────────��──────────────────────── */
 .car-stage { position: relative; height: 150px; margin: var(--space-md) var(--gutter) 0; overflow: hidden; border: 1px solid var(--border); border-radius: calc(var(--radius) * .75); background:
   radial-gradient(78% 58% at 50% 4%, color-mix(in srgb, var(--primary) 26%, transparent), transparent 70%),
   linear-gradient(180deg, var(--secondary), color-mix(in srgb, var(--background) 72%, var(--secondary))); }

@@ -9,9 +9,11 @@ import * as THREE from 'three'
 import { COLORS, MiniCar } from './mini-car'
 import type { CarModelId } from '@/lib/car-catalog'
 import type { GameState } from '@/lib/game'
+import { PLAYER_RADIUS, TRACK_HALF, RECOVERY_SECONDS, stepDriving, type DrivingState } from '@/lib/race-dynamics'
+import { RacingEffects } from './racing-effects'
 
-const HALF = 3.35
-export type SceneProps = { levels?: GameState['levels']; model?: CarModelId; progress: number; seconds: number; color: string; boosted: boolean; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean }
+const HALF = TRACK_HALF
+export type SceneProps = { driving?: RefObject<DrivingState>; onTelemetry?: (state: DrivingState) => void; cinematic?: boolean; levels?: GameState['levels']; model?: CarModelId; progress: number; seconds: number; color: string; boosted: boolean; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean }
 
 function trackPoint(t: number, radius: number) {
   const straight = HALF * 2
@@ -46,19 +48,40 @@ function Ribbon({ inner, outer, height = .12, color, y = 0, glow = false }: { in
   </mesh>
 }
 
-function Racer({ lane, color, model, progress, seconds, boosted, playerRef, levels }: { levels?: GameState['levels']; model?: CarModelId; lane: number; color: string; progress: number; seconds: number; boosted: boolean; playerRef?: RefObject<THREE.Group | null> }) {
+function Racer({ lane, color, model, progress, seconds, boosted, playerRef, levels, driving, onTelemetry, reducedMotion }: { levels?: GameState['levels']; model?: CarModelId; lane: number; color: string; progress: number; seconds: number; boosted: boolean; playerRef?: RefObject<THREE.Group | null> } & Pick<SceneProps, 'driving' | 'onTelemetry' | 'reducedMotion'>) {
   const ownRef = useRef<THREE.Group>(null)
   const group = playerRef ?? ownRef
   const phase = useRef(lane === 0 ? progress : lane * .32)
-  useFrame((_, delta) => {
+  const publishAfter = useRef(0)
+  useFrame(({ clock }, delta) => {
     if (!group.current || document.hidden) return
     if (lane === 0) {
       const distance = ((progress - phase.current + 1.5) % 1) - .5
       phase.current = (phase.current + Math.min(delta, .1) / seconds + distance * Math.min(delta * 4, 1) + 1) % 1
     } else phase.current = (phase.current + Math.min(delta, .1) / (seconds * (1.16 + lane * .08))) % 1
-    const p = trackPoint(phase.current, 2.24 + lane * .68)
-    group.current.position.set(p.x, .14, p.z)
-    group.current.rotation.y = p.angle
+    const p = trackPoint(phase.current, PLAYER_RADIUS + lane * .68)
+    let offset = 0, lift = 0, roll = 0, yaw = 0
+    if (lane === 0 && driving) {
+      const state = driving.current
+      stepDriving(state, delta, phase.current, boosted, levels?.tires)
+      if (state.recovery > 0) {
+        const t = 1 - state.recovery / RECOVERY_SECONDS
+        const excursion = Math.sin(Math.PI * t)
+        offset = excursion * 2.9
+        lift = Math.sin(Math.PI * Math.min(t * 2, 1)) * 1.15
+        if (!reducedMotion) { roll = Math.sin(t * Math.PI * 4) * excursion * .7; yaw = Math.sin(t * Math.PI * 2) * 1.2 }
+      } else if (!reducedMotion) {
+        const stress = (100 - state.grip) / 100
+        offset = state.corner ? stress * .16 : 0
+        roll = state.corner ? -stress * .16 : 0
+        yaw = Math.sin(clock.elapsedTime * 32) * stress * .07
+      }
+      publishAfter.current += Math.min(delta, .1)
+      if (publishAfter.current >= .12) { onTelemetry?.({ ...state }); publishAfter.current = 0 }
+    }
+    group.current.position.set(p.x + Math.cos(p.angle) * offset, .14 + lift, p.z - Math.sin(p.angle) * offset)
+    group.current.rotation.set(0, p.angle + yaw, roll)
+    group.current.userData.trackHeading = p.angle
   }, -2)
   return <group ref={group}>
     <MiniCar color={color} model={model} levels={levels} scale={.85} speed={(HALF * 4 + Math.PI * 2 * (2.24 + lane * .68)) / (seconds * (lane === 0 ? 1 : 1.16 + lane * .08)) / .85} />
@@ -141,6 +164,12 @@ const Circuit = memo(function Circuit({ circuit }: { circuit: number }) {
     {[1.88, 3.92].map(r => <Ribbon key={r} inner={r} outer={r + .06} height={.018} y={.28} glow color={circuit ? COLORS.gold : '#a37ef2'} />)}
     <TrackBrand />
     <TrackMarkings />
+    {Array.from({ length: 32 }, (_, i) => {
+      const p = trackPoint(i / 32, PLAYER_RADIUS)
+      return <mesh key={`racing-line-${i}`} position={[p.x, .126, p.z]} rotation={[0, p.angle, 0]}>
+        <boxGeometry args={[.035, .006, .24]} /><meshBasicMaterial color={COLORS.blue} transparent opacity={.5} toneMapped={false} />
+      </mesh>
+    })}
     <group position={[-1.55, 0, -2.95]}>
       {[-1.12, 1.12].map(z => <mesh key={z} position={[0, .85, z]} castShadow><boxGeometry args={[.16, 1.7, .16]} /><meshStandardMaterial color={COLORS.blue} /></mesh>)}
       <mesh position={[0, 1.75, 0]} castShadow><boxGeometry args={[.22, .32, 2.48]} /><meshStandardMaterial color={COLORS.navy} /></mesh>
@@ -158,12 +187,16 @@ const Circuit = memo(function Circuit({ circuit }: { circuit: number }) {
   </group>
 })
 
-function CameraRig({ mode, follow, resetKey, playerRef, active, boosted, reducedMotion }: { mode: number; follow: boolean; resetKey: number; playerRef: RefObject<THREE.Group | null>; active: boolean; boosted: boolean; reducedMotion: boolean }) {
+function CameraRig({ mode, follow, resetKey, playerRef, active, boosted, reducedMotion, cinematic, driving }: { mode: number; follow: boolean; resetKey: number; playerRef: RefObject<THREE.Group | null>; active: boolean; boosted: boolean; reducedMotion: boolean } & Pick<SceneProps, 'cinematic' | 'driving'>) {
   const { camera, size } = useThree()
   const [overviewCamera] = useState(() => camera)
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null)
   const chaseCamera = useRef<THREE.PerspectiveCamera>(null)
   const initialize = useRef(true)
+  const manualUntil = useRef(0)
+  const bank = useRef(0)
+  const cameraDistance = useRef(0)
+  const up = useMemo(() => new THREE.Vector3(0, 1, 0), [])
   const overviewReady = useRef(false)
   const transitioning = useRef(false)
   const overviewTarget = useMemo(() => new THREE.Vector3(), [])
@@ -200,9 +233,14 @@ function CameraRig({ mode, follow, resetKey, playerRef, active, boosted, reduced
   }, [overviewCamera, overviewTarget, follow, mode, resetKey, size.width, size.height, reducedMotion])
 
   // Racer runs at -2; negative priorities preserve Fiber's automatic render.
-  useFrame((_, delta) => {
+  useFrame(({ clock }, delta) => {
     if (!active || document.hidden) return
+    const dramatic = cinematic && !reducedMotion
+    const recovering = (driving?.current.recovery ?? 0) > 0
     const damping = 1 - Math.exp(-9 * Math.min(delta, .1))
+    if (controls.current) {
+      controls.current.autoRotate = !!dramatic && mode !== 1 && !transitioning.current && performance.now() > manualUntil.current
+    }
     if (!follow && transitioning.current) {
       overviewCamera.position.lerp(overviewTarget, damping)
       overviewCamera.lookAt(0, 0, 0)
@@ -214,13 +252,13 @@ function CameraRig({ mode, follow, resetKey, playerRef, active, boosted, reduced
       if (overviewCamera.position.distanceToSquared(overviewTarget) < .0001) transitioning.current = false
     }
     if (!follow || !playerRef.current || !chaseCamera.current) return
-    const nextFov = THREE.MathUtils.lerp(chaseCamera.current.fov, boosted && !reducedMotion ? 46 : 42, damping)
+    const nextFov = THREE.MathUtils.lerp(chaseCamera.current.fov, dramatic ? recovering ? 60 : boosted ? 56 : 46 : 42, damping)
     if (Math.abs(chaseCamera.current.fov - nextFov) > .001) {
       chaseCamera.current.fov = nextFov
       chaseCamera.current.updateProjectionMatrix()
     }
     playerRef.current.getWorldPosition(pose.position)
-    playerRef.current.getWorldQuaternion(pose.rotation)
+    pose.rotation.setFromAxisAngle(up, playerRef.current.userData.trackHeading ?? playerRef.current.rotation.y)
     if (initialize.current || delta > .25) {
       pose.heading.copy(pose.rotation)
       initialize.current = false
@@ -230,15 +268,19 @@ function CameraRig({ mode, follow, resetKey, playerRef, active, boosted, reduced
 
     // Anchor translation to the actual car: damp only heading, so boost cannot leave it behind.
     // Stay above the 1.91-unit gate and lane walls, including the near clipping plane.
-    pose.offset.set(-.55, 2.15, -2.35).applyQuaternion(pose.heading)
-    pose.target.set(0, .12, .65).applyQuaternion(pose.heading).add(pose.position)
+    cameraDistance.current = THREE.MathUtils.lerp(cameraDistance.current, dramatic && recovering ? 1.8 : 0, damping)
+    const tension = dramatic && boosted ? Math.sin(clock.elapsedTime * 23) * .012 : 0
+    pose.offset.set(dramatic ? -.35 : -.55, 2.15 + cameraDistance.current * .5 + tension, -2.35 - cameraDistance.current).applyQuaternion(pose.heading)
+    pose.target.set(0, .12, dramatic ? 1.05 : .65).applyQuaternion(pose.heading).add(pose.position)
     chaseCamera.current.position.copy(pose.position).add(pose.offset)
     chaseCamera.current.lookAt(pose.target)
+    bank.current = THREE.MathUtils.lerp(bank.current, dramatic && driving?.current.corner && !recovering ? -.045 : 0, damping)
+    chaseCamera.current.rotateZ(bank.current)
   }, -.5)
 
   return <>
     {follow && <PerspectiveCamera ref={chaseCamera} makeDefault fov={42} near={.05} far={100} />}
-    {!follow && <OrbitControls ref={controls} camera={overviewCamera} onStart={() => { transitioning.current = false }} enablePan={false} minZoom={12} maxZoom={95} minPolarAngle={.001} maxPolarAngle={Math.PI / 2.35} enableDamping={!reducedMotion} dampingFactor={.08} />}
+    {!follow && <OrbitControls ref={controls} camera={overviewCamera} autoRotateSpeed={.45} onStart={() => { transitioning.current = false; manualUntil.current = Infinity }} onEnd={() => { manualUntil.current = performance.now() + 8000 }} enablePan={false} minZoom={12} maxZoom={95} minPolarAngle={.001} maxPolarAngle={Math.PI / 2.35} enableDamping={!reducedMotion} dampingFactor={.08} />}
   </>
 }
 
@@ -306,8 +348,9 @@ export default function RaceScene(props: SceneProps) {
       {props.inspect ? <CarInspector levels={props.levels} color={props.color} model={props.model} charge={props.charge} reducedMotion={props.reducedMotion} bodyVisible={props.bodyVisible} /> : <>
       <Grid position={[0, -.145, 0]} args={[36, 36]} cellSize={1} cellThickness={.35} cellColor="#2c2852" sectionSize={5} sectionThickness={.6} sectionColor="#463e7a" fadeDistance={23} fadeStrength={3} />
       <Circuit circuit={props.circuit} />
-      {[0, 1, 2].map(lane => <Racer key={lane} lane={lane} levels={lane === 0 ? props.levels : undefined} model={lane === 0 ? props.model : 'neo-falcon'} playerRef={lane === 0 ? playerRef : undefined} color={lane === 0 ? props.color : lane === 1 ? COLORS.gold : COLORS.white} progress={props.progress} seconds={props.seconds} boosted={props.boosted} />)}
-      <CameraRig mode={props.cameraMode} follow={follow} resetKey={props.resetKey} playerRef={playerRef} active={visible && props.active !== false} boosted={props.boosted} reducedMotion={props.reducedMotion ?? false} />
+      {[0, 1, 2].map(lane => <Racer key={lane} lane={lane} driving={lane === 0 ? props.driving : undefined} onTelemetry={props.onTelemetry} reducedMotion={props.reducedMotion} levels={lane === 0 ? props.levels : undefined} model={lane === 0 ? props.model : 'neo-falcon'} playerRef={lane === 0 ? playerRef : undefined} color={lane === 0 ? props.color : lane === 1 ? COLORS.gold : COLORS.white} progress={props.progress} seconds={props.seconds} boosted={props.boosted} />)}
+      <RacingEffects playerRef={playerRef} driving={props.driving} boosted={props.boosted} reducedMotion={props.reducedMotion ?? false} />
+      <CameraRig cinematic={props.cinematic} driving={props.driving} mode={props.cameraMode} follow={follow} resetKey={props.resetKey} playerRef={playerRef} active={visible && props.active !== false} boosted={props.boosted} reducedMotion={props.reducedMotion ?? false} />
       </>}
       <ContextMonitor onLost={() => setLost(true)} />
     </Canvas>
