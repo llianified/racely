@@ -63,7 +63,7 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
             <Image src="/racely-logo.png" alt="" width={372} height={248} sizes="36px" className="selection-logo" />
             <span>RACELY<span className="selection-brand-dot" aria-hidden="true">.</span></span>
           </div>
-          {developmentPreview ? <Badge variant="secondary">Development</Badge> : <span className="selection-edition">START YOUR STORY</span>}
+          {developmentPreview ? <Badge variant="secondary" className="selection-edition">Development</Badge> : <span className="selection-edition">START YOUR STORY</span>}
         </div>
         <ol className="selection-steps" aria-label="Langkah onboarding">
           <li aria-current={step === 1 ? "step" : undefined} data-complete={step === 2 || undefined}>
