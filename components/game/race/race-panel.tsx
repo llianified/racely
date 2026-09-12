@@ -1,13 +1,12 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useRef, useState, useSyncExternalStore } from "react";
-import { Camera, ChevronDown, Coins, Flag, LoaderCircle, Maximize, Minimize, RotateCcw, Zap } from "lucide-react";
+import { useId, useRef, useState, useSyncExternalStore } from "react";
+import { Camera, ChevronDown, Coins, Flag, LoaderCircle, Maximize, Minimize, RotateCcw, SlidersHorizontal, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { batteryTelemetry, coins, formatCoins, lapReward, lapSeconds, raceOpponentLapSeconds, racePosition, type GameState } from "@/lib/game";
 import { RaceOverviewHud, RacePositionHud } from "./race-overview-hud";
-import { RaceBattery } from "./race-battery";
 import { cn } from "@/lib/utils";
 import { createDrivingState, resetGripChallenge } from "@/lib/race-dynamics";
 import { GripChallenge } from "./grip-challenge";
@@ -48,6 +47,8 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
   const [cameraMode, setCameraMode] = useState(0);
   const [inspect, setInspect] = useState(false);
   const [bodyVisible, setBodyVisible] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsId = useId();
   const battery = batteryTelemetry(game);
   const [cameraChoice, setCameraChoice] = useState<boolean | null>(null);
   const followCamera = cameraChoice ?? !reducedMotion;
@@ -127,25 +128,19 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
             <Button variant="outline" size="sm" onClick={() => setBodyVisible(value => !value)} aria-pressed={bodyVisible} aria-label={bodyVisible ? "Lepas bodi untuk melihat baterai" : "Pasang bodi untuk melihat detail mobil"}>{bodyVisible ? "Lepas bodi" : "Pasang bodi"}</Button>
             <Button variant="outline" size="sm" onClick={() => setInspect(false)}><Camera data-icon="inline-start" />Balapan</Button>
           </> : <>
-          <Button variant="outline" size="sm" onClick={() => {
+          <Button variant="outline" size="icon-sm" onClick={() => {
             const nextFollowCamera = !followCamera;
             setCameraChoice(nextFollowCamera);
             setControlFeedback(nextFollowCamera ? "Kamera kembali mengikuti mobil." : "Kamera overview aktif. Geser lintasan untuk memutar.");
           }} aria-pressed={!followCamera} aria-label={followCamera ? "Aktifkan kamera overview" : "Kembali ke kamera follow mobil"} title={followCamera ? "Lihat seluruh lintasan" : "Kembali mengikuti mobil"}>
-            <Camera data-icon="inline-start" aria-hidden="true" />
-            {followCamera ? 'Overview' : 'Follow'}
-          </Button>
-          <Button variant="outline" size="icon-sm" onClick={() => {
-            setCameraChoice(null);
-            setCameraMode(0);
-            setResetKey((value) => value + 1);
-            setControlFeedback(reducedMotion ? "Kamera direset ke overview." : "Kamera direset untuk mengikuti mobil.");
-          }} aria-label={reducedMotion ? "Reset kamera ke overview" : "Reset kamera ke follow mobil"} title="Reset kamera">
-            <RotateCcw aria-hidden="true" />
+            <Camera aria-hidden="true" />
           </Button>
           </>}
           <Button variant="outline" size="icon-sm" onClick={fullscreen} aria-label={isFullscreen ? "Keluar dari layar penuh" : "Buka layar penuh"} title={isFullscreen ? "Keluar layar penuh" : "Layar penuh"}>
             {isFullscreen ? <Minimize aria-hidden="true" /> : <Maximize aria-hidden="true" />}
+          </Button>
+          <Button variant="outline" size="icon-sm" onClick={() => setSettingsOpen(value => !value)} aria-expanded={settingsOpen} aria-controls={settingsId} aria-label="Pengaturan balapan" title="Pengaturan balapan">
+            <SlidersHorizontal aria-hidden="true" />
           </Button>
           {!inspect && <Button className="race-boost-action" variant="gold" size="sm" onClick={onBoost} disabled={disabled || boosting || !battery.canBoost} aria-busy={boosting} aria-label={boostLabelForAssistiveTechnology} title={game.cooldown > 0 ? `Baterai siap dalam ${battery.readyIn} detik` : undefined}>
             {boosting ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <Zap data-icon="inline-start" fill="currentColor" />}
@@ -154,12 +149,23 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
           </Button>}
           <span className="sr-only" role="status" aria-live="polite">{controlFeedback}</span>
       </div>
-      <RaceBattery game={game} inspect={inspect} onInspect={() => {
-        setInspect(value => !value);
-        panel.current?.scrollIntoView({ block: "start", behavior: reducedMotion ? "instant" : "smooth" });
-      }} />
-      <details className="race-settings">
-        <summary>Pengaturan balapan<ChevronDown aria-hidden="true" /></summary>
+      <section className="race-settings" id={settingsId} hidden={!settingsOpen} aria-label="Pengaturan balapan">
+        <div className="race-director-bar">
+          <span>RESET KAMERA</span>
+          <Button variant="outline" size="sm" onClick={() => {
+            setCameraChoice(null);
+            setCameraMode(0);
+            setResetKey(value => value + 1);
+            setControlFeedback(reducedMotion ? "Kamera direset ke overview." : "Kamera direset untuk mengikuti mobil.");
+          }}><RotateCcw data-icon="inline-start" />Reset</Button>
+        </div>
+        <div className="race-director-bar">
+          <span>INSPEKSI MOBIL</span>
+          <Button variant="outline" size="sm" aria-pressed={inspect} onClick={() => {
+            setInspect(value => !value);
+            panel.current?.scrollIntoView({ block: "start", behavior: reducedMotion ? "instant" : "smooth" });
+          }}>{inspect ? "Kembali balapan" : "Lihat sasis"}</Button>
+        </div>
         <p className="race-powertrain-note">Mesin mempercepat akselerasi setelah tikungan dan pemulihan. Baterai memperpanjang dorongan boost di arena; energi pulih saat Gaspol tidak aktif. Laju, RPM, dan energi arena hanya simulasi, terpisah dari baterai idle dan timer Gaspol server. Lap dan koin tetap mengikuti server.</p>
         <div className="race-director-bar">
           <span>{reducedMotion ? 'GERAK DIKURANGI' : 'KAMERA SINEMATIK'}</span>
@@ -174,7 +180,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
           resetGripChallenge(driving.current, enabled);
           setTelemetry({ ...driving.current });
         }} />}
-      </details>
+      </section>
     </section>
   );
 }
