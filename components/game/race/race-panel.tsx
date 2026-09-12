@@ -5,6 +5,14 @@ import { useRef, useState, useSyncExternalStore } from "react";
 import { Camera, ChevronDown, Coins, Flag, Gauge, LoaderCircle, Maximize, Minimize, RotateCcw, Timer, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { batteryTelemetry, coins, displaySpeedKmh, formatCoins, lapReward, lapSeconds, raceOpponentLapSeconds, racePosition, type GameState } from "@/lib/game";
 import { RaceBattery } from "./race-battery";
 import { cn } from "@/lib/utils";
@@ -32,14 +40,19 @@ function subscribeFullscreen(onChange: () => void) {
   return () => document.removeEventListener("fullscreenchange", onChange);
 }
 
-export function RacePanel({ game, onBoost, onCircuits, active = true, disabled = false, boosting = false }: {
+export function RacePanel({ game, onBoost, onChooseCircuit, active = true, disabled = false, boosting = false }: {
   game: GameState;
   onBoost: () => void;
-  onCircuits: () => void;
+  onChooseCircuit: (circuit: 1) => void;
   active?: boolean;
   disabled?: boolean;
   boosting?: boolean;
 }) {
+  const unlockLaps = game.economy.circuitUnlockLaps;
+  const circuitItems = [
+    { label: "Jakarta Raceway", value: "0" },
+    { label: "Midnight Speedway", value: "1" },
+  ];
   const reducedMotion = useSyncExternalStore(subscribeMotionPreference, () => window.matchMedia("(prefers-reduced-motion: reduce)").matches, () => true);
   const driving = useRef(createDrivingState());
   const [telemetry, setTelemetry] = useState(createDrivingState);
@@ -91,22 +104,46 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
       toast.info("Layar penuh tak tersedia");
     }
   };
-  const openCircuits = async () => {
-    if (document.fullscreenElement) {
-      try { await document.exitFullscreen(); }
-      catch { toast.info("Tutup layar penuh dulu"); return; }
-    }
-    onCircuits();
-  };
   return (
     <section className="panel track-panel" ref={panel} aria-label="Balapan otomatis">
       <div className="track-top">
         <span className="circuit-number" aria-label={`Sirkuit ${game.circuit + 1}`}>{String(game.circuit + 1).padStart(2, "0")}</span>
         <h2 className="track-title">
-          <Button variant="ghost" size="sm" className="circuit-trigger" onClick={openCircuits} aria-label={`Pilih sirkuit: ${game.circuit ? "Midnight Speedway" : "Jakarta Raceway"}`} aria-haspopup="dialog">
-            {game.circuit ? "Midnight Speedway" : "Jakarta Raceway"}
-            <ChevronDown data-icon="inline-end" />
-          </Button>
+          <Select
+            items={circuitItems}
+            value={String(game.circuit)}
+            onValueChange={(value) => {
+              if (value === "1" && game.circuit === 0) onChooseCircuit(1);
+            }}
+            disabled={disabled}
+          >
+            <SelectTrigger
+              id="circuit-selector"
+              className="circuit-trigger"
+              aria-label={`Pilih sirkuit, saat ini ${game.circuit ? "Midnight Speedway" : "Jakarta Raceway"}`}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="circuit-options" align="start" alignItemWithTrigger={false}>
+              <SelectGroup>
+                {circuitItems.map((item) => (
+                  <SelectItem
+                    key={item.value}
+                    value={item.value}
+                    className="circuit-option"
+                    disabled={item.value === "0" ? game.circuit === 1 : game.circuit === 0 && game.laps < unlockLaps}
+                  >
+                    <span>{item.label}</span>
+                    <small>
+                      {item.value === "0"
+                        ? game.circuit === 0 ? "Aktif" : "Trek lama"
+                        : game.circuit === 1 ? "Aktif" : game.laps < unlockLaps ? `${game.laps}/${unlockLaps}` : "Terbuka"}
+                    </small>
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </h2>
         <span className="live-tag" aria-label={`Posisi ${position} dari 3, balapan langsung`}>Pos {position} · LIVE</span>
       </div>
