@@ -116,11 +116,14 @@
 
   --upgrade-action-w: 104px;
   --withdraw-action-w: 80px;
-  --battery-value-w: 76px;
+  --battery-value-w: 88px;
   --battery-h: 72px;
   --battery-cell-slant: -12deg;
   --battery-frame: color-mix(in srgb, var(--foreground) 30%, var(--background));
   --battery-surface: color-mix(in srgb, var(--foreground) 5%, var(--background));
+  --battery-highlight: color-mix(in srgb, var(--foreground) 18%, transparent);
+  --battery-depth: color-mix(in srgb, var(--foreground) 12%, var(--background));
+  --battery-shadow: color-mix(in srgb, var(--background) 72%, transparent);
   /* Muat "24,95/25" (65,7px) tanpa memendekkan bar misi mana pun. */
   --mission-count-w: 68px;
   --edition-max-w: 100px;
