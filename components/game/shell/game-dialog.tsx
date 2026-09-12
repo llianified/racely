@@ -26,9 +26,8 @@ const DIALOG_COPY: Record<DialogKind, { title: string; description: string }> =
       description: "Mobilmu tetap muter di lintasan selama kamu pergi.",
     },
     circuits: {
-      title: "Pilih tempat ngegas",
-      description:
-        "Midnight selalu membayar lebih per putaran. Jakarta ada kalau kamu lebih suka tampilannya.",
+      title: "Progres trek",
+      description: "Trek hanya maju. Bonus Midnight bersifat permanen.",
     },
     help: {
       title: "Mobil kecil. Langsung jalan.",
@@ -49,9 +48,7 @@ function WelcomeBack({
       <div className="welcome-haul">
         <span>Koin offline</span>
         <strong>+{coins(offline.coins)}</strong>
-        <small>
-          Sudah masuk ke koin pending — klaim kapan saja dari panel Balapan.
-        </small>
+        <small>Koin pending. Klaim di panel Balapan.</small>
       </div>
       <dl className="welcome-stats">
         <div>
@@ -72,10 +69,9 @@ function WelcomeBack({
       <p className="welcome-note">
         <Gauge aria-hidden="true" />
         <span>
-          Saat offline mobilmu jalan setengah kecepatan, dihitung maksimal{" "}
-          {formatDuration(OFFLINE_CAP_SECONDS)}.
+          Offline: ½ kecepatan, maksimal {formatDuration(OFFLINE_CAP_SECONDS)}.
           {offline.capped
-            ? ` Kamu pergi ${formatDuration(offline.awaySeconds)}, jadi sisanya tidak dihitung.`
+            ? ` Kamu pergi ${formatDuration(offline.awaySeconds)}; sisanya tidak dihitung.`
             : ""}
         </span>
       </p>
@@ -99,7 +95,7 @@ export function GameDialog({
   onClose: () => void;
   game: GameState;
   offline: OfflineEarnings | null;
-  onChooseCircuit: (circuit: number) => void;
+  onChooseCircuit: (circuit: 1) => void;
   disabled: boolean;
 }) {
   // Closing sets kind to null while the popup is still fading out, so the copy
@@ -128,26 +124,17 @@ export function GameDialog({
           <WelcomeBack offline={offline} onClose={onClose} />
         ) : active === "circuits" ? (
           <div className="circuit-choices">
-            {/* Hasil per putaran ditampilkan di kedua tombol. Tanpa itu kedua
-                sirkuit terlihat setara padahal Midnight selalu membayar lebih,
-                dan "Kembali ke Jakarta" jadi tombol yang memotong penghasilan
-                tanpa memberi tahu. Sekarang pilihannya jujur: pindah balik
-                adalah soal selera tampilan, dan harganya kelihatan. */}
-            <Button
-              variant="circuit"
-              disabled={disabled}
-              onClick={() => onChooseCircuit(0)}
-            >
+            <Button variant="circuit" disabled>
               Jakarta Raceway
               <span>
                 {coins(lapReward({ ...game, circuit: 0 }))} / putaran
-                {game.circuit === 0 ? " · Aktif" : ""}
+                {game.circuit === 0 ? " · Aktif" : " · Trek awal"}
               </span>
               {game.circuit === 0 && <Check data-icon="inline-end" />}
             </Button>
             <Button
               variant="circuit"
-              disabled={disabled || game.laps < 25}
+              disabled={disabled || game.laps < 25 || game.circuit === 1}
               onClick={() => onChooseCircuit(1)}
             >
               Midnight Speedway

@@ -54,28 +54,34 @@ export const GaragePanel = memo(function GaragePanel({
   const car = CAR_CATALOG[model];
   const colorName = car.colors.find((choice) => choice.color === game.color)?.name ?? "pilihan";
   return (
-    <section id="body-colors" tabIndex={-1} className="panel garage-panel" aria-label="Mobil kamu">
-      <div className="car-stage" role="img" aria-label={`${car.name} warna ${colorName}, model 3D yang sama dengan di lintasan`}>
-        <CarPreviewScene color={game.color} model={model} levels={game.levels} equipped={game.bodyParts?.equipped} active={active} />
-      </div>
-      <div className="car-identity">
-        <div className="car-identity-head">
-          <div className="car-identity-title">
-            <h2>{car.name}</h2>
-            <Badge variant="secondary" className="car-level-chip">Lv. {totalLevel(game)}</Badge>
-            <InfoHint title="Mobil kamu">Kecepatan dasar tanpa boost. Model 3D ini sama dengan mobil di lintasan. Ganti warna bodi gratis dan langsung aktif.</InfoHint>
-          </div>
-          <p>{car.chassis}</p>
-          <p>{car.description}</p>
+    <>
+      <section id="body-colors" tabIndex={-1} className="panel garage-panel" aria-label="Mobil kamu">
+        <div className="car-stage" role="img" aria-label={`${car.name} warna ${colorName}, model 3D yang sama dengan di lintasan. Geser untuk memutar.`}>
+          <CarPreviewScene color={game.color} model={model} levels={game.levels} equipped={game.bodyParts?.equipped} active={active} />
         </div>
-      </div>
-      <CarColorPicker model={model} color={game.color} disabled={disabled} onChoose={onChooseColor} />
-      <dl className="garage-stats">
-        <div><dt>Kecepatan dasar</dt><dd><strong>{displaySpeedKmh(lapSeconds({ ...game, boostLeft: 0 })).toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</strong> km/j</dd></div>
-        <div><dt>Hasil per putaran</dt><dd><strong>{formatCoins(lapReward(game))}</strong> koin</dd></div>
-      </dl>
+        <div className="car-identity">
+          <div className="car-identity-head">
+            <div className="car-identity-heading">
+              <div className="car-identity-title">
+                <h2>{car.name}</h2>
+                <Badge variant="secondary" className="car-level-chip">Lv. {totalLevel(game)}</Badge>
+              </div>
+              <div className="heading-aside">
+                <InfoHint title="Mobil kamu">Kecepatan dasar tanpa boost. Model 3D ini sama dengan mobil di lintasan. Ganti warna bodi gratis dan langsung aktif.</InfoHint>
+              </div>
+            </div>
+            <p>{car.chassis}</p>
+            <p>{car.description}</p>
+          </div>
+        </div>
+        <CarColorPicker model={model} color={game.color} disabled={disabled} onChoose={onChooseColor} />
+        <dl className="garage-stats">
+          <div><dt>Kecepatan dasar</dt><dd><strong>{displaySpeedKmh(lapSeconds({ ...game, boostLeft: 0 })).toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</strong> km/j</dd></div>
+          <div><dt>Hasil per putaran</dt><dd><strong>{formatCoins(lapReward(game))}</strong> koin</dd></div>
+        </dl>
+      </section>
       <BodyPartsShop game={game} active={active} disabled={disabled} onAction={onPartAction} />
-    </section>
+    </>
   );
 });
 
@@ -152,7 +158,7 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
           </div>
           <div className="border-b border-border bg-background px-xl py-lg text-foreground">
             <div className="overflow-hidden rounded-xl border border-border">
-              <div className="h-(--stage-inspect-h)" role="img" aria-label={`${showAfter ? "Setelah" : "Sebelum"} modifikasi ${title}, level ${showAfter ? nextLevel : level}${inspect ? ", bodi dilepas" : ""}`}>
+              <div className="h-(--stage-inspect-h)" role="img" aria-label={`${showAfter ? "Setelah" : "Sebelum"} modifikasi ${title}, level ${showAfter ? nextLevel : level}${inspect ? ", bodi dilepas" : ""}. Geser untuk memutar.`}>
                 {open && <CarPreviewScene color={game.color} equipped={game.bodyParts?.equipped} model={game.carSelection?.model ?? "neo-falcon"} levels={showAfter ? { ...game.levels, [key]: nextLevel } : game.levels} inspect={inspect} />}
               </div>
               <div className="flex flex-wrap items-center justify-between gap-sm border-t border-border p-md">
@@ -227,7 +233,7 @@ export function UpgradePanel({ game, onUpgrade, disabled = false }: UpgradePanel
     <section id="upgrades" tabIndex={-1} className="panel upgrade-panel" aria-label="Bengkel modifikasi">
       <SectionCardHeading
         icon={Wrench}
-        title="Bengkel modifikasi"
+        title="Bengkel"
         aside={
           <InfoHint title="Modifikasi mobil">Pilih part, cek perubahan performa, lalu konfirmasi pemasangan. Mesin dan ban mempercepat putaran; ban juga memperkuat grip dan mempercepat pemulihannya di simulasi. Baterai menambah hasil koin. Setiap pemasangan menaikkan satu level, maksimal level 10.</InfoHint>
         }
