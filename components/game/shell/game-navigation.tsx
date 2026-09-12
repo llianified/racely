@@ -20,7 +20,7 @@ export const NAV_ITEMS = [
   { id: "rewards" as const, label: "Hadiah", icon: Gift },
   { id: "wallet" as const, label: "Dompet", icon: Wallet },
 ];
-export function Brand({ section }: { section: string }) {
+export function Brand() {
   return (
     <div className="brand">
       <Image
@@ -31,10 +31,7 @@ export function Brand({ section }: { section: string }) {
         sizes="32px"
         className="brand-mark"
       />
-      <div className="brand-copy">
-        <div className="brand-word">RACELY<span aria-hidden="true">.</span></div>
-        <div className="brand-sub">{section}</div>
-      </div>
+      <div className="brand-word">RACELY<span aria-hidden="true">.</span></div>
     </div>
   );
 }
@@ -70,7 +67,6 @@ export function GameNavigation({
   );
 }
 export function Topbar({
-  tab,
   balance,
   level,
   racerName,
@@ -85,12 +81,11 @@ export function Topbar({
   onHelp: () => void;
 }) {
   const initial = Array.from(racerName.trim())[0]?.toUpperCase() || "R";
-  const section = NAV_ITEMS.find((item) => item.id === tab)?.label ?? "Balapan";
   const displayedBalance = formatCoins(Math.floor(balance));
 
   return (
     <header className="topbar font-sans">
-      <Brand section={section} />
+      <Brand />
       <div className="topbar-right">
         <button
           type="button"
