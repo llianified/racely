@@ -113,24 +113,29 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
       </div>
       <div className={cn("scene-wrap", inspect && "is-inspecting", !inspect && cinematic && "is-cinematic", !inspect && telemetry.recovery > 0 && "is-course-out", !inspect && telemetry.grip < 40 && "is-grip-critical")}>
         {!inspect && <div className="race-vignette" aria-hidden="true" />}
-        {!inspect && <div className="scene-overlay race-reward-hud"><span>REWARD / LAP</span><strong>+{formatCoins(lapReward(game))}<Coins aria-hidden="true" /></strong></div>}
-        {!inspect && <div className="scene-overlay race-line-status" data-danger={telemetry.recovery > 0 || telemetry.grip < 40} data-perfect={telemetry.lineLocked || telemetry.perfectBoost > 0} role="status">
+        <RaceScene driving={driving} onTelemetry={setTelemetry} cinematic={cinematic && !reducedMotion} levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.progress} seconds={seconds} color={game.color} boosted={boosted} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
+      </div>
+      <div className="lap-progress" role="progressbar" aria-label="Progres putaran saat ini" aria-valuenow={Math.round(game.progress * 100)} aria-valuemin={0} aria-valuemax={100}>
+        <div style={{ transform: `scaleX(${game.progress})` }} />
+      </div>
+      <div className="race-dashboard" aria-label="Informasi balapan">
+        {!inspect && <div className="race-reward-hud"><span>REWARD / LAP</span><strong>+{formatCoins(lapReward(game))}<Coins aria-hidden="true" /></strong></div>}
+        {!inspect && <div className="race-line-status" data-danger={telemetry.recovery > 0 || telemetry.grip < 40} data-perfect={telemetry.lineLocked || telemetry.perfectBoost > 0} role="status">
           {telemetry.recovery > 0 ? telemetry.offRoad ? 'OFF-ROAD / GRIP RENDAH' : 'RECOVERY / KEMBALI KE LINE' : telemetry.perfectBoost > 0 ? 'PERFECT EXIT / +22% AKSELERASI' : telemetry.lineLocked ? 'APEX LOCKED / SIAP MELAJU' : telemetry.grip < 40 ? 'TRACTION LOST / STABILKAN' : telemetry.corner ? 'CORNER / CARI APEX' : 'FLAT OUT / SIAPKAN TIKUNGAN'}
         </div>}
-        {inspect ? <div className="scene-overlay inspect-hud"><strong>{bodyVisible ? "DETAIL MOBIL" : "DI BALIK BODI"}</strong><span>{bodyVisible ? "Cat metalik · ban · aero kit" : "2 sel · motor · penggerak 4WD"}</span></div> : <div className="scene-overlay lap-hud">
+        {inspect ? <div className="inspect-hud"><strong>{bodyVisible ? "DETAIL MOBIL" : "DI BALIK BODI"}</strong><span>{bodyVisible ? "Cat metalik · ban · aero kit" : "2 sel · motor · penggerak 4WD"}</span></div> : <div className="lap-hud">
           <span>Lap server</span><strong>{String(game.laps + 1).padStart(3, "0")}</strong>
         </div>}
-        <RaceScene driving={driving} onTelemetry={setTelemetry} cinematic={cinematic && !reducedMotion} levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.progress} seconds={seconds} color={game.color} boosted={boosted} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
-        <div className={cn("scene-overlay boost-hud", boosted && "boost-hud-active")} aria-hidden={!boosted}>
+        <div className={cn("boost-hud", boosted && "boost-hud-active")} aria-hidden={!boosted}>
           <Zap aria-hidden="true" /><strong>2×</strong><span>GASPOL</span>
           <i style={{ transform: `scaleX(${Math.max(0, Math.min(1, game.boostLeft / BOOST_DURATION_SECONDS))})` }} />
         </div>
-        {!inspect && <div className="scene-overlay race-speed-hud" aria-label="Kecepatan mobil di arena">
+        {!inspect && <div className="race-speed-hud" aria-label="Kecepatan mobil di arena">
           <span><i style={{ backgroundColor: game.color }} />MOBILMU / 01</span>
           <strong>{(192 / seconds * telemetry.speedMultiplier).toFixed(1)}<small>KM/J</small></strong>
           <div className="race-speed-meter" aria-hidden="true"><i style={{ transform: `scaleX(${Math.min(1, telemetry.speedMultiplier * (boosted ? 1 : .5))})` }} /></div>
         </div>}
-        {inspect && <div className="scene-overlay inspect-hint">Geser untuk memutar · balapan tetap jalan</div>}
+        {inspect && <div className="inspect-hint">Geser untuk memutar · balapan tetap jalan</div>}
         {!inspect && <div className="scene-boost-action">
           <Button variant="gold" size="sm" onClick={onBoost} disabled={disabled || boosting || !battery.canBoost} aria-busy={boosting}>
             {boosting ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <Zap data-icon="inline-start" fill="currentColor" />}
@@ -138,10 +143,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
             {!boosting && <small>{boosted ? `${Math.ceil(game.boostLeft)}s` : game.cooldown > 0 ? `${Math.ceil(game.cooldown)}s` : '10s'}</small>}
           </Button>
         </div>}
-        <LapFeedback laps={game.laps} reward={lapReward(game)} active={active && !inspect} />
-      </div>
-      <div className="lap-progress" role="progressbar" aria-label="Progres putaran saat ini" aria-valuenow={Math.round(game.progress * 100)} aria-valuemin={0} aria-valuemax={100}>
-        <div style={{ transform: `scaleX(${game.progress})` }} />
+        <div className="race-lap-feedback"><LapFeedback laps={game.laps} reward={lapReward(game)} active={active && !inspect} /></div>
       </div>
       <div className="scene-controls" role="group" aria-label="Kontrol kamera arena">
           {inspect ? <>
