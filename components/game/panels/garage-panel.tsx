@@ -133,7 +133,17 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
           <div className="upgrade-name"><Icon size={16} aria-hidden="true" /><h3>{title}</h3><span className="level-label">Lv. {level}</span></div>
           <p>{preview.currentPart} · Terpasang</p>
           <p>{maxed ? "Modifikasi maksimal" : benefit}</p>
+          {key === "engine" && <div className="upgrade-arena-info">
+            <p><strong>Akselerasi arena</strong></p>
+            <p>Respons 90%: {seconds(Math.log(10) / currentPowertrain.accelerationRate)} d{!maxed && ` → ${seconds(Math.log(10) / nextPowertrain.accelerationRate)} d`}</p>
+            <p>Lebih kecil = lebih cepat pulih setelah tikungan.</p>
+          </div>}
           {key === "tires" && <p>Grip · pengurasan −{currentGrip.drainReductionPercent}%{!maxed && ` → −${nextGrip.drainReductionPercent}%`}</p>}
+          {key === "battery" && <div className="upgrade-arena-info">
+            <p><strong>Energi boost arena</strong></p>
+            <p>Cadangan: {seconds(currentPowertrain.boostCapacitySeconds)} d{!maxed && ` → ${seconds(nextPowertrain.boostCapacitySeconds)} d`}</p>
+            <p>Terisi penuh dalam {currentPowertrain.rechargeSeconds} d tanpa Gaspol.</p>
+          </div>}
           <div className="level-segments" aria-label={`Level ${level} dari 10`}>
             {Array.from({ length: 10 }, (_, i) => <span key={i} className={i < level ? "filled" : undefined} />)}
           </div>
@@ -258,6 +268,7 @@ export function UpgradePanel({ game, onUpgrade, disabled = false }: UpgradePanel
           <InfoHint title="Modifikasi mobil">Pilih part, cek perubahan performa, lalu konfirmasi pemasangan. Mesin dan ban mempercepat putaran; baterai menambah hasil koin. Di simulasi arena, mesin mempercepat akselerasi, ban memperkuat grip, dan baterai memperpanjang cadangan boost tanpa mengubah timer Gaspol server. Setiap pemasangan menaikkan satu level, maksimal level 10.</InfoHint>
         }
       />
+      <p className="upgrade-arena-note">Info arena di bawah hanya untuk simulasi gerak. Tidak menambah koin, durasi Gaspol, atau baterai idle server.</p>
       <div className="upgrade-list">
         {PARTS.map((part) => <ModificationSlot key={part.key} part={part} game={game} onUpgrade={onUpgrade} disabled={disabled} />)}
       </div>
