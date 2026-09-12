@@ -1,3 +1,5 @@
+import { raceTrack, trackCorner } from "./race-tracks";
+
 export const TRACK_HALF = 3.35;
 export const PLAYER_RADIUS = 2.24;
 export const RECOVERY_SECONDS = 2.2;
@@ -31,10 +33,15 @@ export type DrivingState = {
   lateralVelocity: number;
   offRoad: boolean;
   speedMultiplier: number;
+  lineAssist: boolean;
+  perfectBoost: number;
+  perfectCorners: number;
+  cornerAssisted: boolean;
+  speedKmh: number;
 };
 
 export function createDrivingState(): DrivingState {
-  return { grip: 100, recovery: 0, shield: 0, cleanCorners: 0, courseOuts: 0, corner: false, cornerFailed: false, enabled: true, cornerProgress: -1, offset: 0, lateralVelocity: 0, offRoad: false, speedMultiplier: 1 };
+  return { grip: 100, recovery: 0, shield: 0, cleanCorners: 0, courseOuts: 0, corner: false, cornerFailed: false, enabled: true, cornerProgress: -1, offset: 0, lateralVelocity: 0, offRoad: false, speedMultiplier: 1, lineAssist: false, perfectBoost: 0, perfectCorners: 0, cornerAssisted: false, speedKmh: 0 };
 }
 
 export function trackCornerProgress(progress: number) {
@@ -50,18 +57,21 @@ export function isTrackCorner(progress: number) {
 }
 
 // Session-only driving challenge; never changes authoritative laps, rewards, or boost timers.
-export function stepDriving(state: DrivingState, delta: number, progress: number, boosted: boolean, tires = 1) {
-  const dt = Math.max(0, Math.min(delta, .1));
-  const cornerProgress = trackCornerProgress(progress);
+export function stepDriving(state: DrivingState, delta: number, progress: number, boosted: boolean, tires = 1, track = 0) {
+  const dt = Math.max(0, Math.min(Number.isFinite(delta) ? delta : 0, .1));
+  const cornerProgress = trackCorner(progress, track);
+  state.perfectBoost = Math.max(0, state.perfectBoost - dt);
   const corner = cornerProgress >= 0;
   state.shield = Math.max(0, state.shield - dt);
   if (!state.enabled) {
-    Object.assign(state, { grip: 100, recovery: 0, corner, cornerProgress, cornerFailed: false, offset: 0, lateralVelocity: 0, offRoad: false, speedMultiplier: 1 });
+    Object.assign(state, { grip: 100, recovery: 0, corner, cornerProgress, cornerFailed: false, offset: 0, lateralVelocity: 0, offRoad: false, speedMultiplier: 1, perfectBoost: 0, cornerAssisted: false });
     return;
   }
   if (!state.corner && corner) {
     state.cornerFailed = state.recovery > 0 || state.offRoad;
+    state.cornerAssisted = state.lineAssist;
   }
+  if (corner && (!state.lineAssist || boosted)) state.cornerAssisted = false;
   if (state.recovery > 0) {
     state.recovery = Math.max(0, state.recovery - dt);
     state.grip = Math.min(75, state.grip + dt * (state.offRoad ? 8 : 45));
@@ -69,7 +79,7 @@ export function stepDriving(state: DrivingState, delta: number, progress: number
     if (state.recovery === 0) state.shield = 1.5;
   } else {
     const tuning = gripTuning(tires);
-    const drain = boosted ? tuning.boostedCornerDrain : tuning.cornerDrain;
+    const drain = (boosted ? tuning.boostedCornerDrain : tuning.cornerDrain) * raceTrack(track).grip * (state.lineAssist && !boosted ? .3 : 1);
     state.grip = Math.max(0, Math.min(100, state.grip + dt * (state.offRoad ? -18 : state.shield > 0 ? 40 : corner ? -drain : tuning.straightRecovery)));
     if (state.grip === 0) {
       state.recovery = RECOVERY_SECONDS;
@@ -81,6 +91,10 @@ export function stepDriving(state: DrivingState, delta: number, progress: number
   if (state.corner && !corner) {
     if (!state.cornerFailed && !state.offRoad) {
       state.cleanCorners += 1;
+      if (state.cornerAssisted && state.grip >= 60) {
+        state.perfectCorners += 1;
+        state.perfectBoost = 1.5;
+      }
     }
     state.cornerFailed = state.recovery > 0 || state.offRoad;
   }
@@ -95,6 +109,6 @@ export function stepDriving(state: DrivingState, delta: number, progress: number
   state.lateralVelocity += ((targetOffset - state.offset) * stiffness - state.lateralVelocity * 10) * dt;
   state.offset += state.lateralVelocity * dt;
   state.offRoad = state.offset > ROAD_EDGE;
-  const targetSpeed = state.offRoad ? .38 : state.recovery > 0 ? .58 : 1 - slip * .18;
+  const targetSpeed = state.offRoad ? .38 : state.recovery > 0 ? .58 : state.lineAssist && corner && !boosted ? .88 : (1 - slip * .18) * (state.perfectBoost > 0 ? 1.16 : 1);
   state.speedMultiplier += (targetSpeed - state.speedMultiplier) * (1 - Math.exp(-4 * dt));
 }
