@@ -11,6 +11,7 @@ import { CarColorPicker } from "../car/car-color-picker";
 import { InfoHint } from "./info-hint";
 import { BodyPartsShop } from "./body-parts-shop";
 import type { PartCommand } from "@/lib/car-parts";
+import { gripTuning } from "@/lib/race-dynamics";
 import { coins, formatCoins, lapReward, lapSeconds, modificationPreview, totalLevel, type GameState, type Upgrade } from "@/lib/game";
 
 const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
@@ -25,7 +26,7 @@ const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
 
 export const PARTS = [
   { key: "engine" as Upgrade, title: "Mesin", subtitle: "+15% tenaga dasar", icon: Cog },
-  { key: "tires" as Upgrade, title: "Ban & roller", subtitle: "+10% tenaga dasar", icon: CircleDot },
+  { key: "tires" as Upgrade, title: "Ban & roller", subtitle: "+10% tenaga dasar · grip lebih kuat", icon: CircleDot },
   { key: "battery" as Upgrade, title: "Baterai", subtitle: "+0,01 koin / putaran", icon: BatteryMedium },
 ];
 
@@ -93,6 +94,8 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
   const { key, title, icon: Icon } = part;
   const preview = modificationPreview(game, key);
   const { level, nextLevel, maxed, cost, shortfall } = preview;
+  const currentGrip = gripTuning(game.levels.tires);
+  const nextGrip = gripTuning(key === "tires" ? nextLevel : game.levels.tires);
   const blocked = disabled || installing;
   const benefit = key === "battery"
     ? `+${formatCoins(preview.afterReward - preview.beforeReward)} koin / putaran`
@@ -117,6 +120,7 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
           <div className="upgrade-name"><Icon size={16} aria-hidden="true" /><h3>{title}</h3><span className="level-label">Lv. {level}</span></div>
           <p>{preview.currentPart} · Terpasang</p>
           <p>{maxed ? "Modifikasi maksimal" : benefit}</p>
+          {key === "tires" && <p>Grip · pengurasan −{currentGrip.drainReductionPercent}%{!maxed && ` → −${nextGrip.drainReductionPercent}%`}</p>}
           <div className="level-segments" aria-label={`Level ${level} dari 10`}>
             {Array.from({ length: 10 }, (_, i) => <span key={i} className={i < level ? "filled" : undefined} />)}
           </div>
@@ -170,6 +174,26 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
               <tr className="border-y border-border"><th scope="row" className="px-xl py-sm font-normal">Koin / putaran</th><td className="text-right">{formatCoins(preview.beforeReward)}</td><td className="px-xl text-right font-bold text-accent">{formatCoins(preview.afterReward)}</td></tr>
             </tbody>
           </table>
+          {key === "tires" && <>
+            <table className="w-full text-left tabular-nums">
+              <caption className="px-xl pt-lg pb-sm text-left font-semibold">Grip tikungan · poin/detik</caption>
+              <thead className="text-muted-foreground">
+                <tr><th scope="col" className="px-xl pb-sm font-normal">Kondisi</th><th scope="col" className="pb-sm text-right font-normal">Saat ini</th><th scope="col" className="px-xl pb-sm text-right font-normal">Setelah</th></tr>
+              </thead>
+              <tbody>
+                {[
+                  { label: "Terkuras · normal", before: currentGrip.cornerDrain, after: nextGrip.cornerDrain },
+                  { label: "Terkuras · boost", before: currentGrip.boostedCornerDrain, after: nextGrip.boostedCornerDrain },
+                  { label: "Pulih · lurus", before: currentGrip.straightRecovery, after: nextGrip.straightRecovery },
+                ].map(row => <tr key={row.label} className="border-t border-border">
+                  <th scope="row" className="px-xl py-sm font-normal">{row.label}</th>
+                  <td className="text-right">{formatCoins(row.before)}</td>
+                  <td className="px-xl text-right font-bold text-accent">{formatCoins(row.after)}</td>
+                </tr>)}
+              </tbody>
+            </table>
+            <p className="border-y border-border px-xl py-lg text-muted-foreground">Pengurasan lebih kecil, pemulihan lebih cepat. Pengurangan dihitung dari ban level 1, hingga 54% di level 10. Boost tetap berisiko selip. Efek grip hanya saat simulasi aktif; tidak mengubah koin atau lap server.</p>
+          </>}
           <dl className="flex flex-col gap-sm border-b border-border px-xl py-lg">
             <div className="flex justify-between gap-md"><dt>Biaya pemasangan</dt><dd className="font-bold">{coins(cost)}</dd></div>
             <div className="flex justify-between gap-md text-muted-foreground"><dt>Saldo saat ini</dt><dd>{coins(game.balance)}</dd></div>
@@ -198,7 +222,7 @@ export function UpgradePanel({ game, onUpgrade, disabled = false }: UpgradePanel
     <section id="upgrades" tabIndex={-1} className="panel upgrade-panel" aria-label="Bengkel modifikasi">
       <div className="panel-heading">
         <h2><Wrench aria-hidden="true" />Bengkel modifikasi</h2>
-        <InfoHint title="Modifikasi mobil">Pilih part, cek perubahan performa, lalu konfirmasi pemasangan. Mesin dan ban mempercepat putaran; baterai menambah hasil koin. Setiap pemasangan menaikkan satu level, maksimal level 10.</InfoHint>
+        <InfoHint title="Modifikasi mobil">Pilih part, cek perubahan performa, lalu konfirmasi pemasangan. Mesin dan ban mempercepat putaran; ban juga memperkuat grip dan mempercepat pemulihannya di simulasi. Baterai menambah hasil koin. Setiap pemasangan menaikkan satu level, maksimal level 10.</InfoHint>
       </div>
       <p className="px-lg pt-md text-read leading-relaxed text-muted-foreground">Rakit performamu. Cek simulasi sebelum pasang.</p>
       <div className="upgrade-list">

@@ -2,9 +2,10 @@
 
 import { Gauge } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { DrivingState } from '@/lib/race-dynamics'
+import { gripTuning, type DrivingState } from '@/lib/race-dynamics'
 
-export function GripChallenge({ state, onToggle }: { state: DrivingState; onToggle: () => void }) {
+export function GripChallenge({ state, tires, onToggle }: { state: DrivingState; tires: number; onToggle: () => void }) {
+  const tuning = gripTuning(tires)
   const recovering = state.recovery > 0
   const danger = state.grip < 40 && !recovering
   const status = !state.enabled ? 'Autopilot aman' : recovering ? state.offRoad ? 'Off-road · grip rendah' : 'Kembali ke racing line' : state.shield > 0 ? 'Grip terlindungi' : danger ? 'Grip rendah' : state.corner ? 'Tikungan' : 'Lurus · grip pulih'
@@ -22,6 +23,7 @@ export function GripChallenge({ state, onToggle }: { state: DrivingState; onTogg
     </div>
     <div className="grip-footer"><span><strong>{state.cleanCorners}×</strong> tikungan bersih</span><span>{state.courseOuts} course out</span></div>
     </>}
-    <p className="grip-help">Boost berisiko selip; ban membantu grip. Simulasi tidak memengaruhi koin &amp; lap server.</p>
+    <div className="grip-footer"><span>Grip ban <strong>Lv. {tuning.level}/10</strong></span><span>Pengurasan <strong>−{tuning.drainReductionPercent}%</strong></span></div>
+    <p className="grip-help">Pulih {tuning.straightRecovery} poin/detik di lintasan lurus. {tuning.level < 10 ? 'Upgrade Ban & roller di bengkel untuk grip lebih kuat.' : 'Grip maksimal; boost di tikungan tetap berisiko selip.'} {state.enabled ? '' : 'Aktifkan simulasi untuk merasakan efek grip.'} Simulasi tidak memengaruhi koin &amp; lap server.</p>
   </div>
 }
