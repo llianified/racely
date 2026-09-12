@@ -100,7 +100,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
     onCircuits();
   };
   return (
-    <section className={cn("panel track-panel", boosted && "is-boosted")} ref={panel} aria-label="Balapan otomatis">
+    <section className="panel track-panel" ref={panel} aria-label="Balapan otomatis">
       <div className="track-top">
         <span className="circuit-number" aria-label={`Sirkuit ${game.circuit + 1}`}>{String(game.circuit + 1).padStart(2, "0")}</span>
         <h2 className="track-title">
@@ -131,19 +131,12 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
           <div className="race-speed-meter" aria-hidden="true"><i style={{ transform: `scaleX(${Math.min(1, telemetry.speedMultiplier * (boosted ? 1 : .5))})` }} /></div>
         </div>}
         {inspect && <div className="scene-overlay inspect-hint">Geser untuk memutar · balapan tetap jalan</div>}
-        {!inspect && <div className="scene-boost-action">
-          <Button variant="gold" size="sm" onClick={onBoost} disabled={disabled || boosting || !battery.canBoost} aria-busy={boosting}>
-            {boosting ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <Zap data-icon="inline-start" fill="currentColor" />}
-            <span>{boosting ? 'Memulai…' : boosted ? 'Ngacir!' : game.cooldown > 0 ? 'Isi daya' : 'Gaspol 2×'}</span>
-            {!boosting && <small>{boosted ? `${Math.ceil(game.boostLeft)}s` : game.cooldown > 0 ? `${Math.ceil(game.cooldown)}s` : '10s'}</small>}
-          </Button>
-        </div>}
         <LapFeedback laps={game.laps} reward={lapReward(game)} active={active && !inspect} />
       </div>
       <div className="lap-progress" role="progressbar" aria-label="Progres putaran saat ini" aria-valuenow={Math.round(game.progress * 100)} aria-valuemin={0} aria-valuemax={100}>
         <div style={{ transform: `scaleX(${game.progress})` }} />
       </div>
-      <div className="scene-controls" role="group" aria-label="Kontrol kamera arena">
+      <div className="scene-controls" role="group" aria-label="Kontrol balapan dan kamera">
           {inspect ? <>
             <Button variant="outline" size="sm" onClick={() => setBodyVisible(value => !value)} aria-pressed={bodyVisible} aria-label={bodyVisible ? "Lepas bodi untuk melihat baterai" : "Pasang bodi untuk melihat detail mobil"}>{bodyVisible ? "Lepas bodi" : "Pasang bodi"}</Button>
             <Button variant="outline" size="sm" onClick={() => setInspect(false)}><Camera data-icon="inline-start" />Balapan</Button>
@@ -152,9 +145,6 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
             <Camera data-icon="inline-start" aria-hidden="true" />
             {followCamera ? 'Overview' : 'Follow'}
           </Button>
-          {!followCamera && <Button variant="outline" size="icon-sm" onClick={() => setCameraMode((v) => (v + 1) % 3)} aria-label={`Ganti sudut overview, preset ${cameraMode + 1} dari 3`} title={`Sudut overview ${cameraMode + 1}/3`}>
-            <span aria-hidden="true">{cameraMode + 1}/3</span>
-          </Button>}
           <Button variant="outline" size="icon-sm" onClick={() => { setCameraChoice(null); setCameraMode(0); setResetKey((v) => v + 1); }} aria-label={reducedMotion ? "Reset kamera ke overview" : "Reset kamera ke follow mobil"}>
             <RotateCcw aria-hidden="true" />
           </Button>
@@ -162,16 +152,12 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
           <Button variant="outline" size="icon-sm" onClick={fullscreen} aria-label="Layar penuh">
             <Maximize aria-hidden="true" />
           </Button>
+          {!inspect && <Button className="race-boost-action" variant="gold" size="sm" onClick={onBoost} disabled={disabled || boosting || !battery.canBoost} aria-busy={boosting}>
+            {boosting ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <Zap data-icon="inline-start" fill="currentColor" />}
+            <span>{boosting ? 'Memulai…' : boosted ? 'Ngacir!' : game.cooldown > 0 ? 'Isi daya' : 'Gaspol 2×'}</span>
+            {!boosting && (boosted || game.cooldown > 0) && <small>{Math.ceil(boosted ? game.boostLeft : game.cooldown)}s</small>}
+          </Button>}
       </div>
-      <div className="race-director-bar">
-        <span>{followCamera ? 'CHASE CAM' : `OVERVIEW / 0${cameraMode + 1}`}<i />{reducedMotion ? 'REDUCED MOTION' : cinematic ? 'DIRECTOR LIVE' : 'KAMERA STABIL'}</span>
-        <Button variant="ghost" size="xs" aria-pressed={cinematic && !reducedMotion} disabled={reducedMotion} onClick={() => setCinematic(value => !value)}>Sinematik {cinematic && !reducedMotion ? 'on' : 'off'}</Button>
-      </div>
-      {!inspect && <GripChallenge state={telemetry} onToggle={() => {
-        const enabled = !driving.current.enabled;
-        Object.assign(driving.current, createDrivingState(), { enabled });
-        setTelemetry({ ...driving.current });
-      }} />}
       <div className="track-stats">
         <div className="track-stat">
           <div className="track-stat-label"><Gauge aria-hidden="true" />Kecepatan</div>
@@ -190,7 +176,22 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
         setInspect(value => !value);
         panel.current?.scrollIntoView({ block: "start", behavior: reducedMotion ? "instant" : "smooth" });
       }} />
-
+      <details className="race-settings">
+        <summary>Pengaturan balapan<ChevronDown aria-hidden="true" /></summary>
+        <div className="race-director-bar">
+          <span>{reducedMotion ? 'GERAK DIKURANGI' : 'KAMERA SINEMATIK'}</span>
+          <Button variant="ghost" size="xs" aria-label="Kamera sinematik" aria-pressed={cinematic && !reducedMotion} disabled={reducedMotion} onClick={() => setCinematic(value => !value)}>{cinematic && !reducedMotion ? 'Aktif' : 'Nonaktif'}</Button>
+        </div>
+        {!inspect && !followCamera && <div className="race-director-bar">
+          <span>SUDUT OVERVIEW</span>
+          <Button variant="outline" size="sm" onClick={() => setCameraMode((v) => (v + 1) % 3)} aria-label={`Ganti sudut overview, preset ${cameraMode + 1} dari 3`}>{cameraMode + 1}/3</Button>
+        </div>}
+        {!inspect && <GripChallenge state={telemetry} onToggle={() => {
+          const enabled = !driving.current.enabled;
+          Object.assign(driving.current, createDrivingState(), { enabled });
+          setTelemetry({ ...driving.current });
+        }} />}
+      </details>
     </section>
   );
 }
