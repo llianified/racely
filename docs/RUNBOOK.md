@@ -27,7 +27,7 @@ cd /srv/racely
 git fetch origin && git checkout main && git pull --ff-only
 set -a && source /etc/racely/racely.env && set +a   # WAJIB sebelum build
 pnpm install --frozen-lockfile
-pnpm run typecheck && pnpm test
+pnpm run typecheck && pnpm run lint && pnpm test
 pnpm run db:migrate            # idempoten, aman diulang
 pnpm run build:standalone      # next build + salin public/ dan .next/static
 pnpm run pm2:reload            # zero-downtime reload, --update-env
@@ -41,6 +41,12 @@ jalan** — bukan hanya saat PM2 start. Tanpa itu `metadataBase` kosong, Next
 jatuh ke `http://localhost:3000`, dan setiap link Racely yang dibagikan tampil
 dengan preview gambar rusak. Build akan memberi peringatan
 `metadataBase property in metadata export is not set` kalau ini terlewat.
+
+Langkah-langkah ini juga dijalankan otomatis oleh GitHub Actions
+(`.github/workflows/ci.yml`) pada setiap pull request dan push ke `main`:
+typecheck, lint, migrasi, test (dengan service container Postgres sehingga tes
+database benar-benar jalan, bukan ter-skip), lalu build. Kalau CI merah,
+jangan deploy.
 
 Catatan: `instances: 1` dan `exec_mode: "fork"` disengaja — dedupe webhook
 fallback dan rate limiter bersifat per-proses. Jangan naikkan jumlah instance

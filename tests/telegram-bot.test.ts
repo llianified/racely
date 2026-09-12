@@ -57,11 +57,24 @@ describe("Public app URL parsing", () => {
     expect(parsePublicAppUrl(`${APP_URL}/?a=1#frag`)).toBe(APP_URL);
   });
 
-  it("refuses insecure, credentialed, missing or malformed values", () => {
+  it("refuses insecure, credentialed or malformed values", () => {
     expect(() => parsePublicAppUrl("http://racely.example.com")).toThrow();
     expect(() => parsePublicAppUrl("https://user:pw@racely.example.com")).toThrow();
     expect(() => parsePublicAppUrl("racely.example.com")).toThrow();
-    expect(() => parsePublicAppUrl(undefined)).toThrow();
+  });
+
+  it("refuses a missing value regardless of the ambient environment", () => {
+    // parsePublicAppUrl() defaults to process.env.PUBLIC_APP_URL, so passing
+    // undefined reads whatever the shell exports. Both CI and the deploy
+    // runbook source the env file before running this suite, so the variable is
+    // set there -- pin it instead of depending on the caller's shell.
+    vi.stubEnv("PUBLIC_APP_URL", "");
+    try {
+      expect(() => parsePublicAppUrl(undefined)).toThrow();
+      expect(() => parsePublicAppUrl()).toThrow();
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });
 
