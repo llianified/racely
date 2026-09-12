@@ -6,8 +6,8 @@ export function BootScreen() {
       <Image
         src="/racely-logo.png"
         alt=""
-        width={112}
-        height={112}
+        width={372}
+        height={248}
         priority
         className="boot-logo"
       />
