@@ -147,7 +147,9 @@ export function BodyPartsShop({ game, active, disabled, onAction }: ShopProps) {
           </div>;
         })}
       </dl>
-      <DialogTrigger render={<Button variant="gold" className="w-full" disabled={disabled} />}><ShoppingBag data-icon="inline-start" />Buka toko</DialogTrigger>
+      <div className="pt-lg">
+        <DialogTrigger render={<Button variant="gold" className="w-full" disabled={disabled} />}><ShoppingBag data-icon="inline-start" />Buka toko</DialogTrigger>
+      </div>
     </div>
     <DialogContent className="parts-shop-dialog">
       <DialogHeader className="parts-shop-header">
