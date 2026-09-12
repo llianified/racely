@@ -7,3 +7,119 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+# Racely — peta kerja untuk agent
+
+Orientasi lengkap ada di `README.md`; runbook produksi di `docs/RUNBOOK.md`.
+File ini sengaja hanya berisi **rute tugas** dan **aturan yang mahal kalau
+dilanggar** — hal yang tidak bisa ditebak dengan membaca satu-dua file. Jangan
+menyalin peta direktori README ke sini; dua salinan pasti melenceng.
+
+## Baca dulu sebelum menyentuh direktori ini
+
+| Direktori | Baca |
+|---|---|
+| `components/game/scene/` | `components/game/scene/AGENTS.md` |
+| `lib/db/` | `lib/db/AGENTS.md` |
+
+## Aturan yang tidak boleh dilanggar
+
+- Produksi **wajib** autentikasi Telegram `initData` (HMAC + cek kedaluwarsa).
+- **Withdrawal tetap antrean manual berstatus `pending`.** Jangan pernah
+  diubah jadi transfer otomatis.
+- Mode preview hanya untuk development: butuh `RACELY_ENABLE_PREVIEW=true`
+  **dan** `NODE_ENV !== "production"`.
+- Migrasi bersifat additive dan idempoten. Untuk membatalkan sesuatu, tulis
+  migrasi maju baru — **jangan** mengedit file migrasi yang sudah dijalankan.
+- PM2 dikunci `instances: 1`, `exec_mode: "fork"`. Rate limiter dan dedupe
+  webhook bersifat per-proses; menambah instance akan merusak keduanya.
+- Jangan pernah menulis token, connection string, atau secret ke repo, log,
+  atau commit message.
+
+## Rute tugas
+
+### Menambah aksi pemain baru — tiga tempat, tidak saling diturunkan
+
+1. `lib/game.ts` → tambah varian di union `GameCommand` (dipakai client).
+2. `lib/game-server.ts` → tambah varian di `commandSchema`
+   (`z.discriminatedUnion`) **dan** cabang eksekusinya di `performGameAction`.
+3. `lib/preview-game.ts` → tambah cabang di `performPreviewGameAction`.
+
+Ketiganya ditulis manual dan tidak diturunkan satu sama lain. Melewatkan (3)
+tidak menimbulkan error apa pun — aksinya hanya diam-diam tidak berfungsi saat
+`pnpm dev`, yang paling lama ditemukan. Endpoint `app/api/game/action/route.ts`
+tidak perlu diubah: ia mendelegasikan lewat `gameActionSchema`.
+
+Tambahkan juga testnya di `tests/`.
+
+### Menambah mobil baru — langkah 4 adalah pengecualian, baca alasannya
+
+Id mobil diulang di SQL dan tidak ikut otomatis dari TypeScript.
+
+1. `lib/car-catalog.ts` → id di `CAR_MODEL_IDS` + entri di `CAR_CATALOG`.
+2. `components/game/scene/mini-car.tsx` → geometri mobilnya.
+3. `migrations/000N_*.sql` → migrasi **baru** yang menjatuhkan lalu membuat
+   ulang `racely_players_car_model_check` dengan daftar id baru. Inilah yang
+   memperbarui database yang sudah berjalan.
+4. `migrations/0001_racely_core.sql` → perbarui **juga** kedua daftar
+   `car_model IN (...)` di dalamnya.
+
+Langkah 4 tampak melanggar aturan "jangan edit migrasi yang sudah dijalankan",
+dan ini satu-satunya pengecualian. Aman karena `scripts/migrate.mjs` melewati
+file yang sudah tercatat di `racely_schema_migrations`, dan blok constraint di
+0001 dijaga `IF NOT EXISTS` — suntingan itu tidak akan pernah menyentuh
+database yang sudah ada. Gunanya untuk database baru, dan karena
+`tests/car-catalog-consistency.test.ts` hanya membaca 0001: tanpa langkah 4
+test itu merah, meski langkah 3 sudah benar.
+
+### Mengubah ekonomi, reward, atau biaya upgrade
+
+`lib/game-economy.ts` (murni, tanpa I/O) dan konstanta di `lib/game.ts`.
+Jangan menaruh aturan ekonomi di `lib/game-server.ts` — file itu untuk
+persistensi. Test: `tests/game-economy.test.ts`.
+
+### Menambah kolom atau tabel
+
+`migrations/000N_*.sql` **dan** `lib/db/schema.ts`. Runner mengurutkan file
+berdasarkan nama dan mencatat yang sudah jalan di `racely_schema_migrations`,
+jadi penomoran harus naik. Jalankan `pnpm run db:migrate`.
+
+### Menambah endpoint API
+
+Ikuti pola `app/api/game/action/route.ts`: `runtime = "nodejs"`,
+`dynamic = "force-dynamic"`, autentikasi lewat `lib/telegram-auth.ts`,
+throttle lewat `consumeRateLimit`, dan baca body dengan `readJsonBody`
+(`lib/http-body.ts`) yang punya batas ukuran — jangan `request.json()`
+langsung.
+
+### Menambah komponen
+
+`components/game/shell/` kerangka · `scene/` react-three-fiber ·
+`race/` panel balapan · `panels/` panel tab non-3D · `car/` pemilihan mobil.
+Komponen react-three-fiber **wajib** di `scene/` (lihat AGENTS.md di sana).
+
+## Sebelum push
+
+```bash
+pnpm run typecheck && pnpm run lint && pnpm test
+PUBLIC_APP_URL=https://racely.example.com pnpm run build
+```
+
+Persis inilah yang dijalankan `.github/workflows/ci.yml`. `PUBLIC_APP_URL`
+dibutuhkan saat build karena halaman `/` di-prerender dan `metadataBase` ikut
+dibekukan.
+
+Tanpa `DATABASE_URL`, `tests/database.test.ts` ter-skip secara lokal — itu
+normal. Di CI skip tidak diizinkan dan suite akan gagal kalau terjadi.
+
+## Jebakan
+
+- **Blok `nextjs-agent-rules` di atas ditulis ulang oleh `next dev`.** Hanya
+  isi di antara marker yang diganti; tulisan di luarnya aman. Jangan
+  memindahkan teks ini ke dalam blok.
+- **`vercel.json` jangan dihapus.** `"deploymentEnabled": false` adalah rem
+  yang menahan Vercel membuat deployment otomatis setiap push — repo ini
+  dideploy ke EC2, dan pengerjaan lewat v0 akan membanjiri riwayat deployment
+  kalau rem itu dilepas.
+- **`.env.development` memang di-commit**, isinya hanya flag preview
+  non-rahasia. Semua secret produksi hidup di `/etc/racely/racely.env`.
