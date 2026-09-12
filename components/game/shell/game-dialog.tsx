@@ -49,9 +49,7 @@ function WelcomeBack({
       <div className="welcome-haul">
         <span>Koin offline</span>
         <strong>+{coins(offline.coins)}</strong>
-        <small>
-          Sudah masuk ke koin pending — klaim kapan saja dari panel Balapan.
-        </small>
+        <small>Koin pending. Klaim di panel Balapan.</small>
       </div>
       <dl className="welcome-stats">
         <div>
@@ -72,10 +70,9 @@ function WelcomeBack({
       <p className="welcome-note">
         <Gauge aria-hidden="true" />
         <span>
-          Saat offline mobilmu jalan setengah kecepatan, dihitung maksimal{" "}
-          {formatDuration(OFFLINE_CAP_SECONDS)}.
+          Offline: ½ kecepatan, maksimal {formatDuration(OFFLINE_CAP_SECONDS)}.
           {offline.capped
-            ? ` Kamu pergi ${formatDuration(offline.awaySeconds)}, jadi sisanya tidak dihitung.`
+            ? ` Kamu pergi ${formatDuration(offline.awaySeconds)}; sisanya tidak dihitung.`
             : ""}
         </span>
       </p>

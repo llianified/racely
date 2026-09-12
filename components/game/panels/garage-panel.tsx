@@ -227,7 +227,7 @@ export function UpgradePanel({ game, onUpgrade, disabled = false }: UpgradePanel
     <section id="upgrades" tabIndex={-1} className="panel upgrade-panel" aria-label="Bengkel modifikasi">
       <SectionCardHeading
         icon={Wrench}
-        title="Bengkel modifikasi"
+        title="Bengkel"
         aside={
           <InfoHint title="Modifikasi mobil">Pilih part, cek perubahan performa, lalu konfirmasi pemasangan. Mesin dan ban mempercepat putaran; ban juga memperkuat grip dan mempercepat pemulihannya di simulasi. Baterai menambah hasil koin. Setiap pemasangan menaikkan satu level, maksimal level 10.</InfoHint>
         }
