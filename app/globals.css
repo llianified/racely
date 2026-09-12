@@ -175,21 +175,24 @@
 .main-shell { min-width: 0; }
 
 /* ── app bar (bukan navbar desktop) ────────────────── */
-.topbar { position: sticky; top: 0; z-index: 20; height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-inline: var(--gutter); background: color-mix(in srgb, var(--background) 82%, transparent); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
-.brand { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
-.brand-mark { width: 19px; height: auto; flex-shrink: 0; object-fit: contain; }
-.brand-word { font-size: var(--fs-title); font-weight: 950; letter-spacing: -.01em; line-height: 1; }
-.brand-sub { display: none; }
-.racer-avatar { position: relative; display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; background: var(--secondary); border: 1px solid var(--border); color: var(--foreground); font-size: var(--fs-small); font-weight: 850; }
-.racer-avatar:hover { background: var(--menu-header); }
-.racer-avatar small { position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; min-width: 15px; height: 15px; padding-inline: 3px; border-radius: 999px; background: var(--accent); color: var(--accent-foreground); font-size: var(--fs-nano); font-weight: 850; line-height: 1; font-variant-numeric: tabular-nums; }
-.topbar-right { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.coin-balance { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding-inline: 10px; border-radius: 999px; min-width: 0; color: var(--foreground); background: color-mix(in srgb, var(--accent) 12%, var(--card)); border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent); }
-.coin-balance:hover { background: color-mix(in srgb, var(--accent) 18%, var(--card)); }
-.coin-balance > svg { width: 14px; height: 14px; flex-shrink: 0; color: var(--accent); }
-.coin-balance > span { min-width: 0; }
-.coin-balance strong { display: block; font-size: var(--fs-small); font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; white-space: nowrap; }
-.coin-balance small { @apply sr-only; }
+.topbar { position: sticky; top: 0; z-index: 20; min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px var(--gutter); background: var(--background); color: var(--foreground); border-bottom: 1px solid color-mix(in srgb, var(--muted-foreground) 18%, transparent); }
+.brand { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.brand-mark { width: 32px; height: auto; flex-shrink: 0; object-fit: contain; }
+.brand-copy { display: flex; flex-direction: column; gap: 4px; }
+.brand-word { font-size: 24px; font-weight: 1000; font-style: italic; letter-spacing: -.065em; line-height: 1; }
+.brand-word > span { color: var(--accent); }
+.brand-sub { color: var(--muted-foreground); font-size: 14px; font-weight: 500; line-height: 1.4; }
+.racer-avatar { display: flex; flex-direction: column; align-items: stretch; justify-content: center; flex-shrink: 0; min-width: 48px; min-height: 48px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--primary) 55%, var(--background)); border-radius: 12px; background: color-mix(in srgb, var(--primary) 18%, var(--background)); color: var(--foreground); text-align: center; }
+.racer-avatar:hover { background: color-mix(in srgb, var(--primary) 30%, var(--background)); border-color: var(--primary); }
+.racer-initial { padding: 2px 8px; font-size: 18px; font-weight: 850; line-height: 1.25; }
+.racer-level { padding: 2px 6px; background: var(--accent); color: var(--background); font-size: 14px; font-weight: 800; line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.topbar-right { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.coin-balance { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; min-width: 0; padding: 4px 12px; border-radius: 12px; color: var(--foreground); background: color-mix(in srgb, var(--accent) 6%, var(--background)); border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent); text-align: left; }
+.coin-balance:hover { background: color-mix(in srgb, var(--accent) 12%, var(--background)); border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+.coin-balance > svg { width: 20px; height: 20px; flex-shrink: 0; color: var(--accent); }
+.coin-balance > span { display: flex; flex-direction: column; min-width: 0; }
+.coin-balance strong { display: block; overflow: hidden; text-overflow: ellipsis; font-size: 16px; font-weight: 850; font-variant-numeric: tabular-nums; line-height: 1.25; white-space: nowrap; }
+.coin-balance small { color: var(--muted-foreground); font-size: 14px; font-weight: 500; line-height: 1.4; }
 
 /* ── page content ──────────────────────────────────── */
 .page-content { position: relative; padding: var(--space-md) var(--gutter) calc(var(--nav-height) + var(--safe-bottom) + var(--space-lg)); }
@@ -378,7 +381,7 @@
 .mission-status svg { width: 13px; height: 13px; }
 .gift-bottom > strong { font-size: var(--fs-display); }
 
-/* ── hadiah ────────────────────────────────────────── */
+/* ── hadiah ──��─────────────────────────────────────── */
 .rewards-hero { display: flex; flex-direction: column; border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: var(--radius); background: var(--card); padding: var(--space-lg); }
 .rewards-hero-copy { margin-bottom: var(--space-lg); }
 .rewards-hero-copy .eyebrow { font-size: 14px; letter-spacing: .08em; }
@@ -548,7 +551,10 @@
 .track-panel:fullscreen .scene-wrap { flex: 1; height: auto; min-height: 144px; }
 @media (max-width: 359px) {
   :root { --gutter: 10px; }
-  .brand-word { font-size: var(--fs-body); }
+  .topbar { gap: 8px; }
+  .brand-mark { width: 24px; }
+  .brand-word { font-size: 22px; }
+  .coin-balance { padding-inline: 8px; }
   .coin-balance > svg, .track-stat-label svg { display: none; }
   .track-stat { padding-inline: 8px; }
   .car-showcase { width: 76px; height: 70px; }

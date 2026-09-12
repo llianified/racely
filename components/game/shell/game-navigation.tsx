@@ -20,7 +20,7 @@ export const NAV_ITEMS = [
   { id: "rewards" as const, label: "Hadiah", icon: Gift },
   { id: "wallet" as const, label: "Dompet", icon: Wallet },
 ];
-export function Brand() {
+export function Brand({ section }: { section: string }) {
   return (
     <div className="brand">
       <Image
@@ -28,12 +28,12 @@ export function Brand() {
         alt=""
         width={372}
         height={248}
-        priority
+        sizes="32px"
         className="brand-mark"
       />
-      <div>
-        <div className="brand-word">RACELY</div>
-        <div className="brand-sub">SMALL SCALE. BIG AMBITION.</div>
+      <div className="brand-copy">
+        <div className="brand-word">RACELY<span aria-hidden="true">.</span></div>
+        <div className="brand-sub">{section}</div>
       </div>
     </div>
   );
@@ -70,6 +70,7 @@ export function GameNavigation({
   );
 }
 export function Topbar({
+  tab,
   balance,
   level,
   racerName,
@@ -83,29 +84,36 @@ export function Topbar({
   onWallet: () => void;
   onHelp: () => void;
 }) {
-  const initial = racerName.trim().charAt(0).toUpperCase() || "R";
+  const initial = Array.from(racerName.trim())[0]?.toUpperCase() || "R";
+  const section = NAV_ITEMS.find((item) => item.id === tab)?.label ?? "Balapan";
+  const displayedBalance = formatCoins(Math.floor(balance));
+
   return (
-    <header className="topbar">
-      <Brand />
+    <header className="topbar font-sans">
+      <Brand section={section} />
       <div className="topbar-right">
         <button
+          type="button"
           onClick={onWallet}
           className="coin-balance"
-          aria-label="Buka dompet dan tarik koin"
+          aria-label={`Saldo ${displayedBalance} koin. Buka dompet dan tarik koin`}
+          title="Buka dompet"
         >
-          <Coins />
-          <span>
-            <strong key={balance}>{formatCoins(Math.floor(balance))}</strong>
-            <small>KOIN</small>
+          <Coins aria-hidden="true" />
+          <span aria-hidden="true">
+            <small>Koin</small>
+            <strong>{displayedBalance}</strong>
           </span>
         </button>
         <button
+          type="button"
           onClick={onHelp}
           className="racer-avatar"
           aria-label={`${racerName}, level ${level}. Cara bermain`}
+          title={`${racerName} · Level ${level} · Cara bermain`}
         >
-          <span aria-hidden="true">{initial}</span>
-          <small aria-hidden="true">{level}</small>
+          <span className="racer-initial" aria-hidden="true">{initial}</span>
+          <span className="racer-level" aria-hidden="true">LV {level}</span>
         </button>
       </div>
     </header>
