@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { Camera, ChevronDown, Coins, Flag, Gauge, LoaderCircle, Maximize, RotateCcw, Timer, Zap } from "lucide-react";
+import { Camera, ChevronDown, Coins, Flag, Gauge, LoaderCircle, Maximize, Minimize, RotateCcw, Timer, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { batteryTelemetry, BOOST_DURATION_SECONDS, coins, displaySpeedKmh, FASTEST_LAP_SECONDS, formatCoins, lapReward, lapSeconds, type GameState } from "@/lib/game";
@@ -25,6 +25,11 @@ function subscribeMotionPreference(onChange: () => void) {
   const media = window.matchMedia("(prefers-reduced-motion: reduce)");
   media.addEventListener("change", onChange);
   return () => media.removeEventListener("change", onChange);
+}
+
+function subscribeFullscreen(onChange: () => void) {
+  document.addEventListener("fullscreenchange", onChange);
+  return () => document.removeEventListener("fullscreenchange", onChange);
 }
 
 function LapFeedback({ laps, reward, active }: { laps: number; reward: number; active: boolean }) {
@@ -80,14 +85,40 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
   const [cameraChoice, setCameraChoice] = useState<boolean | null>(null);
   const followCamera = cameraChoice ?? !reducedMotion;
   const [resetKey, setResetKey] = useState(0);
+  const [controlFeedback, setControlFeedback] = useState("");
   const panel = useRef<HTMLElement>(null);
+  const isFullscreen = useSyncExternalStore(
+    subscribeFullscreen,
+    () => document.fullscreenElement === panel.current,
+    () => false,
+  );
   const seconds = lapSeconds(game);
   const boosted = game.boostLeft > 0;
+  const boostLabel = boosting
+    ? "Memulai…"
+    : boosted
+      ? "Gaspol aktif"
+      : game.cooldown > 0
+        ? "Mengisi ulang"
+        : "Gaspol 2×";
+  const boostLabelForAssistiveTechnology = boosting
+    ? "Memulai Gaspol"
+    : boosted
+      ? `Gaspol aktif, ${Math.ceil(game.boostLeft)} detik tersisa`
+      : game.cooldown > 0
+        ? `Baterai mengisi ulang, siap dalam ${battery.readyIn} detik`
+        : "Aktifkan Gaspol, kecepatan dua kali selama sepuluh detik";
   const fullscreen = async () => {
     try {
-      if (document.fullscreenElement) await document.exitFullscreen();
-      else if (panel.current?.requestFullscreen) await panel.current.requestFullscreen();
-      else toast.info("Putar perangkat untuk arena yang lebih luas.");
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+        setControlFeedback("Layar penuh ditutup.");
+      } else if (panel.current?.requestFullscreen) {
+        await panel.current.requestFullscreen();
+        setControlFeedback("Layar penuh aktif.");
+      } else {
+        toast.info("Putar perangkat untuk arena yang lebih luas.");
+      }
     } catch {
       toast.info("Layar penuh tidak tersedia. Kamu tetap bisa memutar dan memperbesar lintasan.");
     }
@@ -142,22 +173,32 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
             <Button variant="outline" size="sm" onClick={() => setBodyVisible(value => !value)} aria-pressed={bodyVisible} aria-label={bodyVisible ? "Lepas bodi untuk melihat baterai" : "Pasang bodi untuk melihat detail mobil"}>{bodyVisible ? "Lepas bodi" : "Pasang bodi"}</Button>
             <Button variant="outline" size="sm" onClick={() => setInspect(false)}><Camera data-icon="inline-start" />Balapan</Button>
           </> : <>
-          <Button variant="outline" size="sm" onClick={() => setCameraChoice(!followCamera)} aria-pressed={!followCamera} aria-label={followCamera ? "Aktifkan kamera overview" : "Kembali ke kamera follow mobil"} title={followCamera ? "Lihat seluruh lintasan" : "Kembali mengikuti mobil"}>
+          <Button variant="outline" size="sm" onClick={() => {
+            const nextFollowCamera = !followCamera;
+            setCameraChoice(nextFollowCamera);
+            setControlFeedback(nextFollowCamera ? "Kamera kembali mengikuti mobil." : "Kamera overview aktif. Geser lintasan untuk memutar.");
+          }} aria-pressed={!followCamera} aria-label={followCamera ? "Aktifkan kamera overview" : "Kembali ke kamera follow mobil"} title={followCamera ? "Lihat seluruh lintasan" : "Kembali mengikuti mobil"}>
             <Camera data-icon="inline-start" aria-hidden="true" />
             {followCamera ? 'Overview' : 'Follow'}
           </Button>
-          <Button variant="outline" size="icon-sm" onClick={() => { setCameraChoice(null); setCameraMode(0); setResetKey((v) => v + 1); }} aria-label={reducedMotion ? "Reset kamera ke overview" : "Reset kamera ke follow mobil"}>
+          <Button variant="outline" size="icon-sm" onClick={() => {
+            setCameraChoice(null);
+            setCameraMode(0);
+            setResetKey((value) => value + 1);
+            setControlFeedback(reducedMotion ? "Kamera direset ke overview." : "Kamera direset untuk mengikuti mobil.");
+          }} aria-label={reducedMotion ? "Reset kamera ke overview" : "Reset kamera ke follow mobil"} title="Reset kamera">
             <RotateCcw aria-hidden="true" />
           </Button>
           </>}
-          <Button variant="outline" size="icon-sm" onClick={fullscreen} aria-label="Layar penuh">
-            <Maximize aria-hidden="true" />
+          <Button variant="outline" size="icon-sm" onClick={fullscreen} aria-label={isFullscreen ? "Keluar dari layar penuh" : "Buka layar penuh"} title={isFullscreen ? "Keluar layar penuh" : "Layar penuh"}>
+            {isFullscreen ? <Minimize aria-hidden="true" /> : <Maximize aria-hidden="true" />}
           </Button>
-          {!inspect && <Button className="race-boost-action" variant="gold" size="sm" onClick={onBoost} disabled={disabled || boosting || !battery.canBoost} aria-busy={boosting}>
+          {!inspect && <Button className="race-boost-action" variant="gold" size="sm" onClick={onBoost} disabled={disabled || boosting || !battery.canBoost} aria-busy={boosting} aria-label={boostLabelForAssistiveTechnology} title={game.cooldown > 0 ? `Baterai siap dalam ${battery.readyIn} detik` : undefined}>
             {boosting ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <Zap data-icon="inline-start" fill="currentColor" />}
-            <span>{boosting ? 'Memulai…' : boosted ? 'Ngacir!' : game.cooldown > 0 ? 'Isi daya' : 'Gaspol 2×'}</span>
+            <span>{boostLabel}</span>
             {!boosting && (boosted || game.cooldown > 0) && <small>{Math.ceil(boosted ? game.boostLeft : game.cooldown)}s</small>}
           </Button>}
+          <span className="sr-only" role="status" aria-live="polite">{controlFeedback}</span>
       </div>
       <div className="track-stats">
         <div className="track-stat">
@@ -198,15 +239,23 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
 }
 
 export function RaceReward({ pending, onClaim, disabled = false, claiming = false }: { pending: number; onClaim: () => void; disabled?: boolean; claiming?: boolean }) {
+  const readyToClaim = pending >= 1;
+  const rewardStatus = readyToClaim
+    ? "Siap masuk ke saldo"
+    : pending > 0
+      ? `${formatCoins(1 - pending)} koin lagi untuk klaim`
+      : "Selesaikan putaran untuk mulai mengumpulkan";
+
   return (
-    <section className={cn("race-reward", pending >= 1 && "reward-ready")} aria-label="Hasil balapan">
+    <section className={cn("race-reward", readyToClaim && "reward-ready")} aria-label="Hasil balapan">
       <div className="reward-copy">
         <span>Hasil balapan</span>
         <strong>{coins(pending)}</strong>
-        <small>{pending >= 1 ? "Siap masuk ke saldo" : "Terkumpul setiap putaran"}</small>
+        <small>{rewardStatus}</small>
       </div>
-      <Button variant={pending >= 1 ? "gold" : "secondary"} disabled={disabled || pending < 1} onClick={onClaim} aria-busy={claiming}>
-        <Coins data-icon="inline-start" />{claiming ? "Mengklaim…" : "Klaim"}
+      <Button variant={readyToClaim ? "gold" : "secondary"} disabled={disabled || !readyToClaim} onClick={onClaim} aria-busy={claiming} aria-label={readyToClaim ? "Klaim hasil balapan ke saldo" : `Belum bisa diklaim. ${rewardStatus}`}>
+        {claiming ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <Coins data-icon="inline-start" />}
+        {claiming ? "Mengklaim…" : "Klaim"}
       </Button>
     </section>
   );
