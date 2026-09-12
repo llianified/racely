@@ -5,16 +5,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { type GameState } from "@/lib/game";
+import { SectionCardHeading } from "../shell/section-card-heading";
 
 export function CircuitPanel({ game, onChoose, disabled = false }: { game: GameState; onChoose: (circuit: number) => void; disabled?: boolean }) {
   const unlocked = game.laps >= 25;
   const active = game.circuit === 1;
   return (
     <section className="panel circuit-panel">
-      <div className="section-card-heading">
-        <h2><Trophy aria-hidden="true" />{active ? "Sirkuit aktif" : "Sirkuit berikutnya"}</h2>
-        <Badge variant="secondary">{!unlocked ? <LockKeyhole data-icon="inline-start" /> : active ? <Check data-icon="inline-start" /> : <Flag data-icon="inline-start" />}{!unlocked ? "Terkunci" : active ? "Aktif" : "Terbuka"}</Badge>
-      </div>
+      <SectionCardHeading
+        icon={Trophy}
+        title={active ? "Sirkuit aktif" : "Sirkuit berikutnya"}
+        aside={
+          <Badge variant="secondary">{!unlocked ? <LockKeyhole data-icon="inline-start" /> : active ? <Check data-icon="inline-start" /> : <Flag data-icon="inline-start" />}{!unlocked ? "Terkunci" : active ? "Aktif" : "Terbuka"}</Badge>
+        }
+      />
       <div className="circuit-preview">
         <span className="circuit-ticket-number" aria-hidden="true">02</span>
         <div><h3>Midnight Speedway</h3><p>Bonus +0,02 koin/lap</p></div>
