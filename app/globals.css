@@ -415,7 +415,7 @@
 .race-line-status { left: var(--space-md); top: var(--space-56); font-size: var(--fs-2xs); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps-md); color: var(--muted-foreground); text-shadow: var(--race-hud-shadow); }
 .race-line-status[data-danger='true'] { color: var(--warning); }
 .race-line-status[data-perfect='true'] { color: var(--success); }
-.race-speed-hud { left: var(--space-lg); bottom: var(--space-56); display: flex; flex-direction: column; gap: var(--space-5); text-shadow: var(--race-hud-shadow); }
+.race-speed-hud { left: var(--space-lg); bottom: var(--space-24); display: flex; flex-direction: column; gap: var(--space-5); text-shadow: var(--race-hud-shadow); }
 .race-speed-hud > span { display: flex; align-items: center; gap: var(--space-5); font-size: var(--fs-2xs); font-weight: var(--fw-bold); letter-spacing: var(--track-caps-xl); color: var(--muted-foreground); }
 .race-speed-hud > span i { width: var(--space-5); height: var(--space-5); border-radius: var(--corner-round); }
 .race-speed-hud > strong { display: flex; align-items: baseline; gap: var(--space-6); font-size: var(--fs-9xl); font-weight: var(--fw-black); font-style: italic; line-height: var(--lh-none); letter-spacing: var(--track-tight-lg); font-variant-numeric: tabular-nums; }
@@ -424,7 +424,7 @@
 .race-speed-meter i { display: block; height: 100%; background: var(--accent); transform-origin: left; transition: transform var(--dur-fast) linear; }
 .grip-challenge[data-perfect='true'] .grip-meter i { background: var(--success); }
 .grip-challenge[data-perfect='true'] .grip-heading > span, .grip-challenge[data-perfect='true'] .grip-reading > span { color: var(--success); }
-.scene-boost-action { position: absolute; right: var(--space-md); bottom: var(--space-56); z-index: var(--z-overlay); }
+.scene-boost-action { position: absolute; right: var(--space-md); bottom: var(--space-24); z-index: var(--z-overlay); }
 .scene-boost-action small { font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) { .race-speed-meter i { transition: none; } }
 .race-vignette { position: absolute; inset: 0; z-index: var(--z-base); pointer-events: none; background: var(--race-hud-gradient); box-shadow: var(--vignette); transition: box-shadow var(--dur-slower); }
