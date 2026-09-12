@@ -9,7 +9,9 @@ Bukan serverless. Semua secret hidup di luar repo.
 
 ## 0. Prasyarat instance
 
-- Node.js 20+, `pnpm`, dan `pm2` terpasang global.
+- Node.js 20.9+ (sesuai `engines` di `package.json`), `pnpm`, dan `pm2`
+  terpasang global — `pm2 save`, `pm2 startup`, dan `pm2 logs` dipanggil
+  langsung, jadi tetap perlu ada di PATH.
 - File env di luar repo: `/etc/racely/racely.env`, `chmod 600`, owner user deploy.
   Isinya mengikuti `.env.example` (nilai asli, jangan pernah di-commit).
 - Reverse proxy (nginx/ALB) terminasi TLS ke `PORT` aplikasi (default `3000`).
@@ -98,7 +100,7 @@ maju baru — jangan mengedit file migrasi yang sudah dijalankan.
 | Health `503` `database: unconfigured` | `DATABASE_URL` tidak termuat → cek `RACELY_ENV_FILE` |
 | Webhook `503` | `PUBLIC_APP_URL` kosong/salah |
 | Webhook `401` | `TELEGRAM_WEBHOOK_SECRET` tidak cocok, jalankan ulang `bot:setup` |
-| Action `429` | Rate limiter per pemain; wajar saat spam, tidak wajar saat trafik normal |
+| `429` di `/api/game` atau `/api/game/action` | Rate limiter per pemain; wajar saat spam, tidak wajar saat trafik normal |
 | Update Telegram terproses ganda | Cek tabel `racely_telegram_updates` dan pastikan hanya satu instance berjalan |
 
 Perintah harian: `pm2 status`, `pm2 logs racely --lines 200`,
