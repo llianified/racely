@@ -99,8 +99,6 @@
   --car-showcase-h: 70px;
 
   --scene-h: 240px;
-  --scene-h-fluid: 40svh;
-  --scene-h-max: 360px;
   --race-hud-gradient: linear-gradient(0deg, #090c1de6, #090c1d00 48%, #090c1d66);
   --scene-h-inspect: 240px;
   --stage-inspect-h: 192px;
@@ -488,7 +486,7 @@
 .circuit-trigger { max-width: 100%; white-space: normal; text-align: left; padding-inline: var(--space-sm); font-size: var(--fs-body); font-weight: var(--fw-heavy); }
 .live-tag { display: inline-flex; align-items: center; gap: var(--space-5); color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps-xl); white-space: nowrap; }
 .live-tag::before { content: ''; width: var(--space-5); height: var(--space-5); flex-shrink: 0; border-radius: var(--corner-round); background: var(--accent); }
-.scene-wrap { height: clamp(var(--scene-h), var(--scene-h-fluid), var(--scene-h-max)); position: relative; overflow: hidden; background: var(--card); isolation: isolate; }
+.scene-wrap { height: var(--scene-h); position: relative; overflow: hidden; background: var(--card); isolation: isolate; }
 /* ── arena sinematik & tantangan grip (sesi, tidak menyentuh koin/lap) ── */
 .race-boost-action { margin-left: auto; }
 .race-boost-action small { font-variant-numeric: tabular-nums; }
