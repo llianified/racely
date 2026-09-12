@@ -9,7 +9,7 @@ import * as THREE from 'three'
 import { COLORS, MiniCar } from './mini-car'
 import type { CarModelId } from '@/lib/car-catalog'
 import type { GameState } from '@/lib/game'
-import { PLAYER_RADIUS, TRACK_HALF, stepDriving, type DrivingState } from '@/lib/race-dynamics'
+import { PLAYER_RADIUS, TRACK_HALF, RECOVERY_SECONDS, courseOutPose, stepDriving, stepPowertrain, type DrivingState } from '@/lib/race-dynamics'
 import { RacingEffects } from './racing-effects'
 
 const HALF = TRACK_HALF
@@ -53,19 +53,29 @@ function Racer({ lane, color, model, progress, seconds, boosted, playerRef, leve
   const group = playerRef ?? ownRef
   const phase = useRef(lane === 0 ? progress : lane * .32)
   const publishAfter = useRef(0)
+  const tumble = useRef<THREE.Group>(null)
+  const wheelSpeed = useRef(0)
+  const chassisPitch = useRef(0)
+  const energyLamp = useRef<THREE.MeshStandardMaterial>(null)
+  const crash = useRef({ active: false, x: 0, y: .14, z: 0, heading: 0, impacts: 0 })
   useFrame((_, delta) => {
     if (!group.current || document.hidden) return
     const dt = Math.min(delta, .1)
     const state = lane === 0 ? driving?.current : undefined
-    if (state) stepDriving(state, dt, phase.current, boosted, levels?.tires)
-    phase.current = (phase.current + dt / seconds) % 1
-    if (lane === 0) {
-      // Grip menggerakkan racing line, bukan laju putaran -- itu milik server.
-      // Tanpa rekonsiliasi ini mobil di layar hanyut permanen dari putaran yang
-      // benar-benar dibayar, dan popup lap meletus saat mobil di titik acak.
-      // Ditarik pelan lewat busur terpendek supaya posisinya tidak melompat.
+    if (state) {
+      stepDriving(state, dt, phase.current, boosted && state.boostEnergy > 0 && !state.boostExhausted, levels?.tires)
+      stepPowertrain(state, dt, boosted, levels?.engine, levels?.battery)
+    }
+    const recovering = !!state && state.recovery > 0
+    const motionRatio = state ? state.visualSpeed / (boosted ? 2 : 1) : 1
+    if (!recovering) phase.current = (phase.current + dt / seconds * motionRatio) % 1
+    wheelSpeed.current = recovering ? 0 : (HALF * 4 + Math.PI * 2 * (PLAYER_RADIUS + lane * .68)) / seconds / .85 * motionRatio
+    if (lane === 0 && !recovering) {
+      // Transient acceleration is visual; reconcile gradually to paid server laps.
+      // Bound correction so recovery never looks like an instant extra boost.
       const drift = ((progress - phase.current + 1.5) % 1) - .5
-      phase.current = (phase.current + drift * (1 - Math.exp(-2 * dt)) + 1) % 1
+      const correction = THREE.MathUtils.clamp(drift * (1 - Math.exp(-2 * dt)), -dt / seconds * .15, dt / seconds * .15)
+      phase.current = (phase.current + correction + 1) % 1
     }
     const p = trackPoint(phase.current, PLAYER_RADIUS + lane * .68)
     const offset = state?.offset ?? 0
@@ -73,18 +83,56 @@ function Racer({ lane, color, model, progress, seconds, boosted, playerRef, leve
     const yaw = state ? THREE.MathUtils.clamp(state.lateralVelocity * .09 + (state.corner ? slip * .22 : 0), -.32, .32) : 0
     const roll = reducedMotion ? 0 : state?.corner ? -slip * .06 : 0
     const ground = state?.offRoad ? -.08 : .14
-    group.current.position.set(p.x + Math.cos(p.angle) * offset, THREE.MathUtils.lerp(group.current.position.y, ground, 1 - Math.exp(-14 * dt)), p.z - Math.sin(p.angle) * offset)
-    group.current.rotation.set(0, p.angle + yaw, roll)
+    const targetX = p.x + Math.cos(p.angle) * offset
+    const targetZ = p.z - Math.sin(p.angle) * offset
+    if (recovering && !crash.current.active) {
+      Object.assign(crash.current, { active: true, x: group.current.position.x, y: group.current.position.y, z: group.current.position.z, heading: p.angle, impacts: 0 })
+    }
+    if (recovering && state) {
+      const pose = courseOutPose(RECOVERY_SECONDS - state.recovery, reducedMotion)
+      const origin = crash.current
+      const x = origin.x + Math.cos(origin.heading) * pose.outward + Math.sin(origin.heading) * pose.forward
+      const z = origin.z - Math.sin(origin.heading) * pose.outward + Math.cos(origin.heading) * pose.forward
+      const clearance = .12 * Math.abs(Math.sin(pose.roll)) + .3 * Math.abs(Math.sin(pose.pitch))
+      group.current.position.set(THREE.MathUtils.lerp(x, targetX, pose.rejoin), THREE.MathUtils.lerp(origin.y + pose.groundDrop + pose.lift + clearance, ground, pose.rejoin), THREE.MathUtils.lerp(z, targetZ, pose.rejoin))
+      group.current.rotation.set(0, origin.heading + pose.yaw, 0)
+      tumble.current?.rotation.set(pose.pitch, 0, -pose.roll)
+      group.current.userData.grounded = pose.lift < .04
+      group.current.userData.visualOffRoad = pose.rejoin < .65
+      if (pose.impacts > origin.impacts) {
+        group.current.userData.crashImpact = (group.current.userData.crashImpact ?? 0) + pose.impacts - origin.impacts
+        origin.impacts = pose.impacts
+      }
+    } else {
+      crash.current.active = false
+      group.current.position.set(targetX, THREE.MathUtils.lerp(group.current.position.y, ground, 1 - Math.exp(-14 * dt)), targetZ)
+      group.current.rotation.set(0, p.angle + yaw, 0)
+      const targetPitch = reducedMotion ? 0 : THREE.MathUtils.clamp(-(state?.acceleration ?? 0) * .035, -.065, .045)
+      chassisPitch.current = THREE.MathUtils.lerp(chassisPitch.current, targetPitch, 1 - Math.exp(-10 * dt))
+      tumble.current?.rotation.set(chassisPitch.current, 0, roll)
+      group.current.userData.grounded = true
+      group.current.userData.visualOffRoad = state?.offRoad ?? false
+    }
     group.current.userData.trackHeading = p.angle
     group.current.userData.phase = phase.current
-    group.current.userData.speed = (boosted ? 2 : 1) * (state?.speedMultiplier ?? 1)
+    group.current.userData.speed = state?.visualSpeed ?? 1
+    group.current.userData.boostPower = state?.boostPower ?? 0
+    if (energyLamp.current && state) energyLamp.current.emissiveIntensity = state.boostEnergy * (1 + state.boostPower * 2)
     if (state) {
       publishAfter.current += dt
       if (publishAfter.current >= .1) { onTelemetry?.({ ...state }); publishAfter.current = 0 }
     }
   }, -2)
   return <group ref={group}>
-    <MiniCar color={color} model={model} levels={levels} equipped={equipped} scale={.85} speed={(HALF * 4 + Math.PI * 2 * (2.24 + lane * .68)) / seconds / .85} />
+    <group ref={tumble} position={[0, .17, 0]}>
+      <group position={[0, -.17, 0]}>
+        <MiniCar color={color} model={model} levels={levels} equipped={equipped} scale={.85} speedRef={wheelSpeed} />
+        {lane === 0 && <mesh position={[0, .255, -.30]}>
+          <boxGeometry args={[.14, .018, .025]} />
+          <meshStandardMaterial ref={energyLamp} color={COLORS.navy} emissive={COLORS.gold} emissiveIntensity={1} toneMapped={false} />
+        </mesh>}
+      </group>
+    </group>
   </group>
 }
 
@@ -300,7 +348,7 @@ function CameraRig({ mode, follow, resetKey, playerRef, active, reducedMotion, c
     cameraDistance.current = THREE.MathUtils.lerp(cameraDistance.current, dramatic ? Math.max(0, speed - 1) * .55 + (recovering ? .35 : 0) : 0, 1 - Math.exp(-3 * Math.min(delta, .1)))
     const impulse = dramatic ? Math.sin(clock.elapsedTime * 35) * impact.current * .07 : 0
     pose.offset.set(-.2 + impulse, 2.2 + cameraDistance.current * .18, -2.7 - cameraDistance.current)
-    pose.target.set(dramatic && state?.corner ? -.18 : 0, .12, dramatic ? 1.25 : .8)
+    pose.target.set(dramatic && state?.corner ? -.18 : 0, .12, dramatic ? .35 : .25)
     // Keep the top of the frustum aimed at the arena, even at maximum boost FOV.
     const minimumPitch = THREE.MathUtils.degToRad(chaseCamera.current.fov / 2 + 8)
     const targetDistance = Math.hypot(pose.target.x - pose.offset.x, pose.target.z - pose.offset.z)
