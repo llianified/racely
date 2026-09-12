@@ -146,6 +146,21 @@
   --opacity-light-off: .14;
   --opacity-light-reduced: .7;
 
+  /* ── animasi ─────────────────────────────────────────────────────────────
+     Durasi transisi ada di --dur-* di atas; ini durasi animasi bernama plus
+     kurva easing tunggal yang dipakai boot dan lap-pop. */
+  --ease-out-soft: cubic-bezier(.2, .7, .2, 1);
+  --anim-boot-enter: .6s;
+  --anim-select-enter: .5s;
+  --anim-boot-stagger: .12s;
+  --anim-lights-cycle: 2.8s;
+  --anim-lights-step: .24s;
+  --anim-lap-pop: 1.6s;
+  --anim-boost-stripe: 1.6s;
+
+  /* Offset scroll supaya anchor tidak tertutup topbar yang sticky. */
+  --scroll-offset-top: 60px;
+
   /* Sudut turunan --radius. .7 dan .75 nyaris kembar -- kandidat digabung. */
   --corner-panel: calc(var(--radius) * .75);
   --corner-field: calc(var(--radius) * .7);
@@ -271,11 +286,11 @@
   button { transition: background var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast), transform var(--dur-fast); }
   button:active:not(:disabled) { transform: translateY(1px); }
   ::selection { background: var(--primary); color: var(--foreground); }
-  [id] { scroll-margin-top: 60px; }
-  html { scroll-padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + 12px); }
+  [id] { scroll-margin-top: var(--scroll-offset-top); }
+  html { scroll-padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + var(--space-md)); }
 }
 
-.car-selection { width: 100%; max-width: var(--app-width); min-height: 100dvh; margin-inline: auto; padding: calc(var(--space-20) + var(--safe-top)) var(--space-20) calc(var(--space-20) + var(--safe-bottom)); display: flex; flex-direction: column; gap: var(--space-20); background: var(--background); color: var(--foreground); font-size: var(--fs-read); line-height: var(--lh-normal); animation: boot-enter .5s ease-out both; }
+.car-selection { width: 100%; max-width: var(--app-width); min-height: 100dvh; margin-inline: auto; padding: calc(var(--space-20) + var(--safe-top)) var(--space-20) calc(var(--space-20) + var(--safe-bottom)); display: flex; flex-direction: column; gap: var(--space-20); background: var(--background); color: var(--foreground); font-size: var(--fs-read); line-height: var(--lh-normal); animation: boot-enter var(--anim-select-enter) ease-out both; }
 .selection-header { display: flex; flex-direction: column; gap: var(--space-xl); }
 .selection-topline { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); }
 .selection-brand { display: flex; align-items: center; gap: var(--space-sm); font-size: var(--fs-2xl); font-weight: var(--fw-ultra); font-style: italic; letter-spacing: var(--track-tight-xl); line-height: var(--lh-none); }
@@ -371,7 +386,7 @@
 /* ── track ───���������─────────────────────────────────────── */
 .track-panel { position: relative; border-radius: var(--corner-2xl); }
 .track-panel.is-boosted { border-color: transparent; }
-.track-panel.is-boosted::after { content: ''; position: absolute; inset: 0; z-index: var(--z-boost); padding: var(--space-1); border-radius: inherit; pointer-events: none; background: repeating-linear-gradient(120deg, var(--accent) 0 12px, var(--foreground) 12px 18px, var(--accent) 18px 30px, transparent 30px 42px); background-size: var(--boost-stripe-period) 100%; mask: linear-gradient(var(--foreground) 0 0) content-box, linear-gradient(var(--foreground) 0 0); mask-composite: exclude; animation: boost-border-drive 1.6s linear infinite; }
+.track-panel.is-boosted::after { content: ''; position: absolute; inset: 0; z-index: var(--z-boost); padding: var(--space-1); border-radius: inherit; pointer-events: none; background: repeating-linear-gradient(120deg, var(--accent) 0 12px, var(--foreground) 12px 18px, var(--accent) 18px 30px, transparent 30px 42px); background-size: var(--boost-stripe-period) 100%; mask: linear-gradient(var(--foreground) 0 0) content-box, linear-gradient(var(--foreground) 0 0); mask-composite: exclude; animation: boost-border-drive var(--anim-boost-stripe) linear infinite; }
 @keyframes boost-border-drive { to { background-position: var(--boost-stripe-period) 0; } }
 @media (prefers-reduced-motion: reduce) { .track-panel.is-boosted::after { animation: none; } }
 .track-top { display: flex; align-items: center; gap: var(--space-xs); min-height: var(--space-48); padding: var(--space-6) var(--space-md) var(--space-6) var(--space-10); border-bottom: var(--stroke) solid var(--border); }
@@ -640,20 +655,20 @@
 .boot-screen { display: flex; flex-direction: column; align-items: center; min-height: 100dvh; padding: calc(var(--space-32) + var(--safe-top)) var(--space-xl) calc(var(--space-xl) + var(--safe-bottom)); background: var(--background); color: var(--foreground); text-align: center; }
 .boot-eyebrow { font-size: var(--fs-read); font-weight: var(--fw-semibold); letter-spacing: var(--track-caps-3xl); line-height: var(--lh-normal); color: var(--muted-foreground); }
 .boot-content { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-48); width: 100%; min-height: var(--boot-content-h); }
-.boot-brand { display: flex; flex-direction: column; align-items: center; gap: var(--space-lg); animation: boot-enter .6s cubic-bezier(.2,.7,.2,1) both; }
+.boot-brand { display: flex; flex-direction: column; align-items: center; gap: var(--space-lg); animation: boot-enter var(--anim-boot-enter) var(--ease-out-soft) both; }
 .boot-logo { width: var(--logo-boot-w); max-width: 100%; height: auto; object-fit: contain; }
 .gate-logo { width: var(--logo-gate-w); height: auto; object-fit: contain; }
 .boot-word { font-size: clamp(var(--fs-9xl), 17vw, var(--fs-10xl)); font-weight: var(--fw-ultra); font-style: italic; letter-spacing: var(--track-tight-3xl); line-height: var(--lh-none); color: var(--foreground); }
 .boot-word > span { color: var(--accent); }
 .boot-tagline { font-size: var(--fs-read); line-height: var(--lh-normal); color: var(--muted-foreground); text-wrap: balance; }
-.boot-loader { display: flex; flex-direction: column; align-items: center; gap: var(--space-20); animation: boot-enter .6s .12s cubic-bezier(.2,.7,.2,1) both; }
+.boot-loader { display: flex; flex-direction: column; align-items: center; gap: var(--space-20); animation: boot-enter var(--anim-boot-enter) var(--anim-boot-stagger) var(--ease-out-soft) both; }
 .boot-start-lights { display: flex; gap: var(--space-sm); }
 .boot-light-housing { --light-delay: 0s; display: flex; flex-direction: column; gap: var(--space-6); padding: var(--space-sm); border: var(--stroke) solid color-mix(in srgb, var(--muted-foreground) 18%, transparent); border-radius: var(--corner-4xl); background: color-mix(in srgb, var(--muted-foreground) 6%, var(--background)); }
-.boot-light-housing:nth-child(2) { --light-delay: .24s; }
-.boot-light-housing:nth-child(3) { --light-delay: .48s; }
-.boot-light-housing:nth-child(4) { --light-delay: .72s; }
-.boot-light-housing:nth-child(5) { --light-delay: .96s; }
-.boot-light { display: block; width: var(--space-18); height: var(--space-18); border-radius: var(--corner-round); background: var(--accent); opacity: var(--opacity-light-off); animation: boot-lights 2.8s var(--light-delay) ease-in-out infinite; }
+.boot-light-housing:nth-child(2) { --light-delay: var(--anim-lights-step); }
+.boot-light-housing:nth-child(3) { --light-delay: calc(var(--anim-lights-step) * 2); }
+.boot-light-housing:nth-child(4) { --light-delay: calc(var(--anim-lights-step) * 3); }
+.boot-light-housing:nth-child(5) { --light-delay: calc(var(--anim-lights-step) * 4); }
+.boot-light { display: block; width: var(--space-18); height: var(--space-18); border-radius: var(--corner-round); background: var(--accent); opacity: var(--opacity-light-off); animation: boot-lights var(--anim-lights-cycle) var(--light-delay) ease-in-out infinite; }
 .boot-status { font-size: var(--fs-read); font-weight: var(--fw-medium); line-height: var(--lh-normal); color: var(--muted-foreground); }
 .boot-footer { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-md); font-size: var(--fs-read); font-weight: var(--fw-semibold); letter-spacing: var(--track-caps-md); line-height: var(--lh-normal); color: var(--muted-foreground); }
 .boot-footer > [aria-hidden] { color: var(--primary); }
@@ -738,7 +753,7 @@
 .scene-loading span { font-size: var(--fs-micro); color: var(--muted-foreground); max-width: var(--scene-hint-max-w); }
 .scene-loading button { font-size: var(--fs-small); min-height: var(--space-36); padding: var(--space-sm) var(--space-14); border-radius: var(--corner-xl); background: var(--secondary); color: var(--foreground); }
 .scene-wrap:has(> [role='alert']) { height: auto; min-height: var(--scene-h-alert); }
-.track-panel .lap-pop { pointer-events: none; position: absolute; z-index: var(--z-overlay); left: 50%; top: 34%; display: flex; align-items: center; gap: var(--space-10); padding: var(--space-9) var(--space-14); border: var(--stroke) solid color-mix(in srgb, var(--accent) 38%, transparent); border-radius: var(--corner-sm); background: color-mix(in srgb, var(--background) 94%, transparent); transform: translateX(-50%); color: var(--accent); font-size: var(--fs-3xl); font-weight: var(--fw-black); font-variant-numeric: tabular-nums; white-space: nowrap; opacity: 0; animation: race-lap-complete 1.6s cubic-bezier(.2,.7,.2,1) both; }
+.track-panel .lap-pop { pointer-events: none; position: absolute; z-index: var(--z-overlay); left: 50%; top: 34%; display: flex; align-items: center; gap: var(--space-10); padding: var(--space-9) var(--space-14); border: var(--stroke) solid color-mix(in srgb, var(--accent) 38%, transparent); border-radius: var(--corner-sm); background: color-mix(in srgb, var(--background) 94%, transparent); transform: translateX(-50%); color: var(--accent); font-size: var(--fs-3xl); font-weight: var(--fw-black); font-variant-numeric: tabular-nums; white-space: nowrap; opacity: 0; animation: race-lap-complete var(--anim-lap-pop) var(--ease-out-soft) both; }
 .track-panel .lap-pop > svg { width: var(--icon-xl); height: var(--icon-xl); }
 .track-panel .lap-pop span { display: block; color: var(--muted-foreground); font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: var(--track-caps-xl); }
 .section-enter { animation: enter .25s ease-out both; }
