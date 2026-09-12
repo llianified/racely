@@ -128,7 +128,7 @@ export function WalletPanel({
       </section>
 
       <Dialog open={open} onOpenChange={(next) => { setOpen(next); if (!next) setError(null); }}>
-        <DialogContent className="wallet-dialog max-h-[85dvh] overflow-y-auto">
+        <DialogContent className="wallet-dialog">
           <DialogHeader>
             <DialogTitle>
               <Send aria-hidden="true" />
