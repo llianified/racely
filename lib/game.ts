@@ -224,6 +224,35 @@ export function modificationPreview(game: GameState, key: Upgrade) {
 
 export const BOOST_DURATION_SECONDS = 10;
 export const BATTERY_RECHARGE_SECONDS = 25;
+/**
+ * Jeda sampai Gaspol berikutnya, diukur dari saat tombol ditekan -- bukan dari
+ * saat boost habis. Turunan, bukan angka ketiga yang berdiri sendiri:
+ * `batteryTelemetry` membaca sisa cooldown sebagai sisa waktu pengisian, jadi
+ * begitu cooldown tidak lagi sama dengan durasi + isi ulang, meteran baterai
+ * langsung berbohong. Server dan mode preview sama-sama memakai ini.
+ */
+export const BOOST_COOLDOWN_SECONDS =
+  BOOST_DURATION_SECONDS + BATTERY_RECHARGE_SECONDS;
+
+/**
+ * Kecepatan yang ditampilkan diturunkan dari waktu per putaran, satu-satunya
+ * besaran yang benar-benar menentukan penghasilan. Faktornya memetakan "satu
+ * putaran per detik" ke angka km/j yang masuk akal untuk mobil seukuran mini
+ * 4WD.
+ *
+ * Angka ini sengaja tidak menerima faktor apa pun dari simulasi grip: grip
+ * menggerakkan racing line, bukan laju putaran, jadi mengalikannya ke sini akan
+ * membuat panel kecepatan membantah waktu/putaran dan koin/putaran di sebelahnya.
+ */
+const KMH_PER_LAP_PER_SECOND = 192;
+export const displaySpeedKmh = (secondsPerLap: number) =>
+  KMH_PER_LAP_PER_SECOND / secondsPerLap;
+
+/** Putaran tercepat yang mungkin: seluruh upgrade maksimal, boost menyala. */
+export const FASTEST_LAP_SECONDS = lapSeconds({
+  levels: { engine: 10, tires: 10, battery: 10 },
+  boostLeft: BOOST_DURATION_SECONDS,
+});
 
 // Derive reserve from the authoritative boost timers, so reloads cannot refill it.
 export function batteryTelemetry(s: Pick<GameState, "boostLeft" | "cooldown">) {

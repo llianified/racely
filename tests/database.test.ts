@@ -279,6 +279,85 @@ describeDatabase("Neon Postgres persistence", () => {
     }
   });
 
+  it("refunds a rejected withdrawal exactly once", async () => {
+    await db!
+      .update(schema.players)
+      .set({ balance: 500 })
+      .where(drizzle.eq(schema.players.userId, identity.userId));
+
+    await gameServer.performGameAction(identity, randomUUID(), {
+      type: "withdraw",
+      method: "dana",
+      account: "081234567890",
+      accountName: "Integration Racer",
+      coins: 120,
+    });
+    expect((await gameServer.getGameState(identity)).balance).toBe(380);
+
+    // An operator rejecting the request is the only way this status moves.
+    await db!
+      .update(schema.withdrawals)
+      .set({ status: "rejected" })
+      .where(
+        drizzle.and(
+          drizzle.eq(schema.withdrawals.userId, identity.userId),
+          drizzle.eq(schema.withdrawals.coins, 120),
+        ),
+      );
+
+    const refunded = await gameServer.getGameState(identity);
+    expect(refunded.balance).toBe(500);
+    expect(refunded.withdrawals[0]).toMatchObject({
+      status: "rejected",
+      coins: 120,
+    });
+
+    // Without the refunded_at guard every later sync would pay it again.
+    expect((await gameServer.getGameState(identity)).balance).toBe(500);
+    const synced = await gameServer.performGameAction(identity, randomUUID(), {
+      type: "sync",
+    });
+    expect(synced.balance).toBe(500);
+
+    const [row] = await db!
+      .select()
+      .from(schema.withdrawals)
+      .where(
+        drizzle.and(
+          drizzle.eq(schema.withdrawals.userId, identity.userId),
+          drizzle.eq(schema.withdrawals.coins, 120),
+        ),
+      );
+    expect(row.refundedAt).not.toBeNull();
+    // The refund never advances the queue or touches the operator's columns.
+    expect(row.status).toBe("rejected");
+    expect(row.processedAt).toBeNull();
+  });
+
+  it("accepts re-confirming the same car, still refuses a different one", async () => {
+    // A network drop after the server saved makes the client retry with a new
+    // requestId, which the receipt cannot recognise. The server used to answer
+    // that retry with a 409 while preview mode let it through -- production and
+    // `pnpm dev` disagreeing about the same request.
+    const before = await gameServer.getGameState(identity);
+    const again = await gameServer.performGameAction(identity, randomUUID(), {
+      type: "select-car",
+      model: "luna-gt",
+      color: "#b9a1ed",
+    });
+    expect(again.carSelection?.model).toBe("luna-gt");
+    // A colour chosen later in the garage must survive the retry.
+    expect(again.color).toBe(before.color);
+
+    await expect(
+      gameServer.performGameAction(identity, randomUUID(), {
+        type: "select-car",
+        model: "neo-falcon",
+        color: "#4275ff",
+      }),
+    ).rejects.toThrow("Model sudah dikonfirmasi");
+  });
+
   it("claims a Telegram update exactly once, even across processes", async () => {
     const updateId = Date.now();
     claimedUpdateIds.push(updateId);

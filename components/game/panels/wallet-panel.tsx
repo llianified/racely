@@ -142,7 +142,8 @@ export function WalletPanel({
           <p className="wallet-dialog-note">
             Penarikan diverifikasi manual oleh tim Racely dalam 1×24 jam kerja.
             Pastikan nomor dan nama tujuan benar; dana yang salah kirim tidak
-            bisa ditarik kembali.
+            bisa ditarik kembali. Kalau permintaanmu ditolak, koinnya otomatis
+            kembali ke saldo.
           </p>
         <form className="wallet-form" onSubmit={submit}>
           <div className="wallet-field">
@@ -303,6 +304,11 @@ export function WalletPanel({
                       })}
                     </time>
                   </p>
+                  {item.status === "rejected" && (
+                    <p className="wallet-history-refund">
+                      {coins(item.coins)} sudah kembali ke saldo.
+                    </p>
+                  )}
                 </div>
                 <Badge variant="secondary">
                   {WITHDRAW_STATUS_LABEL[item.status]}
