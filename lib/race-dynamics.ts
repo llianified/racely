@@ -45,6 +45,42 @@ export function gripTuning(tires = 1) {
   };
 }
 
+function upgradeLevel(value: number) {
+  return Number.isFinite(value) ? Math.max(1, Math.min(10, Math.floor(value))) : 1;
+}
+
+export function powertrainTuning(engine = 1, battery = 1) {
+  return {
+    accelerationRate: 1.8 + (upgradeLevel(engine) - 1) * .35,
+    boostCapacitySeconds: 4 + (upgradeLevel(battery) - 1) * .5,
+    rechargeSeconds: 12,
+    maxRpm: 14000,
+  };
+}
+
+// Local arena telemetry only: server boost duration and earnings are untouched.
+export function stepPowertrain(state: DrivingState, delta: number, boosted: boolean, engine = 1, battery = 1) {
+  const dt = Number.isFinite(delta) ? Math.max(0, Math.min(delta, .1)) : 0;
+  if (dt === 0) return;
+  const tuning = powertrainTuning(engine, battery);
+  const available = boosted && state.recovery === 0 && !state.offRoad;
+  if (!boosted) state.boostExhausted = false;
+  state.boostPower = available && !state.boostExhausted ? Math.min(1, state.boostEnergy * tuning.boostCapacitySeconds) : 0;
+  if (available && !state.boostExhausted) {
+    state.boostEnergy = Math.max(0, state.boostEnergy - dt / tuning.boostCapacitySeconds);
+    if (state.boostEnergy === 0) state.boostExhausted = true;
+  } else if (!boosted) {
+    state.boostEnergy = Math.min(1, state.boostEnergy + dt / tuning.rechargeSeconds);
+  }
+  const previousSpeed = state.visualSpeed;
+  const target = state.recovery > 0 ? 0 : state.speedMultiplier * (state.corner ? .82 : 1) * (1 + state.boostPower);
+  const response = target > previousSpeed ? tuning.accelerationRate : 6;
+  state.visualSpeed += (target - previousSpeed) * (1 - Math.exp(-response * dt));
+  state.acceleration = (state.visualSpeed - previousSpeed) / dt;
+  const targetRpm = state.recovery > 0 ? 0 : Math.min(tuning.maxRpm, 2200 + state.visualSpeed * 5000 + state.boostPower * 1600);
+  state.rpm += (targetRpm - state.rpm) * (1 - Math.exp(-8 * dt));
+}
+
 export type DrivingState = {
   grip: number;
   recovery: number;
@@ -59,10 +95,16 @@ export type DrivingState = {
   lateralVelocity: number;
   offRoad: boolean;
   speedMultiplier: number;
+  visualSpeed: number;
+  acceleration: number;
+  rpm: number;
+  boostEnergy: number;
+  boostPower: number;
+  boostExhausted: boolean;
 };
 
 export function createDrivingState(): DrivingState {
-  return { grip: 100, recovery: 0, shield: 0, cleanCorners: 0, courseOuts: 0, corner: false, cornerFailed: false, enabled: true, cornerProgress: -1, offset: 0, lateralVelocity: 0, offRoad: false, speedMultiplier: 1 };
+  return { grip: 100, recovery: 0, shield: 0, cleanCorners: 0, courseOuts: 0, corner: false, cornerFailed: false, enabled: true, cornerProgress: -1, offset: 0, lateralVelocity: 0, offRoad: false, speedMultiplier: 1, visualSpeed: 1, acceleration: 0, rpm: 7200, boostEnergy: 1, boostPower: 0, boostExhausted: false };
 }
 
 export function trackCornerProgress(progress: number) {

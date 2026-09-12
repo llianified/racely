@@ -9,7 +9,7 @@ import * as THREE from 'three'
 import { COLORS, MiniCar } from './mini-car'
 import type { CarModelId } from '@/lib/car-catalog'
 import type { GameState } from '@/lib/game'
-import { PLAYER_RADIUS, TRACK_HALF, RECOVERY_SECONDS, courseOutPose, stepDriving, type DrivingState } from '@/lib/race-dynamics'
+import { PLAYER_RADIUS, TRACK_HALF, RECOVERY_SECONDS, courseOutPose, stepDriving, stepPowertrain, type DrivingState } from '@/lib/race-dynamics'
 import { RacingEffects } from './racing-effects'
 
 const HALF = TRACK_HALF
@@ -54,21 +54,28 @@ function Racer({ lane, color, model, progress, seconds, boosted, playerRef, leve
   const phase = useRef(lane === 0 ? progress : lane * .32)
   const publishAfter = useRef(0)
   const tumble = useRef<THREE.Group>(null)
+  const wheelSpeed = useRef(0)
+  const chassisPitch = useRef(0)
+  const energyLamp = useRef<THREE.MeshStandardMaterial>(null)
   const crash = useRef({ active: false, x: 0, y: .14, z: 0, heading: 0, impacts: 0 })
   useFrame((_, delta) => {
     if (!group.current || document.hidden) return
     const dt = Math.min(delta, .1)
     const state = lane === 0 ? driving?.current : undefined
-    if (state) stepDriving(state, dt, phase.current, boosted, levels?.tires)
+    if (state) {
+      stepDriving(state, dt, phase.current, boosted && state.boostEnergy > 0 && !state.boostExhausted, levels?.tires)
+      stepPowertrain(state, dt, boosted, levels?.engine, levels?.battery)
+    }
     const recovering = !!state && state.recovery > 0
-    if (!recovering) phase.current = (phase.current + dt / seconds) % 1
+    const motionRatio = state ? state.visualSpeed / (boosted ? 2 : 1) : 1
+    if (!recovering) phase.current = (phase.current + dt / seconds * motionRatio) % 1
+    wheelSpeed.current = recovering ? 0 : (HALF * 4 + Math.PI * 2 * (PLAYER_RADIUS + lane * .68)) / seconds / .85 * motionRatio
     if (lane === 0 && !recovering) {
-      // Grip menggerakkan racing line, bukan laju putaran -- itu milik server.
-      // Tanpa rekonsiliasi ini mobil di layar hanyut permanen dari putaran yang
-      // benar-benar dibayar, dan popup lap meletus saat mobil di titik acak.
-      // Ditarik pelan lewat busur terpendek supaya posisinya tidak melompat.
+      // Transient acceleration is visual; reconcile gradually to paid server laps.
+      // Bound correction so recovery never looks like an instant extra boost.
       const drift = ((progress - phase.current + 1.5) % 1) - .5
-      phase.current = (phase.current + drift * (1 - Math.exp(-2 * dt)) + 1) % 1
+      const correction = THREE.MathUtils.clamp(drift * (1 - Math.exp(-2 * dt)), -dt / seconds * .15, dt / seconds * .15)
+      phase.current = (phase.current + correction + 1) % 1
     }
     const p = trackPoint(phase.current, PLAYER_RADIUS + lane * .68)
     const offset = state?.offset ?? 0
@@ -100,13 +107,17 @@ function Racer({ lane, color, model, progress, seconds, boosted, playerRef, leve
       crash.current.active = false
       group.current.position.set(targetX, THREE.MathUtils.lerp(group.current.position.y, ground, 1 - Math.exp(-14 * dt)), targetZ)
       group.current.rotation.set(0, p.angle + yaw, 0)
-      tumble.current?.rotation.set(0, 0, roll)
+      const targetPitch = reducedMotion ? 0 : THREE.MathUtils.clamp(-(state?.acceleration ?? 0) * .035, -.065, .045)
+      chassisPitch.current = THREE.MathUtils.lerp(chassisPitch.current, targetPitch, 1 - Math.exp(-10 * dt))
+      tumble.current?.rotation.set(chassisPitch.current, 0, roll)
       group.current.userData.grounded = true
       group.current.userData.visualOffRoad = state?.offRoad ?? false
     }
     group.current.userData.trackHeading = p.angle
     group.current.userData.phase = phase.current
-    group.current.userData.speed = (boosted ? 2 : 1) * (state?.speedMultiplier ?? 1)
+    group.current.userData.speed = state?.visualSpeed ?? 1
+    group.current.userData.boostPower = state?.boostPower ?? 0
+    if (energyLamp.current && state) energyLamp.current.emissiveIntensity = state.boostEnergy * (1 + state.boostPower * 2)
     if (state) {
       publishAfter.current += dt
       if (publishAfter.current >= .1) { onTelemetry?.({ ...state }); publishAfter.current = 0 }
@@ -115,7 +126,11 @@ function Racer({ lane, color, model, progress, seconds, boosted, playerRef, leve
   return <group ref={group}>
     <group ref={tumble} position={[0, .17, 0]}>
       <group position={[0, -.17, 0]}>
-        <MiniCar color={color} model={model} levels={levels} equipped={equipped} scale={.85} speed={(HALF * 4 + Math.PI * 2 * (2.24 + lane * .68)) / seconds / .85} />
+        <MiniCar color={color} model={model} levels={levels} equipped={equipped} scale={.85} speedRef={wheelSpeed} />
+        {lane === 0 && <mesh position={[0, .255, -.30]}>
+          <boxGeometry args={[.14, .018, .025]} />
+          <meshStandardMaterial ref={energyLamp} color={COLORS.navy} emissive={COLORS.gold} emissiveIntensity={1} toneMapped={false} />
+        </mesh>}
       </group>
     </group>
   </group>
