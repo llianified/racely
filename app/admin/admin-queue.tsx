@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import useSWR from "swr";
+import { Copy, Inbox } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { InfoHint } from "@/components/game/panels/info-hint";
+import { SectionCardHeading } from "@/components/game/shell/section-card-heading";
 import { WITHDRAW_STATUS_LABEL, type WithdrawStatus } from "@/lib/game";
 import type { QueueRow } from "@/lib/admin-ops";
 import {
@@ -15,16 +20,25 @@ import {
 } from "./admin-client";
 
 /**
- * Label pendek untuk tabel operasional. `WITHDRAW_STATUS_LABEL` ditulis untuk
- * pemain ("Menunggu diproses", "Dana terkirim") dan di dalam badge tabel ia
- * melebar sampai menyempitkan kolom jumlah dan aksi. Yang dilihat operator
- * sudah punya konteks dari chip saringan di atasnya.
+ * Label pendek untuk panel. `WITHDRAW_STATUS_LABEL` ditulis untuk pemain
+ * ("Menunggu diproses", "Dana terkirim"); di dalam badge ia melebar dan
+ * memaksa kartu turun baris. Operator sudah punya konteks dari chip saringan.
  */
 export const STATUS_SHORT: Record<WithdrawStatus, string> = {
   pending: "Menunggu",
   processing: "Diproses",
   paid: "Terkirim",
   rejected: "Ditolak",
+};
+
+const STATUS_VARIANT: Record<
+  WithdrawStatus,
+  "secondary" | "outline" | "destructive" | "default"
+> = {
+  pending: "outline",
+  processing: "default",
+  paid: "secondary",
+  rejected: "destructive",
 };
 
 const FILTERS: { id: WithdrawStatus | "all"; label: string }[] = [
@@ -36,24 +50,24 @@ const FILTERS: { id: WithdrawStatus | "all"; label: string }[] = [
 ];
 
 /**
- * Aksi per status. Cerminan ALLOWED_TRANSITIONS di lib/admin-ops.ts -- server
- * tetap yang menegakkannya, tombol yang tidak ada di sini hanya tidak
- * ditawarkan. `paid` dan `rejected` tidak punya aksi: keduanya akhir, karena
- * menolak penarikan yang sudah dibayar akan mengembalikan koin yang uangnya
- * sudah keluar (lihat migrasi 0008).
+ * Aksi per status, cerminan ALLOWED_TRANSITIONS di lib/admin-ops.ts. Server
+ * tetap yang menegakkannya; yang tidak ada di sini hanya tidak ditawarkan.
+ * `paid` dan `rejected` tidak punya aksi: keduanya akhir, karena menolak
+ * penarikan yang sudah dibayar akan memulangkan koin yang uangnya sudah
+ * keluar (lihat migrasi 0008).
  */
 const ACTIONS: Record<
   WithdrawStatus,
-  { next: WithdrawStatus; label: string; confirm: boolean }[]
+  { next: WithdrawStatus; label: string; variant: "gold" | "outline"; confirm: boolean }[]
 > = {
   pending: [
-    { next: "processing", label: "Proses", confirm: false },
-    { next: "paid", label: "Tandai terkirim", confirm: true },
-    { next: "rejected", label: "Tolak", confirm: true },
+    { next: "processing", label: "Proses", variant: "outline", confirm: false },
+    { next: "paid", label: "Sudah kirim", variant: "gold", confirm: true },
+    { next: "rejected", label: "Tolak", variant: "outline", confirm: true },
   ],
   processing: [
-    { next: "paid", label: "Tandai terkirim", confirm: true },
-    { next: "rejected", label: "Tolak", confirm: true },
+    { next: "paid", label: "Sudah kirim", variant: "gold", confirm: true },
+    { next: "rejected", label: "Tolak", variant: "outline", confirm: true },
   ],
   paid: [],
   rejected: [],
@@ -61,9 +75,9 @@ const ACTIONS: Record<
 
 function confirmText(row: QueueRow, next: WithdrawStatus) {
   if (next === "paid") {
-    return `Tandai TERKIRIM: ${rupiah(row.amountIdr)} ke ${row.method.toUpperCase()} ${row.account} (${row.accountName}).\n\nHanya tekan OK kalau transfernya benar-benar sudah dilakukan. Status ini tidak bisa dibatalkan.`;
+    return `Tandai TERKIRIM: ${rupiah(row.amountIdr)} ke ${row.method.toUpperCase()} ${row.account} (${row.accountName}).\n\nHanya OK kalau transfernya benar-benar sudah dilakukan. Status ini tidak bisa dibatalkan.`;
   }
-  return `TOLAK penarikan ${rupiah(row.amountIdr)} milik ${row.displayName}?\n\n${decimal(row.coins)} koin akan dikembalikan ke saldo pemain pada sync berikutnya. Jangan pakai ini untuk penarikan yang sudah dibayar manual.`;
+  return `TOLAK ${rupiah(row.amountIdr)} milik ${row.displayName}?\n\n${decimal(row.coins)} koin kembali ke saldo pemain pada sync berikutnya. Jangan pakai ini untuk penarikan yang sudah dibayar manual.`;
 }
 
 export function AdminQueue({ onChanged }: { onChanged: () => void }) {
@@ -73,8 +87,6 @@ export function AdminQueue({ onChanged }: { onChanged: () => void }) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  // SWR, bukan useEffect + setState: kuncinya ikut saringan dan halaman, jadi
-  // mengganti tab akan memuat ulang dengan sendirinya.
   const {
     data: page,
     error: loadError,
@@ -131,27 +143,29 @@ export function AdminQueue({ onChanged }: { onChanged: () => void }) {
   const limit = page?.limit ?? 25;
 
   return (
-    <section className="adm-panel" aria-label="Antrean penarikan">
-      <header>
-        <div>
-          <h2>Antrean penarikan</h2>
-          <p>
-            Diproses manual. Transfer dilakukan di luar Racely, lalu statusnya
-            dicatat di sini.
-          </p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => void reload()}>
-          Muat ulang
-        </Button>
-      </header>
+    <section className="panel wallet-history-panel" aria-label="Antrean penarikan">
+      <SectionCardHeading
+        icon={Inbox}
+        title="Antrean penarikan"
+        aside={
+          <>
+            <Badge variant="secondary">{count(total)} permintaan</Badge>
+            <InfoHint title="Cara kerja antrean">
+              Transfer dilakukan di luar Racely, lalu statusnya dicatat di sini.
+              Menolak akan mengembalikan koin ke saldo pemain. Status Terkirim
+              dan Ditolak tidak bisa diubah lagi.
+            </InfoHint>
+          </>
+        }
+      />
 
-      <div className="adm-tabs" role="tablist" aria-label="Saring status">
+      <div className="wallet-chips" role="tablist" aria-label="Saring status">
         {FILTERS.map((item) => (
           <button
             key={item.id}
             type="button"
             role="tab"
-            className="adm-tab"
+            className={cn("wallet-chip", filter === item.id && "is-active")}
             aria-selected={filter === item.id}
             onClick={() => {
               setFilter(item.id);
@@ -164,100 +178,90 @@ export function AdminQueue({ onChanged }: { onChanged: () => void }) {
       </div>
 
       {error && (
-        <p className="adm-error" role="alert">
+        <p className="admin-notice" data-tone="error" role="alert">
           {error}
         </p>
       )}
-      {notice && <p className="adm-ok">{notice}</p>}
+      {notice && (
+        <p className="admin-notice" data-tone="ok">
+          {notice}
+        </p>
+      )}
 
       {rows.length === 0 ? (
-        <p className="adm-note">Tidak ada penarikan pada saringan ini.</p>
+        <p className="wallet-empty">Tidak ada penarikan pada saringan ini.</p>
       ) : (
-        <div className="adm-scroll">
-          <table className="adm-table">
-            <thead>
-              <tr>
-                <th scope="col">Diajukan</th>
-                <th scope="col">Pemain</th>
-                <th scope="col">Tujuan</th>
-                <th scope="col">Jumlah</th>
-                <th scope="col">Status</th>
-                <th scope="col">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id}>
-                  <td>
-                    <time dateTime={row.createdAt}>
-                      {timestamp(row.createdAt)}
-                    </time>
-                    {row.processedAt && (
-                      <small>diproses {timestamp(row.processedAt)}</small>
-                    )}
-                  </td>
-                  <td>
-                    <strong>{row.displayName}</strong>
-                    <small>
-                      {row.username ? `@${row.username} · ` : ""}
-                      <code>{row.userId}</code>
-                    </small>
-                    <small>
-                      saldo {decimal(row.playerBalance)} koin ·{" "}
-                      {count(row.playerLaps)} putaran · {row.paidBefore}× pernah
-                      dibayar
-                    </small>
-                  </td>
-                  <td>
-                    <strong>{row.method.toUpperCase()}</strong>
-                    <small>
-                      <code>{row.account}</code>
-                    </small>
-                    <small>{row.accountName}</small>
-                  </td>
-                  <td>
-                    <strong className="adm-amount">{rupiah(row.amountIdr)}</strong>
-                    <small className="adm-amount">{decimal(row.coins)} koin</small>
-                  </td>
-                  <td>
-                    <span className="adm-status" data-status={row.status}>
-                      {STATUS_SHORT[row.status]}
-                    </span>
-                    {row.refundedAt && (
-                      <small>koin dikembalikan {timestamp(row.refundedAt)}</small>
-                    )}
-                  </td>
-                  <td>
-                    <div className="adm-row-actions">
-                      <Button
-                        variant="outline"
-                        size="xs"
-                        onClick={() => void copyAccount(row)}
-                      >
-                        Salin no.
-                      </Button>
-                      {ACTIONS[row.status].map((action) => (
-                        <Button
-                          key={action.next}
-                          variant={action.next === "rejected" ? "outline" : "default"}
-                          size="xs"
-                          disabled={busyId === row.id}
-                          onClick={() => void act(row, action.next, action.confirm)}
-                        >
-                          {action.label}
-                        </Button>
-                      ))}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ul className="admin-queue">
+          {rows.map((row) => (
+            <li key={row.id} className="admin-queue-row">
+              <div className="admin-queue-head">
+                <div>
+                  <h3 className="admin-queue-amount">{rupiah(row.amountIdr)}</h3>
+                  <p className="admin-queue-coins">{decimal(row.coins)} koin</p>
+                </div>
+                <Badge variant={STATUS_VARIANT[row.status]}>
+                  {STATUS_SHORT[row.status]}
+                </Badge>
+              </div>
+
+              <div className="admin-destination">
+                <div>
+                  <strong>
+                    {row.method.toUpperCase()} · {row.account}
+                  </strong>
+                  <span>{row.accountName}</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Salin nomor ${row.account}`}
+                  onClick={() => void copyAccount(row)}
+                >
+                  <Copy aria-hidden="true" />
+                </Button>
+              </div>
+
+              {/*
+                Identitas pemain, bukan tujuan transfer -- nama pemegang
+                rekening sudah tampil di blok di atas. Dipisah "·" seperti
+                baris meta lain di app, bukan spasi.
+              */}
+              <p className="admin-meta">
+                <time dateTime={row.createdAt}>{timestamp(row.createdAt)}</time>
+                {" · "}
+                {[
+                  row.username ? `@${row.username}` : row.displayName,
+                  `saldo ${decimal(row.playerBalance)} koin`,
+                  `${count(row.playerLaps)} putaran`,
+                  row.paidBefore === 0
+                    ? "belum pernah dibayar"
+                    : `${row.paidBefore}× pernah dibayar`,
+                  ...(row.refundedAt ? ["koin sudah dikembalikan"] : []),
+                ].join(" · ")}
+              </p>
+
+              {ACTIONS[row.status].length > 0 && (
+                <div className="admin-row-actions">
+                  {ACTIONS[row.status].map((action) => (
+                    <Button
+                      key={action.next}
+                      variant={action.variant}
+                      size="sm"
+                      disabled={busyId === row.id}
+                      onClick={() => void act(row, action.next, action.confirm)}
+                    >
+                      {action.label}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
       )}
 
       {total > limit && (
-        <div className="adm-actions">
+        <div className="admin-row-actions">
           <Button
             variant="outline"
             size="sm"
@@ -266,9 +270,6 @@ export function AdminQueue({ onChanged }: { onChanged: () => void }) {
           >
             Sebelumnya
           </Button>
-          <span className="adm-note">
-            {offset + 1}–{Math.min(offset + limit, total)} dari {count(total)}
-          </span>
           <Button
             variant="outline"
             size="sm"

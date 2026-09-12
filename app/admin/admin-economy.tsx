@@ -1,7 +1,11 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
+import { SlidersHorizontal } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { InfoHint } from "@/components/game/panels/info-hint";
+import { SectionCardHeading } from "@/components/game/shell/section-card-heading";
 import {
   DEFAULT_ECONOMY,
   UPGRADE_LEVEL_CEILING,
@@ -22,10 +26,9 @@ type Field = { key: NumericKey; label: string; hint?: string; step?: string };
 type Group = { legend: string; fields: Field[] };
 
 /**
- * Tata letak form. Urutannya mengikuti cara ekonomi disetel sungguhan -- nilai
- * koin lebih dulu, karena itu yang mengubah setiap angka lain menjadi rupiah.
- * Label di sini hanya untuk panel admin; teks di app pemain tidak bersumber
- * dari sini.
+ * Urutannya mengikuti cara ekonomi disetel sungguhan -- nilai koin lebih dulu,
+ * karena itu yang mengubah setiap angka lain menjadi rupiah. Label di sini
+ * hanya untuk panel; teks di app pemain tidak bersumber dari sini.
  */
 const GROUPS: Group[] = [
   {
@@ -33,7 +36,7 @@ const GROUPS: Group[] = [
     fields: [
       { key: "coinToIdr", label: "Rupiah per koin", step: "1" },
       { key: "minWithdrawCoins", label: "Penarikan minimum", hint: "koin", step: "1" },
-      { key: "maxWithdrawCoins", label: "Penarikan maksimum", hint: "koin per permintaan", step: "1" },
+      { key: "maxWithdrawCoins", label: "Penarikan maksimum", hint: "koin sekali minta", step: "1" },
     ],
   },
   {
@@ -64,7 +67,7 @@ const GROUPS: Group[] = [
       {
         key: "maxUpgradeLevel",
         label: "Level maksimum",
-        hint: `maks ${UPGRADE_LEVEL_CEILING} tanpa migrasi baru`,
+        hint: `maks ${UPGRADE_LEVEL_CEILING}`,
         step: "1",
       },
     ],
@@ -81,7 +84,7 @@ const GROUPS: Group[] = [
     legend: "Idle",
     fields: [
       { key: "heartbeatCapSeconds", label: "Jendela heartbeat", hint: "detik, bayar penuh", step: "1" },
-      { key: "offlineCapSeconds", label: "Jendela offline", hint: "detik, dibayar sebagian", step: "60" },
+      { key: "offlineCapSeconds", label: "Jendela offline", hint: "detik", step: "60" },
       { key: "offlineRate", label: "Laju offline", hint: "0–1", step: "0.05" },
     ],
   },
@@ -112,9 +115,7 @@ type FormState = Record<NumericKey, string> & { dailyRewards: string };
 function toForm(config: EconomyConfig): FormState {
   const draft = {} as FormState;
   for (const group of GROUPS) {
-    for (const field of group.fields) {
-      draft[field.key] = String(config[field.key]);
-    }
+    for (const field of group.fields) draft[field.key] = String(config[field.key]);
   }
   draft.dailyRewards = config.dailyRewards.join(", ");
   return draft;
@@ -154,10 +155,7 @@ export function AdminEconomy({
 
   const saved = useMemo(() => toForm(snapshot.config), [snapshot.config]);
   const draft = useMemo(() => toConfig(form), [form]);
-  const projection = useMemo(
-    () => (draft ? projectEconomy(draft) : null),
-    [draft],
-  );
+  const projection = useMemo(() => (draft ? projectEconomy(draft) : null), [draft]);
   const dirtyKeys = useMemo(
     () =>
       (Object.keys(saved) as (keyof FormState)[]).filter(
@@ -186,7 +184,7 @@ export function AdminEconomy({
       setNotice(
         changed === 0
           ? "Tidak ada yang berubah."
-          : `${changed} nilai disimpan. Berlaku untuk penyelesaian balapan berikutnya.`,
+          : `${changed} nilai disimpan. Berlaku untuk balapan berikutnya.`,
       );
       onSaved();
     } catch (cause) {
@@ -202,148 +200,190 @@ export function AdminEconomy({
   };
 
   return (
-    <form className="adm-panel adm-form" onSubmit={submit}>
-      <header>
-        <div>
-          <h2>Config ekonomi</h2>
-          <p>
-            {snapshot.usingDefaults
-              ? "Belum pernah disimpan — yang berlaku adalah nilai bawaan."
-              : `Terakhir disimpan ${snapshot.updatedAt ? timestamp(snapshot.updatedAt) : "—"}${snapshot.updatedBy ? ` oleh ${snapshot.updatedBy}` : ""}.`}
-          </p>
-        </div>
-        <span className="adm-note">
-          {dirtyKeys.length > 0
-            ? `${dirtyKeys.length} nilai belum disimpan`
-            : "Tersimpan"}
-        </span>
-      </header>
-
+    <>
       {projection && (
-        <div className="adm-grid" aria-label="Dampak config ini">
-          {projection.rows.map((row) => (
-            <div className="adm-stat" key={row.label} data-tone={row.idrPerMonthIdle > 5_000_000 ? "danger" : undefined}>
-              <dt>{row.label}</dt>
-              <dd>
-                {rupiah(row.idrPerHour)}
-                <small>per jam aktif</small>
-                <small>
-                  {rupiah(row.idrPerDayIdle)}/hari idle ·{" "}
-                  {rupiah(row.idrPerMonthIdle)}/bulan
-                </small>
-                <small>
-                  {decimal(row.secondsPerLap)}s/putaran ·{" "}
-                  {decimal(row.hoursToMinWithdraw, 1)} jam ke penarikan pertama
-                </small>
-              </dd>
-            </div>
-          ))}
-          <div className="adm-stat">
-            <dt>Akun baru</dt>
-            <dd>
-              {rupiah(projection.freshAccountIdr)}
-              <small>sebelum bermain sedetik pun</small>
-              <small>
-                sepasang referral {rupiah(projection.referralPairIdr)}
-              </small>
-            </dd>
-          </div>
-          <div className="adm-stat">
-            <dt>Max-out semua upgrade</dt>
-            <dd>
-              {decimal(projection.maxOutCost)}
-              <small>koin ({rupiah(projection.maxOutIdr)})</small>
-              <small>
-                ≈ {decimal(projection.maxOutHoursAtBase, 0)} jam idle di level 1
-              </small>
-            </dd>
-          </div>
-        </div>
-      )}
-
-      {GROUPS.map((group) => (
-        <fieldset className="adm-fieldset" key={group.legend}>
-          <legend>{group.legend}</legend>
-          <div className="adm-fields">
-            {group.fields.map((field) => (
+        <section
+          className="wallet-hero"
+          aria-label="Dampak config ini kalau disimpan"
+        >
+          <div className="admin-figures">
+            {projection.rows.map((row, index) => (
               <div
-                className="adm-field"
-                key={field.key}
-                data-dirty={saved[field.key] !== form[field.key]}
+                className="admin-figure"
+                key={row.label}
+                data-tone={
+                  index === 1 && row.idrPerMonthIdle > 5_000_000
+                    ? "danger"
+                    : "accent"
+                }
               >
-                <label htmlFor={`eco-${field.key}`}>
-                  {field.label}
-                  {field.hint && <span>{field.hint}</span>}
-                </label>
-                <input
-                  id={`eco-${field.key}`}
-                  className="adm-input"
-                  type="number"
-                  inputMode="decimal"
-                  step={field.step ?? "any"}
-                  value={form[field.key]}
-                  onChange={(event) => set(field.key, event.target.value)}
-                />
+                <span className="eyebrow">
+                  {index === 0 ? "Level 1" : "Upgrade maks"}
+                </span>
+                <strong>{rupiah(row.idrPerHour)}</strong>
+                <span>
+                  per jam aktif · {rupiah(row.idrPerMonthIdle)}/bulan idle
+                </span>
               </div>
             ))}
+            <div className="admin-figure">
+              <span className="eyebrow">Akun baru</span>
+              <strong>{rupiah(projection.freshAccountIdr)}</strong>
+              <span>sebelum main</span>
+            </div>
+            <div className="admin-figure">
+              <span className="eyebrow">Max-out</span>
+              <strong>{decimal(projection.maxOutCost)}</strong>
+              <span>
+                koin · ≈{decimal(projection.maxOutHoursAtBase, 0)} jam idle
+              </span>
+            </div>
           </div>
-        </fieldset>
-      ))}
-
-      <fieldset className="adm-fieldset">
-        <legend>Check-in harian</legend>
-        <div className="adm-field" data-dirty={saved.dailyRewards !== form.dailyRewards}>
-          <label htmlFor="eco-dailyRewards">
-            Hadiah per hari streak
-            <span>koin, dipisah koma; rung terakhir jadi batas atas</span>
-          </label>
-          <input
-            id="eco-dailyRewards"
-            className="adm-input"
-            value={form.dailyRewards}
-            onChange={(event) => set("dailyRewards", event.target.value)}
-          />
-        </div>
-      </fieldset>
-
-      {error && (
-        <div className="adm-error" role="alert">
-          <p>{error}</p>
-          {issues.length > 0 && (
-            <ul>
-              {issues.map((issue) => (
-                <li key={issue}>{issue}</li>
-              ))}
-            </ul>
-          )}
-        </div>
+          <div className="wallet-hero-side">
+            <span className="wallet-pending">
+              {dirtyKeys.length > 0
+                ? `${dirtyKeys.length} nilai belum disimpan`
+                : "Tersimpan"}
+            </span>
+            <InfoHint title="Angka ini dari mana">
+              Dihitung dari isian di bawah dengan rumus yang dipakai server,
+              sebelum disimpan. Proyeksi idle mengasumsikan pemain membuka app
+              tiap jendela offline penuh.
+            </InfoHint>
+          </div>
+        </section>
       )}
-      {notice && <p className="adm-ok">{notice}</p>}
 
-      <div className="adm-actions">
-        <Button type="submit" disabled={busy || dirtyKeys.length === 0}>
-          {busy ? "Menyimpan…" : "Simpan config"}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={busy || dirtyKeys.length === 0}
-          onClick={() => setForm(saved)}
-        >
-          Batalkan perubahan
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          disabled={busy}
-          onClick={() => setForm(toForm(DEFAULT_ECONOMY))}
-        >
-          Isi ulang dengan bawaan
-        </Button>
-        <span className="adm-note">
-          Perubahan berlaku dalam ≤30 detik (cache per-proses).
-        </span>
-      </div>
-    </form>
+      <form className="panel wallet-form-panel" onSubmit={submit}>
+        <SectionCardHeading
+          icon={SlidersHorizontal}
+          title="Config ekonomi"
+          aside={
+            <>
+              <Badge variant={snapshot.usingDefaults ? "outline" : "secondary"}>
+                {snapshot.usingDefaults ? "Bawaan" : "Tersimpan"}
+              </Badge>
+              <InfoHint title="Tentang config ini">
+                {snapshot.usingDefaults
+                  ? "Belum pernah disimpan, jadi yang berlaku adalah nilai bawaan di kode."
+                  : `Terakhir disimpan ${snapshot.updatedAt ? timestamp(snapshot.updatedAt) : "—"}${snapshot.updatedBy ? ` oleh ${snapshot.updatedBy}` : ""}.`}{" "}
+                Perubahan berlaku dalam 30 detik tanpa deploy.
+              </InfoHint>
+            </>
+          }
+        />
+
+        <div className="admin-form">
+          {/*
+            Dilipat, bukan satu kolom panjang: 31 field berurutan membuat
+            halaman ini ~11.000px di HP, dan menyetel satu angka berarti
+            menggulir melewati semuanya. Grup pertama terbuka supaya panel
+            tidak terlihat kosong.
+          */}
+          {GROUPS.map((group, index) => (
+            <details
+              className="admin-group"
+              key={group.legend}
+              open={index === 0}
+            >
+              <summary>
+                <span>{group.legend}</span>
+                <small>{group.fields.length}</small>
+              </summary>
+              {group.fields.map((field) => (
+                <div
+                  className="admin-field"
+                  key={field.key}
+                  data-dirty={saved[field.key] !== form[field.key]}
+                >
+                  <label htmlFor={`eco-${field.key}`}>
+                    {field.label}
+                    {field.hint && <span>{field.hint}</span>}
+                  </label>
+                  <input
+                    id={`eco-${field.key}`}
+                    className="wallet-input"
+                    type="number"
+                    inputMode="decimal"
+                    step={field.step ?? "any"}
+                    value={form[field.key]}
+                    onChange={(event) => set(field.key, event.target.value)}
+                  />
+                </div>
+              ))}
+            </details>
+          ))}
+
+          <details className="admin-group">
+            <summary>
+              <span>Check-in harian</span>
+              <small>1</small>
+            </summary>
+            <div
+              className="admin-field"
+              data-dirty={saved.dailyRewards !== form.dailyRewards}
+            >
+              <label htmlFor="eco-dailyRewards">
+                Hadiah per hari streak
+                <span>koin, dipisah koma</span>
+              </label>
+              <input
+                id="eco-dailyRewards"
+                className="wallet-input"
+                inputMode="numeric"
+                value={form.dailyRewards}
+                onChange={(event) => set("dailyRewards", event.target.value)}
+              />
+            </div>
+          </details>
+
+          {error && (
+            <div className="admin-notice" data-tone="error" role="alert">
+              <p>{error}</p>
+              {issues.length > 0 && (
+                <ul>
+                  {issues.map((issue) => (
+                    <li key={issue}>{issue}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+          {notice && (
+            <p className="admin-notice" data-tone="ok">
+              {notice}
+            </p>
+          )}
+
+          <div className="admin-actions">
+            <Button
+              type="submit"
+              variant="gold"
+              size="lg"
+              className="w-full"
+              disabled={busy || dirtyKeys.length === 0}
+            >
+              {busy ? "Menyimpan…" : "Simpan config"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy || dirtyKeys.length === 0}
+              onClick={() => setForm(saved)}
+            >
+              Batalkan perubahan
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={busy}
+              onClick={() => setForm(toForm(DEFAULT_ECONOMY))}
+            >
+              Isi ulang dengan bawaan
+            </Button>
+          </div>
+        </div>
+      </form>
+    </>
   );
 }
