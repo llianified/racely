@@ -135,8 +135,8 @@ describe("Racely economy", () => {
 
     expect(result.offline).toBeNull();
     expect(result.creditedSeconds).toBe(HEARTBEAT_CAP_SECONDS);
-    expect(result.completedLaps).toBe(3);
-    expect(result.income).toBe(0.15);
+    expect(result.completedLaps).toBe(15);
+    expect(result.income).toBe(0.75);
   });
 });
 
@@ -153,16 +153,16 @@ describe("Offline earnings", () => {
 
   it("pays ten minutes away past the heartbeat window, at half rate", () => {
     const result = settleAfter(10 * 60);
-    // 30s online -> 3 laps; the remaining 570s at half speed -> 36 more.
+    // 120s online -> 15 laps; the remaining 480s at half speed -> 30 more.
     expect(result.offline).toEqual({
       awaySeconds: 600,
-      creditedSeconds: 570,
+      creditedSeconds: 480,
       capped: false,
-      laps: 36,
-      coins: 1.8,
+      laps: 30,
+      coins: 1.5,
     });
-    expect(result.completedLaps).toBe(39);
-    expect(result.income).toBe(1.95);
+    expect(result.completedLaps).toBe(45);
+    expect(result.income).toBe(2.25);
     expect(result.creditedSeconds).toBe(600);
   });
 
@@ -173,11 +173,11 @@ describe("Offline earnings", () => {
       awaySeconds: OFFLINE_CAP_SECONDS,
       creditedSeconds: OFFLINE_CAP_SECONDS - HEARTBEAT_CAP_SECONDS,
       capped: false,
-      laps: 898,
-      coins: 44.9,
+      laps: 892,
+      coins: 44.6,
     });
-    expect(result.completedLaps).toBe(901);
-    expect(result.income).toBe(45.05);
+    expect(result.completedLaps).toBe(907);
+    expect(result.income).toBe(45.35);
     expect(result.creditedSeconds).toBe(OFFLINE_CAP_SECONDS);
   });
 
@@ -212,12 +212,12 @@ describe("Offline earnings", () => {
     const heartbeat = settleAfter(HEARTBEAT_CAP_SECONDS);
     const justOver = settleAfter(HEARTBEAT_CAP_SECONDS + 10);
 
-    // 30s full rate (3.75 laps) + 10s half rate (.625) = 4.375. A single 0.5x
-    // cap over the whole 40s would have paid 2.5 laps -- less than standing still.
-    expect(heartbeat.completedLaps).toBe(3);
-    expect(justOver.completedLaps).toBe(4);
-    expect(justOver.progress).toBeCloseTo(0.375);
-    expect(justOver.offline).toMatchObject({ laps: 1, coins: 0.05 });
+    // 120s full rate (15 laps) + 10s half rate (.625 laps) keeps every lap
+    // already earned in the heartbeat window and carries the remainder forward.
+    expect(heartbeat.completedLaps).toBe(15);
+    expect(justOver.completedLaps).toBe(15);
+    expect(justOver.progress).toBeCloseTo(0.625);
+    expect(justOver.offline).toMatchObject({ laps: 0, coins: 0 });
   });
 
   it("keeps a boost inside the heartbeat window it was spent in", () => {
@@ -226,9 +226,9 @@ describe("Offline earnings", () => {
       new Date(start.getTime() + 10 * 60 * 1000),
     );
 
-    // 10s boosted (2.5 laps) + 20s normal (2.5) + 570s offline (35.625).
-    expect(result.completedLaps).toBe(40);
-    expect(result.offline).toMatchObject({ laps: 35, creditedSeconds: 570 });
+    // 10s boosted (2.5 laps) + 110s normal (13.75) + 480s offline (30).
+    expect(result.completedLaps).toBe(46);
+    expect(result.offline).toMatchObject({ laps: 30, creditedSeconds: 480 });
   });
 
   it("spells the offline window the way the dialog reads it", () => {

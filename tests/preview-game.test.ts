@@ -112,17 +112,17 @@ describe("Preview offline earnings", () => {
     vi.advanceTimersByTime(10 * 60 * 1000);
     const back = action(cookie, { type: "sync" });
 
-    // Same split the database path uses: 30s online (3 laps) + 570s at half
-    // speed (36 laps), all landing straight in pending.
+    // Same split the database path uses: 120s online (15 laps) + 480s at
+    // half speed (30 laps), all landing straight in pending.
     expect(back.state.offlineEarnings).toEqual({
       awaySeconds: 600,
-      creditedSeconds: 570,
+      creditedSeconds: 480,
       capped: false,
-      laps: 36,
-      coins: 1.8,
+      laps: 30,
+      coins: 1.5,
     });
-    expect(back.state.laps).toBe(39);
-    expect(back.state.pending).toBe(1.95);
+    expect(back.state.laps).toBe(45);
+    expect(back.state.pending).toBe(2.25);
 
     // The summary rides the response, never the cookie, so it is not replayed.
     expect(
@@ -143,7 +143,7 @@ describe("Preview offline earnings", () => {
       laps: 900,
       coins: 45,
     });
-    expect(back.state.pending).toBe(45.15);
+    expect(back.state.pending).toBe(45.75);
   });
 
   it("says nothing about an absence a heartbeat could have covered", () => {
