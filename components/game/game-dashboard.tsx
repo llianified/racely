@@ -27,6 +27,8 @@ import {
   gameReducer,
   idr,
   INITIAL_GAME,
+  lapSeconds,
+  lapReward,
   MISSIONS,
   missionValue,
   STARTER_GIFT,
@@ -39,6 +41,8 @@ import {
 } from "@/lib/game";
 import { cn } from "@/lib/utils";
 import type { CarColor } from "@/lib/car-catalog";
+import { nextRaceGoal, type RaceNextAction } from "@/lib/race-journey";
+import { Button } from "@/components/ui/button";
 import { PART_CATALOG, SLOT_LABELS, type PartCommand } from "@/lib/car-parts";
 
 export function GameDashboard() {
@@ -115,7 +119,9 @@ export function GameDashboard() {
       return next;
     },
     {
-      refreshInterval: (latest) => latest?.carSelection?.model === null || mutationLocked.current ? 0 : 5000,
+      // A callback recreated on every HUD tick restarts SWR's polling timer.
+      // Keep the interval stable; isPaused below already guards mutations.
+      refreshInterval: game.carSelection?.model === null ? 0 : 5000,
       refreshWhenHidden: false,
       revalidateOnFocus: game.carSelection?.model !== null,
       isPaused: () => mutationLocked.current || expired.current,
@@ -228,8 +234,11 @@ export function GameDashboard() {
       toast.success(
         `${{ engine: "Mesin", tires: "Ban & roller", battery: "Baterai" }[key]} → Level ${next.levels[key]}`,
         {
-          description: "Terpasang dan tersimpan. Langsung aktif di lintasan.",
-          duration: 2200,
+          description: key === "battery"
+            ? `Hasil per putaran: ${coins(lapReward(game))} → ${coins(lapReward(next))}.`
+            : `Waktu tanpa boost: ${lapSeconds({ ...game, boostLeft: 0 }).toFixed(2)} → ${lapSeconds({ ...next, boostLeft: 0 }).toFixed(2)} detik/putaran.`,
+          action: { label: "Uji di lintasan", onClick: () => navigate("race") },
+          duration: 5000,
         },
       );
     return Boolean(next);
@@ -249,10 +258,12 @@ export function GameDashboard() {
   const claim = async () => {
     const amount = Math.floor(game.pending);
     if (amount < 1) return;
-    if (await runAction({ type: "claim" }))
-      toast.success(`+${coins(amount)} masuk saldo`, {
-        description: `Setara ${idr(amount)} dan siap ditarik lewat Dompet.`,
-        duration: 2200,
+    const next = await runAction({ type: "claim" });
+    if (next)
+      toast.success(`+${coins(next.balance - game.balance)} masuk saldo`, {
+        description: nextRaceGoal(next).title,
+        action: { label: "Buka bengkel", onClick: () => navigate("garage", "upgrades") },
+        duration: 4000,
       });
   };
   const daily = async () => {
@@ -284,7 +295,8 @@ export function GameDashboard() {
     if (game.rewardClaimed) return;
     if (await runAction({ type: "gift" }))
       toast.success(`Bonus starter ${coins(STARTER_GIFT)} diklaim!`, {
-        description: "Bonus ini hanya bisa diklaim sekali.",
+        description: "Modal siap dipakai untuk upgrade permanen.",
+        action: { label: "Buka bengkel", onClick: () => navigate("garage", "upgrades") },
       });
   };
   const mission = async (id: string) => {
@@ -352,6 +364,16 @@ export function GameDashboard() {
       toast.success(`Bodi ${name} terpasang dan tersimpan`);
   };
 
+  const nextAction = (action: RaceNextAction) => {
+    switch (action.type) {
+      case "gift": void gift(); break;
+      case "mission": void mission(action.id); break;
+      case "circuit": void chooseCircuit(1); break;
+      case "claim": void claim(); break;
+      case "workshop": navigate("garage", "upgrades"); break;
+    }
+  };
+
   if (!clientReady || (isLoading && !data && !error)) return <BootScreen />;
   if (sessionExpired || (error && !data)) {
     return (
@@ -408,8 +430,14 @@ export function GameDashboard() {
               inert={tab !== "race"}
             >
               <div className="main-column">
+                {error && <div role="alert" className="rounded-xl border border-border bg-card p-3 text-sm text-card-foreground">
+                  <p>Sinkronisasi terputus. Angka di lintasan masih perkiraan; hasil etape menunggu konfirmasi.</p>
+                  <Button variant="outline" className="mt-2" disabled={isValidating || Boolean(busyAction)} onClick={() => void mutate().catch(() => undefined)}>{isValidating ? "Menyambungkan…" : "Coba sinkronkan"}</Button>
+                </div>}
                 <RacePanel
                   game={game}
+                  confirmed={data}
+                  onNextAction={nextAction}
                   active={tab === "race"}
                   onBoost={boost}
                   boosting={busyAction === "boost"}
@@ -417,7 +445,7 @@ export function GameDashboard() {
                   disabled={Boolean(busyAction)}
                 />
                 <RaceReward
-                  pending={game.pending}
+                  game={data}
                   claiming={busyAction === "claim"}
                   onClaim={claim}
                   disabled={Boolean(busyAction)}
@@ -445,6 +473,8 @@ export function GameDashboard() {
               <UpgradePanel
                 game={game}
                 onUpgrade={upgrade}
+                onRace={() => navigate("race")}
+                onRewards={() => navigate("rewards")}
                 disabled={Boolean(busyAction)}
               />
             </div>
@@ -472,6 +502,7 @@ export function GameDashboard() {
               onClaimMission={mission}
               onClaimAll={claimAll}
               onInvite={invite}
+              onRace={() => navigate("race")}
               disabled={Boolean(busyAction)}
             />
           )}

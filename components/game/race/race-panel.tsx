@@ -10,6 +10,8 @@ import { RaceBattery } from "./race-battery";
 import { cn } from "@/lib/utils";
 import { createDrivingState } from "@/lib/race-dynamics";
 import { GripChallenge } from "./grip-challenge";
+import { RaceJourney } from "./race-journey";
+import { claimProgress, type RaceNextAction } from "@/lib/race-journey";
 
 const RaceScene = dynamic(() => import("../scene/race-scene"), {
   ssr: false,
@@ -61,8 +63,10 @@ function LapFeedback({ laps, reward, active }: { laps: number; reward: number; a
   ) : null;
 }
 
-export function RacePanel({ game, onBoost, onCircuits, active = true, disabled = false, boosting = false }: {
+export function RacePanel({ game, confirmed, onNextAction, onBoost, onCircuits, active = true, disabled = false, boosting = false }: {
   game: GameState;
+  confirmed: GameState;
+  onNextAction: (action: RaceNextAction) => void;
   onBoost: () => void;
   onCircuits: () => void;
   active?: boolean;
@@ -111,6 +115,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
         </h2>
         <span className="live-tag">LIVE</span>
       </div>
+      <RaceJourney game={game} confirmed={confirmed} disabled={disabled} onAction={onNextAction} />
       <div className={cn("scene-wrap", inspect && "is-inspecting", !inspect && cinematic && "is-cinematic", !inspect && telemetry.recovery > 0 && "is-course-out", !inspect && telemetry.grip < 40 && "is-grip-critical")}>
         {!inspect && <div className="race-vignette" aria-hidden="true" />}
         {!inspect && <div className="scene-overlay race-reward-hud"><span>REWARD / LAP</span><strong>+{formatCoins(lapReward(game))}<Coins aria-hidden="true" /></strong></div>}
@@ -118,7 +123,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
           {!telemetry.enabled ? 'AUTOPILOT / BALAPAN OTOMATIS' : telemetry.recovery > 0 ? telemetry.offRoad ? 'OFF-ROAD / GRIP RENDAH' : 'RECOVERY / KEMBALI KE LINE' : telemetry.grip < 40 ? 'TRACTION LOST / GRIP RENDAH' : telemetry.corner ? 'CORNER / TIKUNGAN' : 'FLAT OUT / LINTASAN LURUS'}
         </div>}
         {inspect ? <div className="scene-overlay inspect-hud"><strong>{bodyVisible ? "DETAIL MOBIL" : "DI BALIK BODI"}</strong><span>{bodyVisible ? "Cat metalik · ban · aero kit" : "2 sel · motor · penggerak 4WD"}</span></div> : <div className="scene-overlay lap-hud">
-          <span>Lap server</span><strong>{String(game.laps + 1).padStart(3, "0")}</strong>
+          <span>Putaran</span><strong>{String(game.laps + 1).padStart(3, "0")}</strong>
         </div>}
         <RaceScene equipped={game.bodyParts?.equipped} driving={driving} onTelemetry={setTelemetry} cinematic={cinematic && !reducedMotion} levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.progress} seconds={seconds} color={game.color} boosted={boosted} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
         <div className={cn("scene-overlay boost-hud", boosted && "boost-hud-active")} aria-hidden={!boosted}>
@@ -197,17 +202,21 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
   );
 }
 
-export function RaceReward({ pending, onClaim, disabled = false, claiming = false }: { pending: number; onClaim: () => void; disabled?: boolean; claiming?: boolean }) {
+export function RaceReward({ game, onClaim, disabled = false, claiming = false }: { game: GameState; onClaim: () => void; disabled?: boolean; claiming?: boolean }) {
+  const { claimable, remainder, lapsToCoin } = claimProgress(game);
   return (
-    <section className={cn("race-reward", pending >= 1 && "reward-ready")} aria-label="Hasil balapan">
-      <div className="reward-copy">
-        <span>Hasil balapan</span>
-        <strong>{coins(pending)}</strong>
-        <small>{pending >= 1 ? "Siap masuk ke saldo" : "Terkumpul setiap putaran"}</small>
+    <section className="rounded-xl border border-border bg-card p-3 text-card-foreground" aria-label="Hasil balapan">
+      <div className="flex flex-col gap-2 text-read">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div><p className="text-muted-foreground">Hasil balapan tersimpan</p><strong className="text-xl">{coins(game.pending)}</strong></div>
+          <Button variant={claimable >= 1 ? "gold" : "secondary"} disabled={disabled || claiming || claimable < 1} onClick={onClaim} aria-busy={claiming}>
+            {claiming ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <Coins data-icon="inline-start" />}{claiming ? "Mengklaim…" : claimable > 0 ? `Klaim ${coins(claimable)}` : "Menunggu 1 koin"}
+          </Button>
+        </div>
+        <p className="text-muted-foreground leading-relaxed">{claimable >= 1
+          ? `${coins(claimable)} bisa masuk saldo untuk upgrade.${remainder > 0 ? ` Sisa ${coins(remainder)} tetap tersimpan.` : ""}`
+          : `Sekitar ${lapsToCoin} putaran lagi untuk klaim 1 koin. Pecahan tetap tersimpan; balapan terus berjalan.`}</p>
       </div>
-      <Button variant={pending >= 1 ? "gold" : "secondary"} disabled={disabled || pending < 1} onClick={onClaim} aria-busy={claiming}>
-        <Coins data-icon="inline-start" />{claiming ? "Mengklaim…" : "Klaim"}
-      </Button>
     </section>
   );
 }

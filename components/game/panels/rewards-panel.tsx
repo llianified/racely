@@ -103,6 +103,7 @@ export function RewardsPanel({
   onClaimMission,
   onClaimAll,
   onInvite,
+  onRace,
   disabled = false,
 }: {
   game: GameState;
@@ -112,6 +113,7 @@ export function RewardsPanel({
   onClaimMission: (id: string) => void;
   onClaimAll: () => void;
   onInvite: () => void;
+  onRace: () => void;
   disabled?: boolean;
 }) {
   const total = claimableTotal(game);
@@ -181,6 +183,7 @@ export function RewardsPanel({
           <Coins data-icon="inline-start" />
           Klaim semua
         </Button>
+        <Button variant="outline" className="w-full" onClick={onRace}><Flag data-icon="inline-start" />Lanjut balapan</Button>
         <div className="rewards-hero-side">
           <span className="rewards-ready">
             <Gift aria-hidden="true" />

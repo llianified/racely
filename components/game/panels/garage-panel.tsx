@@ -82,6 +82,8 @@ export const GaragePanel = memo(function GaragePanel({
 type UpgradePanelProps = {
   game: GameState;
   onUpgrade: (key: Upgrade) => Promise<boolean>;
+  onRace: () => void;
+  onRewards: () => void;
   disabled?: boolean;
 };
 
@@ -90,7 +92,7 @@ const seconds = (value: number) => value.toLocaleString("id-ID", {
   maximumFractionDigits: 2,
 });
 
-function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps & { part: (typeof PARTS)[number] }) {
+function ModificationSlot({ game, onUpgrade, onRewards, disabled, part }: UpgradePanelProps & { part: (typeof PARTS)[number] }) {
   const [open, setOpen] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [showAfter, setShowAfter] = useState(true);
@@ -125,6 +127,7 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
           <div className="upgrade-name"><Icon size={16} aria-hidden="true" /><h3>{title}</h3><span className="level-label">Lv. {level}</span></div>
           <p>{preview.currentPart} · Terpasang</p>
           <p>{maxed ? "Modifikasi maksimal" : benefit}</p>
+          {!maxed && <p>{coins(cost)} · {shortfall > 0 ? `Kurang ${coins(shortfall)}` : "Saldo cukup"}</p>}
           {key === "tires" && <p>Grip · pengurasan −{currentGrip.drainReductionPercent}%{!maxed && ` → −${nextGrip.drainReductionPercent}%`}</p>}
           <div className="level-segments" aria-label={`Level ${level} dari 10`}>
             {Array.from({ length: 10 }, (_, i) => <span key={i} className={i < level ? "filled" : undefined} />)}
@@ -212,17 +215,17 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
         </div>
         <SheetFooter className="border-t border-border px-xl py-(--space-20)">
           <SheetClose render={<Button variant="outline" disabled={installing} />}>Batal</SheetClose>
-          <Button variant="gold" disabled={blocked || maxed || shortfall > 0} onClick={() => void install()} aria-busy={installing}>
+          {shortfall > 0 ? <Button variant="gold" disabled={blocked} onClick={() => { setOpen(false); onRewards(); }}>Cari koin di Hadiah</Button> : <Button variant="gold" disabled={blocked || maxed} onClick={() => void install()} aria-busy={installing}>
             {installing ? <LoaderCircle className="animate-spin" data-icon="inline-start" /> : <ArrowUp data-icon="inline-start" />}
             {installing ? "Memasang…" : maxed ? "Level maksimal" : `Pasang · ${coins(cost)}`}
-          </Button>
+          </Button>}
         </SheetFooter>
       </SheetContent>
     </Sheet>
   );
 }
 
-export function UpgradePanel({ game, onUpgrade, disabled = false }: UpgradePanelProps) {
+export function UpgradePanel({ game, onUpgrade, onRace, onRewards, disabled = false }: UpgradePanelProps) {
   return (
     <section id="upgrades" tabIndex={-1} className="panel upgrade-panel" aria-label="Bengkel modifikasi">
       <SectionCardHeading
@@ -232,8 +235,14 @@ export function UpgradePanel({ game, onUpgrade, disabled = false }: UpgradePanel
           <InfoHint title="Modifikasi mobil">Pilih part, cek perubahan performa, lalu konfirmasi pemasangan. Mesin dan ban mempercepat putaran; ban juga memperkuat grip dan mempercepat pemulihannya di simulasi. Baterai menambah hasil koin. Setiap pemasangan menaikkan satu level, maksimal level 10.</InfoHint>
         }
       />
+      <div className="border-b border-border p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-read">
+          <p>Saldo: <strong>{coins(game.balance)}</strong></p>
+          <Button variant="outline" onClick={onRace}>Uji di lintasan</Button>
+        </div>
+      </div>
       <div className="upgrade-list">
-        {PARTS.map((part) => <ModificationSlot key={part.key} part={part} game={game} onUpgrade={onUpgrade} disabled={disabled} />)}
+        {PARTS.map((part) => <ModificationSlot key={part.key} part={part} game={game} onUpgrade={onUpgrade} onRace={onRace} onRewards={onRewards} disabled={disabled} />)}
       </div>
     </section>
   );
