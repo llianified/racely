@@ -5,7 +5,7 @@ import {
   dailyRewardFor,
   racingDayKey,
 } from "../lib/game-economy";
-import { INITIAL_GAME, batteryTelemetry, formatDuration, gameReducer, lapReward, lapSeconds, modificationPartName, modificationPreview } from "../lib/game";
+import { INITIAL_GAME, batteryTelemetry, formatDuration, gameReducer, lapReward, lapSeconds, modificationPartName, modificationPreview, raceOpponentLapSeconds, racePosition } from "../lib/game";
 import { DEFAULT_ECONOMY, upgradeCostAt } from "../lib/economy-config";
 
 /**
@@ -76,11 +76,11 @@ describe("Modification workshop", () => {
     for (const circuit of [0, 1]) {
       const state = { ...INITIAL_GAME, circuit };
       const battery = modificationPreview(state, "battery");
-      expect(battery.afterReward - battery.beforeReward).toBeCloseTo(.01);
+      expect(battery.afterReward).toBeGreaterThanOrEqual(battery.beforeReward);
       expect(battery.afterSeconds).toBe(battery.beforeSeconds);
       const tires = modificationPreview(state, "tires");
       expect(tires.afterSeconds).toBeLessThan(tires.beforeSeconds);
-      expect(tires.afterReward).toBe(tires.beforeReward);
+      expect(tires.afterReward).toBeGreaterThanOrEqual(tires.beforeReward);
     }
   });
 
@@ -104,12 +104,25 @@ describe("Modification workshop", () => {
 });
 
 describe("Racely economy", () => {
-  it("keeps the base lap time, coin rewards, and upgrade costs", () => {
+  it("keeps the base lap time and upgrade costs", () => {
     expect(lapSeconds(INITIAL_GAME)).toBe(8);
-    expect(lapReward(INITIAL_GAME)).toBe(0.05);
     expect(upgradeCostAt(E, "engine", 1)).toBe(25);
     expect(upgradeCostAt(E, "tires", 1)).toBe(15);
     expect(upgradeCostAt(E, "battery", 1)).toBe(20);
+  });
+
+  it("ranks three racers and scales rewards conservatively by position", () => {
+    const second = { ...INITIAL_GAME, levels: { ...INITIAL_GAME.levels, engine: 2 } };
+    const first = { ...INITIAL_GAME, levels: { ...INITIAL_GAME.levels, engine: 3 } };
+    const boosted = { ...INITIAL_GAME, boostLeft: 1 };
+
+    expect(raceOpponentLapSeconds(INITIAL_GAME)[0]).toBeLessThan(
+      raceOpponentLapSeconds(INITIAL_GAME)[1],
+    );
+    expect([racePosition(INITIAL_GAME), lapReward(INITIAL_GAME)]).toEqual([3, 0.04]);
+    expect([racePosition(second), lapReward(second)]).toEqual([2, 0.05]);
+    expect([racePosition(first), lapReward(first)]).toEqual([1, 0.06]);
+    expect([racePosition(boosted), lapReward(boosted)]).toEqual([1, 0.06]);
   });
 
   it("settles completed laps and carries fractional progress", () => {
@@ -119,7 +132,7 @@ describe("Racely economy", () => {
     );
 
     expect(result.completedLaps).toBe(2);
-    expect(result.income).toBe(0.1);
+    expect(result.income).toBe(0.08);
     expect(result.progress).toBeCloseTo(0);
   });
 
@@ -130,6 +143,7 @@ describe("Racely economy", () => {
     );
 
     expect(result.completedLaps).toBe(1);
+    expect(result.income).toBe(0.06);
     expect(result.progress).toBeCloseTo(0.5);
   });
 
@@ -142,13 +156,13 @@ describe("Racely economy", () => {
     expect(result.offline).toBeNull();
     expect(result.creditedSeconds).toBe(E.heartbeatCapSeconds);
     expect(result.completedLaps).toBe(15);
-    expect(result.income).toBe(0.75);
+    expect(result.income).toBe(0.6);
   });
 });
 
 /**
- * Base settlement state laps every 8s for 0.05 coins, so the whole table below
- * is derived from those two numbers.
+ * Base settlement state laps every 8s and finishes P3 for 0.04 coins, so the
+ * whole table below is derived from those two numbers.
  */
 describe("Offline earnings", () => {
   const settleAfter = (seconds: number) =>
@@ -165,10 +179,10 @@ describe("Offline earnings", () => {
       creditedSeconds: 480,
       capped: false,
       laps: 30,
-      coins: 1.5,
+      coins: 1.2,
     });
     expect(result.completedLaps).toBe(45);
-    expect(result.income).toBe(2.25);
+    expect(result.income).toBe(1.8);
     expect(result.creditedSeconds).toBe(600);
   });
 
@@ -180,10 +194,10 @@ describe("Offline earnings", () => {
       creditedSeconds: E.offlineCapSeconds - E.heartbeatCapSeconds,
       capped: false,
       laps: 892,
-      coins: 44.6,
+      coins: 35.68,
     });
     expect(result.completedLaps).toBe(907);
-    expect(result.income).toBe(45.35);
+    expect(result.income).toBe(36.28);
     expect(result.creditedSeconds).toBe(E.offlineCapSeconds);
   });
 
@@ -195,13 +209,13 @@ describe("Offline earnings", () => {
       creditedSeconds: E.offlineCapSeconds,
       capped: true,
       laps: 900,
-      coins: 45,
+      coins: 36,
     });
     // A full day away pays exactly the same as the capped four hours.
     expect(settleAfter(24 * 60 * 60).offline).toMatchObject({
       creditedSeconds: E.offlineCapSeconds,
       laps: 900,
-      coins: 45,
+      coins: 36,
     });
   });
 

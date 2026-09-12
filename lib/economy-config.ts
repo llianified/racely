@@ -29,6 +29,8 @@ export type EconomyConfig = {
   lapRewardBase: number;
   lapRewardPerBattery: number;
   lapRewardPerCircuit: number;
+  /** Selisih pengali hadiah: P1 +nilai, P2 netral, P3 -nilai. */
+  racePositionRewardStep: number;
 
   upgradeCostEngine: number;
   upgradeCostTires: number;
@@ -86,6 +88,7 @@ export const DEFAULT_ECONOMY: EconomyConfig = {
   lapRewardBase: 0.05,
   lapRewardPerBattery: 0.01,
   lapRewardPerCircuit: 0.02,
+  racePositionRewardStep: 0.2,
 
   upgradeCostEngine: 25,
   upgradeCostTires: 15,
@@ -140,6 +143,7 @@ export const economyConfigSchema = z
     lapRewardBase: coin,
     lapRewardPerBattery: coin,
     lapRewardPerCircuit: coin,
+    racePositionRewardStep: rate,
 
     upgradeCostEngine: coin,
     upgradeCostTires: coin,
@@ -262,3 +266,53 @@ export const lapRewardAt = (
       circuit * e.lapRewardPerCircuit) *
       100,
   ) / 100;
+
+export type RacePosition = 1 | 2 | 3;
+
+const rivalLevelsAt = (e: EconomyConfig, circuit: number) => {
+  const tier = circuit > 0 ? 1 : 0;
+  const level = (value: number) => Math.min(e.maxUpgradeLevel, value);
+  return [
+    { engine: level(3 + tier), tires: level(1 + tier), battery: 1 },
+    { engine: level(1 + tier), tires: level(2 + tier), battery: 1 },
+  ] as const;
+};
+
+/** Waktu lawan tetap server-derived; model atau input client tidak memengaruhinya. */
+export const raceOpponentLapSecondsAt = (
+  e: EconomyConfig,
+  circuit: number,
+): readonly [number, number] => {
+  const [leader, chaser] = rivalLevelsAt(e, circuit);
+  return [
+    lapSecondsAt(e, leader, false),
+    lapSecondsAt(e, chaser, false),
+  ];
+};
+
+export const racePositionAt = (
+  e: EconomyConfig,
+  levels: Record<UpgradeKey, number>,
+  circuit: number,
+  boosted: boolean,
+): RacePosition => {
+  const playerSeconds = lapSecondsAt(e, levels, boosted);
+  const losses = raceOpponentLapSecondsAt(e, circuit).filter(
+    (opponentSeconds) => opponentSeconds < playerSeconds,
+  ).length;
+  return (losses + 1) as RacePosition;
+};
+
+export const raceRewardAt = (
+  e: EconomyConfig,
+  levels: Record<UpgradeKey, number>,
+  circuit: number,
+  boosted: boolean,
+) => {
+  const position = racePositionAt(e, levels, circuit, boosted);
+  const multiplier = 1 + (2 - position) * e.racePositionRewardStep;
+  return (
+    Math.round(lapRewardAt(e, levels.battery, circuit) * multiplier * 100) /
+    100
+  );
+};
