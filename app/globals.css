@@ -237,9 +237,10 @@
 .parts-shop-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); }
 .parts-shop-heading > div { min-width: 0; }
 .parts-shop-heading h3 { margin-top: var(--space-3); font-size: var(--fs-lead); font-weight: var(--fw-heavy); }
-.parts-shop-dialog { display: flex; flex-direction: column; gap: 0; padding: 0; overflow: hidden; width: calc(100% - var(--space-xl)); max-width: var(--app-width); }
-.parts-shop-header { gap: var(--space-3); padding: var(--space-lg); border-bottom: var(--stroke) solid var(--border); }
-.parts-shop-header [data-slot="dialog-description"] { margin-top: var(--space-3); font-size: var(--fs-read); text-wrap: pretty; }
+  .game-sheet { width: 100%; max-width: var(--app-width); max-height: calc(100dvh - var(--safe-top) - var(--space-md)); margin-inline: auto; overflow-y: auto; border-radius: var(--corner-2xl) var(--corner-2xl) 0 0; }
+  .parts-shop-dialog { display: flex; flex-direction: column; gap: 0; padding: 0; overflow: hidden; }
+  .parts-shop-header { gap: var(--space-3); padding: var(--space-lg); border-bottom: var(--stroke) solid var(--border); }
+  .parts-shop-header [data-slot="sheet-description"] { margin-top: var(--space-3); font-size: var(--fs-read); text-wrap: pretty; }
 .parts-shop-scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; font-size: var(--fs-read); line-height: var(--lh-normal); scrollbar-gutter: stable; }
 .parts-shop-stage { height: clamp(var(--stage-select-h-short), var(--stage-parts-fluid-h), var(--stage-select-h-max)); background: var(--background); color: var(--foreground); touch-action: none; }
 .parts-shop-preview-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); padding: var(--space-sm) var(--space-lg); background: var(--background); color: var(--muted-foreground); border-bottom: var(--stroke) solid var(--border); }
@@ -449,7 +450,7 @@
 [data-telegram-fullscreen='true'] .racer-avatar { height: var(--space-40); border-radius: var(--corner-md); }
 [data-telegram-fullscreen='true'] .racer-photo,
 [data-telegram-fullscreen='true'] .racer-initial { width: var(--space-38); height: var(--space-38); }
-[data-telegram-fullscreen='true'] [data-slot='dialog-content'] { top: calc(var(--safe-top) + (100dvh - var(--safe-top) - var(--safe-bottom)) / 2); max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - var(--space-xl)); max-width: min(var(--app-width), calc(100% - var(--safe-left) - var(--safe-right) - var(--space-xl))); }
+  [data-telegram-fullscreen='true'] [data-slot='sheet-content'] { max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - var(--space-md)); padding-bottom: max(var(--space-lg), var(--safe-bottom)); }
 [data-telegram-fullscreen='true'] [data-sonner-toaster][data-y-position='top'] { top: calc(var(--safe-top) + var(--space-md)); }
 [data-telegram-fullscreen='true'] .mobile-nav { padding-left: max(var(--space-xs), var(--safe-left)); padding-right: max(var(--space-xs), var(--safe-right)); }
 .brand { display: flex; align-items: center; gap: var(--space-sm); flex-shrink: 0; }
