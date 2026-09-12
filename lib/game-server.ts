@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq, lt } from "drizzle-orm";
+import { and, desc, eq, gte, lt } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import {
@@ -11,7 +11,14 @@ import {
   type PlayerRow,
   type WithdrawalRow,
 } from "@/lib/db/schema";
-import { calculateRaceSettlement } from "@/lib/game-economy";
+import {
+  calculateRaceSettlement,
+  DAILY_CLAIM_END,
+  DAILY_CLAIM_PREFIX,
+  DAILY_HISTORY_DAYS,
+  dailyCheckIn,
+  racingDayKey,
+} from "@/lib/game-economy";
 import { CAR_MODEL_IDS, isCarColor } from "@/lib/car-catalog";
 import {
   accountPattern,
@@ -23,6 +30,7 @@ import {
   STARTER_GIFT,
   upgradeCost,
   WITHDRAW_METHODS,
+  type DailyCheckIn,
   type GameState,
   type OfflineEarnings,
   type Upgrade,
@@ -57,6 +65,7 @@ const commandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("claim") }).strict(),
   z.object({ type: z.literal("boost") }).strict(),
   z.object({ type: z.literal("gift") }).strict(),
+  z.object({ type: z.literal("daily") }).strict(),
   z
     .object({
       type: z.literal("mission"),
@@ -146,6 +155,7 @@ function stateFromRow(
   now: Date,
   history: WithdrawalRow[] = [],
   offlineEarnings: OfflineEarnings | null = null,
+  daily: DailyCheckIn = dailyCheckIn([], now),
 ): GameState {
   return {
     developmentPreview: false,
@@ -158,6 +168,7 @@ function stateFromRow(
         row.carModel === null && hasExistingProgress(row, history),
     },
     withdrawals: history.map(withdrawalRecord),
+    daily,
     balance: row.balance,
     pending: row.pending,
     earned: row.earned,
@@ -186,6 +197,31 @@ function stateFromRow(
       photoUrl: row.photoUrl,
     },
   };
+}
+
+/**
+ * Riwayat check-in dibaca sebanyak DAILY_HISTORY_DAYS hari; streak yang lebih
+ * panjang dari itu berhenti bertambah di tampilan, tapi hadiahnya sudah mentok
+ * jauh sebelumnya jadi tidak ada koin yang hilang.
+ */
+type Transaction = Parameters<
+  Parameters<NonNullable<typeof db>["transaction"]>[0]
+>[0];
+
+async function readDailyClaims(tx: Transaction, userId: string) {
+  const rows = await tx
+    .select({ rewardKey: rewardClaims.rewardKey })
+    .from(rewardClaims)
+    .where(
+      and(
+        eq(rewardClaims.userId, userId),
+        gte(rewardClaims.rewardKey, DAILY_CLAIM_PREFIX),
+        lt(rewardClaims.rewardKey, DAILY_CLAIM_END),
+      ),
+    )
+    .orderBy(desc(rewardClaims.rewardKey))
+    .limit(DAILY_HISTORY_DAYS);
+  return rows.map((row) => row.rewardKey.slice(DAILY_CLAIM_PREFIX.length));
 }
 
 export type SettledPlayer = {
@@ -310,8 +346,12 @@ export async function getGameState(
       .where(eq(withdrawals.userId, identity.userId))
       .orderBy(desc(withdrawals.createdAt))
       .limit(HISTORY_LIMIT);
+    const daily = dailyCheckIn(
+      await readDailyClaims(tx, identity.userId),
+      now,
+    );
 
-    return stateFromRow(saved, now, history, settled.offline);
+    return stateFromRow(saved, now, history, settled.offline, daily);
   });
 }
 
@@ -361,6 +401,7 @@ export async function performGameAction(
 
     const settled = settlePlayerRow(locked, now);
     let next = settled.row;
+    let dailyClaims = await readDailyClaims(tx, identity.userId);
 
     if (action.type !== "sync") {
       const [receipt] = await tx
@@ -393,7 +434,13 @@ export async function performGameAction(
           .where(eq(withdrawals.userId, identity.userId))
           .orderBy(desc(withdrawals.createdAt))
           .limit(HISTORY_LIMIT);
-        return stateFromRow(saved, now, replayHistory, settled.offline);
+        return stateFromRow(
+          saved,
+          now,
+          replayHistory,
+          settled.offline,
+          dailyCheckIn(dailyClaims, now),
+        );
       }
     }
 
@@ -470,6 +517,26 @@ export async function performGameAction(
           balance: next.balance + (inserted.length > 0 ? STARTER_GIFT : 0),
         };
       }
+    } else if (action.type === "daily") {
+      const status = dailyCheckIn(dailyClaims, now);
+      if (!status.claimedToday) {
+        const today = racingDayKey(now);
+        // The unique (user_id, reward_key) index is the whole guard: a double
+        // tap on the same racing day inserts nothing and pays nothing.
+        const inserted = await tx
+          .insert(rewardClaims)
+          .values({
+            userId: identity.userId,
+            rewardKey: `${DAILY_CLAIM_PREFIX}${today}`,
+            amount: status.reward,
+          })
+          .onConflictDoNothing()
+          .returning({ id: rewardClaims.id });
+        if (inserted.length > 0) {
+          next = { ...next, balance: next.balance + status.reward };
+          dailyClaims = [today, ...dailyClaims];
+        }
+      }
     } else if (action.type === "mission") {
       const mission = MISSIONS.find((item) => item.id === action.id);
       const alreadyClaimed = next.missionsClaimed.includes(action.id);
@@ -540,7 +607,13 @@ export async function performGameAction(
       .where(eq(withdrawals.userId, identity.userId))
       .orderBy(desc(withdrawals.createdAt))
       .limit(HISTORY_LIMIT);
-    const response = stateFromRow(saved, now, history, settled.offline);
+    const response = stateFromRow(
+      saved,
+      now,
+      history,
+      settled.offline,
+      dailyCheckIn(dailyClaims, now),
+    );
     if (action.type !== "sync") {
       // Deliberately no response snapshot: (userId, requestId) is the whole
       // idempotency key, and a stored GameState would copy the player's

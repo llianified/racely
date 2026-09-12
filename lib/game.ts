@@ -12,6 +12,13 @@ export const COIN_TO_IDR = 100;
 export const MIN_WITHDRAW_COINS = 100;
 export const STARTER_GIFT = 15;
 
+/**
+ * Hadiah check-in harian per hari streak (1-based), menaik lalu mentok di rung
+ * terakhir. Batas atas itu disengaja: setiap koin adalah kewajiban rupiah, jadi
+ * hadiah harian harus terhitung berapa pun panjang streak pemain.
+ */
+export const DAILY_REWARDS = [1, 2, 3, 4, 5, 6, 10] as const;
+
 export const WITHDRAW_METHODS = [
   { id: "dana", label: "DANA", kind: "ewallet" },
   { id: "gopay", label: "GoPay", kind: "ewallet" },
@@ -66,6 +73,17 @@ export type OfflineEarnings = {
   coins: number;
 };
 
+/** Ringkasan check-in harian untuk UI; dihitung ulang tiap respons. */
+export type DailyCheckIn = {
+  /** Hari berturut-turut, sudah termasuk hari ini kalau `claimedToday`. */
+  streak: number;
+  claimedToday: boolean;
+  /** Koin kalau klaim sekarang; 0 kalau hari ini sudah diklaim. */
+  reward: number;
+  /** Koin untuk klaim berikutnya -- dipakai memotivasi lanjut besok. */
+  nextReward: number;
+};
+
 export type GameState = {
   // Optional only so legacy preview cookies can be upgraded without losing progress.
   carSelection?: { model: CarModelId | null; returningPlayer: boolean };
@@ -84,6 +102,7 @@ export type GameState = {
   circuit: number;
   player: PlayerProfile;
   withdrawals: WithdrawalRecord[];
+  daily: DailyCheckIn;
   offlineEarnings?: OfflineEarnings;
 };
 
@@ -103,6 +122,13 @@ export const INITIAL_GAME: GameState = {
   circuit: 0,
   player: { name: "Rookie racer", username: null, photoUrl: null },
   withdrawals: [],
+  // Nilai streak-nol; server dan mode preview selalu menimpanya.
+  daily: {
+    streak: 0,
+    claimedToday: false,
+    reward: DAILY_REWARDS[0],
+    nextReward: DAILY_REWARDS[1],
+  },
 };
 
 /** Coin amounts are kept to two decimals so partial laps still count. */
@@ -192,7 +218,7 @@ export function batteryTelemetry(s: Pick<GameState, "boostLeft" | "cooldown">) {
   };
 }
 
-export const totalLevel = (s: GameState) =>
+export const totalLevel = (s: Pick<GameState, "levels">) =>
   Object.values(s.levels).reduce((a, b) => a + b, 0) - 2;
 
 export const MISSIONS = [
@@ -218,13 +244,16 @@ export const MISSIONS = [
     reward: 15,
   },
 ];
-export const missionValue = (s: GameState, id: string) =>
+export const missionValue = (
+  s: Pick<GameState, "laps" | "levels" | "earned">,
+  id: string,
+) =>
   id === "laps" ? s.laps : id === "upgrade" ? totalLevel(s) - 1 : s.earned;
 
 export type GameCommand =
   | { type: "sync" }
   | { type: "upgrade"; key: Upgrade }
-  | { type: "claim" | "boost" | "gift" }
+  | { type: "claim" | "boost" | "gift" | "daily" }
   | { type: "mission"; id: string }
   | { type: "select-car"; model: CarModelId; color: CarColor }
   | { type: "color"; color: CarColor }
