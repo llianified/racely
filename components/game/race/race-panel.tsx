@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { batteryTelemetry, coins, formatCoins, lapReward, lapSeconds, raceOpponentLapSeconds, racePosition, type GameState } from "@/lib/game";
 import { RaceOverviewHud, RacePositionHud } from "./race-overview-hud";
-import { RaceBattery } from "./race-battery";
 import { cn } from "@/lib/utils";
 import { createDrivingState, resetGripChallenge } from "@/lib/race-dynamics";
 import { GripChallenge } from "./grip-challenge";
@@ -154,12 +153,15 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
           </Button>}
           <span className="sr-only" role="status" aria-live="polite">{controlFeedback}</span>
       </div>
-      <RaceBattery game={game} inspect={inspect} onInspect={() => {
-        setInspect(value => !value);
-        panel.current?.scrollIntoView({ block: "start", behavior: reducedMotion ? "instant" : "smooth" });
-      }} />
       <details className="race-settings">
         <summary>Pengaturan balapan<ChevronDown aria-hidden="true" /></summary>
+        <div className="race-director-bar">
+          <span>INSPEKSI MOBIL</span>
+          <Button variant="outline" size="sm" aria-pressed={inspect} onClick={() => {
+            setInspect(value => !value);
+            panel.current?.scrollIntoView({ block: "start", behavior: reducedMotion ? "instant" : "smooth" });
+          }}>{inspect ? "Kembali balapan" : "Lihat sasis"}</Button>
+        </div>
         <p className="race-powertrain-note">Mesin mempercepat akselerasi setelah tikungan dan pemulihan. Baterai memperpanjang dorongan boost di arena; energi pulih saat Gaspol tidak aktif. Laju, RPM, dan energi arena hanya simulasi, terpisah dari baterai idle dan timer Gaspol server. Lap dan koin tetap mengikuti server.</p>
         <div className="race-director-bar">
           <span>{reducedMotion ? 'GERAK DIKURANGI' : 'KAMERA SINEMATIK'}</span>
