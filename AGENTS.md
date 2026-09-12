@@ -10,10 +10,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # Racely — peta kerja untuk agent
 
-Orientasi lengkap ada di `README.md`; runbook produksi di `docs/RUNBOOK.md`.
-File ini sengaja hanya berisi **rute tugas** dan **aturan yang mahal kalau
-dilanggar** — hal yang tidak bisa ditebak dengan membaca satu-dua file. Jangan
-menyalin peta direktori README ke sini; dua salinan pasti melenceng.
+Orientasi lengkap ada di `README.md`. File ini sengaja hanya berisi **rute
+tugas** dan **aturan yang mahal kalau dilanggar** — hal yang tidak bisa ditebak
+dengan membaca satu-dua file. Jangan menyalin peta direktori README ke sini;
+dua salinan pasti melenceng.
 
 ## Baca dulu sebelum menyentuh direktori ini
 
@@ -102,12 +102,13 @@ Komponen react-three-fiber **wajib** di `scene/` (lihat AGENTS.md di sana).
 
 ```bash
 pnpm run typecheck && pnpm run lint && pnpm test
-PUBLIC_APP_URL=https://racely.example.com pnpm run build
+PUBLIC_APP_URL=https://racely.fun pnpm run build
 ```
 
-Persis inilah yang dijalankan `.github/workflows/ci.yml`. `PUBLIC_APP_URL`
-dibutuhkan saat build karena halaman `/` di-prerender dan `metadataBase` ikut
-dibekukan.
+Ini adalah pemeriksaan lokal utama. CI juga menjalankan `pnpm run db:migrate`
+sebelum test dengan Postgres sementara agar suite database tidak ter-skip.
+`PUBLIC_APP_URL` dibutuhkan saat build karena halaman `/` di-prerender dan
+`metadataBase` ikut dibekukan.
 
 Tanpa `DATABASE_URL`, `tests/database.test.ts` ter-skip secara lokal — itu
 normal. Di CI skip tidak diizinkan dan suite akan gagal kalau terjadi.

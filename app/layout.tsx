@@ -8,7 +8,7 @@ const description =
 
 // Social cards need absolute image URLs. Without this the build falls back to
 // http://localhost:3000 and every shared link renders a broken preview, so
-// PUBLIC_APP_URL has to be present at build time (see docs/RUNBOOK.md).
+// PUBLIC_APP_URL has to be present at build time.
 function siteUrl() {
   try {
     const url = new URL(process.env.PUBLIC_APP_URL ?? '')
