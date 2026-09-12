@@ -164,7 +164,7 @@ export function RewardsPanel({
   const readyCount = rows.filter((row) => row.state === "ready").length;
 
   return (
-    <div className="rewards-layout section-enter flex flex-col gap-4">
+    <div className="rewards-layout section-enter flex flex-col gap-lg">
       <section className="rewards-hero" aria-label="Total hadiah siap diklaim">
         <div className="rewards-hero-copy">
           <span className="eyebrow">Siap diklaim</span>

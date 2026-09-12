@@ -28,7 +28,7 @@ export function CircuitPanel({ game, onChoose, disabled = false }: { game: GameS
         <p className="circuit-description">{25 - game.laps} putaran lagi menuju Midnight.</p>
         <div className="mission-progress circuit-progress"><Progress value={Math.min((game.laps / 25) * 100, 100)} aria-label="Buka Midnight Speedway" className="flex-1" /><span>{Math.min(game.laps, 25)}/25</span></div>
       </>}
-      {unlocked && <Button variant="gold" className="mt-3 w-full" disabled={disabled} onClick={() => onChoose(active ? 0 : 1)}>{active ? "Kembali ke Jakarta" : "Gas ke Midnight"}<ArrowRight data-icon="inline-end" /></Button>}
+      {unlocked && <Button variant="gold" className="mt-md w-full" disabled={disabled} onClick={() => onChoose(active ? 0 : 1)}>{active ? "Kembali ke Jakarta" : "Gas ke Midnight"}<ArrowRight data-icon="inline-end" /></Button>}
     </section>
   );
 }
