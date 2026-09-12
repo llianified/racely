@@ -34,6 +34,7 @@ import {
   upgradeCost,
   type GameCommand,
   type GameState,
+  type OfflineEarnings,
   type Upgrade,
 } from "@/lib/game";
 import { cn } from "@/lib/utils";
@@ -43,6 +44,7 @@ export function GameDashboard() {
   const [game, dispatch] = useReducer(gameReducer, INITIAL_GAME);
   const [tab, setTab] = useState<GameTab>("race");
   const [dialog, setDialog] = useState<DialogKind | null>(null);
+  const [welcomeBack, setWelcomeBack] = useState<OfflineEarnings | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [raceMounted, setRaceMounted] = useState(false);
   const [garageMounted, setGarageMounted] = useState(false);
@@ -52,6 +54,7 @@ export function GameDashboard() {
   const mutationLocked = useRef(false);
   const navigationTarget = useRef<string | null>(null);
   const expired = useRef(false);
+  const welcomeShown = useRef(false);
 
   useEffect(() => {
     const targetId = navigationTarget.current;
@@ -126,6 +129,17 @@ export function GameDashboard() {
     if (!data) return;
     synced.current = true;
     dispatch({ type: "hydrate", state: data });
+  }, [data]);
+
+  useEffect(() => {
+    const earnings = data?.offlineEarnings;
+    // The server reports an absence on exactly the one response that credited
+    // it, so it has to be latched out here before the next sync replaces the
+    // state that carried it. welcomeShown only ever flips false -> true, so
+    // opening the dialog cannot cascade or reopen later.
+    if (!earnings || earnings.coins <= 0 || welcomeShown.current) return;
+    welcomeShown.current = true;
+    setWelcomeBack(earnings);
   }, [data]);
 
   const sessionExpired = isSessionExpired(error);
@@ -415,9 +429,13 @@ export function GameDashboard() {
         </main>
       </div>
       <GameDialog
-        kind={dialog}
-        onClose={() => setDialog(null)}
+        kind={welcomeBack ? "welcome" : dialog}
+        onClose={() => {
+          setWelcomeBack(null);
+          setDialog(null);
+        }}
         game={game}
+        offline={welcomeBack}
         onChooseCircuit={chooseCircuit}
         disabled={Boolean(busyAction)}
       />
