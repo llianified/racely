@@ -6,8 +6,6 @@ import {
   accountPattern,
   INITIAL_GAME,
   MISSIONS,
-  lapReward,
-  lapSeconds,
   missionValue,
   roundCoins,
   STARTER_GIFT,
@@ -15,9 +13,11 @@ import {
   WITHDRAW_METHODS,
   type GameCommand,
   type GameState,
+  type OfflineEarnings,
   type Upgrade,
   type WithdrawMethod,
 } from "./game";
+import { calculateRaceSettlement } from "./game-economy";
 import { CAR_MODEL_IDS, isCarColor } from "./car-catalog";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
 
@@ -29,7 +29,6 @@ export const previewCarActionSchema = z.object({
   ]),
 }).strict();
 
-const MAX_OFFLINE_SECONDS = 24 * 60 * 60;
 const MAX_RECEIPTS = 12;
 const MAX_WITHDRAWALS = 8;
 const METHOD_IDS = WITHDRAW_METHODS.map((method) => method.id) as [
@@ -143,10 +142,10 @@ function readPreviewGame(request: Request, identity: PlayerIdentity) {
     }
     if (!parsed.data.state.carSelection) {
       // Credit time owed before the offer, then freeze without resetting progress.
-      const settled = settlePreviewGame(parsed.data, Date.now());
+      const { game } = settlePreviewGame(parsed.data, Date.now());
       return {
-        ...settled,
-        state: { ...settled.state, carSelection: { model: null, returningPlayer: true } },
+        ...game,
+        state: { ...game.state, carSelection: { model: null, returningPlayer: true } },
       };
     }
     return parsed.data;
@@ -155,40 +154,67 @@ function readPreviewGame(request: Request, identity: PlayerIdentity) {
   }
 }
 
-function settlePreviewGame(game: PreviewGame, now: number): PreviewGame {
-  if (game.state.carSelection?.model === null) return { ...game, updatedAt: now };
-  const elapsed = Math.min(
-    MAX_OFFLINE_SECONDS,
-    Math.max(0, (now - game.updatedAt) / 1000),
-  );
-  if (elapsed === 0) return game;
+type SettledPreview = { game: PreviewGame; offline: OfflineEarnings | null };
 
-  const boostedSeconds = Math.min(elapsed, game.state.boostLeft);
-  const normalSeconds = elapsed - boostedSeconds;
-  const boostedProgress =
-    boostedSeconds > 0
-      ? boostedSeconds / lapSeconds({ ...game.state, boostLeft: 1 })
-      : 0;
-  const normalProgress =
-    normalSeconds > 0
-      ? normalSeconds / lapSeconds({ ...game.state, boostLeft: 0 })
-      : 0;
-  const progress = game.state.progress + boostedProgress + normalProgress;
-  const completedLaps = Math.floor(progress);
-  const income = roundCoins(completedLaps * lapReward(game.state));
+/**
+ * Delegates to the same pure settlement the database path uses, so the offline
+ * cap and its half rate cannot drift between `pnpm dev` and production. The
+ * cookie stores boost as seconds left, so it is converted to the deadline the
+ * settlement expects.
+ */
+function settlePreviewGame(game: PreviewGame, now: number): SettledPreview {
+  if (game.state.carSelection?.model === null) {
+    return { game: { ...game, updatedAt: now }, offline: null };
+  }
+  const elapsed = Math.max(0, (now - game.updatedAt) / 1000);
+  if (elapsed === 0) return { game, offline: null };
+
+  const settlement = calculateRaceSettlement(
+    {
+      progress: game.state.progress,
+      levels: game.state.levels,
+      circuit: game.state.circuit,
+      lastSettledAt: new Date(game.updatedAt),
+      boostEndsAt:
+        game.state.boostLeft > 0
+          ? new Date(game.updatedAt + game.state.boostLeft * 1000)
+          : null,
+    },
+    new Date(now),
+  );
 
   return {
-    ...game,
-    updatedAt: now,
-    state: {
-      ...game.state,
-      progress: progress % 1,
-      laps: game.state.laps + completedLaps,
-      pending: roundCoins(game.state.pending + income),
-      earned: roundCoins(game.state.earned + income),
-      boostLeft: Math.max(0, game.state.boostLeft - elapsed),
-      cooldown: Math.max(0, game.state.cooldown - elapsed),
+    game: {
+      ...game,
+      updatedAt: now,
+      state: {
+        ...game.state,
+        progress: settlement.progress,
+        laps: game.state.laps + settlement.completedLaps,
+        pending: roundCoins(game.state.pending + settlement.income),
+        earned: roundCoins(game.state.earned + settlement.income),
+        // Boost and cooldown are wall clocks, so they drain over real time even
+        // where the payout is capped.
+        boostLeft: Math.max(0, game.state.boostLeft - elapsed),
+        cooldown: Math.max(0, game.state.cooldown - elapsed),
+      },
     },
+    offline: settlement.offline,
+  };
+}
+
+/**
+ * The summary rides the response only. Keeping it out of the cookie is what
+ * stops one absence from being reported -- and re-reported -- on every later
+ * request.
+ */
+function previewResult(
+  game: PreviewGame,
+  offline: OfflineEarnings | null,
+): { state: GameState; cookieValue: string } {
+  return {
+    state: offline ? { ...game.state, offlineEarnings: offline } : game.state,
+    cookieValue: serializePreviewGame(game),
   };
 }
 
@@ -218,8 +244,11 @@ export function getPreviewGameState(
   request: Request,
   identity: PlayerIdentity,
 ) {
-  const game = settlePreviewGame(readPreviewGame(request, identity), Date.now());
-  return { state: game.state, cookieValue: serializePreviewGame(game) };
+  const { game, offline } = settlePreviewGame(
+    readPreviewGame(request, identity),
+    Date.now(),
+  );
+  return previewResult(game, offline);
 }
 
 export function performPreviewGameAction(
@@ -229,7 +258,9 @@ export function performPreviewGameAction(
   action: GameCommand | z.infer<typeof previewCarActionSchema>["action"],
 ) {
   const now = Date.now();
-  let game = settlePreviewGame(readPreviewGame(request, identity), now);
+  const settled = settlePreviewGame(readPreviewGame(request, identity), now);
+  const { offline } = settled;
+  let game = settled.game;
   const selection = game.state.carSelection;
 
   if (action.type === "select-car") {
@@ -241,7 +272,7 @@ export function performPreviewGameAction(
         throw new PreviewGameRuleError("Model sudah dikonfirmasi dan tidak dapat diganti.");
       }
       // A retry must not reset a later garage color or grant any progress.
-      return { state: game.state, cookieValue: serializePreviewGame(game) };
+      return previewResult(game, offline);
     }
   } else if (selection?.model === null && action.type !== "sync") {
     throw new PreviewGameRuleError("Pilih mobilmu sebelum mulai bermain.");
@@ -251,7 +282,7 @@ export function performPreviewGameAction(
   }
 
   if (action.type !== "sync" && game.receipts.includes(requestId)) {
-    return { state: game.state, cookieValue: serializePreviewGame(game) };
+    return previewResult(game, offline);
   }
 
   let state = game.state;
@@ -342,5 +373,5 @@ export function performPreviewGameAction(
         ? game.receipts
         : [...game.receipts, requestId].slice(-MAX_RECEIPTS),
   };
-  return { state: game.state, cookieValue: serializePreviewGame(game) };
+  return previewResult(game, offline);
 }
