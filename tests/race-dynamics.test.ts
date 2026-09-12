@@ -1,5 +1,40 @@
 import { describe, expect, it } from 'vitest';
-import { createDrivingState, gripTuning, isTrackCorner, RECOVERY_SECONDS, stepDriving } from '../lib/race-dynamics';
+import { courseOutPose, createDrivingState, gripTuning, isTrackCorner, RECOVERY_SECONDS, stepDriving } from '../lib/race-dynamics';
+
+describe('course-out choreography', () => {
+  it('launches from rest, lands upside down, and bounces before recovery', () => {
+    expect(courseOutPose(0)).toMatchObject({ lift: 0, roll: 0, outward: 0, forward: 0, rejoin: 0, impacts: 0 });
+    expect(courseOutPose(.32).lift).toBeGreaterThan(.7);
+    expect(courseOutPose(.64)).toMatchObject({ lift: 0, roll: Math.PI, impacts: 1 });
+    expect(courseOutPose(.77).lift).toBeGreaterThan(.1);
+    expect(courseOutPose(.9).impacts).toBe(2);
+    expect(courseOutPose(1.2).roll).toBeCloseTo(Math.PI);
+    expect(courseOutPose(1.2).rejoin).toBe(0);
+  });
+  it('rights the chassis and returns exactly to the racing line', () => {
+    const end = courseOutPose(RECOVERY_SECONDS);
+    expect(end).toMatchObject({ lift: 0, pitch: 0, yaw: 0, rejoin: 1 });
+    expect(end.roll).toBeCloseTo(Math.PI * 2);
+    expect(courseOutPose(100)).toEqual(end);
+    expect(courseOutPose(-1)).toEqual(courseOutPose(0));
+    expect(courseOutPose(NaN)).toEqual(courseOutPose(0));
+  });
+  it('keeps motion continuous at launch, impacts, righting, and rejoin', () => {
+    for (const time of [.64, .9, 1.06, 1.35, 1.7, 1.8, RECOVERY_SECONDS]) {
+      const before = courseOutPose(time - .00001);
+      const after = courseOutPose(time + .00001);
+      for (const key of ['lift', 'roll', 'pitch', 'yaw', 'outward', 'forward', 'groundDrop', 'rejoin'] as const) {
+        expect(Math.abs(before[key] - after[key])).toBeLessThan(.001);
+      }
+    }
+  });
+  it('disables tumbling, bounce, and impact bursts for reduced motion', () => {
+    for (let frame = 0; frame <= 132; frame++) {
+      const pose = courseOutPose(frame / 60, true);
+      expect(pose).toMatchObject({ lift: 0, roll: 0, pitch: 0, yaw: 0, impacts: 0 });
+    }
+  });
+});
 
 describe('session grip challenge', () => {
   it('identifies both curves and handles wrapped progress', () => {
