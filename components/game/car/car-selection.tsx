@@ -146,11 +146,11 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
         </div>
         <p className="selection-hint">
           <LockKeyhole className="size-4" aria-hidden="true" />
-          {step === 1 ? "Model dipilih sekali." : "Model tetap; warna bisa diganti."}
+          <span>
+            {step === 1 ? "Model dipilih sekali." : "Model tetap; warna bisa diganti."}
+            {developmentPreview && " Preview saja · progres lokal di browser ini."}
+          </span>
         </p>
-        {developmentPreview && (
-          <p className="selection-save-note">Preview saja · progres lokal di browser ini.</p>
-        )}
       </footer>
     </main>
   );
