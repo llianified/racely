@@ -208,7 +208,10 @@
 
 /* ── track ───���������─────────────────────────────────────── */
 .track-panel { position: relative; transition: border-color .3s; border-radius: 12px; }
-.track-panel.is-boosted { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+.track-panel.is-boosted { border-color: var(--accent); }
+.track-panel.is-boosted::after { content: ''; position: absolute; inset: 0; z-index: 3; padding: 2px; border-radius: inherit; pointer-events: none; background: repeating-linear-gradient(120deg, var(--accent) 0 12px, var(--foreground) 12px 18px, var(--accent) 18px 30px, transparent 30px 42px); background-size: 97px 100%; mask: linear-gradient(var(--foreground) 0 0) content-box, linear-gradient(var(--foreground) 0 0); mask-composite: exclude; animation: boost-border-drive 1.6s linear infinite; }
+@keyframes boost-border-drive { to { background-position: 97px 0; } }
+@media (prefers-reduced-motion: reduce) { .track-panel.is-boosted::after { animation: none; } }
 .track-top { display: flex; align-items: center; gap: 4px; min-height: 48px; padding: 6px 12px 6px 10px; border-bottom: 1px solid var(--border); }
 .track-title { flex: 1; min-width: 0; }
 .circuit-number { display: grid; place-items: center; flex-shrink: 0; width: 30px; height: 30px; border: 1px solid var(--border); border-bottom: 2px solid var(--accent); border-radius: 3px; font-size: var(--fs-title); font-weight: 900; font-variant-numeric: tabular-nums; color: var(--foreground); background: var(--background); }
@@ -254,7 +257,7 @@
 .battery-title > svg { box-sizing: content-box; padding: 8px; border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent); border-radius: 10px; background: color-mix(in srgb, var(--accent) 8%, var(--background)); color: var(--accent); flex-shrink: 0; }
 .battery-reading { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .battery-label { color: var(--foreground); font-size: 14px; font-weight: 750; }
-.battery-status { color: var(--muted-foreground); font-size: 14px; }
+.battery-status { color: var(--muted-foreground); font-size: 14px; font-weight: 400; line-height: 1.4; letter-spacing: -.025em; }
 .battery-power { display: flex; align-items: center; gap: 16px; }
 .battery-value { min-width: 76px; color: var(--accent); font-size: 32px; font-weight: 900; letter-spacing: -.05em; font-variant-numeric: tabular-nums; line-height: 1; }
 .battery-value small { font-size: 16px; font-weight: 600; letter-spacing: 0; }
