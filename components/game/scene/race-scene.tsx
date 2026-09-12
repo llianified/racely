@@ -13,7 +13,7 @@ import { PLAYER_RADIUS, TRACK_HALF, stepDriving, type DrivingState } from '@/lib
 import { RacingEffects } from './racing-effects'
 
 const HALF = TRACK_HALF
-export type SceneProps = { equipped?: NonNullable<GameState['bodyParts']>['equipped']; driving?: RefObject<DrivingState>; onTelemetry?: (state: DrivingState) => void; cinematic?: boolean; levels?: GameState['levels']; model?: CarModelId; progress: number; seconds: number; color: string; boosted: boolean; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean }
+export type SceneProps = { equipped?: NonNullable<GameState['bodyParts']>['equipped']; driving?: RefObject<DrivingState>; onTelemetry?: (state: DrivingState) => void; cinematic?: boolean; levels?: GameState['levels']; model?: CarModelId; progress: number; seconds: number; opponentSeconds: readonly [number, number]; color: string; boosted: boolean; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean }
 
 function trackPoint(t: number, radius: number) {
   const straight = HALF * 2
@@ -58,7 +58,7 @@ function Racer({ lane, color, model, progress, seconds, boosted, playerRef, leve
     const dt = Math.min(delta, .1)
     const state = lane === 0 ? driving?.current : undefined
     if (state) stepDriving(state, dt, phase.current, boosted, levels?.tires)
-    phase.current = (phase.current + dt / (seconds * (lane === 0 ? 1 : 1.16 + lane * .08))) % 1
+    phase.current = (phase.current + dt / seconds) % 1
     if (lane === 0) {
       // Grip menggerakkan racing line, bukan laju putaran -- itu milik server.
       // Tanpa rekonsiliasi ini mobil di layar hanyut permanen dari putaran yang
@@ -84,7 +84,7 @@ function Racer({ lane, color, model, progress, seconds, boosted, playerRef, leve
     }
   }, -2)
   return <group ref={group}>
-    <MiniCar color={color} model={model} levels={levels} equipped={equipped} scale={.85} speed={(HALF * 4 + Math.PI * 2 * (2.24 + lane * .68)) / (seconds * (lane === 0 ? 1 : 1.16 + lane * .08)) / .85} />
+    <MiniCar color={color} model={model} levels={levels} equipped={equipped} scale={.85} speed={(HALF * 4 + Math.PI * 2 * (2.24 + lane * .68)) / seconds / .85} />
   </group>
 }
 
@@ -384,7 +384,7 @@ export default function RaceScene(props: SceneProps) {
       {props.inspect ? <CarInspector equipped={props.equipped} levels={props.levels} color={props.color} model={props.model} charge={props.charge} reducedMotion={props.reducedMotion} bodyVisible={props.bodyVisible} /> : <>
       <Grid position={[0, -.145, 0]} args={[36, 36]} infiniteGrid cellSize={1} cellThickness={.35} cellColor="#2c2852" sectionSize={5} sectionThickness={.6} sectionColor="#463e7a" fadeDistance={60} fadeStrength={2} />
       <Circuit circuit={props.circuit} />
-      {[0, 1, 2].map(lane => <Racer key={lane} equipped={lane === 0 ? props.equipped : undefined} lane={lane} driving={lane === 0 ? props.driving : undefined} onTelemetry={props.onTelemetry} reducedMotion={props.reducedMotion} levels={lane === 0 ? props.levels : undefined} model={lane === 0 ? props.model : 'neo-falcon'} playerRef={lane === 0 ? playerRef : undefined} color={lane === 0 ? props.color : lane === 1 ? COLORS.gold : COLORS.white} progress={props.progress} seconds={props.seconds} boosted={props.boosted} />)}
+      {[0, 1, 2].map(lane => <Racer key={lane} equipped={lane === 0 ? props.equipped : undefined} lane={lane} driving={lane === 0 ? props.driving : undefined} onTelemetry={props.onTelemetry} reducedMotion={props.reducedMotion} levels={lane === 0 ? props.levels : undefined} model={lane === 0 ? props.model : 'neo-falcon'} playerRef={lane === 0 ? playerRef : undefined} color={lane === 0 ? props.color : lane === 1 ? COLORS.gold : COLORS.white} progress={props.progress} seconds={lane === 0 ? props.seconds : (props.opponentSeconds[lane - 1] ?? props.seconds)} boosted={props.boosted} />)}
       <RacingLine playerRef={playerRef} driving={props.driving} />
       <RacingEffects playerRef={playerRef} driving={props.driving} boosted={props.boosted} reducedMotion={props.reducedMotion ?? false} />
       <CameraRig cinematic={props.cinematic} driving={props.driving} mode={props.cameraMode} follow={follow} resetKey={props.resetKey} playerRef={playerRef} active={visible && props.active !== false} boosted={props.boosted} reducedMotion={props.reducedMotion ?? false} />
