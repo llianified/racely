@@ -49,7 +49,15 @@ app/                    App Router — route tipis, logika didelegasikan ke lib/
   api/telegram/webhook/ Endpoint webhook bot
   api/health/           Health check load balancer (503 saat DB tak terjangkau)
 components/
-  game/                 Seluruh UI permainan (client components)
+  game/                 UI permainan (client components)
+    game-dashboard.tsx  Orkestrasi: state, SWR, aksi pemain
+    game-client.ts      Transport /api/game (error, parsing, deteksi sesi kedaluwarsa)
+    use-telegram-webapp.ts  Bootstrap Telegram WebApp + haptic
+    shell/              Kerangka: navigasi, menu, boot screen, gate, dialog
+    scene/              Lapisan react-three-fiber (WebGL)
+    race/               Panel balapan & lintasan
+    panels/             Panel tab non-3D: garasi, dompet, hadiah
+    car/                Pemilihan & pewarnaan mobil
   ui/                   Primitif shadcn/base-ui
 lib/
   game.ts               Aturan & konstanta murni, dipakai server dan client
@@ -71,6 +79,11 @@ scripts/                Migrasi, persiapan build standalone, setup bot
 tests/                  Vitest (lingkungan node)
 docs/                   Runbook, tutorial setup, handoff
 ```
+
+`scene/` berdiri sendiri karena react-three-fiber menggerakkan scene graph
+dengan memutasi objek Three.js — itu model pemrogramannya, bukan bug. Aturan
+`react-hooks/immutability` dimatikan tepat untuk direktori itu di
+`eslint.config.mjs`, jadi setiap komponen biasa tetap dijaga.
 
 Batas yang dijaga: `lib/game-server.ts`, `lib/http-body.ts`, dan `lib/db/`
 mengimpor `server-only` sehingga tidak mungkin ikut terbundel ke client;
@@ -151,6 +164,11 @@ troubleshooting pada server yang sudah berjalan.
 
 Belum pernah deploy sama sekali? Mulai dari **`docs/SETUP-MANUAL.md`** (buat
 bot, database, EC2, domain, TLS) — dari nol sampai live.
+
+**`vercel.json` jangan dihapus.** `"deploymentEnabled": false` di dalamnya
+adalah rem yang menahan Vercel supaya tidak membuat deployment otomatis setiap
+push — repo ini dideploy ke EC2, dan pengerjaan lewat v0 akan membanjiri riwayat
+deployment dengan entri sampah kalau rem itu dilepas.
 
 Catatan: PM2 dikonfigurasi `instances: 1`, `exec_mode: "fork"` secara sengaja.
 Dedupe webhook fallback dan rate limiter bersifat per-proses; jangan menambah
