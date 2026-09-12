@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useRef, useState } from "react";
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
-import { Check, LoaderCircle, RotateCcw, ShoppingBag, Wrench } from "lucide-react";
+import { Check, LoaderCircle, RotateCcw, ShoppingBag, Wind, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -66,9 +66,12 @@ function ShopContents({ game, disabled, onAction, onPending }: Omit<ShopProps, "
         <CarPreviewScene color={game.color} model={model} levels={game.levels} equipped={previewParts} interactive />
       </div>
       <div className="parts-shop-preview-bar">
-        <span>{trying ? "Pratinjau · belum disimpan" : "Setelan terpasang"}</span>
+        <div className="parts-shop-preview-state">
+          <span aria-hidden="true" />
+          <div><small>MODE VISUAL</small><strong>{trying ? "Pratinjau part" : "Setelan terpasang"}</strong></div>
+        </div>
         <Button variant="outline" size="sm" onClick={() => setTrying(value => !value)} aria-pressed={trying}>
-          <RotateCcw data-icon="inline-start" />{trying ? "Lihat terpasang" : "Coba part"}
+          <RotateCcw data-icon="inline-start" />{trying ? "Bandingkan" : "Coba part"}
         </Button>
       </div>
       <div className="parts-shop-content">
@@ -83,24 +86,31 @@ function ShopContents({ game, disabled, onAction, onPending }: Omit<ShopProps, "
             const has = game.bodyParts?.owned.includes(id);
             const fitted = equipped[item.slot] === id;
             return <Toggle key={id} value={id} className="parts-shop-choice">
-              <span>{SLOT_LABELS[item.slot]}</span>
+              <span className="parts-shop-choice-slot">{SLOT_LABELS[item.slot]}</span>
               <strong>{item.name}</strong>
-              <span>{fitted ? "Terpasang" : has ? "Dimiliki" : coins(item.price)}</span>
+              <span className="parts-shop-choice-state" data-fitted={fitted || undefined}>
+                {fitted && <Check aria-hidden="true" />}{fitted ? "Terpasang" : has ? "Dimiliki" : coins(item.price)}
+              </span>
             </Toggle>;
           })}
         </ToggleGroup>
         <section className="parts-shop-detail" aria-label={`Detail ${part.name}`}>
-          <div className="parts-shop-heading"><h3>{part.name}</h3><Badge variant="secondary">{installed ? "Terpasang" : owned ? "Dimiliki" : "Belum dimiliki"}</Badge></div>
-          <p>{part.description}</p>
-          <p className="parts-shop-hint">Geser mobil untuk memutar. Part 3D kosmetik — tidak menambah kecepatan atau koin.</p>
-          <p className="parts-shop-hint">Finishing: {part.finish} · Cocok untuk {CAR_CATALOG[model].name}</p>
+          <div className="parts-shop-heading"><div><span className="eyebrow">{SLOT_LABELS[part.slot]}</span><h3>{part.name}</h3></div><Badge variant="secondary">{installed ? "Terpasang" : owned ? "Dimiliki" : "Belum dimiliki"}</Badge></div>
+          <p className="parts-shop-description">{part.description}</p>
+          <dl className="parts-shop-specs">
+            <div><dt>Finishing</dt><dd>{part.finish}</dd></div>
+            <div><dt>Kompatibel</dt><dd>{CAR_CATALOG[model].name}</dd></div>
+          </dl>
           <dl className="parts-shop-pricing">
             <div><dt>Saldo koin</dt><dd>{coins(game.balance)}</dd></div>
             {!owned && <div><dt>{shortfall > 0 ? "Kekurangan" : "Saldo setelah beli"}</dt><dd>{coins(shortfall > 0 ? shortfall : game.balance - part.price)}</dd></div>}
           </dl>
-          <p className="parts-shop-hint">{!owned
-            ? shortfall > 0 ? "Klaim hasil balapan atau hadiah untuk menambah saldo." : "Beli sekali untuk koleksi. Setelah itu, pasang dan lepas gratis. Pembelian tidak dapat dikembalikan."
-            : installed ? "Lepas untuk kembali ke part bawaan. Part ini tetap ada di koleksimu." : equipped[part.slot] ? `Pemasangan menggantikan ${PART_CATALOG[equipped[part.slot]!].name}. Part lama tetap dimiliki.` : "Siap dipasang. Tidak ada biaya tambahan."}</p>
+          <div className="parts-shop-note">
+            <Wind aria-hidden="true" />
+            <p>{!owned
+              ? shortfall > 0 ? "Klaim hasil balapan atau hadiah untuk menambah saldo." : "Kosmetik murni. Beli sekali, lalu lepas-pasang gratis dari koleksimu."
+              : installed ? "Sedang aktif. Lepas untuk kembali ke setelan pabrik tanpa menghapus koleksi." : equipped[part.slot] ? `Akan menggantikan ${PART_CATALOG[equipped[part.slot]!].name}; part lama tetap dimiliki.` : "Siap dipasang tanpa biaya tambahan."}</p>
+          </div>
           {error && <p role="alert">{error}</p>}
         </section>
       </div>
@@ -118,22 +128,31 @@ function ShopContents({ game, disabled, onAction, onPending }: Omit<ShopProps, "
 export function BodyPartsShop({ game, active, disabled, onAction }: ShopProps) {
   const [open, setOpen] = useState(false);
   const pending = useRef(false);
+  const ownedCount = game.bodyParts?.owned.length ?? 0;
+  const equippedCount = Object.keys(game.bodyParts?.equipped ?? {}).length;
   return <Dialog open={open && active} onOpenChange={value => { if (!pending.current) setOpen(value); }}>
     <div className="garage-parts">
-      <div className="parts-shop-heading"><div><h3>Aero kit</h3><p>{game.bodyParts?.owned.length ?? 0} / {PART_IDS.length} part dimiliki</p></div>
-        <DialogTrigger render={<Button variant="gold" disabled={disabled} />}><ShoppingBag data-icon="inline-start" />Toko part</DialogTrigger>
+      <div className="garage-parts-heading">
+        <div className="garage-parts-title">
+          <div><Wind aria-hidden="true" /><h3>Aero kit</h3><Badge variant="secondary">{equippedCount} / {PART_SLOTS.length} aktif</Badge></div>
+          <p>{ownedCount} dari {PART_IDS.length} part sudah masuk koleksi.</p>
+        </div>
+        <DialogTrigger render={<Button variant="gold" disabled={disabled} />}><ShoppingBag data-icon="inline-start" />Buka toko</DialogTrigger>
       </div>
-      <dl className="garage-parts-slots">
+      <dl className="garage-parts-slots" aria-label="Slot aero kit terpasang">
         {PART_SLOTS.map(slot => {
           const id = game.bodyParts?.equipped[slot];
-          return <div key={slot}><dt>{SLOT_LABELS[slot]}</dt><dd>{id && <Check aria-hidden="true" />}{id ? PART_CATALOG[id].name : "Bawaan"}</dd></div>;
+          return <div key={slot} data-fitted={Boolean(id)}>
+            <dt><span aria-hidden="true" />{SLOT_LABELS[slot]}</dt>
+            <dd><strong>{id ? PART_CATALOG[id].name : "Part bawaan"}</strong><span>{id ? <><Check aria-hidden="true" />Aktif</> : "Setelan pabrik"}</span></dd>
+          </div>;
         })}
       </dl>
     </div>
     <DialogContent className="parts-shop-dialog">
       <DialogHeader className="parts-shop-header">
-        <DialogTitle>Toko part</DialogTitle>
-        <DialogDescription>Rakit tampilanmu. Coba dulu, beli, lalu pasang.</DialogDescription>
+        <DialogTitle>Toko aero kit</DialogTitle>
+        <DialogDescription>Coba langsung pada mobilmu, koleksi, lalu pasang ke slot yang sesuai.</DialogDescription>
       </DialogHeader>
       {open && active && <ShopContents game={game} disabled={disabled} onAction={onAction} onPending={value => { pending.current = value; }} />}
     </DialogContent>
