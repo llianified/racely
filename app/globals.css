@@ -576,7 +576,7 @@
 @media (prefers-reduced-motion: reduce) { .battery-cell > span { transition: none; } }
 
 /* ── keluarga tombol tekan: muka turun, alas tetap di tempat ─────────────── */
-.press-button { --press-depth: var(--space-3); --press-shift: var(--space-2); --press-shadow-color: var(--border); box-shadow: 0 var(--press-depth) 0 var(--press-shadow-color), var(--press-inset-shadow, 0 0 transparent); }
+.press-button { --press-depth: var(--space-3); --press-shift: var(--space-2); --press-radius: var(--radius); --press-shadow-color: var(--border); border-radius: var(--press-radius); box-shadow: 0 var(--press-depth) 0 var(--press-shadow-color), var(--press-inset-shadow, 0 0 transparent); }
 .press-button:active:not(:disabled) { translate: none; transform: translateY(var(--press-shift)); box-shadow: 0 calc(var(--press-depth) - var(--press-shift)) 0 var(--press-shadow-color), var(--press-inset-shadow, 0 0 transparent); }
 
 /* ── tombol emas: warna khusus dalam keluarga tombol tekan ─────────────── */
@@ -777,7 +777,7 @@
 .wallet-history-row p { margin-top: var(--space-xs); font-size: var(--fs-read); line-height: var(--lh-normal); color: var(--muted-foreground); overflow-wrap: anywhere; }
 .wallet-history-row p.wallet-history-refund { color: var(--success); font-weight: var(--fw-heavy); }
 
-/* ── boot ─────��────────────────────────────────────── */
+/* ── boot ─────��────────────���───────────────────────── */
 .boot-screen { display: flex; flex-direction: column; align-items: center; min-height: 100dvh; padding: calc(var(--space-32) + var(--safe-top)) var(--space-xl) calc(var(--space-xl) + var(--safe-bottom)); background: var(--background); color: var(--foreground); text-align: center; }
 .boot-eyebrow { font-size: var(--fs-read); font-weight: var(--fw-semibold); letter-spacing: var(--track-caps-3xl); line-height: var(--lh-normal); color: var(--muted-foreground); }
 .boot-content { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-48); width: 100%; min-height: var(--boot-content-h); }
