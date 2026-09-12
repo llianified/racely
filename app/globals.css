@@ -100,12 +100,12 @@
   --car-showcase-w: 76px;
   --car-showcase-h: 70px;
 
-  --scene-h: 240px;
+  --scene-h: 300px;
   --race-hud-gradient: linear-gradient(0deg, #090c1de6, #090c1d00 48%, #090c1d66);
   --scene-h-inspect: 240px;
   --stage-inspect-h: 192px;
   --scene-h-alert: 220px;
-  --scene-h-fullscreen: 144px;
+  --scene-h-fullscreen: 240px;
   --scene-hint-max-w: 260px;
 
   --logo-boot-w: 156px;
@@ -494,8 +494,6 @@
 .track-title { flex: 1; min-width: 0; }
 .circuit-number { display: grid; place-items: center; flex-shrink: 0; width: var(--space-30); height: var(--space-30); border: var(--stroke) solid var(--border); border-bottom: var(--stroke-2) solid var(--accent); border-radius: var(--corner-xs); font-size: var(--fs-title); font-weight: var(--fw-black); font-variant-numeric: tabular-nums; color: var(--foreground); background: var(--background); }
 .circuit-trigger { max-width: 100%; white-space: normal; text-align: left; padding-inline: var(--space-sm); font-size: var(--fs-body); font-weight: var(--fw-heavy); }
-.live-tag { display: inline-flex; align-items: center; gap: var(--space-5); color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps-xl); white-space: nowrap; }
-.live-tag::before { content: ''; width: var(--space-5); height: var(--space-5); flex-shrink: 0; border-radius: var(--corner-round); background: var(--accent); }
 .scene-wrap { height: var(--scene-h); position: relative; overflow: hidden; background: var(--card); isolation: isolate; }
 /* ── arena sinematik & tantangan grip (sesi, tidak menyentuh koin/lap) ── */
 .race-boost-action { margin-left: auto; }
@@ -546,17 +544,22 @@
 .lap-progress { position: relative; height: var(--space-xs); background: var(--secondary); overflow: hidden; }
 .lap-progress::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(25% - 2px), var(--background) calc(25% - 2px) 25%); pointer-events: none; }
 .lap-progress > div { width: 100%; height: 100%; transform-origin: left; background: var(--accent); }
-.track-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: color-mix(in srgb, var(--background) 28%, var(--card)); color: var(--foreground); }
-.track-stat { display: flex; flex-direction: column; gap: var(--space-6); padding: var(--space-lg) var(--space-md); border-right: var(--stroke) solid var(--border); }
-.track-stat:last-child { border: none; background: color-mix(in srgb, var(--accent) 4%, transparent); }
-/* Tiga sel berdampingan: "24.0 km/j" baru muat satu baris mulai 375px.
-   Di bawah itu paddingnya dirapatkan supaya nilainya tidak pecah dua baris. */
-@media (max-width: 374px) { .track-stat { padding-inline: var(--space-sm); } }
-.track-stat-label { color: var(--muted-foreground); display: flex; align-items: center; gap: var(--space-xs); font-size: var(--fs-read); font-weight: var(--fw-semibold); letter-spacing: var(--track-snug-sm); }
-.track-stat-label svg { display: none; width: var(--icon-base); height: var(--icon-base); flex-shrink: 0; }
-.track-stat-value { font-weight: var(--fw-black); font-size: clamp(var(--fs-4xl), 6.5vw, var(--fs-6xl)); letter-spacing: var(--track-tight-lg); font-variant-numeric: tabular-nums; line-height: var(--lh-tight); overflow-wrap: anywhere; }
-.track-stat-value small { display: inline; font-size: var(--fs-read); font-weight: var(--fw-medium); color: var(--muted-foreground); letter-spacing: var(--track-flat); }
-@media (min-width: 480px) { .track-stat-label svg { display: block; } }
+.race-overview-hud { position: absolute; inset: var(--space-md); z-index: var(--z-overlay); display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; color: var(--foreground); font-variant-numeric: tabular-nums; }
+.race-hud-top { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-sm); }
+.race-hud-position { display: flex; align-items: baseline; gap: var(--space-6); padding: var(--space-5) var(--space-10); border: var(--stroke) solid var(--border); border-radius: var(--corner-md); background: color-mix(in srgb, var(--background) 88%, transparent); color: var(--foreground); }
+.race-hud-position span { font-size: var(--fs-read); color: var(--muted-foreground); }
+.race-hud-position strong { color: var(--accent); font-weight: var(--fw-black); font-size: var(--fs-4xl); line-height: var(--lh-tight); }
+.race-hud-mode { padding: var(--space-6) var(--space-sm); border-radius: var(--corner-md); background: color-mix(in srgb, var(--background) 88%, transparent); color: var(--muted-foreground); font-size: var(--fs-read); font-weight: var(--fw-semibold); }
+.is-course-out .race-hud-mode { color: var(--accent); }
+.race-hud-telemetry { display: grid; grid-template-columns: 1.2fr 1fr 1fr; margin: 0; padding: var(--space-sm) 0; border: var(--stroke) solid var(--border); border-radius: var(--corner-md); background: color-mix(in srgb, var(--background) 88%, transparent); color: var(--foreground); }
+.race-hud-telemetry > div { display: flex; flex-direction: column; justify-content: center; gap: var(--space-3); min-width: 0; padding-inline: var(--space-10); }
+.race-hud-telemetry > div + div { border-left: var(--stroke) solid var(--border); }
+.race-hud-telemetry dt { color: var(--muted-foreground); font-size: var(--fs-read); line-height: var(--lh-normal); white-space: nowrap; }
+.race-hud-telemetry dd { display: flex; align-items: baseline; gap: var(--space-xs); margin: 0; font-size: var(--fs-2xl); font-weight: var(--fw-heavy); line-height: var(--lh-tight); letter-spacing: var(--track-tight-sm); white-space: nowrap; }
+.race-hud-telemetry .race-hud-speed dd { font-size: var(--fs-5xl); font-weight: var(--fw-black); }
+.race-hud-telemetry small { font-size: var(--fs-read); font-weight: var(--fw-medium); letter-spacing: var(--track-flat); color: var(--muted-foreground); }
+.race-hud-reward { color: var(--accent); }
+@media (max-width: 359px) { .race-hud-telemetry > div { padding-inline: var(--space-6); } .race-hud-telemetry .race-hud-speed dd { font-size: var(--fs-4xl); } }
 .reward-value { color: var(--accent); }
 .race-actions { padding: var(--space-md) var(--gutter); border-top: var(--stroke) solid var(--border); }
 .race-battery { padding: var(--space-lg) var(--space-md); border-top: var(--stroke) solid var(--border); background: var(--background); color: var(--accent); font-size: var(--fs-read); line-height: var(--lh-normal); }
@@ -906,7 +909,7 @@
   .brand-mark { width: var(--space-xl); }
   .brand-word { font-size: var(--fs-2xl); }
   .coin-balance { padding-inline: var(--space-sm); }
-  .coin-balance > svg, .track-stat-label svg { display: none; }
+  .coin-balance > svg { display: none; }
   .car-showcase { width: var(--car-showcase-w); height: var(--car-showcase-h); }
   .upgrade-action { flex-basis: 100%; }
 }

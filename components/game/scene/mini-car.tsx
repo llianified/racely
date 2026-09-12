@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useRef } from 'react'
+import { memo, useRef, type RefObject } from 'react'
 import { useFrame } from '@react-three/fiber'
 import type { CarModelId } from '@/lib/car-catalog'
 import type { GameState } from '@/lib/game'
@@ -393,12 +393,12 @@ function CarSurfaces({ parts, color, model, inspect = false }: {
   })}</>
 }
 
-function RollingWheel({ wheel, color, model, speed, level }: {
-  wheel: ReturnType<typeof createCarGeometry>['wheels'][number]; color: string; model: CarModelId; speed: number; level: number
+function RollingWheel({ wheel, color, model, speed, speedRef, level }: {
+  wheel: ReturnType<typeof createCarGeometry>['wheels'][number]; color: string; model: CarModelId; speed: number; speedRef?: RefObject<number>; level: number
 }) {
   const group = useRef<THREE.Group>(null)
   useFrame((_, delta) => {
-    if (group.current && !document.hidden) group.current.rotation.x = (group.current.rotation.x + Math.min(delta, .05) * speed / .122) % (Math.PI * 2)
+    if (group.current && !document.hidden) group.current.rotation.x = (group.current.rotation.x + Math.min(delta, .05) * (speedRef?.current ?? speed) / .122) % (Math.PI * 2)
   })
   return <group ref={group} position={wheel.position} scale={[1 + (level - 1) * .025, 1, 1]}>
     <CarSurfaces parts={wheel.parts} color={color} model={model} />
@@ -499,8 +499,8 @@ const InstalledParts = memo(function InstalledParts({ levels, inspect }: { level
   </group>
 })
 
-export const MiniCar = memo(function MiniCar({ color, model = 'neo-falcon', scale = 1, speed = 0, inspect = false, charge = 1, levels = STOCK_LEVELS, equipped }: {
-  color: string; model?: CarModelId; scale?: number; speed?: number; inspect?: boolean; charge?: number; levels?: GameState['levels']; equipped?: BodyParts['equipped']
+export const MiniCar = memo(function MiniCar({ color, model = 'neo-falcon', scale = 1, speed = 0, speedRef, inspect = false, charge = 1, levels = STOCK_LEVELS, equipped }: {
+  color: string; model?: CarModelId; scale?: number; speed?: number; speedRef?: RefObject<number>; inspect?: boolean; charge?: number; levels?: GameState['levels']; equipped?: BodyParts['equipped']
 }) {
   const geometry = GEOMETRY_CACHE[model] ?? (GEOMETRY_CACHE[model] = createCarGeometry(model))
   return <group scale={scale}>
@@ -509,7 +509,7 @@ export const MiniCar = memo(function MiniCar({ color, model = 'neo-falcon', scal
     {!inspect && Object.values(equipped ?? {}).map(id => <AeroPart key={id} id={id} color={color} model={model} />)}
     {inspect && <CarSurfaces parts={geometry.internals} color={color} model={model} />}
     <InstalledParts levels={levels} inspect={inspect} />
-    {geometry.wheels.map((wheel, index) => <RollingWheel key={index} wheel={wheel} color={color} model={model} speed={speed} level={levels.tires} />)}
+    {geometry.wheels.map((wheel, index) => <RollingWheel key={index} wheel={wheel} color={color} model={model} speed={speed} speedRef={speedRef} level={levels.tires} />)}
     {inspect && Array.from({ length: 5 }, (_, index) => <mesh key={index} position={[(index - 2) * .023, .216, -.157]}>
       <boxGeometry args={[.016, .008, .018]} />
       <meshStandardMaterial color={COLORS.navy} emissive={COLORS.gold} emissiveIntensity={charge > index / 5 ? 1.8 : 0} />
