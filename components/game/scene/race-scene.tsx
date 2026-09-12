@@ -325,7 +325,7 @@ function CarInspector({ color, model, charge, reducedMotion, bodyVisible, levels
 }
 
 function SceneError({ onRetry }: { onRetry: () => void }) {
-  return <div className="scene-loading" role="alert"><Flag /><strong>Arena 3D perlu dinyalakan ulang.</strong><span>Progres sesi tetap aman. Coba lagi atau buka di browser yang mendukung WebGL.</span><button onClick={onRetry} className="flex items-center gap-2"><RotateCcw size={14} />Muat ulang arena</button></div>
+  return <div className="scene-loading" role="alert"><Flag /><strong>Arena 3D perlu dinyalakan ulang.</strong><span>Progres sesi tetap aman. Coba lagi atau buka di browser yang mendukung WebGL.</span><button onClick={onRetry} className="flex items-center gap-sm"><RotateCcw className="size-(--icon-sm)" />Muat ulang arena</button></div>
 }
 
 class SceneBoundary extends Component<{ children: ReactNode; onRetry: () => void }, { failed: boolean }> {
