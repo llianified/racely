@@ -137,7 +137,6 @@ export function BodyPartsShop({ game, active, disabled, onAction }: ShopProps) {
           <div><Wind aria-hidden="true" /><h3>Aero kit</h3><Badge variant="secondary">{equippedCount} / {PART_SLOTS.length} aktif</Badge></div>
           <p>{ownedCount} dari {PART_IDS.length} part sudah masuk koleksi.</p>
         </div>
-        <DialogTrigger render={<Button variant="gold" disabled={disabled} />}><ShoppingBag data-icon="inline-start" />Buka toko</DialogTrigger>
       </div>
       <dl className="garage-parts-slots" aria-label="Slot aero kit terpasang">
         {PART_SLOTS.map(slot => {
@@ -148,6 +147,7 @@ export function BodyPartsShop({ game, active, disabled, onAction }: ShopProps) {
           </div>;
         })}
       </dl>
+      <DialogTrigger render={<Button variant="gold" className="w-full" disabled={disabled} />}><ShoppingBag data-icon="inline-start" />Buka toko</DialogTrigger>
     </div>
     <DialogContent className="parts-shop-dialog">
       <DialogHeader className="parts-shop-header">
