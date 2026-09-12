@@ -65,9 +65,12 @@ Drizzle ORM, Neon Postgres, Vitest, PM2 di AWS EC2.
   onboarding tersimpan, `car_model` persisten, `claimTelegramUpdate()`
   idempoten di Postgres, withdrawal `pending`. Migrasi belum dijalankan di
   sandbox karena `DATABASE_URL` belum tersedia.
-- **C. Kualitas.** `pnpm run typecheck`, `pnpm install --frozen-lockfile`, dan
-  `pnpm run build:standalone` lulus. `lib/telegram-updates.ts` dipastikan tidak
-  ter-bundle ke client (dijaga `server-only`).
+- **C. Kualitas.** `pnpm run typecheck`, `pnpm run lint`, `pnpm install
+  --frozen-lockfile`, dan `pnpm run build:standalone` lulus.
+  `lib/telegram-updates.ts` dipastikan tidak ter-bundle ke client (dijaga
+  `server-only`). Lint memakai ESLint flat config (`eslint.config.mjs`) —
+  `next lint` sudah dihapus di Next 16. Semua gate ini dijalankan otomatis di
+  `.github/workflows/ci.yml`.
 - **D. UI.** Diverifikasi agent-browser pada 384x595 dark mode: onboarding →
   pemilihan mobil → dashboard → withdrawal (status pending/manual), serta
   respons `429` saat rate limit tercapai.

@@ -6,7 +6,20 @@ import './globals.css'
 const description =
   'Mobil kecil, ambisi besar. Balapan mini 4WD 3D, kumpulkan koin virtual, dan rakit mobil impianmu bersama Racely.'
 
+// Social cards need absolute image URLs. Without this the build falls back to
+// http://localhost:3000 and every shared link renders a broken preview, so
+// PUBLIC_APP_URL has to be present at build time (see docs/RUNBOOK.md).
+function siteUrl() {
+  try {
+    const url = new URL(process.env.PUBLIC_APP_URL ?? '')
+    return url.protocol === 'https:' ? url : undefined
+  } catch {
+    return undefined
+  }
+}
+
 export const metadata: Metadata = {
+  metadataBase: siteUrl(),
   title: 'Racely — Night Racing Garage',
   description,
   applicationName: 'Racely',
@@ -16,7 +29,7 @@ export const metadata: Metadata = {
     title: 'Racely — Night Racing Garage',
     description,
     locale: 'id_ID',
-    images: [{ url: '/racely-logo.png', width: 1254, height: 1254, alt: 'Logo Racely: bendera balap kotak-kotak kuning dan ungu' }],
+    images: [{ url: '/racely-logo.png', width: 512, height: 512, alt: 'Logo Racely: bendera balap kotak-kotak kuning dan ungu' }],
   },
   twitter: {
     card: 'summary',

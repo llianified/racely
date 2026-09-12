@@ -2,6 +2,10 @@
   "name": "racely",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "dev": "next dev",
     "db:migrate": "node scripts/migrate.mjs",
@@ -13,6 +17,7 @@
     "pm2:start": "pm2 start ecosystem.config.cjs --update-env",
     "pm2:reload": "pm2 reload ecosystem.config.cjs --update-env",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
     "test": "vitest run"
   },
   "dependencies": {
@@ -24,7 +29,6 @@
     "@vercel/functions": "^3.9.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "cn": "^0.2.6",
     "drizzle-orm": "^0.45.2",
     "lucide-react": "^1.16.0",
     "next": "16.3.3",
@@ -33,7 +37,6 @@
     "pm2": "^7.0.4",
     "react": "^19",
     "react-dom": "^19",
-    "shadcn": "^4.11.0",
     "sonner": "^2.0.8",
     "swr": "^2.5.1",
     "tailwind-merge": "^3.3.1",
@@ -48,7 +51,10 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/three": "^0.185.4",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "16.3.3",
     "postcss": "^8.5",
+    "shadcn": "^4.11.0",
     "tailwindcss": "^4.3.3",
     "typescript": "5.7.3",
     "vitest": "^5.0.0"
