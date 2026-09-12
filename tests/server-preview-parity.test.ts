@@ -112,6 +112,31 @@ describe("Boost timing has one source of truth", () => {
   });
 });
 
+describe("Circuit progression only moves forward", () => {
+  it("keeps the higher-reward circuit after it has been selected", () => {
+    const fresh = getPreviewGameState(request(), identity);
+    const decoded = JSON.parse(
+      Buffer.from(fresh.cookieValue, "base64url").toString("utf8"),
+    );
+    decoded.state.laps = 25;
+    decoded.state.circuit = 0;
+    decoded.state.carSelection = { model: "luna-gt", returningPlayer: false };
+    decoded.state.color = "#b9a1ed";
+    const eligibleCookie = Buffer.from(
+      JSON.stringify(decoded),
+      "utf8",
+    ).toString("base64url");
+
+    const advanced = act(eligibleCookie, { type: "circuit", circuit: 1 });
+    expect(advanced.state.circuit).toBe(1);
+    expect(() =>
+      act(advanced.cookieValue, { type: "circuit", circuit: 0 }),
+    ).toThrow("Trek lama tidak bisa dipilih lagi");
+    expect(gameServerSource).toContain("action.circuit < next.circuit");
+    expect(previewSource).toContain("action.circuit < state.circuit");
+  });
+});
+
 describe("Repeating a settled action is a no-op in both writers", () => {
   it("accepts re-confirming the same car without resetting anything", () => {
     // Jaringan yang putus setelah server menyimpan membuat klien mencoba lagi

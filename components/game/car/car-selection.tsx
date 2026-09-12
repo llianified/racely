@@ -11,7 +11,15 @@ import { Button } from "@/components/ui/button";
 import { CAR_CATALOG, CAR_MODEL_IDS, isCarColor, type CarColor, type CarModelId } from "@/lib/car-catalog";
 import { CarColorPicker } from "./car-color-picker";
 
-const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), { ssr: false });
+const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
+  ssr: false,
+  loading: () => (
+    <div className="scene-loading" role="status">
+      <LoaderCircle className="animate-spin" aria-hidden="true" />
+      <strong>Menyiapkan mobil 3D…</strong>
+    </div>
+  ),
+});
 
 export function CarSelection({ developmentPreview, returningPlayer, initialColor, saving, onConfirm }: {
   developmentPreview: boolean;
@@ -63,7 +71,7 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
             <Image src="/racely-logo.png" alt="" width={372} height={248} sizes="36px" className="selection-logo" />
             <span>RACELY<span className="selection-brand-dot" aria-hidden="true">.</span></span>
           </div>
-          {developmentPreview ? <Badge variant="secondary">Development</Badge> : <span className="selection-edition">START YOUR STORY</span>}
+          {developmentPreview ? <Badge variant="secondary" className="selection-edition">Development</Badge> : <span className="selection-edition">START YOUR STORY</span>}
         </div>
         <ol className="selection-steps" aria-label="Langkah onboarding">
           <li aria-current={step === 1 ? "step" : undefined} data-complete={step === 2 || undefined}>
@@ -86,7 +94,7 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
           <span>{car.chassis}</span>
           <Badge variant="outline">Gratis</Badge>
         </div>
-        <div className="selection-stage" role="img" aria-label={`${car.name}, warna ${colorName}, model 3D berputar`}>
+        <div className="selection-stage" role="img" aria-label={`${car.name}, warna ${colorName}. Geser untuk memutar mobil 3D.`}>
           <CarPreviewScene model={model} color={color} />
         </div>
         <div className="selection-details" aria-live="polite" aria-atomic="true">
@@ -120,10 +128,6 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
         ) : (
           <CarColorPicker model={model} color={color} disabled={busy} onChoose={(next) => { setColor(next); setFailed(false); }} />
         )}
-        <p className="selection-hint">
-          <LockKeyhole className="size-4" aria-hidden="true" />
-          {step === 1 ? "Model hanya bisa dipilih sekali." : "Model permanen. Warna bisa diganti di garasi."}
-        </p>
       </div>
 
       <footer className="selection-footer">
@@ -140,6 +144,10 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
             {step === 1 && <ArrowRight data-icon="inline-end" />}
           </Button>
         </div>
+        <p className="selection-hint">
+          <LockKeyhole className="size-4" aria-hidden="true" />
+          {step === 1 ? "Model dipilih sekali." : "Model tetap; warna bisa diganti."}
+        </p>
         <p className="selection-save-note">{developmentPreview
           ? "Preview saja · progres lokal di browser ini."
           : "Tersimpan ke akun Telegram kamu."}</p>

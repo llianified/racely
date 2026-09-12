@@ -279,7 +279,7 @@ export function WalletPanel({
         <SectionCardHeading
           icon={Clock}
           title="Riwayat penarikan"
-          aside={<span>{game.withdrawals.length} permintaan</span>}
+          aside={<Badge variant="secondary">{game.withdrawals.length} permintaan</Badge>}
         />
         {game.withdrawals.length === 0 ? (
           <p className="wallet-empty">

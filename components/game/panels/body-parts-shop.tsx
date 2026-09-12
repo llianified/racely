@@ -15,7 +15,12 @@ import { SectionCardHeading } from "../shell/section-card-heading";
 
 const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
   ssr: false,
-  loading: () => <div className="scene-loading" role="status">Menyiapkan part 3D…</div>,
+  loading: () => (
+    <div className="scene-loading" role="status">
+      <LoaderCircle className="animate-spin" aria-hidden="true" />
+      <strong>Menyiapkan mobil 3D…</strong>
+    </div>
+  ),
 });
 
 type ShopProps = {
@@ -64,7 +69,7 @@ function ShopContents({ game, disabled, onAction, onPending }: Omit<ShopProps, "
   return <>
     <div className="parts-shop-scroll">
       <div className="parts-shop-stage" role="img" aria-label={`${CAR_CATALOG[model].name}: ${trying ? `pratinjau ${part.name}, belum disimpan` : "part yang terpasang"}`}>
-        <CarPreviewScene color={game.color} model={model} levels={game.levels} equipped={previewParts} interactive />
+        <CarPreviewScene color={game.color} model={model} levels={game.levels} equipped={previewParts} />
       </div>
       <div className="parts-shop-preview-bar">
         <div className="parts-shop-preview-state">
@@ -132,7 +137,7 @@ export function BodyPartsShop({ game, active, disabled, onAction }: ShopProps) {
   const ownedCount = game.bodyParts?.owned.length ?? 0;
   const equippedCount = Object.keys(game.bodyParts?.equipped ?? {}).length;
   return <Sheet open={open && active} onOpenChange={value => { if (!pending.current) setOpen(value); }}>
-    <div className="garage-parts">
+    <section className="panel garage-parts" aria-label="Aero kit">
       <SectionCardHeading
         icon={Wind}
         title="Aero kit"
@@ -153,7 +158,7 @@ export function BodyPartsShop({ game, active, disabled, onAction }: ShopProps) {
       <div className="pt-lg">
         <SheetTrigger render={<Button variant="gold" className="w-full" disabled={disabled} />}><ShoppingBag data-icon="inline-start" />Buka toko</SheetTrigger>
       </div>
-    </div>
+    </section>
     <SheetContent side="bottom" className="game-sheet parts-shop-dialog">
       <SheetHeader className="parts-shop-header">
         <SheetTitle>Toko aero kit</SheetTitle>
