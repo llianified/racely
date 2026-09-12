@@ -186,5 +186,3 @@ instance sebelum keduanya dipindahkan ke Postgres/Redis.
 - Deployment adalah Node.js standalone + PM2 di EC2, bukan serverless.
 - Migrasi bersifat additive dan idempoten. Untuk membatalkan sesuatu, tulis
   migrasi maju baru — jangan mengedit migrasi yang sudah dijalankan.
-
-Konteks lengkap dan sisa pekerjaan: **`docs/HANDOFF.md`**.
