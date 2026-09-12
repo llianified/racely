@@ -806,7 +806,7 @@
   .boot-logo { width: var(--logo-boot-w-short); }
 }
 .circuit-preview { display: flex; align-items: center; gap: var(--space-md); margin: var(--space-10) calc(var(--space-md) * -1) 0; padding: var(--space-md); border-block: var(--stroke) dashed var(--border); color: var(--foreground); }
-.circuit-ticket-number { flex-shrink: 0; align-self: stretch; display: flex; align-items: center; margin-block: -12px; padding: var(--space-md) var(--space-md) var(--space-md) 0; border-right: var(--stroke) solid var(--border); color: var(--subtle-foreground); font-size: var(--fs-6xl); font-weight: var(--fw-black); letter-spacing: var(--track-tight-2xl); line-height: var(--lh-none); }
+.circuit-ticket-label { flex-shrink: 0; align-self: stretch; display: flex; align-items: center; margin-block: calc(var(--space-md) * -1); padding: var(--space-md) var(--space-md) var(--space-md) 0; border-right: var(--stroke) solid var(--border); color: var(--subtle-foreground); font-size: var(--fs-read); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps-md); line-height: var(--lh-none); text-transform: uppercase; }
 .circuit-ticket-flag { width: var(--space-20); height: var(--space-20); flex-shrink: 0; color: var(--subtle-foreground); margin-left: auto; }
 .circuit-panel { border-radius: var(--corner-xl); }
 .circuit-panel .section-card-heading h2 { font-size: var(--fs-lead); }

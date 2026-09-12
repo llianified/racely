@@ -406,6 +406,9 @@ export function performPreviewGameAction(
   } else if (action.type === "color") {
     state = { ...state, color: action.color };
   } else if (action.type === "circuit") {
+    if (action.circuit < state.circuit) {
+      throw new PreviewGameRuleError("Trek lama tidak bisa dipilih lagi.");
+    }
     if (action.circuit === 1 && state.laps < 25) {
       throw new PreviewGameRuleError(
         "Selesaikan 25 putaran untuk membuka sirkuit ini.",
