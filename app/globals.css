@@ -32,8 +32,9 @@
   --menu-header: #494078;
   --gold-highlight: #fff18b;
   --gold-shadow: #ba731b;
-  /* Kiblatnya tombol Gaspol: 6px. Semua sudut besar bersumber dari sini. */
+  /* Kiblatnya keluarga tombol tekan. Permukaan utama onboarding ikut token ini. */
   --radius: .375rem;
+  --press-radius: var(--radius);
   --app-width: 480px;
 
   /* ── tangga ukuran (px) ──────────────────────────────────────────────────
@@ -379,7 +380,7 @@
 .car-selection h1 { font-size: clamp(var(--fs-5xl), 8vw, var(--fs-8xl)); font-weight: var(--fw-blacker); letter-spacing: var(--track-tight-md); line-height: var(--lh-display); text-wrap: balance; }
 .car-selection h1 > span { color: var(--accent); }
 .selection-intro > p { color: var(--muted-foreground); text-wrap: pretty; }
-.selection-showcase { overflow: hidden; border: var(--stroke) solid color-mix(in srgb, var(--muted-foreground) 18%, transparent); border-radius: var(--corner-3xl); background: color-mix(in srgb, var(--primary) 9%, var(--background)); color: var(--foreground); }
+.selection-showcase { overflow: hidden; border: var(--stroke) solid color-mix(in srgb, var(--muted-foreground) 18%, transparent); border-radius: var(--press-radius); background: color-mix(in srgb, var(--primary) 9%, var(--background)); color: var(--foreground); }
 .selection-specs { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); padding: var(--space-md) var(--space-lg) 0; color: var(--muted-foreground); font-size: var(--fs-read); }
 .selection-stage { height: clamp(var(--stage-select-h), 29dvh, var(--stage-select-h-max)); }
 .selection-details { display: flex; flex-direction: column; gap: var(--space-xs); padding: 0 var(--space-lg) var(--space-lg); }
@@ -387,12 +388,12 @@
 .selection-details > p { min-height: var(--space-42); color: var(--muted-foreground); font-size: var(--fs-read); text-wrap: pretty; }
 .selection-controls { display: flex; flex-direction: column; gap: var(--space-md); }
 .car-model-options { display: flex; gap: var(--space-sm); }
-.car-model-option { display: flex; flex: 1; align-items: center; justify-content: space-between; gap: var(--space-sm); min-width: 0; min-height: var(--space-48); padding-inline: var(--space-md); border: var(--stroke) solid color-mix(in srgb, var(--muted-foreground) 22%, transparent); border-radius: var(--corner-2xl); background: var(--background); color: var(--muted-foreground); font-weight: var(--fw-bold); }
+.car-model-option { display: flex; flex: 1; align-items: center; justify-content: space-between; gap: var(--space-sm); min-width: 0; min-height: var(--space-48); padding-inline: var(--space-md); border: var(--stroke) solid color-mix(in srgb, var(--muted-foreground) 22%, transparent); border-radius: var(--press-radius); background: var(--background); color: var(--muted-foreground); font-weight: var(--fw-bold); }
 .car-model-option:hover:not(:disabled) { border-color: var(--muted-foreground); color: var(--foreground); }
 .car-model-option[data-pressed] { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 18%, var(--background)); color: var(--foreground); }
 .selection-check { visibility: hidden; flex-shrink: 0; color: var(--accent); }
 .car-model-option[data-pressed] .selection-check { visibility: visible; }
-.car-selection .garage-customize { padding: var(--space-9) var(--space-10); border: var(--stroke) solid transparent; border-radius: var(--corner-panel); background: var(--secondary); }
+.car-selection .garage-customize { padding: var(--space-9) var(--space-10); border: var(--stroke) solid transparent; border-radius: var(--press-radius); background: var(--secondary); }
 .car-selection .garage-color-label { font-size: var(--fs-read); }
 .car-selection .color-swatch { width: var(--space-44); height: var(--space-44); }
 .car-selection [data-slot='button'], .car-selection [data-slot='badge'] { font-size: var(--fs-read); }
@@ -576,7 +577,7 @@
 @media (prefers-reduced-motion: reduce) { .battery-cell > span { transition: none; } }
 
 /* ── keluarga tombol tekan: muka turun, alas tetap di tempat ─────────────── */
-.press-button { --press-depth: var(--space-3); --press-shift: var(--space-2); --press-radius: var(--radius); --press-shadow-color: var(--border); border-radius: var(--press-radius); box-shadow: 0 var(--press-depth) 0 var(--press-shadow-color), var(--press-inset-shadow, 0 0 transparent); }
+.press-button { --press-depth: var(--space-3); --press-shift: var(--space-2); --press-shadow-color: var(--border); border-radius: var(--press-radius); box-shadow: 0 var(--press-depth) 0 var(--press-shadow-color), var(--press-inset-shadow, 0 0 transparent); }
 .press-button:active:not(:disabled) { translate: none; transform: translateY(var(--press-shift)); box-shadow: 0 calc(var(--press-depth) - var(--press-shift)) 0 var(--press-shadow-color), var(--press-inset-shadow, 0 0 transparent); }
 
 /* ── tombol emas: warna khusus dalam keluarga tombol tekan ─────────────── */
