@@ -70,6 +70,7 @@ export function Topbar({
   balance,
   level,
   racerName,
+  racerPhotoUrl,
   onWallet,
   onHelp,
 }: {
@@ -77,6 +78,7 @@ export function Topbar({
   balance: number;
   level: number;
   racerName: string;
+  racerPhotoUrl: string | null;
   onWallet: () => void;
   onHelp: () => void;
 }) {
@@ -107,7 +109,19 @@ export function Topbar({
           aria-label={`${racerName}, level ${level}. Cara bermain`}
           title={`${racerName} · Level ${level} · Cara bermain`}
         >
-          <span className="racer-initial" aria-hidden="true">{initial}</span>
+          {racerPhotoUrl ? (
+            <Image
+              src={racerPhotoUrl}
+              alt=""
+              width={32}
+              height={32}
+              sizes="32px"
+              className="racer-photo"
+              aria-hidden="true"
+            />
+          ) : (
+            <span className="racer-initial" aria-hidden="true">{initial}</span>
+          )}
           <span className="racer-level" aria-hidden="true">LV {level}</span>
         </button>
       </div>
