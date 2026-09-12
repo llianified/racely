@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { courseOutPose, createDrivingState, gripTuning, isTrackCorner, RECOVERY_SECONDS, stepDriving } from '../lib/race-dynamics';
+import { courseOutPose, createDrivingState, gripTuning, isTrackCorner, powertrainTuning, RECOVERY_SECONDS, resetGripChallenge, stepDriving, stepPowertrain, type DrivingState } from '../lib/race-dynamics';
 
 describe('course-out choreography', () => {
   it('launches from rest, lands upside down, and bounces before recovery', () => {
@@ -32,6 +32,159 @@ describe('course-out choreography', () => {
     for (let frame = 0; frame <= 132; frame++) {
       const pose = courseOutPose(frame / 60, true);
       expect(pose).toMatchObject({ lift: 0, roll: 0, pitch: 0, yaw: 0, impacts: 0 });
+    }
+  });
+});
+
+describe('arena powertrain', () => {
+  function advance(state: DrivingState, seconds: number, boosted: boolean, engine = 1, battery = 1, fps = 60) {
+    for (let frame = 0; frame < Math.round(seconds * fps); frame++) stepPowertrain(state, 1 / fps, boosted, engine, battery);
+  }
+
+  it('improves acceleration and capacity at every upgrade without changing top speed', () => {
+    for (let level = 1; level < 10; level++) {
+      const current = createDrivingState();
+      const upgraded = createDrivingState();
+      current.visualSpeed = upgraded.visualSpeed = .3;
+      advance(current, .5, false, level);
+      advance(upgraded, .5, false, level + 1);
+      expect(upgraded.visualSpeed).toBeGreaterThan(current.visualSpeed);
+      expect(upgraded.visualSpeed).toBeLessThan(1);
+      expect(powertrainTuning(1, level + 1).boostCapacitySeconds).toBeGreaterThan(powertrainTuning(1, level).boostCapacitySeconds);
+      advance(current, 12, false, level);
+      advance(upgraded, 12, false, level + 1);
+      expect(current.visualSpeed).toBeCloseTo(upgraded.visualSpeed, 5);
+    }
+  });
+
+  it('matches the 90 percent response time shown in the upgrade sheet', () => {
+    for (let level = 1; level <= 10; level++) {
+      const state = createDrivingState();
+      state.visualSpeed = 0;
+      const time = Math.log(10) / powertrainTuning(level).accelerationRate;
+      const frames = 100;
+      for (let frame = 0; frame < frames; frame++) stepPowertrain(state, time / frames, false, level);
+      expect(state.visualSpeed).toBeCloseTo(.9, 6);
+    }
+  });
+
+  it('slows for corners and accelerates back out with engine-dependent response', () => {
+    const stock = createDrivingState();
+    stock.corner = true;
+    advance(stock, 2, false);
+    expect(stock.visualSpeed).toBeCloseTo(.82, 4);
+    stock.corner = false;
+    const upgraded = { ...stock };
+    advance(stock, .4, false, 1);
+    advance(upgraded, .4, false, 10);
+    expect(upgraded.visualSpeed).toBeGreaterThan(stock.visualSpeed);
+  });
+
+  it('boosts speed and RPM using actual drive power, then fades before depletion', () => {
+    const state = createDrivingState();
+    advance(state, 2, true);
+    expect(state.visualSpeed).toBeGreaterThan(1.9);
+    expect(state.rpm).toBeGreaterThan(12000);
+    expect(state.rpm).toBeLessThanOrEqual(powertrainTuning().maxRpm);
+    advance(state, 1.5, true);
+    expect(state.boostPower).toBeGreaterThan(0);
+    expect(state.boostPower).toBeLessThan(1);
+    advance(state, 1, true);
+    expect(state.boostPower).toBe(0);
+    expect(state.visualSpeed).toBeLessThan(1.1);
+    expect(state.rpm).toBeLessThan(9000);
+  });
+
+  it('exhausts exactly the displayed capacity at every battery level and frame rate', () => {
+    for (const fps of [30, 60, 120]) {
+      for (let level = 1; level <= 10; level++) {
+        const state = createDrivingState();
+        advance(state, powertrainTuning(1, level).boostCapacitySeconds, true, 1, level, fps);
+        expect(state.boostEnergy).toBe(0);
+        expect(state.boostExhausted).toBe(true);
+        expect(state.boostPower).toBe(0);
+      }
+    }
+  });
+
+  it('recharges only without Gaspol and never pulses boost after exhaustion', () => {
+    const state = createDrivingState();
+    advance(state, 4, true);
+    advance(state, 5, true);
+    expect(state.boostEnergy).toBe(0);
+    expect(state.boostPower).toBe(0);
+    advance(state, 6, false);
+    expect(state.boostEnergy).toBeCloseTo(.5);
+    expect(state.boostExhausted).toBe(false);
+    advance(state, 7, false);
+    expect(state.boostEnergy).toBe(1);
+    advance(state, .1, true);
+    expect(state.boostPower).toBeGreaterThan(0);
+    expect(state.boostEnergy).toBeLessThan(1);
+  });
+
+  it('withholds boost during recovery or off-road travel without refilling energy', () => {
+    for (const interruption of [{ recovery: RECOVERY_SECONDS }, { offRoad: true }]) {
+      const state: DrivingState = { ...createDrivingState(), ...interruption, boostEnergy: .4 };
+      advance(state, 1, true);
+      expect(state.boostEnergy).toBe(.4);
+      expect(state.boostPower).toBe(0);
+      if (state.recovery > 0) {
+        expect(state.visualSpeed).toBeLessThan(.01);
+        expect(state.rpm).toBeLessThan(10);
+      }
+      state.recovery = 0;
+      state.offRoad = false;
+      advance(state, .5, true, 10);
+      expect(state.boostPower).toBeGreaterThan(0);
+      expect(state.visualSpeed).toBeGreaterThan(1);
+    }
+  });
+
+  it('does not reset the powertrain when the grip challenge is toggled', () => {
+    const state = createDrivingState();
+    advance(state, 4, true);
+    const before = { ...state };
+    resetGripChallenge(state, false);
+    expect(state.enabled).toBe(false);
+    resetGripChallenge(state, true);
+    for (const key of ['boostEnergy', 'boostPower', 'boostExhausted', 'visualSpeed', 'acceleration', 'rpm'] as const) {
+      expect(state[key]).toBe(before[key]);
+    }
+  });
+
+  it('applies upgrades mid-run without resetting energy or handling counters', () => {
+    const state = createDrivingState();
+    Object.assign(state, { boostEnergy: .4, grip: 55, cleanCorners: 3, courseOuts: 2 });
+    stepPowertrain(state, .1, true, 10, 10);
+    expect(state.boostEnergy).toBeCloseTo(.4 - .1 / 8.5);
+    expect(state).toMatchObject({ grip: 55, cleanCorners: 3, courseOuts: 2 });
+  });
+
+  it('bounds invalid levels and time jumps without introducing NaN', () => {
+    for (const level of [-1, 0, NaN, Infinity, -Infinity]) expect(powertrainTuning(level, level)).toEqual(powertrainTuning(1, 1));
+    expect(powertrainTuning(100, 100)).toEqual(powertrainTuning(10, 10));
+    expect(powertrainTuning(3.9, 3.9)).toEqual(powertrainTuning(3, 3));
+    for (const dt of [0, -1, NaN, Infinity, -Infinity]) {
+      const state = createDrivingState();
+      stepPowertrain(state, dt, true);
+      expect(state).toEqual(createDrivingState());
+    }
+    const state = createDrivingState();
+    stepPowertrain(state, 100, true);
+    expect(state.boostEnergy).toBeCloseTo(.975);
+  });
+
+  it('keeps acceleration and charge consistent across frame rates', () => {
+    const states = [30, 60, 120].map(fps => {
+      const state = createDrivingState();
+      advance(state, 2, true, 4, 4, fps);
+      return state;
+    });
+    for (const state of states) {
+      expect(state.visualSpeed).toBeCloseTo(states[0].visualSpeed, 5);
+      expect(state.boostEnergy).toBeCloseTo(states[0].boostEnergy, 5);
+      expect(Math.abs(state.rpm - states[0].rpm)).toBeLessThan(20);
     }
   });
 });
