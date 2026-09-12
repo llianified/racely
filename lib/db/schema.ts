@@ -41,11 +41,25 @@ export const players = pgTable("racely_players", {
   lastSettledAt: timestamp("last_settled_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+  idleNotifiedAt: timestamp("idle_notified_at", { withTimezone: true }),
+  referredBy: text("referred_by"),
+  referralPaidAt: timestamp("referral_paid_at", { withTimezone: true }),
   version: integer("version").notNull().default(1),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/**
+ * Pemain yang sudah membuka percakapan dengan bot. Tanpa foreign key ke
+ * players: /start biasanya terjadi sebelum baris pemain ada.
+ */
+export const botChats = pgTable("racely_bot_chats", {
+  userId: text("user_id").primaryKey(),
+  startedAt: timestamp("started_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
 });

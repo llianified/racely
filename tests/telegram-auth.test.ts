@@ -34,7 +34,12 @@ function signInitData(
 }
 
 function initData(
-  overrides: Partial<{ authDate: number; user: unknown; token: string }> = {},
+  overrides: Partial<{
+    authDate: number;
+    user: unknown;
+    token: string;
+    startParam: string;
+  }> = {},
 ) {
   const authDate = overrides.authDate ?? Math.floor(Date.now() / 1000);
   return signInitData(
@@ -42,6 +47,9 @@ function initData(
       query_id: "AAHdF6IQAAAAAN0XohDhrOrc",
       auth_date: String(authDate),
       user: JSON.stringify(overrides.user ?? USER),
+      ...(overrides.startParam === undefined
+        ? {}
+        : { start_param: overrides.startParam }),
     },
     overrides.token ?? BOT_TOKEN,
   );
@@ -62,7 +70,36 @@ describe("Telegram initData authentication", () => {
       username: "rizky",
       displayName: "Rizky Pratama",
       photoUrl: null,
+      startParam: null,
     });
+  });
+
+  it("membaca start_param dari deep link referral", () => {
+    vi.stubEnv("TELEGRAM_BOT_TOKEN", BOT_TOKEN);
+    const identity = authenticateTelegramRequest(
+      authed(initData({ startParam: "ref_555000111" })),
+    );
+    expect(identity.startParam).toBe("ref_555000111");
+  });
+
+  it("menolak start_param yang di luar charset aman", () => {
+    vi.stubEnv("TELEGRAM_BOT_TOKEN", BOT_TOKEN);
+    const identity = authenticateTelegramRequest(
+      authed(initData({ startParam: "ref_1;drop table" })),
+    );
+    expect(identity.startParam).toBeNull();
+  });
+
+  it("start_param ikut ditandatangani, jadi tidak bisa ditukar", () => {
+    // Inilah yang membuat ikatan referral tidak bisa dipalsukan pemain:
+    // menukar id pengajak merusak HMAC seluruh initData.
+    vi.stubEnv("TELEGRAM_BOT_TOKEN", BOT_TOKEN);
+    const signed = initData({ startParam: "ref_1" });
+    const tampered = signed.replace("ref_1", "ref_999");
+    expect(tampered).not.toBe(signed);
+    expect(() => authenticateTelegramRequest(authed(tampered))).toThrow(
+      TelegramAuthError,
+    );
   });
 
   it("rejects a payload signed with a different bot token", () => {

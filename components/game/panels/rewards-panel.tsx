@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Coins, Flag, Gift, LockKeyhole, Trophy } from "lucide-react";
+import { CalendarCheck, Check, Coins, Copy, Flag, Gift, LockKeyhole, Trophy, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { InfoHint } from "./info-hint";
@@ -11,6 +11,9 @@ import {
   idr,
   MISSIONS,
   missionValue,
+  REFERRAL_MILESTONE_LAPS,
+  REFERRAL_REWARD_INVITEE,
+  REFERRAL_REWARD_INVITER,
   STARTER_GIFT,
   type GameState,
 } from "@/lib/game";
@@ -34,23 +37,80 @@ export function claimableTotal(game: GameState) {
   ).reduce((sum, m) => sum + m.reward, 0);
   // Only whole coins can move from pending into the balance.
   return (
-    Math.floor(game.pending) + (game.rewardClaimed ? 0 : GIFT_AMOUNT) + missions
+    Math.floor(game.pending) +
+    (game.rewardClaimed ? 0 : GIFT_AMOUNT) +
+    game.daily.reward +
+    missions
+  );
+}
+
+function dailyNote(daily: GameState["daily"]) {
+  if (daily.claimedToday)
+    return daily.streak > 1
+      ? `Streak ${daily.streak} hari. Balik besok untuk ${coins(daily.nextReward)}.`
+      : `Sudah diklaim hari ini. Besok ${coins(daily.nextReward)}.`;
+  return daily.streak > 0
+    ? `Streak ${daily.streak} hari berjalan. Klaim hari ini supaya tidak putus.`
+    : "Klaim tiap hari; hadiahnya naik sampai hari ketujuh.";
+}
+
+function ReferralCard({
+  referral,
+  onInvite,
+  disabled,
+}: {
+  referral: GameState["referral"];
+  onInvite: () => void;
+  disabled: boolean;
+}) {
+  return (
+    <section className="panel referral-card" aria-label="Ajak teman">
+      <div className="section-card-heading">
+        <h2>
+          <UserPlus aria-hidden="true" />
+          Ajak teman
+        </h2>
+        <span>
+          {referral.invited} diajak · {coins(referral.earned)} didapat
+        </span>
+      </div>
+      <p className="referral-note">
+        Kamu dapat {coins(REFERRAL_REWARD_INVITER)} dan temanmu{" "}
+        {coins(REFERRAL_REWARD_INVITEE)} begitu dia menyelesaikan{" "}
+        {REFERRAL_MILESTONE_LAPS} putaran. Dibayar saat dia benar-benar main,
+        bukan saat daftar.
+      </p>
+      <code className="referral-link">{referral.link}</code>
+      <Button
+        variant="outline"
+        className="w-full"
+        disabled={disabled || !referral.link}
+        onClick={onInvite}
+      >
+        <Copy data-icon="inline-start" />
+        Salin link ajakan
+      </Button>
+    </section>
   );
 }
 
 export function RewardsPanel({
   game,
   onClaimRace,
+  onClaimDaily,
   onClaimGift,
   onClaimMission,
   onClaimAll,
+  onInvite,
   disabled = false,
 }: {
   game: GameState;
   onClaimRace: () => void;
+  onClaimDaily: () => void;
   onClaimGift: () => void;
   onClaimMission: (id: string) => void;
   onClaimAll: () => void;
+  onInvite: () => void;
   disabled?: boolean;
 }) {
   const total = claimableTotal(game);
@@ -66,6 +126,15 @@ export function RewardsPanel({
       amount: Math.floor(game.pending),
       state: game.pending >= 1 ? "ready" : "waiting",
       onClaim: onClaimRace,
+    },
+    {
+      id: "daily",
+      icon: CalendarCheck,
+      label: "Check-in harian",
+      note: dailyNote(game.daily),
+      amount: game.daily.claimedToday ? game.daily.nextReward : game.daily.reward,
+      state: game.daily.claimedToday ? "claimed" : "ready",
+      onClaim: onClaimDaily,
     },
     {
       id: "gift",
@@ -116,6 +185,12 @@ export function RewardsPanel({
           Klaim semua
         </Button>
       </section>
+
+      <ReferralCard
+        referral={game.referral}
+        onInvite={onInvite}
+        disabled={disabled}
+      />
 
       <section className="panel rewards-list-panel" aria-label="Rincian hadiah">
         <div className="section-card-heading">
