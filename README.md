@@ -8,6 +8,8 @@ TypeScript · Tailwind CSS 4 · Drizzle ORM + Neon Postgres · react-three-fiber
 Vitest. Produksi berjalan sebagai Node.js standalone di balik PM2 di AWS EC2 —
 **bukan** serverless.
 
+**Status:** live di [https://racely.fun](https://racely.fun).
+
 > Repo ini memakai Next.js 16, yang punya breaking change dibanding versi
 > sebelumnya. Baca panduan di `node_modules/next/dist/docs/` sebelum menulis
 > kode — lihat `AGENTS.md`.
@@ -77,7 +79,6 @@ lib/
 migrations/             SQL bernomor, dijalankan scripts/migrate.mjs
 scripts/                Migrasi, persiapan build standalone, setup bot
 tests/                  Vitest (lingkungan node)
-docs/                   Runbook, tutorial setup, handoff
 ```
 
 `scene/` berdiri sendiri karena react-three-fiber menggerakkan scene graph
@@ -104,6 +105,7 @@ database. `lib/db/connection-url.ts` sengaja bebas dependensi karena
 | `pnpm test` | Vitest sekali jalan |
 | `pnpm run db:migrate` | Terapkan migrasi (idempoten) |
 | `pnpm run build` | Build Next.js |
+| `pnpm start` | Jalankan hasil build Next.js |
 | `pnpm run build:standalone` | Build + salin `public/` dan `.next/static` |
 | `pnpm run start:standalone` | Jalankan hasil build standalone |
 | `pnpm run bot:setup` | Daftarkan webhook + command bot (repeatable) |
@@ -115,7 +117,8 @@ database. `lib/db/connection-url.ts` sengaja bebas dependensi karena
 
 `.env.example` adalah daftar lengkap beserta penjelasan tiap variabel. Ringkas:
 `DATABASE_URL` (Neon, pooled), `TELEGRAM_BOT_TOKEN`,
-`TELEGRAM_WEBHOOK_SECRET`, `PUBLIC_APP_URL`.
+`TELEGRAM_WEBHOOK_SECRET`, `PUBLIC_APP_URL` (nilai produksi:
+`https://racely.fun`).
 
 Di produksi **tidak ada** file env di dalam repo. Nilai asli hidup di
 `/etc/racely/racely.env` (`chmod 600`) dan dimuat `ecosystem.config.cjs` lewat
@@ -124,7 +127,6 @@ flag preview non-rahasia.
 
 `PUBLIC_APP_URL` dibutuhkan **saat build**, bukan hanya saat runtime: halaman
 `/` di-prerender, jadi `metadataBase` ikut dibekukan ke dalam hasil build.
-Lihat `docs/RUNBOOK.md` §1.
 
 Jangan pernah menulis token, connection string, atau secret ke dalam repo, log,
 atau commit message.
@@ -159,20 +161,19 @@ merah, jangan deploy.
 
 ## Deploy
 
-Lihat **`docs/RUNBOOK.md`** untuk deploy, rotasi secret, rollback, dan
-troubleshooting pada server yang sudah berjalan.
+Urutan rilis produksi:
 
-Belum pernah deploy sama sekali? Mulai dari **`docs/SETUP-MANUAL.md`** (buat
-bot, database, EC2, domain, TLS) — dari nol sampai live.
+```bash
+pnpm run db:migrate
+pnpm run build:standalone
+pnpm run pm2:reload
+pnpm run bot:setup
+```
 
 **`vercel.json` jangan dihapus.** `"deploymentEnabled": false` di dalamnya
 adalah rem yang menahan Vercel supaya tidak membuat deployment otomatis setiap
 push — repo ini dideploy ke EC2, dan pengerjaan lewat v0 akan membanjiri riwayat
 deployment dengan entri sampah kalau rem itu dilepas.
-
-Catatan: PM2 dikonfigurasi `instances: 1`, `exec_mode: "fork"` secara sengaja.
-Dedupe webhook fallback dan rate limiter bersifat per-proses; jangan menambah
-instance sebelum keduanya dipindahkan ke Postgres/Redis.
 
 ---
 
