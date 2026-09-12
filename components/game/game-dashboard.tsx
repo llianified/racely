@@ -26,13 +26,13 @@ import {
   coins,
   gameReducer,
   INITIAL_GAME,
-  MISSIONS,
+  missions,
   missionValue,
-  STARTER_GIFT,
   totalLevel,
   upgradeCost,
   type GameCommand,
   type GameState,
+  type MissionId,
   type OfflineEarnings,
   type Upgrade,
 } from "@/lib/game";
@@ -218,8 +218,8 @@ export function GameDashboard() {
 
   const upgrade = async (key: Upgrade) => {
     if (
-      game.levels[key] >= 10 ||
-      game.balance < upgradeCost(key, game.levels[key])
+      game.levels[key] >= game.economy.maxUpgradeLevel ||
+      game.balance < upgradeCost(game, key)
     )
       return false;
     const next = await runAction({ type: "upgrade", key }, `upgrade:${key}`);
@@ -263,10 +263,10 @@ export function GameDashboard() {
   const gift = async () => {
     if (game.rewardClaimed) return;
     if (await runAction({ type: "gift" }))
-      toast.success(`Starter +${coins(STARTER_GIFT)}`);
+      toast.success(`Starter +${coins(game.economy.starterGift)}`);
   };
-  const mission = async (id: string) => {
-    const missionItem = MISSIONS.find((item) => item.id === id);
+  const mission = async (id: MissionId) => {
+    const missionItem = missions(game.economy).find((item) => item.id === id);
     if (
       !missionItem ||
       game.missionsClaimed.includes(id) ||
@@ -282,7 +282,7 @@ export function GameDashboard() {
     if (game.pending >= 1 && !(await runAction({ type: "claim" }))) return;
     if (!game.daily.claimedToday && !(await runAction({ type: "daily" }))) return;
     if (!game.rewardClaimed && !(await runAction({ type: "gift" }))) return;
-    for (const item of MISSIONS) {
+    for (const item of missions(game.economy)) {
       const ready =
         !game.missionsClaimed.includes(item.id) &&
         missionValue(game, item.id) >= item.target;

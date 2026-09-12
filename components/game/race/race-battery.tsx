@@ -3,16 +3,15 @@
 import { BatteryCharging, BatteryFull, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  BATTERY_RECHARGE_SECONDS,
-  BOOST_DURATION_SECONDS,
   batteryTelemetry,
   type GameState,
 } from "@/lib/game";
 
 export function RaceBattery({ game, inspect, onInspect }: { game: GameState; inspect: boolean; onInspect: () => void }) {
+  const { economy } = game;
   const battery = batteryTelemetry(game);
   const Icon = battery.phase === "charging" ? BatteryCharging : BatteryFull;
-  const status = battery.phase === "discharging" ? "Boost 2× aktif" : battery.phase === "charging" ? `Siap dalam ${battery.readyIn} detik` : "Siap untuk Gaspol";
+  const status = battery.phase === "discharging" ? `Boost ${economy.boostMultiplier}× aktif` : battery.phase === "charging" ? `Siap dalam ${battery.readyIn} detik` : "Siap untuk Gaspol";
   return (
     <section className="race-battery" data-phase={battery.phase} aria-label="Baterai cadangan boost">
       <div className="battery-heading">
@@ -38,8 +37,8 @@ export function RaceBattery({ game, inspect, onInspect }: { game: GameState; ins
         </div>
       </div>
       <div className="battery-caption">
-        <span><strong>2×</strong> laju · {BOOST_DURATION_SECONDS} detik</span>
-        <span>Isi ulang <strong>{BATTERY_RECHARGE_SECONDS} detik</strong></span>
+        <span><strong>{economy.boostMultiplier}×</strong> laju · {economy.boostDurationSeconds} detik</span>
+        <span>Isi ulang <strong>{economy.batteryRechargeSeconds} detik</strong></span>
       </div>
     </section>
   );

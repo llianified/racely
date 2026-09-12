@@ -11,16 +11,11 @@ import {
   coins,
   formatCoins,
   idr,
-  MISSIONS,
+  missions,
   missionValue,
-  REFERRAL_MILESTONE_LAPS,
-  REFERRAL_REWARD_INVITEE,
-  REFERRAL_REWARD_INVITER,
-  STARTER_GIFT,
   type GameState,
+  type MissionId,
 } from "@/lib/game";
-
-export const GIFT_AMOUNT = STARTER_GIFT;
 
 type RewardRow = {
   id: string;
@@ -34,15 +29,17 @@ type RewardRow = {
 };
 
 export function claimableTotal(game: GameState) {
-  const missions = MISSIONS.filter(
-    (m) => !game.missionsClaimed.includes(m.id) && missionValue(game, m.id) >= m.target,
-  ).reduce((sum, m) => sum + m.reward, 0);
+  const missionTotal = missions(game.economy)
+    .filter(
+      (m) => !game.missionsClaimed.includes(m.id) && missionValue(game, m.id) >= m.target,
+    )
+    .reduce((sum, m) => sum + m.reward, 0);
   // Only whole coins can move from pending into the balance.
   return (
     Math.floor(game.pending) +
-    (game.rewardClaimed ? 0 : GIFT_AMOUNT) +
+    (game.rewardClaimed ? 0 : game.economy.starterGift) +
     game.daily.reward +
-    missions
+    missionTotal
   );
 }
 
@@ -58,10 +55,12 @@ function dailyNote(daily: GameState["daily"]) {
 
 function ReferralCard({
   referral,
+  economy,
   onInvite,
   disabled,
 }: {
   referral: GameState["referral"];
+  economy: GameState["economy"];
   onInvite: () => void;
   disabled: boolean;
 }) {
@@ -77,9 +76,9 @@ function ReferralCard({
         }
       />
       <p className="referral-note">
-        Kamu dapat {coins(REFERRAL_REWARD_INVITER)} dan temanmu{" "}
-        {coins(REFERRAL_REWARD_INVITEE)} begitu dia menyelesaikan{" "}
-        {REFERRAL_MILESTONE_LAPS} putaran. Dibayar saat dia benar-benar main,
+        Kamu dapat {coins(economy.referralRewardInviter)} dan temanmu{" "}
+        {coins(economy.referralRewardInvitee)} begitu dia menyelesaikan{" "}
+        {economy.referralMilestoneLaps} putaran. Dibayar saat dia benar-benar main,
         bukan saat daftar.
       </p>
       <code className="referral-link">{referral.link}</code>
@@ -110,7 +109,7 @@ export function RewardsPanel({
   onClaimRace: () => void;
   onClaimDaily: () => void;
   onClaimGift: () => void;
-  onClaimMission: (id: string) => void;
+  onClaimMission: (id: MissionId) => void;
   onClaimAll: () => void;
   onInvite: () => void;
   disabled?: boolean;
@@ -143,11 +142,11 @@ export function RewardsPanel({
       icon: Gift,
       label: "Bonus starter",
       note: game.rewardClaimed ? "Bonus sudah masuk ke saldo kamu." : "Hadiah pertamamu. Sekali klaim, langsung masuk saldo.",
-      amount: GIFT_AMOUNT,
+      amount: game.economy.starterGift,
       state: game.rewardClaimed ? "claimed" : "ready",
       onClaim: onClaimGift,
     },
-    ...MISSIONS.map((mission) => {
+    ...missions(game.economy).map((mission) => {
       const value = Math.min(mission.target, missionValue(game, mission.id));
       const claimed = game.missionsClaimed.includes(mission.id);
       return {
@@ -170,7 +169,7 @@ export function RewardsPanel({
         <div className="rewards-hero-copy">
           <span className="eyebrow">Siap diklaim</span>
           <strong>{formatCoins(total)} <span>koin</span></strong>
-          <p>~ {idr(total)}</p>
+          <p>~ {idr(total, game.economy)}</p>
         </div>
         <Button
           variant="gold"
@@ -188,7 +187,7 @@ export function RewardsPanel({
             {readyCount > 0 ? `${readyCount} hadiah menunggu` : "Belum ada hadiah menunggu"}
           </span>
           <InfoHint title="Tentang hadiah">
-            Semua hadiah berupa koin Racely. 1 koin setara {idr(1)} dan bisa
+            Semua hadiah berupa koin Racely. 1 koin setara {idr(1, game.economy)} dan bisa
             ditarik lewat tab Dompet setelah saldo cukup.
           </InfoHint>
         </div>
@@ -196,6 +195,7 @@ export function RewardsPanel({
 
       <ReferralCard
         referral={game.referral}
+        economy={game.economy}
         onInvite={onInvite}
         disabled={disabled}
       />
@@ -205,7 +205,7 @@ export function RewardsPanel({
           icon={Gift}
           title="Rincian hadiah"
           aside={
-            <Badge variant="secondary">{game.missionsClaimed.length}/{MISSIONS.length} misi diklaim</Badge>
+            <Badge variant="secondary">{game.missionsClaimed.length}/{missions(game.economy).length} misi diklaim</Badge>
           }
         />
         <ul className="reward-list">

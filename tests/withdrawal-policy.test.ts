@@ -3,11 +3,13 @@ import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   accountPattern,
-  COIN_TO_IDR,
-  MIN_WITHDRAW_COINS,
   WITHDRAW_METHODS,
   WITHDRAW_STATUS_LABEL,
 } from "../lib/game";
+import { DEFAULT_ECONOMY } from "../lib/economy-config";
+
+/** Kebijakan penarikan kini bersumber config; di sini yang bawaan. */
+const E = DEFAULT_ECONOMY;
 import { gameActionSchema } from "../lib/game-server";
 import {
   getPreviewGameState,
@@ -29,7 +31,7 @@ const request = (cookie?: string) =>
   });
 
 function fundedCookie(balance: number) {
-  const fresh = getPreviewGameState(request(), identity);
+  const fresh = getPreviewGameState(request(), identity, E);
   const decoded = JSON.parse(
     Buffer.from(fresh.cookieValue, "base64url").toString("utf8"),
   );
@@ -54,6 +56,7 @@ describe("Withdrawals stay a manual, pending-only queue", () => {
       identity,
       randomUUID(),
       withdraw,
+      E,
     );
     expect(result.state.balance).toBe(350);
     expect(result.state.withdrawals).toHaveLength(1);
@@ -74,13 +77,14 @@ describe("Withdrawals stay a manual, pending-only queue", () => {
         identity,
         randomUUID(),
         withdraw,
+        E,
       );
       cookie = step.cookieValue;
       expect(step.state.withdrawals.every((row) => row.status === "pending")).toBe(
         true,
       );
     }
-    const later = getPreviewGameState(request(cookie), identity);
+    const later = getPreviewGameState(request(cookie), identity, E);
     expect(later.state.withdrawals.every((row) => row.status === "pending")).toBe(
       true,
     );
@@ -140,6 +144,7 @@ describe("Withdrawals stay a manual, pending-only queue", () => {
         identity,
         randomUUID(),
         withdraw,
+        E,
       ),
     ).toThrow("Saldo koin tidak cukup");
   });
@@ -154,19 +159,14 @@ describe("Withdrawals stay a manual, pending-only queue", () => {
         identity,
         randomUUID(),
         { ...withdraw, account: "1234567890" },
+        E,
       ),
     ).toThrow("Nomor tujuan tidak valid");
   });
 
-  it("enforces the minimum payout and the method allow list at the API edge", () => {
+  it("enforces the method allow list and the payload shape at the API edge", () => {
     const base = { requestId: randomUUID(), action: withdraw };
     expect(gameActionSchema.safeParse(base).success).toBe(true);
-    expect(
-      gameActionSchema.safeParse({
-        ...base,
-        action: { ...withdraw, coins: MIN_WITHDRAW_COINS - 1 },
-      }).success,
-    ).toBe(false);
     expect(
       gameActionSchema.safeParse({
         ...base,
@@ -179,6 +179,61 @@ describe("Withdrawals stay a manual, pending-only queue", () => {
         action: { ...withdraw, status: "paid" },
       }).success,
     ).toBe(false);
+    // Angka yang tidak masuk akal bagi kolomnya tetap ditolak di tepi.
+    expect(
+      gameActionSchema.safeParse({
+        ...base,
+        action: { ...withdraw, coins: 0 },
+      }).success,
+    ).toBe(false);
+    expect(
+      gameActionSchema.safeParse({
+        ...base,
+        action: { ...withdraw, coins: 1.5 },
+      }).success,
+    ).toBe(false);
+  });
+
+  /**
+   * Batas minimum dan maksimum pindah dari skema zod ke writer saat ekonomi
+   * jadi config: skema dibangun sekali ketika modul dimuat, jadi ia tidak bisa
+   * tahu batas yang baru disimpan dari panel admin. Yang dijaga di sini adalah
+   * batasnya tetap ditegakkan -- sekarang di lapisan yang benar-benar membaca
+   * config -- dan kedua penulis menegakkannya.
+   */
+  it("enforces the configured payout window in the writer, not the schema", () => {
+    const belowMinimum = {
+      ...withdraw,
+      coins: E.minWithdrawCoins - 1,
+    };
+    // Tepi membiarkannya lewat: batas ini bukan lagi urusan skema.
+    expect(
+      gameActionSchema.safeParse({ requestId: randomUUID(), action: belowMinimum })
+        .success,
+    ).toBe(true);
+    expect(() =>
+      performPreviewGameAction(
+        request(fundedCookie(500)),
+        identity,
+        randomUUID(),
+        belowMinimum,
+        E,
+      ),
+    ).toThrow("Penarikan minimal");
+
+    expect(() =>
+      performPreviewGameAction(
+        request(fundedCookie(E.maxWithdrawCoins + 10)),
+        identity,
+        randomUUID(),
+        { ...withdraw, coins: E.maxWithdrawCoins + 1 },
+        E,
+      ),
+    ).toThrow("Penarikan maksimal");
+
+    // Server ditulis manual dan terpisah dari preview -- lihat AGENTS.md.
+    expect(gameServerSource).toContain("economy.minWithdrawCoins");
+    expect(gameServerSource).toContain("economy.maxWithdrawCoins");
   });
 
   it("exposes only operator-driven statuses and a fixed conversion rate", () => {
@@ -188,7 +243,7 @@ describe("Withdrawals stay a manual, pending-only queue", () => {
       "paid",
       "rejected",
     ]);
-    expect(COIN_TO_IDR).toBe(100);
+    expect(E.coinToIdr).toBe(100);
     expect(WITHDRAW_METHODS).toHaveLength(8);
   });
 });
