@@ -344,10 +344,7 @@ export function GameDashboard() {
   const boost = async () => {
     if (game.cooldown > 0) return;
     if (await runAction({ type: "boost" }))
-      toast.success("Gaspol aktif · kecepatan 2×", {
-        description: "Pantau sisa waktu di tombol. Baterai mengisi ulang otomatis setelahnya.",
-        duration: 1800,
-      });
+      toast.success("Gaspol 2× aktif", { duration: 1800 });
   };
   const chooseColor = async (
     color: CarColor,
