@@ -247,7 +247,8 @@
 @media (min-width: 480px) { .track-stat-label svg { display: block; } }
 .reward-value { color: var(--accent); }
 .race-actions { padding: var(--space-md) var(--gutter); border-top: 1px solid var(--border); }
-.race-battery { display: flex; flex-direction: column; gap: 12px; padding: 16px 12px 12px; border-top: 1px solid var(--border); background: var(--background); color: var(--foreground); font-size: 14px; line-height: 1.5; }
+.race-battery { display: flex; flex-direction: column; gap: 12px; padding-block: 16px 12px; border-top: 1px solid var(--border); background: var(--background); color: var(--foreground); font-size: 14px; line-height: 1.5; }
+.battery-heading, .battery-power { padding-inline: 12px; }
 .battery-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .battery-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .battery-title > svg { box-sizing: content-box; padding: 8px; border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent); border-radius: 10px; background: color-mix(in srgb, var(--accent) 8%, var(--background)); color: var(--accent); flex-shrink: 0; }
@@ -263,7 +264,7 @@
 .race-battery[data-phase='charging'] .battery-cell > span { background: var(--muted-foreground); }
 .race-battery[data-phase='charging'] .battery-value { color: var(--muted-foreground); }
 .race-battery[data-phase='discharging'] .battery-status { color: var(--accent); }
-.battery-caption { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; padding-top: 10px; border-top: 1px solid var(--border); color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.battery-caption { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; padding: 10px 12px 0; border-top: 1px solid var(--border); color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
 .battery-caption strong { color: var(--foreground); font-weight: 650; }
 .battery-caption > :first-child strong { color: var(--accent); }
 .scene-wrap.is-inspecting { height: 300px; }
