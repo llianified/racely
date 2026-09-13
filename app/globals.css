@@ -547,36 +547,24 @@
 .race-hud-position strong { color: var(--accent); font-weight: var(--fw-black); font-size: var(--fs-xl); line-height: var(--lh-tight); }
 .race-hud-mode { padding: var(--space-6) var(--space-sm); border-radius: var(--corner-md); background: color-mix(in srgb, var(--background) 88%, transparent); color: var(--muted-foreground); font-size: var(--fs-read); font-weight: var(--fw-semibold); }
 .is-course-out .race-hud-mode { color: var(--accent); }
-.race-hud-telemetry { display: flex; align-items: center; margin: 0; padding-block: var(--space-12); }
-.race-hud-telemetry > div { flex: 1; min-width: 0; padding-inline: var(--space-md); }
-.race-hud-telemetry > div:first-child { flex: 1.2; }
-.race-hud-telemetry > div + div { border-left: var(--stroke) solid var(--border); }
-.race-hud-telemetry dt { margin-bottom: var(--space-3); color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-semibold); letter-spacing: var(--track-caps-md); text-transform: uppercase; line-height: var(--lh-tight); }
-.race-hud-telemetry dd { display: flex; align-items: baseline; gap: var(--space-3); margin: 0; font-size: var(--fs-xl); font-weight: var(--fw-heavy); line-height: var(--lh-none); letter-spacing: var(--track-tight-sm); }
-.race-hud-telemetry > div:first-child dd { font-size: var(--fs-7xl); font-style: italic; }
-.race-hud-telemetry small { font-size: var(--fs-micro); font-style: normal; font-weight: var(--fw-medium); letter-spacing: var(--track-flat); color: var(--muted-foreground); }
-.race-hud-telemetry .race-hud-meter { display: block; height: var(--space-3); margin-top: var(--space-6); overflow: hidden; border-radius: var(--corner-pill); background: var(--secondary); }
+.race-hud-main { display: flex; align-items: center; gap: var(--space-md); padding: var(--space-8) var(--space-md) var(--space-6); }
+.race-hud-speed { display: flex; align-items: baseline; gap: var(--space-3); margin: 0; flex-shrink: 0; line-height: var(--lh-none); }
+.race-hud-speed strong { font-size: var(--fs-5xl); font-weight: var(--fw-heavy); font-style: italic; letter-spacing: var(--track-tight-sm); font-variant-numeric: tabular-nums; }
+.race-hud-speed small { font-size: var(--fs-micro); font-weight: var(--fw-medium); color: var(--muted-foreground); }
+.race-hud-gauges { display: flex; flex: 1; min-width: 0; gap: var(--space-sm); margin: 0; }
+.race-hud-gauges > div { flex: 1; min-width: 0; display: grid; grid-template-columns: auto 1fr; align-items: baseline; column-gap: var(--space-4); row-gap: var(--space-3); }
+.race-hud-gauges dt { color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-semibold); letter-spacing: var(--track-caps-md); text-transform: uppercase; line-height: var(--lh-tight); }
+.race-hud-gauges dd { display: flex; align-items: baseline; justify-content: flex-end; gap: var(--space-2); margin: 0; font-size: var(--fs-small); font-weight: var(--fw-bold); line-height: var(--lh-tight); font-variant-numeric: tabular-nums; }
+.race-hud-gauges small { font-size: var(--fs-nano); font-weight: var(--fw-medium); color: var(--muted-foreground); }
+.race-hud-gauges .race-hud-meter { grid-column: 1 / -1; display: block; height: var(--space-3); overflow: hidden; border-radius: var(--corner-pill); background: var(--secondary); }
 .race-hud-meter > span { display: block; width: 100%; height: 100%; transform-origin: left; background: var(--accent); }
-.race-hud-server { display: flex; align-items: center; margin: 0; padding: var(--space-7) var(--space-md); border-top: var(--stroke) solid var(--border); background: color-mix(in srgb, var(--card) 35%, var(--background)); line-height: var(--lh-normal); }
-.race-hud-server > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
-.race-hud-server > div:nth-child(2) { align-items: center; text-align: center; }
-.race-hud-server > div:last-child { align-items: flex-end; text-align: right; }
-.race-hud-server dt { color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-semibold); letter-spacing: var(--track-caps-md); text-transform: uppercase; white-space: nowrap; }
-.race-hud-server dd { display: flex; align-items: baseline; gap: var(--space-3); margin: 0; font-size: var(--fs-small); font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
-.race-hud-server small { font-size: var(--fs-micro); color: var(--muted-foreground); font-weight: var(--fw-normal); }
-.race-hud-reward { color: var(--accent); }
-@media (max-width: 359px) { .race-hud-telemetry > div { padding-inline: var(--space-sm); } }
-@media (max-width: 359px) {
-  .race-hud-telemetry > div { padding-inline: var(--space-sm); }
-  /* Di 320px kolomnya tinggal ~78px dan "ENERGI BOOST" pecah jadi dua baris,
-     sementara dua label lain tetap satu baris -- angkanya ikut turun sendiri
-     dan ketiga kolom berhenti sebaris. Turunkan label ke rung yang sudah
-     dipakai HUD lain (.race-settings-title, .lane-hud) supaya tetap satu baris
-     tanpa menaikkan tinggi HUD. */
-  .race-hud-telemetry dt { font-size: var(--fs-2xs); letter-spacing: var(--track-caps-sm); white-space: nowrap; }
-  /* "19.7" + "km/j" melewati kolomnya 3px dan menempel garis pemisah. */
-  .race-hud-telemetry > div:first-child dd { font-size: var(--fs-6xl); }
-}
+.race-hud-lap { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-sm); margin: 0; padding: var(--space-4) var(--space-md) var(--space-6); color: var(--muted-foreground); font-size: var(--fs-nano); line-height: var(--lh-tight); font-variant-numeric: tabular-nums; }
+.race-hud-lap span { white-space: nowrap; }
+.race-hud-lap strong { color: var(--foreground); font-size: var(--fs-small); font-weight: var(--fw-bold); }
+.race-hud-reward, .race-hud-reward strong { color: var(--accent); }
+/* Di 320px angka kecepatan berebut ruang dengan dua gauge; turunkan satu rung
+   dan rapatkan celahnya supaya semuanya tetap satu baris. */
+@media (max-width: 359px) { .race-hud-main { gap: var(--space-sm); } .race-hud-speed strong { font-size: var(--fs-4xl); } }
 .reward-value { color: var(--accent); }
 .race-actions { padding: var(--space-md) var(--gutter); border-top: var(--stroke) solid var(--border); }
 .scene-wrap.is-inspecting { height: var(--scene-h-inspect); }
