@@ -12,6 +12,7 @@ import { MenuPanel } from "./shell/menu-panel";
 import { GaragePanel, UpgradePanel } from "./panels/garage-panel";
 import { RewardsPanel, claimableTotal } from "./panels/rewards-panel";
 import { ReferralPanel } from "./panels/referral-panel";
+import { LeaderboardPanel, LeaderboardShortcut } from "./panels/leaderboard-panel";
 import { WalletPanel, type WithdrawPayload } from "./panels/wallet-panel";
 import { CircuitPanel } from "./race/circuit-panel";
 import { RacePanel, RaceReward } from "./race/race-panel";
@@ -402,6 +403,7 @@ export function GameDashboard() {
                   onClaim={claim}
                   disabled={Boolean(busyAction)}
                 />
+                <LeaderboardShortcut onOpen={() => navigate("leaderboard")} />
                 <CircuitPanel
                   game={game}
                   onChoose={chooseCircuit}
@@ -443,6 +445,8 @@ export function GameDashboard() {
               onWithdraw={withdraw}
               disabled={Boolean(busyAction)}
             />
+          ) : tab === "leaderboard" ? (
+            <LeaderboardPanel initData={initData} onRace={() => navigate("race")} />
           ) : tab === "referral" ? (
             <ReferralPanel
               game={game}

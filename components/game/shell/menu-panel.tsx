@@ -49,6 +49,9 @@ export function MenuPanel({
   return (
     <section className="menu-panel panel section-enter" aria-label="Menu Racely">
       <div className="menu-groups">
+        <Button variant="menuDirect" onClick={() => onNavigate("leaderboard")}>
+          <Trophy aria-hidden="true" /><span>Leaderboard</span><ArrowUpRight aria-hidden="true" />
+        </Button>
         {groups.map(({ title, icon: Icon, items }, index) => (
           <details className="menu-group" key={title} open={index === 0}>
             <summary>
