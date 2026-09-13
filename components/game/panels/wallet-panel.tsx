@@ -8,6 +8,7 @@ import {
   Sheet,
   SheetContent,
   SheetDescription,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -138,22 +139,20 @@ export function WalletPanel({
       />
 
       <Sheet open={open} onOpenChange={(next) => { setOpen(next); if (!next) setError(null); }}>
-    <SheetContent side="bottom" className="game-sheet wallet-dialog p-md">
-      <SheetHeader className="p-0">
-            <SheetTitle>
-              <Send aria-hidden="true" />
-              Tarik koin
-            </SheetTitle>
+        <SheetContent side="bottom" className="game-sheet">
+          <SheetHeader>
+            <SheetTitle>Tarik koin</SheetTitle>
             <SheetDescription>
               {formatCoins(balance)} koin tersedia · 1 koin = {idr(1, economy)}
             </SheetDescription>
           </SheetHeader>
-          <p className="wallet-dialog-note">
+          <div className="sheet-body">
+          <p className="sheet-note">
             Permintaan diproses manual oleh tim Racely, biasanya dalam sehari.
             Cek lagi nomor dan nama tujuan sebelum kirim. Kalau ditolak, koinnya
             kembali ke saldo kamu.
           </p>
-        <form className="wallet-form" onSubmit={submit}>
+        <form id="withdraw-form" className="wallet-form" onSubmit={submit}>
           <div className="wallet-field">
             <label htmlFor="withdraw-amount">Jumlah koin</label>
             <input
@@ -266,18 +265,19 @@ export function WalletPanel({
               {error}
             </p>
           )}
-
-          <Button
-            type="submit"
-            variant="gold"
-            size="lg"
-            className="w-full"
-            disabled={disabled || balance < minWithdraw}
-          >
-            <Send data-icon="inline-start" />
-            Kirim permintaan
-          </Button>
         </form>
+          </div>
+          <SheetFooter>
+            <Button
+              type="submit"
+              form="withdraw-form"
+              variant="gold"
+              disabled={disabled || balance < minWithdraw}
+            >
+              <Send data-icon="inline-start" />
+              Kirim permintaan
+            </Button>
+          </SheetFooter>
         </SheetContent>
       </Sheet>
 

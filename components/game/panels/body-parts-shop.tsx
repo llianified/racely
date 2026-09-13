@@ -7,7 +7,7 @@ import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { Check, LoaderCircle, RotateCcw, ShoppingBag, Wind, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { PART_CATALOG, PART_IDS, PART_SLOTS, SLOT_LABELS, type PartCommand, type PartId } from "@/lib/car-parts";
 import { CAR_CATALOG } from "@/lib/car-catalog";
 import { coins, type GameState } from "@/lib/game";
@@ -67,7 +67,7 @@ function ShopContents({ game, disabled, onAction, onPending }: Omit<ShopProps, "
   };
 
   return <>
-    <div className="parts-shop-scroll">
+    <div className="sheet-body" data-flush>
       <div className="parts-shop-stage" role="img" aria-label={`${CAR_CATALOG[model].name}: ${trying ? `pratinjau ${part.name}, belum disimpan` : "part yang terpasang"}`}>
         <CarPreviewScene color={game.color} model={model} levels={game.levels} equipped={previewParts} />
       </div>
@@ -121,13 +121,13 @@ function ShopContents({ game, disabled, onAction, onPending }: Omit<ShopProps, "
         </section>
       </div>
     </div>
-    <div className="parts-shop-footer">
+    <SheetFooter>
       <Button variant={installed ? "outline" : "gold"} disabled={blocked || (!owned && shortfall > 0)} aria-busy={pending} onClick={() => void submit(!owned ? { type: "buy-part", partId: selected } : installed ? { type: "unequip-part", slot: part.slot } : { type: "equip-part", partId: selected })}>
         {pending ? <LoaderCircle className="animate-spin" data-icon="inline-start" /> : !owned ? <ShoppingBag data-icon="inline-start" /> : installed ? <RotateCcw data-icon="inline-start" /> : <Wrench data-icon="inline-start" />}
         {pending ? "Memproses…" : !owned ? `Beli ${part.name} · ${coins(part.price)}` : installed ? `Lepas ${part.name}` : `Pasang ${part.name} · Gratis`}
       </Button>
-      <span role="status">{owned ? "Milikmu selamanya · lepas-pasang gratis" : "Hanya tombol Beli yang memotong koin"}</span>
-    </div>
+      <span className="sheet-footnote" role="status">{owned ? "Milikmu selamanya · lepas-pasang gratis" : "Hanya tombol Beli yang memotong koin"}</span>
+    </SheetFooter>
   </>;
 }
 
@@ -159,8 +159,8 @@ export function BodyPartsShop({ game, active, disabled, onAction }: ShopProps) {
         <SheetTrigger render={<Button variant="gold" className="w-full" disabled={disabled} />}><ShoppingBag data-icon="inline-start" />Buka toko</SheetTrigger>
       </div>
     </section>
-    <SheetContent side="bottom" className="game-sheet parts-shop-dialog">
-      <SheetHeader className="parts-shop-header">
+    <SheetContent side="bottom" className="game-sheet">
+      <SheetHeader>
         <SheetTitle>Toko aero kit</SheetTitle>
         <SheetDescription>Coba langsung pada mobilmu, koleksi, lalu pasang ke slot yang sesuai.</SheetDescription>
       </SheetHeader>
