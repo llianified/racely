@@ -131,9 +131,16 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
   const currentPowertrain = powertrainTuning(game.levels.engine, game.levels.battery);
   const nextPowertrain = powertrainTuning(key === "engine" ? nextLevel : game.levels.engine, key === "battery" ? nextLevel : game.levels.battery);
   const blocked = disabled || installing;
+  // Dua sel spek per part: dampak per putaran (server) dan efek arena (simulasi).
+  // Penjelasan panjangnya tetap ada di lembar modifikasi.
   const benefit = key === "battery"
-    ? `+${formatCoins(preview.afterReward - preview.beforeReward)} koin / putaran`
-    : `${seconds(preview.beforeSeconds - preview.afterSeconds)} dtk lebih cepat / putaran`;
+    ? `+${formatCoins(preview.afterReward - preview.beforeReward)} koin`
+    : `−${seconds(preview.beforeSeconds - preview.afterSeconds)} dtk`;
+  const arena = key === "engine"
+    ? { label: "Akselerasi", now: `${seconds(Math.log(10) / currentPowertrain.accelerationRate)} d`, next: `${seconds(Math.log(10) / nextPowertrain.accelerationRate)} d` }
+    : key === "tires"
+      ? { label: "Grip", now: `−${currentGrip.drainReductionPercent}%`, next: `−${nextGrip.drainReductionPercent}%` }
+      : { label: "Boost", now: `${seconds(currentPowertrain.boostCapacitySeconds)} d`, next: `${seconds(nextPowertrain.boostCapacitySeconds)} d` };
 
   const install = async () => {
     if (installLock.current || blocked || maxed || shortfall > 0) return;
@@ -150,32 +157,34 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
   return (
     <Sheet open={open} onOpenChange={(value) => { if (!installLock.current) setOpen(value); }}>
       <div className="upgrade-row">
-        <div className="upgrade-info">
-          <div className="upgrade-name"><Icon size={16} aria-hidden="true" /><h3>{title}</h3><span className="level-label">Lv. {level}</span></div>
-          <p>{preview.currentPart} · Terpasang</p>
-          <p>{maxed ? "Modifikasi maksimal" : benefit}</p>
-          {key === "engine" && <div className="upgrade-arena-info">
-            <p><strong>Akselerasi arena</strong></p>
-            <p>Respons 90%: {seconds(Math.log(10) / currentPowertrain.accelerationRate)} d{!maxed && ` → ${seconds(Math.log(10) / nextPowertrain.accelerationRate)} d`}</p>
-            <p>Lebih kecil = lebih cepat pulih setelah tikungan.</p>
-          </div>}
-          {key === "tires" && <p>Grip · pengurasan −{currentGrip.drainReductionPercent}%{!maxed && ` → −${nextGrip.drainReductionPercent}%`}</p>}
-          {key === "battery" && <div className="upgrade-arena-info">
-            <p><strong>Energi boost arena</strong></p>
-            <p>Cadangan: {seconds(currentPowertrain.boostCapacitySeconds)} d{!maxed && ` → ${seconds(nextPowertrain.boostCapacitySeconds)} d`}</p>
-            <p>Terisi penuh dalam {currentPowertrain.rechargeSeconds} d tanpa Gaspol.</p>
-          </div>}
+        <div className="upgrade-head">
+          <span className="upgrade-icon" aria-hidden="true"><Icon /></span>
+          <div className="upgrade-name">
+            <h3>{title}</h3>
+            <p>{preview.currentPart}</p>
+          </div>
+          <SheetTrigger render={<Button variant="gold" size="sm" className="upgrade-buy" disabled={blocked || maxed} />} aria-label={maxed ? `${title} level maksimal` : `Modifikasi ${title}`}>
+            {maxed ? <Check data-icon="inline-start" /> : <Wrench data-icon="inline-start" />}
+            {maxed ? "MAX" : "Modif"}
+          </SheetTrigger>
+        </div>
+        <dl className="upgrade-specs">
+          <div>
+            <dt>Per putaran</dt>
+            <dd>{maxed ? "Maksimal" : <b>{benefit}</b>}</dd>
+          </div>
+          <div>
+            <dt>{arena.label} <small>arena</small></dt>
+            <dd>{arena.now}{!maxed && <><span aria-hidden="true"> → </span><b>{arena.next}</b></>}</dd>
+          </div>
+        </dl>
+        <div className="upgrade-level">
+          <span className="level-label">Lv. {level}</span>
           {/* Jumlah segmen mengikuti config: ceiling yang disetel jadi 5 tidak
               boleh menyisakan lima kotak yang tidak akan pernah terisi. */}
           <div className="level-segments" aria-label={`Level ${level} dari ${ceiling}`}>
             {Array.from({ length: ceiling }, (_, i) => <span key={i} className={i < level ? "filled" : undefined} />)}
           </div>
-        </div>
-        <div className="upgrade-action">
-          <SheetTrigger render={<Button variant="gold" className="upgrade-buy" disabled={blocked || maxed} />} aria-label={maxed ? `${title} level maksimal` : `Modifikasi ${title}`}>
-            {maxed ? <Check data-icon="inline-start" /> : <Wrench data-icon="inline-start" />}
-            {maxed ? "MAX" : "Modif"}
-          </SheetTrigger>
         </div>
       </div>
       <SheetContent side="bottom" className="game-sheet gap-0 p-0 font-sans" showCloseButton={!installing}>
@@ -289,10 +298,9 @@ export function UpgradePanel({ game, onUpgrade, disabled = false }: UpgradePanel
         icon={Wrench}
         title="Bengkel"
         aside={
-          <InfoHint title="Modifikasi mobil">Pilih part, cek perubahan performa, lalu konfirmasi pemasangan. Mesin dan ban mempercepat putaran; baterai menambah hasil koin. Di simulasi arena, mesin mempercepat akselerasi, ban memperkuat grip, dan baterai memperpanjang cadangan boost tanpa mengubah timer Gaspol server. Setiap pemasangan menaikkan satu level, maksimal level {game.economy.maxUpgradeLevel}.</InfoHint>
+          <InfoHint title="Modifikasi mobil">Pilih part, cek perubahan performa, lalu konfirmasi pemasangan. Mesin dan ban mempercepat putaran; baterai menambah hasil koin. Baris &quot;Arena&quot; hanya untuk simulasi gerak: mesin mempercepat akselerasi, ban memperkuat grip, baterai memperpanjang cadangan boost. Tidak menambah koin, durasi Gaspol, atau baterai idle server. Setiap pemasangan menaikkan satu level, maksimal level {game.economy.maxUpgradeLevel}.</InfoHint>
         }
       />
-      <p className="upgrade-arena-note">Info arena di bawah hanya untuk simulasi gerak. Tidak menambah koin, durasi Gaspol, atau baterai idle server.</p>
       <div className="upgrade-list">
         {PARTS.map((part) => <ModificationSlot key={part.key} part={part} game={game} onUpgrade={onUpgrade} disabled={disabled} />)}
       </div>
