@@ -617,9 +617,8 @@
 .reward-copy { min-width: 0; }
 .reward-heading { display: flex; align-items: center; gap: var(--space-6); min-width: 0; }
 .reward-heading h2 { flex-shrink: 0; font-size: var(--fs-nano); font-weight: var(--fw-bold); line-height: var(--lh-snug); letter-spacing: var(--track-caps-lg); text-transform: uppercase; color: var(--muted-foreground); }
-.reward-status { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-nano); font-weight: var(--fw-medium); line-height: var(--lh-snug); color: var(--muted-foreground); }
-.reward-status::before { content: '·'; margin-right: var(--space-6); color: var(--border); }
-.reward-ready .reward-status { color: var(--accent); }
+.reward-status { min-width: 0; padding: var(--space-1) var(--space-6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: var(--stroke) solid var(--border); border-radius: var(--corner-xs); background: color-mix(in srgb, var(--secondary) 60%, transparent); font-size: var(--fs-nano); font-weight: var(--fw-medium); line-height: var(--lh-snug); color: var(--muted-foreground); }
+.reward-ready .reward-status { border-color: color-mix(in srgb, var(--accent) 30%, transparent); background: color-mix(in srgb, var(--accent) 8%, transparent); color: var(--accent); }
 .reward-copy > strong { display: block; margin-top: var(--space-2); font-size: var(--fs-title); font-weight: var(--fw-heavier); line-height: var(--lh-tight); letter-spacing: var(--track-tight-xs); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .race-reward > [data-slot='button'] { flex-shrink: 0; }
 
