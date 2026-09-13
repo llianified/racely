@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils";
 import {
   coins,
   formatCoins,
-  idr,
   missions,
   missionValue,
   type GameState,
@@ -173,7 +172,6 @@ export function RewardsPanel({
         <div className="rewards-hero-copy">
           <span className="eyebrow">Siap diklaim</span>
           <strong>{formatCoins(total)} <span>koin</span></strong>
-          <p>~ {idr(total, game.economy)}</p>
         </div>
         <Button
           variant="gold"
@@ -191,8 +189,8 @@ export function RewardsPanel({
             {readyCount > 0 ? `${readyCount} hadiah menunggu` : "Belum ada hadiah menunggu"}
           </span>
           <InfoHint title="Tentang hadiah">
-            Semua hadiah berupa koin Racely. 1 koin setara {idr(1, game.economy)} dan bisa
-            ditarik lewat tab Dompet setelah saldo cukup.
+            Semua hadiah berupa koin Racely dan bisa ditarik lewat tab Dompet
+            setelah saldo cukup.
           </InfoHint>
         </div>
       </section>
