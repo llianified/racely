@@ -6,7 +6,7 @@ import type { CarModelId } from '@/lib/car-catalog'
 import type { GameState } from '@/lib/game'
 import { PART_CATALOG, type BodyParts, type PartId } from '@/lib/car-parts'
 import * as THREE from 'three'
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
+import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js'
 
 // Palet scene. Nilai yang juga ada sebagai token CSS ditulis sekali di sini
 // supaya WebGL dan DOM tidak pelan-pelan melenceng: `muted` = --muted-foreground,
@@ -92,6 +92,18 @@ function plate(outline: Point[], thickness: number, holes: [number, number, numb
 
 function turned(profile: Point[], segments = 48) {
   return new THREE.LatheGeometry(profile.map(([radius, y]) => new THREE.Vector2(radius, y)), segments)
+}
+
+// Parts are flattened to triangle soup so they can be merged per finish; weld the soup back
+// into an indexed buffer afterwards. Only exact duplicates (position + normal) merge, so
+// every hard edge and every shading normal stays as it was.
+function mergeIndexed(geometries: THREE.BufferGeometry[]) {
+  const soup = mergeGeometries(geometries)!
+  geometries.forEach(geometry => geometry.dispose())
+  const indexed = mergeVertices(soup, 1e-6)
+  soup.dispose()
+  indexed.computeBoundingSphere()
+  return indexed
 }
 
 function createCarGeometry(model: CarModelId) {
@@ -364,12 +376,7 @@ function createCarGeometry(model: CarModelId) {
   }
 
   const merge = (groups: Partial<Record<Finish, THREE.BufferGeometry[]>>) =>
-    Object.fromEntries(Object.entries(groups).filter(([, geometries]) => geometries.length).map(([finish, geometries]) => {
-      const merged = mergeGeometries(geometries)!
-      geometries.forEach(geometry => geometry.dispose())
-      merged.computeBoundingSphere()
-      return [finish, merged]
-    })) as Partial<Record<Finish, THREE.BufferGeometry>>
+    Object.fromEntries(Object.entries(groups).filter(([, geometries]) => geometries.length).map(([finish, geometries]) => [finish, mergeIndexed(geometries)])) as Partial<Record<Finish, THREE.BufferGeometry>>
   return { shell: merge(parts), spoiler: merge(spoilerParts), internals: merge(internalParts), wheels: wheels.map(wheel => ({ position: wheel.position, parts: merge(wheel.parts) })) }
 }
 
@@ -459,12 +466,7 @@ function createAeroGeometry(id: PartId, model: CarModelId) {
       box('chassis', [.009, .045, .046], [side * .195, .107, -.145], [-.3, 0, side * .2])
     }
   }
-  return Object.fromEntries(Object.entries(groups).map(([finish, geometries]) => {
-    const geometry = mergeGeometries(geometries!)!
-    geometries!.forEach(item => item.dispose())
-    geometry.computeBoundingSphere()
-    return [finish, geometry]
-  })) as Partial<Record<Finish, THREE.BufferGeometry>>
+  return Object.fromEntries(Object.entries(groups).map(([finish, geometries]) => [finish, mergeIndexed(geometries!)])) as Partial<Record<Finish, THREE.BufferGeometry>>
 }
 
 const AERO_CACHE = new Map<string, ReturnType<typeof createAeroGeometry>>()
