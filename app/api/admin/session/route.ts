@@ -94,6 +94,13 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  // Satu-satunya route /api/admin yang tidak lewat guardAdmin -- keluar tanpa
+  // sesi memang tidak berbahaya. Tapi cek Origin tetap dipakai: tanpanya situs
+  // lain bisa mengeluarkan operator dari panel di tengah memproses antrean.
+  if (!hasSameOrigin(request)) {
+    return adminJson({ error: "Asal permintaan tidak sah." }, 403);
+  }
+
   const response = adminJson({ authenticated: false });
   response.cookies.set(
     ADMIN_SESSION_COOKIE,

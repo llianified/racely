@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_ECONOMY,
@@ -172,5 +173,76 @@ describe("Proyeksi ekonomi", () => {
     expect(gratis.rows[0].coinsPerHour).toBe(0);
     expect(gratis.rows[0].hoursToMinWithdraw).toBe(Infinity);
     expect(Number.isNaN(gratis.maxOutHoursAtBase)).toBe(false);
+  });
+});
+
+/**
+ * Panel admin adalah satu-satunya jalan menyetel ekonomi, dan `toConfig()` di
+ * `app/admin/admin-economy.tsx` membangun payload-nya HANYA dari `GROUPS`.
+ * Karena `economyConfigSchema` itu `.strict()` dengan semua field wajib, satu
+ * knob yang lupa didaftarkan tidak cuma "tidak bisa disetel" -- payload-nya jadi
+ * kurang satu field dan SELURUH form berhenti bisa disimpan (422). Dibaca dari
+ * source, sama seperti tests/action-receipt-types.test.ts terhadap SQL, supaya
+ * test lingkungan node tidak perlu mengimpor komponen React.
+ */
+describe("Panel admin mencakup seluruh knob ekonomi", () => {
+  const panelSource = readFileSync("app/admin/admin-economy.tsx", "utf8");
+  const groupKeys = [
+    ...new Set(
+      [...panelSource.matchAll(/\{\s*key:\s*"([A-Za-z]+)"/g)].map(
+        ([, key]) => key,
+      ),
+    ),
+  ];
+  /** Bukan angka tunggal, jadi ia punya field teksnya sendiri di luar GROUPS. */
+  const OUTSIDE_GROUPS = new Set(["dailyRewards"]);
+
+  it("mendaftarkan setiap field EconomyConfig", () => {
+    const expected = economyFieldKeys
+      .filter((key) => !OUTSIDE_GROUPS.has(key))
+      .sort();
+    expect([...groupKeys].sort()).toEqual(expected);
+  });
+
+  it("tetap menyediakan kontrol untuk tangga hadiah harian", () => {
+    for (const key of OUTSIDE_GROUPS) {
+      expect(panelSource).toContain(`set("${key}"`);
+    }
+  });
+
+  it("tidak mendaftarkan field yang bukan milik EconomyConfig", () => {
+    const known = new Set<string>(economyFieldKeys);
+    for (const key of groupKeys) expect(known.has(key)).toBe(true);
+  });
+});
+
+/**
+ * Ambang buka sirkuit 2 disebut di tiga permukaan UI, dan ketiganya sempat
+ * menyimpang: panel sirkuit dan handler di dashboard memakai literal 25 sementara
+ * dialog sudah membaca config. Akibatnya nyata -- dengan ambang 10 dari panel
+ * admin, dialog menawarkan tombol yang handler-nya menolak tanpa pesan apa pun;
+ * dengan ambang 50, panel bilang "Terbuka" lalu server menolak aksinya.
+ *
+ * Dijaga dari source, bukan dari render: suite ini berjalan di lingkungan node,
+ * dan yang perlu dikunci memang bentuk kodenya -- bukan pikselnya.
+ */
+describe("Ambang sirkuit dibaca dari config di setiap permukaan", () => {
+  const WRITERS = [
+    "components/game/race/circuit-panel.tsx",
+    "components/game/game-dashboard.tsx",
+    "components/game/shell/game-dialog.tsx",
+  ];
+
+  it("membaca circuitUnlockLaps, bukan angka yang ditulis lepas", () => {
+    for (const file of WRITERS) {
+      expect(readFileSync(file, "utf8")).toContain("circuitUnlockLaps");
+    }
+  });
+
+  it("tidak membandingkan laps dengan literal di mana pun", () => {
+    for (const file of WRITERS) {
+      const source = readFileSync(file, "utf8");
+      expect(source).not.toMatch(/laps\s*[<>]=?\s*\d/);
+    }
   });
 });

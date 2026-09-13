@@ -164,8 +164,35 @@ export function hasSameOrigin(request: Request) {
   }
 }
 
-/** Kunci rate limit login: satu ember per alamat, bukan per sesi. */
-export function clientAddress(request: Request) {
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return forwarded || request.headers.get("x-real-ip") || "unknown";
+/**
+ * Berapa proxy yang benar-benar ada di depan Racely. Dipakai memilih hop mana di
+ * `X-Forwarded-For` yang boleh dipercaya; lihat `clientAddress`.
+ */
+export function trustedProxyHops(
+  value = process.env.RACELY_TRUSTED_PROXY_HOPS,
+) {
+  const parsed = Number(value ?? 1);
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 8 ? parsed : 1;
+}
+
+/**
+ * Kunci rate limit login: satu ember per alamat, bukan per sesi.
+ *
+ * Dibaca dari KANAN, bukan kiri. `X-Forwarded-For` itu daftar yang di-APPEND
+ * setiap hop -- ALB menambahkan alamat peer TCP-nya ke apa pun yang sudah
+ * dikirim klien. Jadi entri pertama sepenuhnya milik klien: mengambilnya berarti
+ * penyerang bisa memberi dirinya ember rate limit baru untuk setiap tebakan
+ * password, dan menuliskan alamat palsu ke `racely_admin_audit`. Entri ke-N dari
+ * kanan (N = jumlah proxy terpercaya) adalah yang ditulis proxy kita sendiri,
+ * satu-satunya bagian daftar yang tidak bisa dikarang klien.
+ */
+export function clientAddress(request: Request, hops = trustedProxyHops()) {
+  const chain = (request.headers.get("x-forwarded-for") ?? "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  // Rantai yang lebih pendek dari jumlah hop berarti permintaan tidak lewat
+  // seluruh proxy itu; pakai entri terkiri yang ada, bukan indeks negatif.
+  const trusted = chain.length > 0 ? chain[Math.max(0, chain.length - hops)] : "";
+  return trusted || request.headers.get("x-real-ip") || "unknown";
 }
