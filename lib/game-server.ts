@@ -28,9 +28,6 @@ import { applyPartCommand, PART_IDS, PART_SLOTS, PartRuleError } from "@/lib/car
 import {
   accountPattern,
   boostCooldownSeconds,
-  MISSION_IDS,
-  missions,
-  missionValue,
   REFERRAL_PARAM_PREFIX,
   roundCoins,
   WITHDRAW_METHODS,
@@ -49,6 +46,16 @@ import {
   type EconomyConfig,
 } from "@/lib/economy-config";
 import { readEconomyConfig } from "@/lib/economy-store";
+import {
+  MISSION_ID_PATTERN,
+  buildMissionBoard,
+  findActiveMission,
+  missionClaimKey,
+  missionProgress,
+  normalizeMissionCounters,
+  pruneMissionClaims,
+  type MissionCounters,
+} from "@/lib/missions";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
 import { emissionBrake, recordMinted } from "@/lib/emission-store";
 import { referralLink } from "@/lib/telegram-bot";
@@ -96,7 +103,8 @@ const commandSchema = z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("mission"),
-      id: z.enum(MISSION_IDS),
+      scope: z.enum(["daily", "weekly"]),
+      id: z.string().regex(MISSION_ID_PATTERN),
     })
     .strict(),
   z
@@ -194,6 +202,28 @@ function hasExistingProgress(row: PlayerRow, history: WithdrawalRow[]) {
   );
 }
 
+function missionCountersFromRow(row: PlayerRow): MissionCounters {
+  return {
+    dayKey: row.dayKey,
+    dayLaps: row.dayLaps,
+    dayBoosts: row.dayBoosts,
+    weekKey: row.weekKey,
+    weekLaps: row.weekLaps,
+    weekBoosts: row.weekBoosts,
+  };
+}
+
+function normalizePlayerMissionPeriods(row: PlayerRow, now: Date): PlayerRow {
+  const dayKey = racingDayKey(now);
+  const counters = normalizeMissionCounters(missionCountersFromRow(row), dayKey, now);
+  return {
+    ...row,
+    ...counters,
+    dayCoins: row.dayKey === dayKey ? row.dayCoins : 0,
+    missionsClaimed: pruneMissionClaims(row.missionsClaimed, now),
+  };
+}
+
 function stateFromRow(
   row: PlayerRow,
   now: Date,
@@ -247,7 +277,12 @@ function stateFromRow(
       ((row.cooldownEndsAt?.getTime() ?? 0) - now.getTime()) / 1000,
     ),
     rewardClaimed: row.rewardClaimed,
-    missionsClaimed: row.missionsClaimed,
+    missions: buildMissionBoard(
+      economy,
+      row.userId,
+      missionCountersFromRow(row),
+      row.missionsClaimed,
+    ),
     color: row.color,
     circuit: row.circuit,
     player: {
@@ -466,6 +501,12 @@ function settledColumns(row: PlayerRow) {
     starterScrapAt: row.starterScrapAt,
     dayKey: row.dayKey,
     dayCoins: row.dayCoins,
+    dayLaps: row.dayLaps,
+    dayBoosts: row.dayBoosts,
+    weekKey: row.weekKey,
+    weekLaps: row.weekLaps,
+    weekBoosts: row.weekBoosts,
+    missionsClaimed: row.missionsClaimed,
     laps: row.laps,
     progress: row.progress,
     lastSettledAt: row.lastSettledAt,
@@ -503,6 +544,7 @@ export function settlePlayerRow(
   /** Rem emisi global; 1 berarti tidak direm. */
   rewardMultiplier = 1,
 ): SettledPlayer {
+  row = normalizePlayerMissionPeriods(row, now);
   if (row.carModel === null) {
     return {
       row: { ...row, lastSettledAt: now, updatedAt: now },
@@ -541,6 +583,8 @@ export function settlePlayerRow(
       scrapEarned: roundCoins(base.scrapEarned + settlement.scrap),
       dayKey: settlement.dayKey,
       dayCoins: settlement.dayCoins,
+      dayLaps: base.dayLaps + settlement.completedLaps,
+      weekLaps: base.weekLaps + settlement.completedLaps,
       laps: base.laps + settlement.completedLaps,
       progress: settlement.progress,
       lastSettledAt: now,
@@ -891,6 +935,8 @@ export async function performGameAction(
       }
       next = {
         ...next,
+        dayBoosts: next.dayBoosts + 1,
+        weekBoosts: next.weekBoosts + 1,
         boostEndsAt: new Date(
           now.getTime() + economy.boostDurationSeconds * 1000,
         ),
@@ -957,34 +1003,45 @@ export async function performGameAction(
         }
       }
     } else if (action.type === "mission") {
-      const mission = missions(economy).find((item) => item.id === action.id);
-      const alreadyClaimed = next.missionsClaimed.includes(action.id);
-      if (!alreadyClaimed) {
-        if (
-          !mission ||
-          missionValue(stateFromRow(next, now, economy), mission.id) <
-            mission.target
-        ) {
-          throw new GameRuleError("Target misi belum tercapai.");
-        }
-        const inserted = await tx
-          .insert(rewardClaims)
-          .values({
-            userId: identity.userId,
-            rewardKey: `mission:${mission.id}`,
-            amount: mission.reward,
-          })
-          .onConflictDoNothing()
-          .returning({ id: rewardClaims.id });
-        if (inserted.length > 0) {
-          await recordMinted(tx, settled.day, mission.reward, economy);
-        }
-        next = {
-          ...next,
-          balance: next.balance + (inserted.length > 0 ? mission.reward : 0),
-          missionsClaimed: [...next.missionsClaimed, mission.id],
-        };
+      const counters = missionCountersFromRow(next);
+      const mission = findActiveMission(
+        action.scope,
+        action.id,
+        economy,
+        identity.userId,
+        counters,
+      );
+      if (!mission) {
+        throw new GameRuleError("Misi ini sudah berganti atau tidak aktif.");
       }
+      const periodKey =
+        action.scope === "daily" ? counters.dayKey : counters.weekKey;
+      if (!periodKey) throw new GameRuleError("Periode misi belum siap.");
+      const claimKey = missionClaimKey(action.scope, periodKey, mission.id);
+      if (next.missionsClaimed.includes(claimKey)) {
+        throw new GameRuleError("Misi ini sudah diklaim.");
+      }
+      if (missionProgress(mission, action.scope, counters) < mission.target) {
+        throw new GameRuleError("Target misi belum tercapai.");
+      }
+      const inserted = await tx
+        .insert(rewardClaims)
+        .values({
+          userId: identity.userId,
+          rewardKey: claimKey,
+          amount: mission.reward,
+        })
+        .onConflictDoNothing()
+        .returning({ id: rewardClaims.id });
+      if (inserted.length === 0) {
+        throw new GameRuleError("Misi ini sudah diklaim.");
+      }
+      next = {
+        ...next,
+        scrap: roundCoins(next.scrap + mission.reward),
+        scrapEarned: roundCoins(next.scrapEarned + mission.reward),
+        missionsClaimed: [...next.missionsClaimed, claimKey],
+      };
     } else if (action.type === "color") {
       if (!next.carModel || !isCarColor(next.carModel, action.color)) {
         throw new GameRuleError("Warna ini tidak tersedia untuk mobilmu.", 400);
@@ -1013,7 +1070,6 @@ export async function performGameAction(
         boostEndsAt: next.boostEndsAt,
         cooldownEndsAt: next.cooldownEndsAt,
         rewardClaimed: next.rewardClaimed,
-        missionsClaimed: next.missionsClaimed,
         bodyParts: next.bodyParts,
         carModel: next.carModel,
         ownedCars: next.ownedCars,

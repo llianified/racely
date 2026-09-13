@@ -29,19 +29,17 @@ import {
   formatCoins,
   gameReducer,
   INITIAL_GAME,
-  missions,
-  missionValue,
   totalLevel,
   upgradeCost,
   type GameCommand,
   type GameState,
-  type MissionId,
   type OfflineEarnings,
   type Upgrade,
 } from "@/lib/game";
 import { cn } from "@/lib/utils";
 import { CAR_CATALOG, type CarColor } from "@/lib/car-catalog";
 import type { CarCommand } from "@/lib/car-collection";
+import type { MissionScope } from "@/lib/missions";
 import { PART_CATALOG, SLOT_LABELS, type PartCommand } from "@/lib/car-parts";
 
 const GAME_TOAST_OFFSET = {
@@ -280,16 +278,16 @@ export function GameDashboard() {
     if (await runAction({ type: "gift" }))
       toast.success(`Starter +${coins(game.economy.starterGift)}`);
   };
-  const mission = async (id: MissionId) => {
-    const missionItem = missions(game.economy).find((item) => item.id === id);
+  const mission = async (scope: MissionScope, id: string) => {
+    const missionItem = game.missions[scope].find((item) => item.id === id);
     if (
       !missionItem ||
-      game.missionsClaimed.includes(id) ||
-      missionValue(game, id) < missionItem.target
+      missionItem.claimed ||
+      missionItem.progress < missionItem.target
     )
       return;
-    if (await runAction({ type: "mission", id }))
-      toast.success(`Misi +${coins(missionItem.reward)}`);
+    if (await runAction({ type: "mission", scope, id }))
+      toast.success(`Misi +${missionItem.reward.toLocaleString("id-ID")} Sparepart`);
   };
   const claimAll = async () => {
     const total = claimableTotal(game);
@@ -297,12 +295,6 @@ export function GameDashboard() {
     if (game.pending >= 1 && !(await runAction({ type: "claim" }))) return;
     if (!game.daily.claimedToday && !(await runAction({ type: "daily" }))) return;
     if (!game.rewardClaimed && !(await runAction({ type: "gift" }))) return;
-    for (const item of missions(game.economy)) {
-      const ready =
-        !game.missionsClaimed.includes(item.id) &&
-        missionValue(game, item.id) >= item.target;
-      if (ready && !(await runAction({ type: "mission", id: item.id }))) return;
-    }
     toast.success(`Hadiah +${coins(total)}`);
   };
   const convertScrap = async (amount: number) => {

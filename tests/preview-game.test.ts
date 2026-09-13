@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CAR_CATALOG, CAR_MODEL_IDS, isCarColor } from "../lib/car-catalog";
 import { gameReducer, INITIAL_GAME, lapReward, lapSeconds } from "../lib/game";
 import { DEFAULT_ECONOMY } from "../lib/economy-config";
-import type { GameState } from "../lib/game";
 
 vi.mock("server-only", () => ({}));
 import { getPreviewGameState, performPreviewGameAction, PREVIEW_GAME_COOKIE, previewCarActionSchema } from "../lib/preview-game";
@@ -297,11 +296,14 @@ describe("Preview car selection", () => {
   });
 
   it("offers a legacy cookie one choice without discarding any progress", () => {
-    const state: GameState = { ...INITIAL_GAME, balance: 250, pending: 3.25, earned: 29.25, laps: 80, progress: .4, levels: { engine: 3, tires: 2, battery: 4 }, rewardClaimed: true, missionsClaimed: ["laps"], color: "#f4b65b", withdrawals: [{ id: randomUUID(), coins: 100, method: "dana", account: "081234567890", accountName: "Preview Racer", status: "pending", createdAt: now.toISOString() }] };
+    const { missions: _missions, ...legacyInitial } = INITIAL_GAME;
+    const state = { ...legacyInitial, balance: 250, pending: 3.25, earned: 29.25, laps: 80, progress: .4, levels: { engine: 3, tires: 2, battery: 4 }, rewardClaimed: true, missionsClaimed: ["laps"], color: "#f4b65b", withdrawals: [{ id: randomUUID(), coins: 100, method: "dana" as const, account: "081234567890", accountName: "Preview Racer", status: "pending" as const, createdAt: now.toISOString() }] };
     const cookie = Buffer.from(JSON.stringify({ version: 1, userId: identity.userId, updatedAt: now.getTime(), receipts: [], state })).toString("base64url");
     const offered = getPreviewGameState(request(cookie), identity, E);
+    const { missionsClaimed: _claims, ...publicState } = state;
     expect(offered.state).toEqual({
-      ...state,
+      ...publicState,
+      missions: offered.state.missions,
       carSelection: { model: null, returningPlayer: true },
       ownedCars: [],
       referral: offered.state.referral,
@@ -312,7 +314,8 @@ describe("Preview car selection", () => {
     vi.advanceTimersByTime(3600000);
     const selected = action(offered.cookieValue, selectLuna);
     expect(selected.state).toEqual({
-      ...state,
+      ...publicState,
+      missions: selected.state.missions,
       color: selectLuna.color,
       carSelection: { model: "luna-gt", returningPlayer: true },
       ownedCars: ["luna-gt"],

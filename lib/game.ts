@@ -15,6 +15,7 @@ import {
   type RacePosition,
   type UpgradeKey,
 } from "./economy-config";
+import type { MissionBoard, MissionScope } from "./missions";
 
 export type { EconomyConfig, RacePosition };
 /** Alias; definisinya hidup di `lib/economy-config.ts` bersama rumusnya. */
@@ -140,7 +141,7 @@ export type GameState = {
   boostLeft: number;
   cooldown: number;
   rewardClaimed: boolean;
-  missionsClaimed: string[];
+  missions: MissionBoard;
   color: string;
   circuit: number;
   player: PlayerProfile;
@@ -164,7 +165,7 @@ export const INITIAL_GAME: GameState = {
   boostLeft: 0,
   cooldown: 0,
   rewardClaimed: false,
-  missionsClaimed: [],
+  missions: { daily: [], weekly: [] },
   color: "#4275ff",
   circuit: 0,
   player: { name: "Rookie racer", username: null, photoUrl: null },
@@ -343,73 +344,13 @@ export function batteryTelemetry(
 export const totalLevel = (s: Pick<GameState, "levels">) =>
   Object.values(s.levels).reduce((a, b) => a + b, 0) - 2;
 
-export const MISSION_IDS = ["laps", "upgrade", "earn"] as const;
-export type MissionId = (typeof MISSION_IDS)[number];
-
-/**
- * Judul dan kalimatnya tetap di kode, bukan di config: itu teks UI, bukan angka
- * ekonomi. Yang datang dari config hanya target dan hadiahnya -- dan kalimatnya
- * dibangun dari target itu, supaya menaikkan target lewat panel admin tidak
- * meninggalkan kalimat yang menyebut angka lama.
- */
-const MISSION_COPY: Record<
-  MissionId,
-  { title: string; description: (target: number) => string }
-> = {
-  laps: {
-    title: "Pemanasan dulu, bos",
-    description: (target) => `Selesaikan ${target} putaran`,
-  },
-  upgrade: {
-    title: "Bukan mobil standar",
-    description: (target) => `Lakukan ${target} upgrade`,
-  },
-  earn: {
-    title: "Pelan-pelan jadi sultan",
-    description: (target) => `Kumpulkan ${formatCoins(target)} koin dari balapan`,
-  },
-};
-
-export type Mission = {
-  id: MissionId;
-  title: string;
-  description: string;
-  target: number;
-  reward: number;
-};
-
-export function missions(e: EconomyConfig): Mission[] {
-  const tuned: { id: MissionId; target: number; reward: number }[] = [
-    { id: "laps", target: e.missionLapsTarget, reward: e.missionLapsReward },
-    {
-      id: "upgrade",
-      target: e.missionUpgradeTarget,
-      reward: e.missionUpgradeReward,
-    },
-    { id: "earn", target: e.missionEarnTarget, reward: e.missionEarnReward },
-  ];
-  return tuned.map(({ id, target, reward }) => ({
-    id,
-    target,
-    reward,
-    title: MISSION_COPY[id].title,
-    description: MISSION_COPY[id].description(target),
-  }));
-}
-
-export const missionValue = (
-  s: Pick<GameState, "laps" | "levels" | "earned">,
-  id: MissionId,
-) =>
-  id === "laps" ? s.laps : id === "upgrade" ? totalLevel(s) - 1 : s.earned;
-
 export type GameCommand =
   | CarCommand
   | PartCommand
   | { type: "sync" }
   | { type: "upgrade"; key: Upgrade }
   | { type: "claim" | "boost" | "gift" | "daily" }
-  | { type: "mission"; id: MissionId }
+  | { type: "mission"; scope: MissionScope; id: string }
   /**
    * Penyerap koin sukarela. Satu arah: tidak ada perintah sebaliknya, dan tidak
    * boleh pernah ada -- Sparepart yang bisa kembali jadi koin akan membuat

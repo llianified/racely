@@ -801,6 +801,8 @@
 .reward-row-copy .mission-progress > span { min-width: var(--mission-count-w); text-align: right; }
 .reward-row-copy [data-slot='progress-track'] { background: var(--background); height: var(--space-5); }
 .reward-row.is-ready [data-slot='progress-indicator'] { background: var(--accent); }
+.mission-reset { display: inline-flex; align-items: center; gap: var(--space-xs); white-space: nowrap; }
+.mission-reset svg { width: var(--icon-xs); height: var(--icon-xs); flex-shrink: 0; }
 
 /* ── dompet ────────────────────────────────────────── */
 .wallet-hero { overflow: hidden; border: var(--stroke) solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: var(--radius); background: var(--card); }

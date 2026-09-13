@@ -163,6 +163,7 @@ const NON_COIN_FIELDS = [
   "missionEarnTarget", "circuitUnlockLaps",
   // Sparepart: tidak bisa ditarik, jadi bukan kewajiban rupiah.
   "lapScrapBase", "lapScrapPerLevel", "lapScrapPerCircuit", "startingScrap",
+  "missionLapsReward", "missionUpgradeReward", "missionEarnReward",
   // Pagar emisi.
   "dailyCoinCapPerPlayer", "dailyEmissionBudgetIdr",
   // Lawan: mengubah siapa yang menang, bukan berapa koin yang dicetak.
@@ -184,9 +185,6 @@ describe("Aturan emas: keran koin tidak boleh bertambah diam-diam", () => {
       "lapRewardBase",
       "lapRewardPerBattery",
       "lapRewardPerCircuit",
-      "missionEarnReward",
-      "missionLapsReward",
-      "missionUpgradeReward",
       "racePositionRewardStep",
       "referralRewardInvitee",
       "referralRewardInviter",
@@ -218,7 +216,6 @@ describe("Aturan emas: keran koin tidak boleh bertambah diam-diam", () => {
       "balance: sql`${players.balance} + ${economy.referralRewardInviter}`,",
       "next.balance + (inserted.length > 0 ? economy.starterGift : 0),",
       "next = { ...next, balance: next.balance + status.reward };",
-      "balance: next.balance + (inserted.length > 0 ? mission.reward : 0),",
     ];
     // Memindahkan koin yang sudah ada; tidak menambah kewajiban apa pun.
     const PEMINDAHAN = [

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { CarModelId } from "./car-catalog";
+import type { MissionDefinition } from "./missions";
 
 /**
  * Seluruh angka ekonomi Racely dalam satu objek. Dulu tersebar sebagai
@@ -22,7 +23,6 @@ import type { CarModelId } from "./car-catalog";
  * pada daftar yang sudah ada dan tidak boleh bertambah:
  *
  *   lap reward · dailyRewards rung 1-7 · referral · bonus starter & saldo awal
- *   · hadiah tiga misi lama (kompatibilitas pemain yang sudah mengklaimnya)
  *
  * Seluruh hadiah BARU -- misi harian/mingguan, streak rung 8 ke atas, kotak
  * bonus, duel, leaderboard -- dibayar Sparepart. Daftarnya hidup di
@@ -71,6 +71,9 @@ export type EconomyConfig = {
 
   /** Hadiah check-in per hari streak (1-based), mentok di rung terakhir. */
   dailyRewards: number[];
+  dailyMissionCount: number;
+  dailyMissionPool: MissionDefinition[];
+  weeklyMissionPool: MissionDefinition[];
 
   referralMilestoneLaps: number;
   referralRewardInviter: number;
@@ -166,6 +169,18 @@ export const DEFAULT_ECONOMY: EconomyConfig = {
   offlineRate: 0.5,
 
   dailyRewards: [1, 2, 3, 4, 5, 6, 10],
+  dailyMissionCount: 2,
+  dailyMissionPool: [
+    { id: "daily-laps-10", kind: "laps", target: 10, reward: 3 },
+    { id: "daily-laps-25", kind: "laps", target: 25, reward: 7 },
+    { id: "daily-boosts-2", kind: "boosts", target: 2, reward: 4 },
+    { id: "daily-boosts-5", kind: "boosts", target: 5, reward: 8 },
+  ],
+  weeklyMissionPool: [
+    { id: "weekly-laps-150", kind: "laps", target: 150, reward: 35 },
+    { id: "weekly-laps-300", kind: "laps", target: 300, reward: 65 },
+    { id: "weekly-boosts-20", kind: "boosts", target: 20, reward: 40 },
+  ],
 
   referralMilestoneLaps: 100,
   referralRewardInviter: 25,
@@ -219,6 +234,31 @@ const scrap = z.number().finite().min(0).max(1_000_000);
 const percent = z.number().finite().min(0).max(100);
 const days = z.number().int().min(0).max(365);
 
+const missionDefinitionSchema = z.object({
+  id: z.string().regex(/^[a-z0-9](?:[a-z0-9-]{0,39})$/),
+  kind: z.enum(["laps", "boosts"]),
+  target: z.number().int().min(1).max(1_000_000),
+  reward: z.number().int().min(1).max(1_000_000),
+}).strict();
+
+const missionPoolSchema = z
+  .array(missionDefinitionSchema)
+  .min(1)
+  .max(50)
+  .superRefine((pool, context) => {
+    const seen = new Set<string>();
+    for (const [index, mission] of pool.entries()) {
+      if (seen.has(mission.id)) {
+        context.addIssue({
+          code: "custom",
+          message: "ID misi harus unik dalam satu pool.",
+          path: [index, "id"],
+        });
+      }
+      seen.add(mission.id);
+    }
+  });
+
 export const economyConfigSchema = z
   .object({
     coinToIdr: z.number().int().min(1).max(10_000_000),
@@ -251,6 +291,9 @@ export const economyConfigSchema = z
     offlineRate: rate,
 
     dailyRewards: z.array(coin).min(1).max(31),
+    dailyMissionCount: z.number().int().min(1).max(10),
+    dailyMissionPool: missionPoolSchema,
+    weeklyMissionPool: missionPoolSchema,
 
     referralMilestoneLaps: lapCount,
     referralRewardInviter: coin,
@@ -287,6 +330,10 @@ export const economyConfigSchema = z
     rivalDailyJitter: z.number().int().min(0).max(30),
   })
   .strict()
+  .refine((value) => value.dailyMissionCount <= value.dailyMissionPool.length, {
+    message: "Jumlah misi harian tidak boleh melebihi isi pool.",
+    path: ["dailyMissionCount"],
+  })
   .refine((value) => value.maxWithdrawCoins >= value.minWithdrawCoins, {
     message: "Penarikan maksimum tidak boleh di bawah minimum.",
     path: ["maxWithdrawCoins"],
@@ -347,9 +394,6 @@ export const COIN_FAUCET_FIELDS = [
   "dailyRewards",
   "referralRewardInviter",
   "referralRewardInvitee",
-  "missionLapsReward",
-  "missionUpgradeReward",
-  "missionEarnReward",
 ] as const satisfies readonly (keyof EconomyConfig)[];
 
 /**

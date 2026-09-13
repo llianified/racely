@@ -6,8 +6,6 @@ import {
   accountPattern,
   boostCooldownSeconds,
   INITIAL_GAME,
-  missions,
-  missionValue,
   roundCoins,
   WITHDRAW_METHODS,
   type GameCommand,
@@ -30,6 +28,15 @@ import { applyCarCommand, CarRuleError, ownedCarIds } from "./car-collection";
 import { applyPartCommand, bodyPartsSchema, PartRuleError } from "./car-parts";
 import { referralLink } from "./telegram-bot";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
+import {
+  buildMissionBoard,
+  findActiveMission,
+  missionClaimKey,
+  missionProgress,
+  normalizeMissionCounters,
+  pruneMissionClaims,
+  type MissionCounters,
+} from "./missions";
 
 export const previewCarActionSchema = z.object({
   requestId: z.string().uuid(),
@@ -76,6 +83,11 @@ const previewGameSchema = z.object({
     scrapEarned: z.number().nonnegative().default(0),
     dayKey: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null),
     dayCoins: z.number().nonnegative().default(0),
+    dayLaps: z.number().int().nonnegative().default(0),
+    dayBoosts: z.number().int().nonnegative().default(0),
+    weekKey: z.string().regex(/^\d{4}-W\d{2}$/).nullable().default(null),
+    weekLaps: z.number().int().nonnegative().default(0),
+    weekBoosts: z.number().int().nonnegative().default(0),
     laps: z.number().int().nonnegative(),
     progress: z.number().min(0).max(1),
     levels: z.object({
@@ -86,7 +98,7 @@ const previewGameSchema = z.object({
     boostLeft: z.number().nonnegative(),
     cooldown: z.number().nonnegative(),
     rewardClaimed: z.boolean(),
-    missionsClaimed: z.array(z.string()),
+    missionsClaimed: z.array(z.string()).max(200).default([]),
     color: z.string(),
     circuit: z.number().int().min(0).max(1),
     player: z.object({
@@ -133,7 +145,11 @@ export class PreviewGameRuleError extends Error {
  * ekonomi disetel dari panel, dan menggelembungkan cookie di tiap permintaan.
  * `previewResult` yang menyuntikkannya ke respons, sama seperti `daily`.
  */
-const { economy: _initialEconomy, ...INITIAL_PREVIEW_STATE } = INITIAL_GAME;
+const {
+  economy: _initialEconomy,
+  missions: _initialMissions,
+  ...INITIAL_PREVIEW_STATE
+} = INITIAL_GAME;
 
 function initialPreviewGame(identity: PlayerIdentity, now: number): PreviewGame {
   return {
@@ -149,6 +165,11 @@ function initialPreviewGame(identity: PlayerIdentity, now: number): PreviewGame 
       // Hari balapan hanya dikenal mode preview; GameState cukup membawa
       // `dayCoins` karena HUD tidak perlu tahu kunci harinya.
       dayKey: null,
+      dayLaps: 0,
+      dayBoosts: 0,
+      weekKey: null,
+      weekLaps: 0,
+      weekBoosts: 0,
       carSelection: { model: null, returningPlayer: false },
       levels: { ...INITIAL_GAME.levels },
       missionsClaimed: [],
@@ -202,6 +223,36 @@ function readPreviewGame(
 
 type SettledPreview = { game: PreviewGame; offline: OfflineEarnings | null };
 
+function previewMissionCounters(state: PreviewState): MissionCounters {
+  return {
+    dayKey: state.dayKey,
+    dayLaps: state.dayLaps,
+    dayBoosts: state.dayBoosts,
+    weekKey: state.weekKey,
+    weekLaps: state.weekLaps,
+    weekBoosts: state.weekBoosts,
+  };
+}
+
+function normalizePreviewMissionPeriods(game: PreviewGame, now: number) {
+  const date = new Date(now);
+  const dayKey = racingDayKey(date);
+  const counters = normalizeMissionCounters(
+    previewMissionCounters(game.state),
+    dayKey,
+    date,
+  );
+  return {
+    ...game,
+    state: {
+      ...game.state,
+      ...counters,
+      dayCoins: game.state.dayKey === dayKey ? game.state.dayCoins : 0,
+      missionsClaimed: pruneMissionClaims(game.state.missionsClaimed, date),
+    },
+  };
+}
+
 /**
  * Delegates to the same pure settlement the database path uses, so the offline
  * cap and its half rate cannot drift between `pnpm dev` and production. The
@@ -213,6 +264,7 @@ function settlePreviewGame(
   now: number,
   economy: EconomyConfig,
 ): SettledPreview {
+  game = normalizePreviewMissionPeriods(game, now);
   if (game.state.carSelection?.model === null) {
     return { game: { ...game, updatedAt: now }, offline: null };
   }
@@ -243,6 +295,8 @@ function settlePreviewGame(
       state: {
         ...game.state,
         progress: settlement.progress,
+        dayLaps: game.state.dayLaps + settlement.completedLaps,
+        weekLaps: game.state.weekLaps + settlement.completedLaps,
         laps: game.state.laps + settlement.completedLaps,
         pending: roundCoins(game.state.pending + settlement.income),
         earned: roundCoins(game.state.earned + settlement.income),
@@ -275,11 +329,26 @@ function previewResult(
   // GameState. Membiarkannya ikut membuat payload preview punya satu field yang
   // tidak pernah dikirim server -- persis jenis penyimpangan yang dijaga
   // tests/server-preview-parity.test.ts.
-  const { dayKey: _dayKey, ...carried } = game.state;
+  const {
+    dayKey: _dayKey,
+    dayLaps: _dayLaps,
+    dayBoosts: _dayBoosts,
+    weekKey: _weekKey,
+    weekLaps: _weekLaps,
+    weekBoosts: _weekBoosts,
+    missionsClaimed,
+    ...carried
+  } = game.state;
   const state: GameState = {
     ...carried,
     ownedCars: ownedCarIds(game.state.ownedCars, game.state.carSelection?.model ?? null),
     economy,
+    missions: buildMissionBoard(
+      economy,
+      game.userId,
+      previewMissionCounters(game.state),
+      missionsClaimed,
+    ),
     daily: dailyCheckIn(game.dailyClaims, new Date(now), economy),
     // Mode preview hanya punya satu pemain di dalam cookie, jadi tidak ada yang
     // bisa diajak dan tidak ada yang bisa dibayar. Linknya tetap dibangun
@@ -483,6 +552,8 @@ export function performPreviewGameAction(
     }
     state = {
       ...state,
+      dayBoosts: state.dayBoosts + 1,
+      weekBoosts: state.weekBoosts + 1,
       boostLeft: economy.boostDurationSeconds,
       cooldown: boostCooldownSeconds(economy),
     };
@@ -502,21 +573,35 @@ export function performPreviewGameAction(
       );
     }
   } else if (action.type === "mission") {
-    // Misi yang sudah diklaim bukan kesalahan, hanya tidak ada yang berubah --
-    // sama seperti server. Sebelumnya cabang ini melempar "Target misi belum
-    // tercapai", pesan yang menuduh hal yang keliru dan hanya muncul di
-    // `pnpm dev`, sehingga perilakunya menyimpang dari produksi.
-    if (!state.missionsClaimed.includes(action.id)) {
-      const mission = missions(economy).find((item) => item.id === action.id);
-      if (!mission || missionValue(state, action.id) < mission.target) {
-        throw new PreviewGameRuleError("Target misi belum tercapai.");
-      }
-      state = {
-        ...state,
-        balance: state.balance + mission.reward,
-        missionsClaimed: [...state.missionsClaimed, action.id],
-      };
+    const counters = previewMissionCounters(state);
+    const mission = findActiveMission(
+      action.scope,
+      action.id,
+      economy,
+      game.userId,
+      counters,
+    );
+    if (!mission) {
+      throw new PreviewGameRuleError("Misi ini sudah berganti atau tidak aktif.");
     }
+    const periodKey =
+      action.scope === "daily" ? counters.dayKey : counters.weekKey;
+    if (!periodKey) {
+      throw new PreviewGameRuleError("Periode misi belum siap.");
+    }
+    const claimKey = missionClaimKey(action.scope, periodKey, mission.id);
+    if (state.missionsClaimed.includes(claimKey)) {
+      throw new PreviewGameRuleError("Misi ini sudah diklaim.");
+    }
+    if (missionProgress(mission, action.scope, counters) < mission.target) {
+      throw new PreviewGameRuleError("Target misi belum tercapai.");
+    }
+    state = {
+      ...state,
+      scrap: roundCoins(state.scrap + mission.reward),
+      scrapEarned: roundCoins(state.scrapEarned + mission.reward),
+      missionsClaimed: [...state.missionsClaimed, claimKey],
+    };
   } else if (action.type === "color") {
     state = { ...state, color: action.color };
   } else if (action.type === "circuit") {

@@ -34,9 +34,14 @@ export const players = pgTable("racely_players", {
   /** Null berarti bekal Sparepart awal belum dibayarkan; lihat migrasi 0011. */
   starterScrapAt: timestamp("starter_scrap_at", { withTimezone: true }),
   /** Hari balapan (WIB) yang sedang dihitung untuk batas koin harian. */
-  dayKey: text("day_key"),
-  dayCoins: doublePrecision("day_coins").notNull().default(0),
-  laps: integer("laps").notNull().default(0),
+    dayKey: text("day_key"),
+    dayCoins: doublePrecision("day_coins").notNull().default(0),
+    dayLaps: integer("day_laps").notNull().default(0),
+    dayBoosts: integer("day_boosts").notNull().default(0),
+    weekKey: text("week_key"),
+    weekLaps: integer("week_laps").notNull().default(0),
+    weekBoosts: integer("week_boosts").notNull().default(0),
+    laps: integer("laps").notNull().default(0),
   progress: doublePrecision("progress").notNull().default(0),
   engineLevel: integer("engine_level").notNull().default(1),
   tiresLevel: integer("tires_level").notNull().default(1),

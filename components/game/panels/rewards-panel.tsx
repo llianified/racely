@@ -1,304 +1,339 @@
 "use client";
 
-import { CalendarCheck, Check, Coins, Flag, Gift, LockKeyhole, Trophy, Wrench } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  CalendarDays,
+  CalendarRange,
+  Check,
+  Clock3,
+  Flag,
+  Gift,
+  LockKeyhole,
+  Sparkles,
+  Wrench,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { InfoHint } from "./info-hint";
+import { cn } from "@/lib/utils";
+import { formatCoins, type GameState } from "@/lib/game";
+import {
+  millisecondsUntilMissionReset,
+  type ActiveMission,
+  type MissionScope,
+} from "@/lib/missions";
 import { SectionCardHeading } from "../shell/section-card-heading";
 import { StatHero } from "../shell/stat-hero";
-import { cn } from "@/lib/utils";
-import {
-  coins,
-  formatCoins,
-  missions,
-  missionValue,
-  type GameState,
-  type MissionId,
-} from "@/lib/game";
-
-type RowState = "ready" | "waiting" | "claimed";
-
-type RewardRow = {
-  id: string;
-  icon: typeof Gift;
-  label: string;
-  note: string;
-  amount: number;
-  state: RowState;
-  onClaim: () => void;
-};
-
-const MISSION_ICONS: Record<MissionId, typeof Gift> = {
-  laps: Flag,
-  upgrade: Wrench,
-  earn: Coins,
-};
-
-type MissionRow = {
-  id: MissionId;
-  icon: typeof Gift;
-  label: string;
-  note: string;
-  amount: number;
-  state: RowState;
-  value: number;
-  target: number;
-  onClaim: () => void;
-};
 
 export function claimableTotal(game: GameState) {
-  const missionTotal = missions(game.economy)
-    .filter(
-      (m) => !game.missionsClaimed.includes(m.id) && missionValue(game, m.id) >= m.target,
-    )
-    .reduce((sum, m) => sum + m.reward, 0);
-  // Only whole coins can move from pending into the balance.
   return (
     Math.floor(game.pending) +
-    (game.rewardClaimed ? 0 : game.economy.starterGift) +
-    game.daily.reward +
-    missionTotal
+    (game.daily.claimedToday ? 0 : game.daily.reward) +
+    (game.rewardClaimed ? 0 : game.economy.starterGift)
   );
 }
 
-/** Panjang tangga hadiah ikut config, jadi kalimatnya tidak boleh menyebut 7 sendiri. */
-function dailyNote(daily: GameState["daily"], economy: GameState["economy"]) {
-  if (daily.claimedToday)
-    return daily.streak > 1
-      ? `Streak ${daily.streak} hari. Balik besok untuk ${coins(daily.nextReward)}.`
-      : `Sudah diklaim hari ini. Besok ${coins(daily.nextReward)}.`;
-  if (daily.streak > 0)
-    return `Streak ${daily.streak} hari berjalan. Klaim hari ini supaya tidak putus.`;
-  const rungs = economy.dailyRewards.length;
-  return rungs > 1
-    ? `Klaim tiap hari; hadiahnya naik sampai hari ke-${rungs}.`
-    : "Klaim tiap hari untuk tambahan koin.";
+type RewardRow = {
+  id: string;
+  icon: LucideIcon;
+  title: string;
+  note: string;
+  reward: number;
+  claimed: boolean;
+  ready: boolean;
+  onClaim: () => void;
+};
+
+function RewardItem({ row, disabled }: { row: RewardRow; disabled: boolean }) {
+  const Icon = row.icon;
+  return (
+    <article
+      className={cn(
+        "reward-row",
+        row.ready && "is-ready",
+        row.claimed && "is-claimed",
+      )}
+    >
+      <span className="reward-row-icon" aria-hidden="true">
+        <Icon />
+      </span>
+      <div className="reward-row-copy">
+        <h3>{row.title}</h3>
+        <p>{row.note}</p>
+      </div>
+      <div className="reward-row-action">
+        <strong>
+          +{formatCoins(row.reward)} <span>koin</span>
+        </strong>
+        <Button
+          type="button"
+          size="sm"
+          variant={row.ready ? "gold" : "secondary"}
+          onClick={row.onClaim}
+          disabled={disabled || !row.ready}
+        >
+          {row.claimed ? (
+            <>
+              <Check aria-hidden="true" /> Selesai
+            </>
+          ) : row.ready ? (
+            "Klaim"
+          ) : (
+            <>
+              <LockKeyhole aria-hidden="true" /> Belum
+            </>
+          )}
+        </Button>
+      </div>
+    </article>
+  );
 }
 
-function RowStatus({ state }: { state: Exclude<RowState, "ready"> }) {
-  return state === "claimed" ? (
-    <span className="mission-status">
-      <Check aria-hidden="true" />
-      Diklaim
-    </span>
-  ) : (
-    <span className="mission-status">
-      <LockKeyhole aria-hidden="true" />
-      Belum siap
-    </span>
+function formatCountdown(milliseconds: number) {
+  const totalMinutes = Math.max(0, Math.ceil(milliseconds / 60_000));
+  const days = Math.floor(totalMinutes / (24 * 60));
+  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+  const minutes = totalMinutes % 60;
+  if (days > 0) return `${days} hari ${hours} jam`;
+  if (hours > 0) return `${hours} jam ${minutes} menit`;
+  return `${minutes} menit`;
+}
+
+function MissionItem({
+  mission,
+  disabled,
+  onClaim,
+}: {
+  mission: ActiveMission;
+  disabled: boolean;
+  onClaim: () => void;
+}) {
+  const complete = mission.progress >= mission.target;
+  const shownProgress = Math.min(mission.progress, mission.target);
+  const Icon = mission.kind === "laps" ? Flag : Zap;
+
+  return (
+    <article
+      className={cn(
+        "reward-row",
+        complete && !mission.claimed && "is-ready",
+        mission.claimed && "is-claimed",
+      )}
+    >
+      <span className="reward-row-icon" aria-hidden="true">
+        <Icon />
+      </span>
+      <div className="reward-row-copy">
+        <h3>{mission.title}</h3>
+        <p>{mission.description}</p>
+        <div className="mission-progress">
+          <Progress
+            value={(shownProgress / mission.target) * 100}
+            aria-label={`Progres ${mission.title}`}
+          />
+          <span>
+            {shownProgress.toLocaleString("id-ID")}/
+            {mission.target.toLocaleString("id-ID")}
+          </span>
+        </div>
+      </div>
+      <div className="reward-row-action">
+        <strong>
+          +{mission.reward.toLocaleString("id-ID")} <span>Sparepart</span>
+        </strong>
+        {mission.claimed ? (
+          <span className="mission-status">
+            <Check aria-hidden="true" /> Diklaim
+          </span>
+        ) : complete ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="gold"
+            onClick={onClaim}
+            disabled={disabled}
+          >
+            <Wrench aria-hidden="true" /> Klaim
+          </Button>
+        ) : (
+          <span className="mission-status">
+            <LockKeyhole aria-hidden="true" /> Belum selesai
+          </span>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function MissionSection({
+  title,
+  scope,
+  icon,
+  missions,
+  now,
+  disabled,
+  onMission,
+}: {
+  title: string;
+  scope: MissionScope;
+  icon: LucideIcon;
+  missions: ActiveMission[];
+  now: number | null;
+  disabled: boolean;
+  onMission: (scope: MissionScope, id: string) => void;
+}) {
+  const countdown =
+    now === null
+      ? "Menyiapkan reset"
+      : `Reset ${formatCountdown(millisecondsUntilMissionReset(scope, new Date(now)))}`;
+
+  return (
+    <section className="panel rewards-list-panel" aria-label={title}>
+      <SectionCardHeading
+        icon={icon}
+        title={title}
+        aside={
+          <span className="mission-reset">
+            <Clock3 aria-hidden="true" /> {countdown}
+          </span>
+        }
+      />
+      <div className="reward-list">
+        {missions.map((mission) => (
+          <MissionItem
+            key={`${scope}:${mission.id}`}
+            mission={mission}
+            disabled={disabled}
+            onClaim={() => onMission(scope, mission.id)}
+          />
+        ))}
+      </div>
+    </section>
   );
 }
 
 export function RewardsPanel({
   game,
-  onClaimRace,
-  onClaimDaily,
-  onClaimGift,
-  onClaimMission,
   onClaimAll,
+  onClaimRace,
+  onClaimGift,
+  onClaimDaily,
+  onClaimMission,
   disabled = false,
 }: {
   game: GameState;
-  onClaimRace: () => void;
-  onClaimDaily: () => void;
-  onClaimGift: () => void;
-  onClaimMission: (id: MissionId) => void;
   onClaimAll: () => void;
+  onClaimRace: () => void;
+  onClaimGift: () => void;
+  onClaimDaily: () => void;
+  onClaimMission: (scope: MissionScope, id: string) => void;
   disabled?: boolean;
 }) {
+  const [now, setNow] = useState<number | null>(null);
+
+  useEffect(() => {
+    setNow(Date.now());
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const total = claimableTotal(game);
-  const rewards: RewardRow[] = [
+  const dailyMissionClaims = game.missions.daily.filter(
+    (mission) => mission.claimed,
+  ).length;
+  const weeklyMissionClaims = game.missions.weekly.filter(
+    (mission) => mission.claimed,
+  ).length;
+  const rows: RewardRow[] = [
     {
       id: "race",
       icon: Flag,
-      label: "Hasil balapan",
-      note: `Terkumpul ${coins(game.pending)} · hanya koin utuh yang masuk saldo.`,
-      amount: Math.floor(game.pending),
-      state: game.pending >= 1 ? "ready" : "waiting",
+      title: "Hasil balapan",
+      note: "Pindahkan koin bulat hasil putaran ke saldo.",
+      reward: Math.floor(game.pending),
+      claimed: game.pending < 1,
+      ready: game.pending >= 1,
       onClaim: onClaimRace,
     },
     {
       id: "daily",
-      icon: CalendarCheck,
-      label: "Check-in harian",
-      note: dailyNote(game.daily, game.economy),
-      amount: game.daily.claimedToday ? game.daily.nextReward : game.daily.reward,
-      state: game.daily.claimedToday ? "claimed" : "ready",
+      icon: Sparkles,
+      title: "Check-in harian",
+      note: game.daily.claimedToday
+        ? `Streak ${game.daily.streak} hari terjaga.`
+        : `Hari ke-${game.daily.streak + 1} menunggumu.`,
+      reward: game.daily.claimedToday ? 0 : game.daily.reward,
+      claimed: game.daily.claimedToday,
+      ready: !game.daily.claimedToday,
       onClaim: onClaimDaily,
     },
     {
       id: "gift",
       icon: Gift,
-      label: "Bonus starter",
-      note: game.rewardClaimed
-        ? "Bonus sudah masuk ke saldo kamu."
-        : "Hadiah pertamamu. Sekali klaim, langsung masuk saldo.",
-      amount: game.economy.starterGift,
-      state: game.rewardClaimed ? "claimed" : "ready",
+      title: "Hadiah selamat datang",
+      note: "Bonus satu kali untuk mulai merakit mobilmu.",
+      reward: game.economy.starterGift,
+      claimed: game.rewardClaimed,
+      ready: !game.rewardClaimed,
       onClaim: onClaimGift,
     },
   ];
-  const missionRows: MissionRow[] = missions(game.economy).map((mission) => {
-    const value = Math.min(mission.target, missionValue(game, mission.id));
-    const claimed = game.missionsClaimed.includes(mission.id);
-    return {
-      id: mission.id,
-      icon: MISSION_ICONS[mission.id],
-      label: mission.title,
-      note: mission.description,
-      amount: mission.reward,
-      state: claimed ? "claimed" : value >= mission.target ? "ready" : "waiting",
-      value: claimed ? mission.target : value,
-      target: mission.target,
-      onClaim: () => onClaimMission(mission.id),
-    };
-  });
-  const readyCount =
-    rewards.filter((row) => row.state === "ready").length +
-    missionRows.filter((row) => row.state === "ready").length;
-  const missionsDone = missionRows.filter((row) => row.state === "claimed").length;
+
+  const claimButton: ReactNode = (
+    <Button
+      type="button"
+      variant="gold"
+      onClick={onClaimAll}
+      disabled={disabled || total <= 0}
+    >
+      Klaim semua
+    </Button>
+  );
 
   return (
-    <div className="rewards-layout section-enter flex flex-col gap-lg">
+    <div className="section-enter flex flex-col gap-lg">
       <StatHero
-        ariaLabel="Total hadiah siap diklaim"
+        ariaLabel="Ringkasan hadiah koin"
         label="Siap diklaim"
         figure={formatCoins(total)}
-        info={
-          <InfoHint title="Tentang hadiah">
-            Semua hadiah berupa koin Racely. Pakai buat upgrade mesin atau
-            kosmetik mobil di garasi.
-          </InfoHint>
-        }
-        action={
-          <Button
-            variant="gold"
-            disabled={disabled || total <= 0}
-            onClick={onClaimAll}
-          >
-            <Coins data-icon="inline-start" />
-            Klaim semua
-          </Button>
-        }
+        action={claimButton}
         stats={[
-          { label: "Item siap", value: `${readyCount} item` },
-          { label: "Streak harian", value: `${game.daily.streak} hari` },
+          { label: "Sparepart", value: game.scrap.toLocaleString("id-ID") },
+          {
+            label: "Misi selesai",
+            value: `${dailyMissionClaims + weeklyMissionClaims}/${game.missions.daily.length + game.missions.weekly.length}`,
+          },
         ]}
       />
 
-      <section className="panel rewards-list-panel" aria-label="Hadiah">
-        <SectionCardHeading
-          icon={Gift}
-          title="Hadiah"
-          aside={
-            <Badge variant="secondary">
-              {rewards.filter((row) => row.state === "ready").length} siap
-            </Badge>
-          }
-        />
-        <ul className="reward-list">
-          {rewards.map((row) => (
-            <li
-              key={row.id}
-              id={row.id === "gift" ? "starter-gift" : `reward-${row.id}`}
-              tabIndex={-1}
-              className={cn(
-                "reward-row",
-                row.state === "ready" && "is-ready",
-                row.state === "claimed" && "is-claimed",
-              )}
-            >
-              <span className="reward-row-icon" aria-hidden="true">
-                <row.icon />
-              </span>
-              <div className="reward-row-copy">
-                <h3>{row.label}</h3>
-                <p>{row.note}</p>
-              </div>
-              <div className="reward-row-action">
-                <strong>{formatCoins(row.amount)} <span>koin</span></strong>
-                {row.state === "ready" ? (
-                  <Button
-                    variant="gold"
-                    disabled={disabled}
-                    onClick={row.onClaim}
-                    aria-label={`Klaim ${row.label}`}
-                  >
-                    Klaim
-                  </Button>
-                ) : (
-                  <RowStatus state={row.state} />
-                )}
-              </div>
-            </li>
+      <section className="panel rewards-list-panel" aria-label="Hadiah koin">
+        <SectionCardHeading icon={Gift} title="Hadiah koin" />
+        <div className="reward-list">
+          {rows.map((row) => (
+            <RewardItem key={row.id} row={row} disabled={disabled} />
           ))}
-        </ul>
+        </div>
       </section>
 
-      <section
-        id="missions"
-        tabIndex={-1}
-        className="panel rewards-list-panel"
-        aria-label="Misi"
-      >
-        <SectionCardHeading
-          icon={Trophy}
-          title="Misi"
-          aside={
-            <Badge variant="secondary">
-              {missionsDone}/{missionRows.length} selesai
-            </Badge>
-          }
-        />
-        <ul className="reward-list">
-          {missionRows.map((row) => (
-            <li
-              key={row.id}
-              id={`reward-${row.id}`}
-              tabIndex={-1}
-              className={cn(
-                "reward-row",
-                row.state === "ready" && "is-ready",
-                row.state === "claimed" && "is-claimed",
-              )}
-            >
-              <span className="reward-row-icon" aria-hidden="true">
-                <row.icon />
-              </span>
-              <div className="reward-row-copy">
-                <h3>{row.label}</h3>
-                <p>{row.note}</p>
-                <div className="mission-progress">
-                  <Progress
-                    value={(row.value / row.target) * 100}
-                    aria-label={`${row.label}: ${row.value.toLocaleString("id-ID")} dari ${row.target.toLocaleString("id-ID")}`}
-                    className="flex-1"
-                  />
-                  <span>
-                    {row.value.toLocaleString("id-ID")}/{row.target.toLocaleString("id-ID")}
-                  </span>
-                </div>
-              </div>
-              <div className="reward-row-action">
-                <strong>{formatCoins(row.amount)} <span>koin</span></strong>
-                {row.state === "ready" ? (
-                  <Button
-                    variant="gold"
-                    disabled={disabled}
-                    onClick={row.onClaim}
-                    aria-label={`Klaim ${row.label}`}
-                  >
-                    Klaim
-                  </Button>
-                ) : (
-                  <RowStatus state={row.state} />
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <MissionSection
+        title="Misi harian"
+        scope="daily"
+        icon={CalendarDays}
+        missions={game.missions.daily}
+        now={now}
+        disabled={disabled}
+        onMission={onClaimMission}
+      />
+      <MissionSection
+        title="Misi mingguan"
+        scope="weekly"
+        icon={CalendarRange}
+        missions={game.missions.weekly}
+        now={now}
+        disabled={disabled}
+        onMission={onClaimMission}
+      />
     </div>
   );
 }

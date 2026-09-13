@@ -219,26 +219,42 @@ describe("Repeating a settled action is a no-op in both writers", () => {
     );
   });
 
-  it("treats an already-claimed mission as nothing to do, not a failure", () => {
-    // Preview dulu melempar "Target misi belum tercapai" untuk misi yang justru
-    // sudah selesai -- pesan yang menuduh hal keliru, dan hanya di `pnpm dev`.
-    let game = { cookieValue: fundedCookie(500) };
-    for (let index = 0; index < 3; index += 1) {
-      game = act(game.cookieValue, { type: "upgrade", key: "tires" });
-    }
-    const claimed = act(game.cookieValue, { type: "mission", id: "upgrade" });
-    expect(claimed.state.missionsClaimed).toContain("upgrade");
-
-    const repeated = act(claimed.cookieValue, { type: "mission", id: "upgrade" });
-    expect(repeated.state.balance).toBe(claimed.state.balance);
-    expect(repeated.state.missionsClaimed).toEqual(
-      claimed.state.missionsClaimed,
+  it("keeps a retried mission claim idempotent and rejects another claim", () => {
+    const game = onboarded();
+    const mission = game.state.missions.daily[0];
+    const decoded = JSON.parse(
+      Buffer.from(game.cookieValue, "base64url").toString("utf8"),
     );
+    decoded.state.dayLaps = mission.target;
+    decoded.state.dayBoosts = mission.target;
+    const eligibleCookie = Buffer.from(JSON.stringify(decoded), "utf8").toString(
+      "base64url",
+    );
+    const requestId = randomUUID();
+    const command = { type: "mission", scope: "daily", id: mission.id } as const;
+    const before = getPreviewGameState(request(eligibleCookie), identity, E).state;
+    const claimed = act(eligibleCookie, command, requestId);
+
+    expect(claimed.state.balance).toBe(before.balance);
+    expect(claimed.state.scrap).toBe(before.scrap + mission.reward);
+    expect(
+      claimed.state.missions.daily.find((item) => item.id === mission.id)?.claimed,
+    ).toBe(true);
+    expect(act(claimed.cookieValue, command, requestId).state).toEqual(
+      claimed.state,
+    );
+    expect(() => act(claimed.cookieValue, command)).toThrow("sudah diklaim");
   });
 
-  it("still refuses a mission whose target is genuinely unmet", () => {
+  it("still refuses an active mission whose target is genuinely unmet", () => {
+    const game = onboarded();
+    const mission = game.state.missions.daily[0];
     expect(() =>
-      act(onboarded().cookieValue, { type: "mission", id: "laps" }),
+      act(game.cookieValue, {
+        type: "mission",
+        scope: "daily",
+        id: mission.id,
+      }),
     ).toThrow("Target misi belum tercapai");
   });
 });
