@@ -110,11 +110,11 @@ export function WalletPanel({
     <div className="wallet-layout section-enter flex flex-col gap-lg">
       <section className="wallet-hero" aria-label="Saldo koin">
         <div className="wallet-balance">
-          <span className="eyebrow">Saldo tersedia</span>
+          <span className="eyebrow">Koin kamu</span>
           <strong>{formatCoins(balance)} <span>koin</span></strong>
         </div>
         <Button
-          variant="gold"
+          variant={balance < minWithdraw ? "secondary" : "gold"}
           size="lg"
           className="w-full"
           disabled={disabled || balance < minWithdraw}
@@ -122,8 +122,8 @@ export function WalletPanel({
         >
           <Send data-icon="inline-start" />
           {balance < minWithdraw
-            ? `Kumpulkan ${coins(minWithdraw - balance)} lagi`
-            : "Tarik saldo"}
+            ? `Penarikan mulai ${coins(minWithdraw)}`
+            : "Tarik koin"}
         </Button>
         <div className="wallet-hero-side">
           <span className="wallet-pending">
@@ -144,17 +144,16 @@ export function WalletPanel({
       <SheetHeader className="p-0">
             <SheetTitle>
               <Send aria-hidden="true" />
-              Tarik saldo
+              Tarik koin
             </SheetTitle>
             <SheetDescription>
-              Saldo {formatCoins(balance)} koin · minimal {coins(minWithdraw)} per penarikan.
+              {formatCoins(balance)} koin tersedia · 1 koin = {idr(1, economy)}
             </SheetDescription>
           </SheetHeader>
           <p className="wallet-dialog-note">
-            Penarikan diverifikasi manual oleh tim Racely dalam 1×24 jam kerja.
-            Pastikan nomor dan nama tujuan benar; dana yang salah kirim tidak
-            bisa ditarik kembali. Kalau permintaanmu ditolak, koinnya otomatis
-            kembali ke saldo.
+            Permintaan diproses manual oleh tim Racely, biasanya dalam sehari.
+            Cek lagi nomor dan nama tujuan sebelum kirim. Kalau ditolak, koinnya
+            kembali ke saldo kamu.
           </p>
         <form className="wallet-form" onSubmit={submit}>
           <div className="wallet-field">
@@ -171,7 +170,7 @@ export function WalletPanel({
               aria-describedby="withdraw-amount-note"
             />
             <p id="withdraw-amount-note">
-              Kamu terima {idr(requested, economy)} setelah diproses.
+              {formatCoins(requested)} koin = {idr(requested, economy)} · minimal {coins(minWithdraw)}
             </p>
           </div>
 
@@ -278,9 +277,7 @@ export function WalletPanel({
             disabled={disabled || balance < minWithdraw}
           >
             <Send data-icon="inline-start" />
-            {balance < minWithdraw
-              ? `Kumpulkan ${coins(minWithdraw - balance)} lagi`
-              : `Tarik ${coins(requested)}`}
+            Kirim permintaan
           </Button>
         </form>
         </SheetContent>
