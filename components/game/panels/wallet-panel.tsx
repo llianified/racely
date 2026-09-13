@@ -112,7 +112,6 @@ export function WalletPanel({
         <div className="wallet-balance">
           <span className="eyebrow">Saldo tersedia</span>
           <strong>{formatCoins(balance)} <span>koin</span></strong>
-          <p>~ {idr(balance, economy)}</p>
         </div>
         <Button
           variant="gold"
@@ -133,8 +132,9 @@ export function WalletPanel({
           </span>
           <InfoHint title="Cara kerja saldo">
             Koin dari balapan masuk ke &quot;belum diklaim&quot; dulu. Setiap 1
-            koin penuh bisa kamu klaim ke saldo, lalu ditarik ke e-wallet atau
-            rekening bank saat mencapai {coins(minWithdraw)}.
+            koin penuh bisa kamu klaim ke saldo. Saldo bisa ditarik ke e-wallet
+            atau rekening bank saat mencapai {coins(minWithdraw)}, dengan nilai
+            1 koin = {idr(1, economy)}.
           </InfoHint>
         </div>
       </section>
@@ -280,7 +280,7 @@ export function WalletPanel({
             <Send data-icon="inline-start" />
             {balance < minWithdraw
               ? `Kumpulkan ${coins(minWithdraw - balance)} lagi`
-              : `Tarik ${idr(requested, economy)}`}
+              : `Tarik ${coins(requested)}`}
           </Button>
         </form>
         </SheetContent>
@@ -301,7 +301,7 @@ export function WalletPanel({
             {game.withdrawals.map((item) => (
               <li key={item.id} className="wallet-history-row">
                 <div>
-                  <h3>{idr(item.coins, economy)}</h3>
+                  <h3>{coins(item.coins)}</h3>
                   <p>
                     {methodLabel(item.method)} · {item.account}
                   </p>
