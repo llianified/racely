@@ -20,7 +20,7 @@ import {
   performPreviewGameAction,
   PREVIEW_GAME_COOKIE,
 } from "../lib/preview-game";
-import { gameActionSchema } from "../lib/game-server";
+import { gameActionSchema, HANDLED_ACTION_TYPES } from "../lib/game-server";
 
 /**
  * `lib/game-server.ts` dan `lib/preview-game.ts` ditulis manual dan tidak
@@ -95,6 +95,15 @@ describe("Setiap aksi server punya cabangnya di mode preview", () => {
 
   it("tidak meninggalkan satu pun varian commandSchema tanpa cabang", () => {
     expect(previewBranches()).toEqual(commandTypes());
+  });
+
+  /**
+   * Sisi server tidak perlu di-grep: peta handlernya diketik `{ [T in
+   * GameCommand["type"]]: ... }`, jadi varian tanpa handler sudah gagal
+   * kompilasi. Ini menegaskannya sekali lagi pada nilai yang sebenarnya.
+   */
+  it("memetakan setiap varian commandSchema ke handler server", () => {
+    expect([...HANDLED_ACTION_TYPES].sort()).toEqual(commandTypes());
   });
 
   it("tidak menangani aksi yang tidak bisa diproduksi server", () => {
@@ -179,7 +188,9 @@ describe("Circuit progression only moves forward", () => {
     expect(() =>
       act(advanced.cookieValue, { type: "circuit", circuit: 0 }),
     ).toThrow("Trek lama tidak bisa dipilih lagi");
-    expect(gameServerSource).toContain("action.circuit < next.circuit");
+    // Masih dibaca dari source: sisi server butuh database untuk dijalankan
+    // sungguhan, jadi arah perbandingannya belum bisa diuji seperti preview.
+    expect(gameServerSource).toContain("action.circuit < row.circuit");
     expect(previewSource).toContain("action.circuit < state.circuit");
   });
 });
@@ -203,7 +214,7 @@ describe("Repeating a settled action is a no-op in both writers", () => {
     // Warna garasi yang dipilih belakangan tidak boleh tersetel ulang.
     expect(again.state.color).toBe("#e6a4ba");
 
-    expect(gameServerSource).toContain("next.carModel !== action.model");
+    expect(gameServerSource).toContain("row.carModel !== action.model");
   });
 
   it("rejects a different car in both writers", () => {
