@@ -12,7 +12,9 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { formatCoins } from "@/lib/game";
 
-export type GameTab = "menu" | "race" | "garage" | "rewards" | "wallet";
+export type GameTab = "menu" | "race" | "garage" | "rewards" | "wallet" | "referral";
+/** Tab yang tidak punya tombol di nav bawah; dibuka dari Menu dan menyorot "Menu" saat aktif. */
+const MENU_CHILD_TABS: ReadonlySet<GameTab> = new Set(["referral"]);
 export const NAV_ITEMS = [
   { id: "menu" as const, label: "Menu", icon: Menu },
   { id: "race" as const, label: "Balapan", icon: Flag },
@@ -44,12 +46,13 @@ export function GameNavigation({
   onTab: (tab: GameTab) => void;
   giftAvailable: boolean;
 }) {
+  const activeTab: GameTab = MENU_CHILD_TABS.has(tab) ? "menu" : tab;
   const items = NAV_ITEMS.map(({ id, label, icon: Icon }) => (
     <button
       key={id}
       onClick={() => onTab(id)}
-      className={cn("nav-item", tab === id && "active")}
-      aria-current={tab === id ? "page" : undefined}
+      className={cn("nav-item", activeTab === id && "active")}
+      aria-current={activeTab === id ? "page" : undefined}
     >
       <span className="nav-icon">
         <Icon />

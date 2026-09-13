@@ -3,7 +3,7 @@
 import {
   ArrowUpRight, ChevronDown, ChevronRight, CircleHelp, ClipboardList,
   Coins, Flag, Gift, Gauge, MapPinned, Paintbrush, ShieldCheck,
-  Trophy, Warehouse, Wrench, Zap,
+  Trophy, UserPlus, Warehouse, Wind, Wrench, Zap,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,14 +32,16 @@ export function MenuPanel({
         { label: "Mobil kamu", icon: Zap, action: () => onNavigate("garage") },
         { label: "Upgrade performa", icon: Wrench, action: () => onNavigate("garage", "upgrades") },
         { label: "Warna bodi", icon: Paintbrush, action: () => onNavigate("garage", "body-colors") },
+        { label: "Aero kit", icon: Wind, action: () => onNavigate("garage", "aero-kit") },
       ],
     },
     {
       title: "Hadiah & Misi", icon: Trophy,
       items: [
-        { label: "Semua hadiah & misi", icon: ClipboardList, action: () => onNavigate("rewards") },
+        { label: "Semua hadiah", icon: ClipboardList, action: () => onNavigate("rewards") },
         { label: "Hasil balapan", icon: Coins, action: () => onNavigate("rewards", "reward-race") },
         { label: "Bonus starter", icon: Gift, action: () => onNavigate("rewards", "starter-gift"), badge: giftAvailable ? "KLAIM" : "DIKLAIM" },
+        { label: "Daftar misi", icon: Trophy, action: () => onNavigate("rewards", "missions") },
       ],
     },
   ];
@@ -65,6 +67,9 @@ export function MenuPanel({
             </div>
           </details>
         ))}
+        <Button variant="menuDirect" onClick={() => onNavigate("referral")}>
+          <UserPlus aria-hidden="true" /><span>Ajak teman</span><ArrowUpRight aria-hidden="true" />
+        </Button>
         <Button variant="menuDirect" onClick={onWallet}>
           <Coins aria-hidden="true" /><span>Dompet koin</span><ArrowUpRight aria-hidden="true" />
         </Button>
