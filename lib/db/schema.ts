@@ -38,6 +38,7 @@ export const players = pgTable("racely_players", {
     .default([]),
   bodyParts: jsonb("body_parts").$type<BodyParts>().notNull().default({ owned: [], equipped: {} }),
   carModel: text("car_model").$type<CarModelId>(),
+  ownedCars: jsonb("owned_cars").$type<CarModelId[]>().notNull().default([]),
   color: text("color").notNull().default("#4275ff"),
   circuit: integer("circuit").notNull().default(0),
   lastSettledAt: timestamp("last_settled_at", { withTimezone: true })

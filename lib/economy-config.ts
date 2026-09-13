@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { CarModelId } from "./car-catalog";
 
 /**
  * Seluruh angka ekonomi Racely dalam satu objek. Dulu tersebar sebagai
@@ -67,6 +68,9 @@ export type EconomyConfig = {
   missionEarnReward: number;
 
   circuitUnlockLaps: number;
+  carPriceBebek: number;
+  carPriceBurger: number;
+  carPriceUfo: number;
 };
 
 /**
@@ -118,10 +122,18 @@ export const DEFAULT_ECONOMY: EconomyConfig = {
   missionEarnReward: 15,
 
   circuitUnlockLaps: 25,
+  carPriceBebek: 35,
+  carPriceBurger: 60,
+  carPriceUfo: 90,
 };
 
 /** Batas maksimum level upgrade yang boleh dipilih tanpa migrasi baru. */
 export const UPGRADE_LEVEL_CEILING = 10;
+
+export const carPriceAt = (e: EconomyConfig, model: CarModelId) =>
+  model === "bebek-sultan" ? e.carPriceBebek
+    : model === "burger-oleng" ? e.carPriceBurger
+      : model === "ufo-gabut" ? e.carPriceUfo : 0;
 
 const coin = z.number().finite().min(0).max(1_000_000);
 const rate = z.number().finite().min(0).max(1);
@@ -173,6 +185,9 @@ export const economyConfigSchema = z
     missionEarnReward: coin,
 
     circuitUnlockLaps: lapCount,
+    carPriceBebek: z.number().int().min(1).max(1_000_000),
+    carPriceBurger: z.number().int().min(1).max(1_000_000),
+    carPriceUfo: z.number().int().min(1).max(1_000_000),
   })
   .strict()
   .refine((value) => value.maxWithdrawCoins >= value.minWithdrawCoins, {

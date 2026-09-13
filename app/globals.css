@@ -93,6 +93,13 @@
   --stage-garage-h: 150px;
   --stage-parts-fluid-h: 24svh;
   --parts-choice-w: 144px;
+  --collection-gold: #ffdd79;
+  --collection-pink: #f7adbd;
+  --collection-mint: #a4e8d2;
+  --collection-stage: #eae1fa;
+  --collection-corner: 14px;
+  --collection-stage-h: 200px;
+  --collection-icon: 28px;
   --stage-select-h: 160px;
   --stage-select-h-max: 240px;
   --stage-select-h-short: 140px;
@@ -296,6 +303,38 @@
 .parts-shop-note { display: flex; align-items: flex-start; gap: var(--space-sm); color: var(--muted-foreground); }
 .parts-shop-note > svg { width: var(--icon-base); height: var(--icon-base); flex-shrink: 0; color: var(--accent); }
 .parts-shop-note p { text-wrap: pretty; }
+.car-collection { padding: var(--space-md); }
+.collection-intro { margin-top: var(--space-xs); color: var(--muted-foreground); font-size: var(--fs-small); }
+.collection-catalog { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-sm); margin-top: var(--space-lg); }
+[data-character='bebek-sultan'] { --character-color: var(--collection-gold); }
+[data-character='burger-oleng'] { --character-color: var(--collection-pink); }
+[data-character='ufo-gabut'] { --character-color: var(--collection-mint); }
+.collection-card { display: flex; flex-direction: column; gap: var(--space-6); min-width: 0; padding: var(--space-10); text-align: left; border: var(--stroke) solid color-mix(in srgb, var(--character-color) 40%, var(--border)); border-radius: var(--collection-corner); background: color-mix(in srgb, var(--character-color) 10%, var(--card)); color: var(--foreground); transition: background var(--dur-fast); }
+.collection-card:hover { background: color-mix(in srgb, var(--character-color) 20%, var(--card)); }
+.collection-card:disabled { opacity: var(--opacity-locked); }
+.collection-card-top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-xs); margin-bottom: var(--space-sm); color: var(--character-color); }
+.collection-card-top svg { width: var(--collection-icon); height: var(--collection-icon); }
+.collection-number { font-size: var(--fs-nano); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps-lg); }
+.collection-card > strong { font-size: var(--fs-body); line-height: var(--lh-tight); font-weight: var(--fw-heavy); text-wrap: balance; }
+.collection-tagline { font-size: var(--fs-nano); color: var(--muted-foreground); }
+.collection-card-price { display: flex; align-items: center; justify-content: space-between; gap: var(--space-xs); margin-top: auto; padding-top: var(--space-sm); color: var(--character-color); font-size: var(--fs-small); font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
+.collection-card-price svg { width: var(--icon-sm); height: var(--icon-sm); flex-shrink: 0; }
+.collection-note { margin-top: var(--space-md); font-size: var(--fs-small); color: var(--muted-foreground); line-height: var(--lh-normal); text-wrap: pretty; }
+.collection-owned { display: flex; flex-direction: column; gap: var(--space-sm); margin-top: var(--space-lg); padding-top: var(--space-md); border-top: var(--stroke) solid var(--border); }
+.collection-owned h3 { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); font-size: var(--fs-body); font-weight: var(--fw-bold); }
+.collection-owned h3 span, .collection-owned > p { color: var(--muted-foreground); font-size: var(--fs-small); font-weight: var(--fw-normal); }
+.collection-switcher { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
+.collection-owned-car { display: flex; align-items: center; gap: var(--space-xs); min-height: var(--space-44); padding: var(--space-sm) var(--space-10); border: var(--stroke) solid var(--border); border-radius: var(--corner-pill); color: var(--muted-foreground); background: var(--background); font-size: var(--fs-small); }
+.collection-owned-car svg { width: var(--icon-sm); height: var(--icon-sm); visibility: hidden; }
+.collection-owned-car[aria-pressed='true'] { border-color: var(--accent); color: var(--accent); }
+.collection-owned-car[aria-pressed='true'] svg { visibility: visible; }
+.collection-preview { height: var(--collection-stage-h); background: color-mix(in srgb, var(--character-color) 24%, var(--collection-stage)); touch-action: none; }
+.collection-detail { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-md); }
+.collection-detail-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-sm); }
+.collection-detail-heading > span:last-child { color: var(--muted-foreground); font-size: var(--fs-small); }
+.collection-detail h3 { font-size: var(--fs-title); font-weight: var(--fw-heavy); line-height: var(--lh-title); text-wrap: balance; }
+.collection-detail p { color: var(--muted-foreground); font-size: var(--fs-small); line-height: var(--lh-normal); text-wrap: pretty; }
+.collection-error { margin-top: var(--space-sm); font-size: var(--fs-small); }
 @theme inline {
   --font-sans: 'Google Sans Flex Variable', sans-serif;
   --font-mono: 'Google Sans Flex Variable', sans-serif;

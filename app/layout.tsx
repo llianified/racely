@@ -4,7 +4,7 @@ import '@fontsource-variable/google-sans-flex'
 import './globals.css'
 
 const description =
-  'Mobil kecil, ambisi besar. Balapan mini 4WD 3D, kumpulkan koin virtual, dan rakit mobil impianmu bersama Racely.'
+  'Mobil lucu, kelakuan random. Balapan mini 4WD 3D, kumpulkan koin virtual, dan koleksi Mochi Meong, Bebek Sultan, Burger Oleng, serta UFO Gabut di Racely.'
 
 // Social cards need absolute image URLs. Without this the build falls back to
 // http://localhost:3000 and every shared link renders a broken preview, so
@@ -20,20 +20,20 @@ function siteUrl() {
 
 export const metadata: Metadata = {
   metadataBase: siteUrl(),
-  title: 'Racely — Night Racing Garage',
+  title: 'Racely — Lucu Dulu, Ngebut Kemudian',
   description,
   applicationName: 'Racely',
   openGraph: {
     type: 'website',
     siteName: 'Racely',
-    title: 'Racely — Night Racing Garage',
+    title: 'Racely — Lucu Dulu, Ngebut Kemudian',
     description,
     locale: 'id_ID',
     images: [{ url: '/racely-logo.png', width: 512, height: 512, alt: 'Logo Racely: bendera balap kotak-kotak kuning dan ungu' }],
   },
   twitter: {
     card: 'summary',
-    title: 'Racely — Night Racing Garage',
+    title: 'Racely — Lucu Dulu, Ngebut Kemudian',
     description,
     images: ['/racely-logo.png'],
   },

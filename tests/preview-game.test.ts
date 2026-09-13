@@ -35,6 +35,40 @@ describe("Workshop installation", () => {
   });
 });
 
+describe("Preview car collection", () => {
+  it("rejects premium onboarding and purchase before selecting a starter", () => {
+    const fresh = getPreviewGameState(request(), identity, E);
+    expect(() => action(fresh.cookieValue, { type: "select-car", model: "bebek-sultan", color: "#ffd45c" })).toThrow();
+    expect(() => action(fresh.cookieValue, { type: "buy-car", model: "bebek-sultan" })).toThrow("Pilih mobilmu");
+    const selected = action(fresh.cookieValue, selectLuna);
+    expect(() => action(selected.cookieValue, { type: "buy-car", model: "bebek-sultan" })).toThrow("Koin belum cukup");
+    expect(() => action(selected.cookieValue, { type: "equip-car", model: "bebek-sultan" })).toThrow("Beli mobil");
+  });
+
+  it("persists the collection, charges once, equips for free, and preserves progress", () => {
+    const selected = action(getPreviewGameState(request(), identity, E).cookieValue, selectLuna);
+    const cookie = JSON.parse(Buffer.from(selected.cookieValue, "base64url").toString("utf8"));
+    cookie.state.balance = 200;
+    const funded = Buffer.from(JSON.stringify(cookie)).toString("base64url");
+    const requestId = randomUUID();
+    const bought = action(funded, { type: "buy-car", model: "bebek-sultan" }, requestId);
+    expect(bought.state.balance).toBe(200 - E.carPriceBebek);
+    expect(bought.state.ownedCars).toEqual(["luna-gt", "bebek-sultan"]);
+    expect(bought.state.carSelection?.model).toBe("bebek-sultan");
+    expect(bought.state.color).toBe(CAR_CATALOG["bebek-sultan"].defaultColor);
+    expect(bought.state.levels).toEqual(selected.state.levels);
+    expect(bought.state.laps).toBe(selected.state.laps);
+    expect(action(bought.cookieValue, { type: "buy-car", model: "bebek-sultan" }, requestId).state).toEqual(bought.state);
+    expect(action(bought.cookieValue, { type: "buy-car", model: "bebek-sultan" }).state).toEqual(bought.state);
+    const switched = action(bought.cookieValue, { type: "equip-car", model: "luna-gt" });
+    expect(switched.state.balance).toBe(bought.state.balance);
+    expect(switched.state.ownedCars).toEqual(bought.state.ownedCars);
+    expect(switched.state.carSelection?.model).toBe("luna-gt");
+    expect(getPreviewGameState(request(switched.cookieValue), identity, E).state).toEqual(switched.state);
+    expect(action(switched.cookieValue, { type: "buy-car", model: "bebek-sultan" }, requestId).state).toEqual(switched.state);
+  });
+});
+
 describe("Preview body parts", () => {
   it("persists purchases and equipped slots across reload, without double charging retries", () => {
     const fresh = getPreviewGameState(request(), identity, E);
@@ -188,7 +222,7 @@ describe("Preview car selection", () => {
     const fresh = getPreviewGameState(request(), identity, E);
     vi.advanceTimersByTime(120000);
     const selected = action(fresh.cookieValue, selectLuna);
-    expect(selected.state).toEqual({ ...fresh.state, color: selectLuna.color, carSelection: { model: "luna-gt", returningPlayer: false } });
+    expect(selected.state).toEqual({ ...fresh.state, ownedCars: ["luna-gt"], color: selectLuna.color, carSelection: { model: "luna-gt", returningPlayer: false } });
     expect(getPreviewGameState(request(selected.cookieValue), identity, E).state).toEqual(selected.state);
     vi.advanceTimersByTime(8000);
     expect(action(selected.cookieValue, { type: "sync" }).state.laps).toBe(1);
@@ -220,6 +254,7 @@ describe("Preview car selection", () => {
     expect(offered.state).toEqual({
       ...state,
       carSelection: { model: null, returningPlayer: true },
+      ownedCars: [],
       referral: offered.state.referral,
     });
     // Mode preview cuma punya satu pemain, jadi tidak ada ajakan yang terhitung.
@@ -231,6 +266,7 @@ describe("Preview car selection", () => {
       ...state,
       color: selectLuna.color,
       carSelection: { model: "luna-gt", returningPlayer: true },
+      ownedCars: ["luna-gt"],
       referral: selected.state.referral,
     });
   });
