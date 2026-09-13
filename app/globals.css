@@ -538,8 +538,6 @@
 .scene-controls [data-slot='button']:focus-visible { outline-offset: calc(var(--focus-offset) * -1); }
 .scene-controls [data-slot='button']:not(.gold-button):hover { background: var(--secondary); }
 .scene-controls [data-slot='button'][aria-pressed='true'] { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--background) 88%, var(--accent)); }
-.lap-progress { flex-shrink: 0; height: var(--space-2); margin: 0; background: var(--secondary); overflow: hidden; }
-.lap-progress > div { width: 100%; height: 100%; transform-origin: left; background: var(--accent); }
 .race-overview-hud { flex-shrink: 0; border-top: var(--stroke) solid var(--border); background: var(--background); color: var(--foreground); font-variant-numeric: tabular-nums; }
 .race-hud-top { position: absolute; inset: var(--space-md) var(--space-md) auto; z-index: var(--z-overlay); display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-sm); pointer-events: none; font-variant-numeric: tabular-nums; }
 .race-hud-position { display: flex; align-items: baseline; gap: var(--space-6); padding: var(--space-5) var(--space-10); border: var(--stroke) solid var(--border); border-radius: var(--corner-md); background: color-mix(in srgb, var(--background) 88%, transparent); color: var(--foreground); }
@@ -550,7 +548,7 @@
 .race-hud-main { display: flex; align-items: center; gap: var(--space-md); padding: var(--space-8) var(--space-md) var(--space-6); }
 .race-hud-speed { display: flex; align-items: baseline; gap: var(--space-3); margin: 0; flex-shrink: 0; line-height: var(--lh-none); }
 .race-hud-speed strong { font-size: var(--fs-5xl); font-weight: var(--fw-heavy); font-style: italic; letter-spacing: var(--track-tight-sm); font-variant-numeric: tabular-nums; }
-.race-hud-speed small { font-size: var(--fs-micro); font-weight: var(--fw-medium); color: var(--muted-foreground); }
+.race-hud-speed small { font-size: var(--fs-micro); font-style: normal; font-weight: var(--fw-medium); color: var(--muted-foreground); }
 .race-hud-gauges { display: flex; flex: 1; min-width: 0; gap: var(--space-sm); margin: 0; }
 .race-hud-gauges > div { flex: 1; min-width: 0; display: grid; grid-template-columns: auto 1fr; align-items: baseline; column-gap: var(--space-4); row-gap: var(--space-3); }
 .race-hud-gauges dt { color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-semibold); letter-spacing: var(--track-caps-md); text-transform: uppercase; line-height: var(--lh-tight); }
