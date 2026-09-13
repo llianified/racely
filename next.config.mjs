@@ -17,8 +17,16 @@ const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isProduction ? '' : " 'unsafe-eval'"} https://telegram.org`,
   "style-src 'self' 'unsafe-inline'",
-  // t.me melayani foto profil Telegram; blob: dipakai canvas WebGL.
-  "img-src 'self' data: blob: https://t.me",
+  /**
+   * Foto profil pemain. `photo_url` di initData menunjuk ke t.me, tapi t.me
+   * membalas 302 ke CDN-nya, jadi mengizinkan t.me SAJA memblokir avatarnya:
+   * CSP memeriksa ulang target redirect terhadap policy ini, dan host di sana
+   * ikut ditegakkan. blob: dipakai canvas WebGL.
+   *
+   * Hanya produksi yang bisa menunjukkan ini -- identitas preview selalu
+   * punya photoUrl null, jadi `pnpm dev` tidak pernah merender <img> itu.
+   */
+  "img-src 'self' data: blob: https://t.me https://*.cdn-telegram.org",
   "font-src 'self' data:",
   "connect-src 'self' https://telegram.org",
   "worker-src 'self' blob:",
@@ -64,11 +72,17 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
+    // Inert selama `unoptimized: true`, tapi didaftarkan berpasangan dengan
+    // img-src supaya mematikan flag itu tidak menghidupkan bug yang sama lagi.
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 't.me',
         pathname: '/i/userpic/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.cdn-telegram.org',
       },
     ],
   },
