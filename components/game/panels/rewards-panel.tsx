@@ -296,6 +296,7 @@ export function RewardsPanel({
                   </Button>
                 ) : row.state === "waiting" ? (
                   <Button variant="secondary" disabled>
+                    <LockKeyhole data-icon="inline-start" />
                     Belum siap
                   </Button>
                 ) : (
