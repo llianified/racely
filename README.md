@@ -87,7 +87,14 @@ lib/
 migrations/             SQL bernomor, dijalankan scripts/migrate.mjs
 scripts/                Migrasi, persiapan build standalone, setup bot
 tests/                  Vitest (lingkungan node)
+docs/                   Prosedur yang jarang dipakai (rewrite histori Git)
 ```
+
+Aturan untuk agent sengaja dipecah: `AGENTS.md` root berisi aturan keras dan
+rute tugas, `CLAUDE.md` berisi aturan commit, dan `AGENTS.md` per area
+(`components/game/scene/`, `lib/db/`, `app/admin/`) berisi aturan yang hanya
+relevan saat menyentuh area itu. Penjelasan arsitektur dan alasan di balik
+aturan hidup di README ini.
 
 `scene/` berdiri sendiri karena react-three-fiber menggerakkan scene graph
 dengan memutasi objek Three.js — itu model pemrogramannya, bukan bug. Aturan
@@ -179,6 +186,61 @@ Setiap perubahan status dan penyimpanan config dicatat di `racely_admin_audit`.
 
 ---
 
+## Ekonomi
+
+Seluruh angka ekonomi — konversi koin ke rupiah, batas penarikan, saldo awal,
+durasi lap, reward, biaya upgrade, boost, idle — hidup di `EconomyConfig`
+(`lib/economy-config.ts`) dan disimpan di tabel `racely_economy_config`.
+Operator menyetelnya dari `/admin` → tab Ekonomi tanpa deploy;
+`DEFAULT_ECONOMY` hanya berlaku selama tabel itu masih kosong.
+
+Pembagian tanggung jawab:
+
+- `lib/economy-config.ts` — tipe, default, schema validasi, dan rumus murni
+  (`lapSecondsAt`, `lapRewardAt`, `upgradeCostAt`).
+- `lib/game-economy.ts` — penyelesaian balapan, murni tanpa I/O.
+- `lib/economy-store.ts` — baca/tulis config ke database dengan cache
+  per-proses 30 detik (alasan yang sama dengan rate limiter: satu proses PM2).
+- `lib/economy-projection.ts` — proyeksi rupiah untuk panel admin.
+
+Config ikut dikirim di `GameState.economy`, jadi UI membaca `game.economy.*`.
+Dulu UI mengimpor angka sebagai konstanta modul, dan tampilan bisa menyimpang
+dari server tanpa satu pun error — itu sebabnya sekarang hanya ada satu
+sumber. `lib/game-server.ts` sengaja tidak berisi aturan ekonomi; file itu
+untuk persistensi.
+
+Test: `tests/economy-config.test.ts` (batas + proyeksi) dan
+`tests/game-economy.test.ts` (mengunci nilai bawaan).
+
+---
+
+## Token desain
+
+Semua nilai desain app pemain hidup sebagai token di `:root`
+(`app/globals.css`). Tangganya:
+
+| Awalan | Untuk |
+|---|---|
+| `--space-*` | ukuran dan jarak |
+| `--fs-*`, `--fw-*`, `--lh-*`, `--track-*` | ukuran, bobot, tinggi baris, spasi huruf |
+| `--icon-*`, `--corner-*` | ukuran ikon, radius sudut |
+| `--stroke*`, `--focus-*`, `--z-*`, `--dur-*` | garis, ring fokus, lapisan, durasi |
+
+Di TSX pakai utility yang bersumber token (`px-xl`, `gap-md`, `text-read`),
+atau `py-(--space-20)` untuk rung di luar alias — bukan `px-6` atau
+`text-[14px]`. Kalau rung yang dibutuhkan belum ada, tambahkan di `:root`
+dulu.
+
+Yang tetap literal dan memang boleh: nilai struktural (`0`, `1`, `auto`,
+`100%`, rasio flex, track grid), keyframe, dan persentase `color-mix`.
+
+Token tinggi baris dan spasi huruf sengaja bernama `--lh-*` dan `--track-*`,
+**bukan** `--leading-*`/`--tracking-*`: keduanya namespace tema Tailwind v4.
+Tailwind meng-emit defaultnya ke `:root`, jadi menimpanya diam-diam mengubah
+utility `leading-tight`/`leading-relaxed` di seluruh app.
+
+---
+
 ## Test
 
 ```bash
@@ -215,6 +277,12 @@ pnpm run build:standalone
 pnpm run pm2:reload
 pnpm run bot:setup
 ```
+
+`ecosystem.config.cjs` mengunci PM2 pada `instances: 1`, `exec_mode: "fork"`.
+Rate limiter (`lib/rate-limit.ts`), dedupe webhook, dan penyapu pemberitahuan
+idle (`lib/idle-notifier.ts`, dinyalakan dari `instrumentation.ts`) bersifat
+per-proses; menambah instance merusak ketiganya — khusus penyapu, pemain akan
+dikirimi pesan ganda.
 
 **`vercel.json` jangan dihapus.** `"deploymentEnabled": false` di dalamnya
 adalah rem yang menahan Vercel supaya tidak membuat deployment otomatis setiap

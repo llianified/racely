@@ -8,183 +8,119 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-# Racely — peta kerja untuk agent
+# Racely — aturan untuk agent
 
-Orientasi lengkap ada di `README.md`. File ini sengaja hanya berisi **rute
-tugas** dan **aturan yang mahal kalau dilanggar** — hal yang tidak bisa ditebak
-dengan membaca satu-dua file. Jangan menyalin peta direktori README ke sini;
-dua salinan pasti melenceng.
+File ini hanya berisi **aturan keras** dan **rute tugas**. Penjelasan
+arsitektur dan alasan di balik aturan ada di `README.md`; aturan khusus area
+ada di `AGENTS.md` terdekat. Jangan menyalin isi README ke sini.
 
-## Baca dulu sebelum menyentuh direktori ini
+## Prinsip utama
 
-| Direktori | Baca |
+Kerjakan hanya yang diminta. Pertahankan arsitektur dan hierarki visual yang
+ada. Jangan refactor kode yang tidak terkait.
+
+- Ubah hanya file yang memang dibutuhkan oleh fitur yang diminta.
+- Jangan refactor, rename, memindahkan, mendesain ulang, atau "merapikan" kode
+  di luar cakupan tugas.
+- Jangan mengubah hierarki visual yang ada kecuali diminta secara eksplisit.
+- Jangan menambah dependensi baru kecuali benar-benar diperlukan.
+- Kalau pola yang ada bisa dipakai untuk fitur itu, pakai ulang polanya.
+
+## Baca dulu sebelum menyentuh area ini
+
+| Area | Baca |
 |---|---|
 | `components/game/scene/` | `components/game/scene/AGENTS.md` |
-| `lib/db/` | `lib/db/AGENTS.md` |
+| `lib/db/`, `migrations/` | `lib/db/AGENTS.md` |
+| `app/admin/`, `app/api/admin/`, `lib/admin-*.ts` | `app/admin/AGENTS.md` |
+| Commit dan histori Git | `CLAUDE.md` |
 
-## Aturan yang tidak boleh dilanggar
+## Aturan keras
 
 - Produksi **wajib** autentikasi Telegram `initData` (HMAC + cek kedaluwarsa).
 - **Withdrawal tetap antrean manual berstatus `pending`.** Jangan pernah
-  diubah jadi transfer otomatis. Panel admin di `/admin` hanya **mencatat**
-  keputusan operator — tidak ada integrasi pembayaran, dan tidak ada jalur yang
-  memindahkan penarikan tanpa seorang manusia menekan tombolnya.
-- Mode preview hanya untuk development: butuh `RACELY_ENABLE_PREVIEW=true`
-  **dan** `NODE_ENV !== "production"`.
-- Migrasi bersifat additive dan idempoten. Untuk membatalkan sesuatu, tulis
-  migrasi maju baru — **jangan** mengedit file migrasi yang sudah dijalankan.
-- PM2 dikunci `instances: 1`, `exec_mode: "fork"`. Rate limiter, dedupe webhook,
-  **dan penyapu pemberitahuan idle** (`lib/idle-notifier.ts`, dinyalakan dari
-  `instrumentation.ts`) bersifat per-proses; menambah instance akan merusak
-  ketiganya — khusus penyapu, pemain akan dikirimi pesan ganda.
+  menambahkan eksekusi pembayaran otomatis; panel admin hanya mencatat
+  keputusan operator.
+- Mode preview hanya untuk development: `RACELY_ENABLE_PREVIEW=true` **dan**
+  `NODE_ENV !== "production"`.
+- Migrasi additive dan idempoten. Jangan mengedit migrasi yang sudah
+  dijalankan — satu-satunya pengecualian adalah daftar id mobil di `0001`,
+  lihat `lib/db/AGENTS.md`.
+- PM2 tetap `instances: 1`, `exec_mode: "fork"`. Rate limiter, dedupe webhook,
+  dan penyapu notifikasi idle bersifat per-proses.
+- Endpoint API wajib: autentikasi (`lib/telegram-auth.ts`), `consumeRateLimit`,
+  dan `readJsonBody` — bukan `request.json()`. Tiru
+  `app/api/game/action/route.ts`.
+- Setiap route `app/api/admin/` wajib `guardAdmin()`; status penarikan `paid`
+  dan `rejected` bersifat final.
 - Jangan pernah menulis token, connection string, atau secret ke repo, log,
   atau commit message.
+- `vercel.json` jangan dihapus — `"deploymentEnabled": false` menahan Vercel
+  membuat deployment otomatis; repo ini dideploy ke EC2.
 
 ## Rute tugas
 
-### Menambah aksi pemain baru — tiga tempat, tidak saling diturunkan
+Kalau menyentuh X, jangan lupa Y dan Z. Daftar di bawah ditulis manual dan
+tidak saling diturunkan.
 
-1. `lib/game.ts` → tambah varian di union `GameCommand` (dipakai client).
-2. `lib/game-server.ts` → tambah varian di `commandSchema`
-   (`z.discriminatedUnion`) **dan** cabang eksekusinya di `performGameAction`.
-3. `lib/preview-game.ts` → tambah cabang di `performPreviewGameAction`.
+**Aksi pemain baru** — tambah di ketiganya, lalu test di `tests/`:
 
-Ketiganya ditulis manual dan tidak diturunkan satu sama lain. Melewatkan (3)
-tidak menimbulkan error apa pun — aksinya hanya diam-diam tidak berfungsi saat
-`pnpm dev`, yang paling lama ditemukan. Endpoint `app/api/game/action/route.ts`
-tidak perlu diubah: ia mendelegasikan lewat `gameActionSchema`.
+1. `lib/game.ts` → union `GameCommand`
+2. `lib/game-server.ts` → `commandSchema` **dan** cabang di `performGameAction`
+3. `lib/preview-game.ts` → cabang di `performPreviewGameAction`
 
-Tambahkan juga testnya di `tests/`.
+Melewatkan (3) tidak memunculkan error — aksinya cuma diam-diam mati saat
+`pnpm dev`. `app/api/game/action/route.ts` tidak perlu diubah.
 
-### Menambah mobil baru — langkah 4 adalah pengecualian, baca alasannya
+**Mobil baru**:
 
-Id mobil diulang di SQL dan tidak ikut otomatis dari TypeScript.
+1. `lib/car-catalog.ts` → `CAR_MODEL_IDS` + `CAR_CATALOG`
+2. `components/game/scene/mini-car.tsx` → geometri
+3. `migrations/000N_*.sql` → migrasi baru yang membuat ulang
+   `racely_players_car_model_check`
+4. `migrations/0001_racely_core.sql` → kedua daftar `car_model IN (...)`
 
-1. `lib/car-catalog.ts` → id di `CAR_MODEL_IDS` + entri di `CAR_CATALOG`.
-2. `components/game/scene/mini-car.tsx` → geometri mobilnya.
-3. `migrations/000N_*.sql` → migrasi **baru** yang menjatuhkan lalu membuat
-   ulang `racely_players_car_model_check` dengan daftar id baru. Inilah yang
-   memperbarui database yang sudah berjalan.
-4. `migrations/0001_racely_core.sql` → perbarui **juga** kedua daftar
-   `car_model IN (...)` di dalamnya.
+**Ekonomi, reward, biaya upgrade** — angkanya hidup di database dan disetel
+lewat `/admin`, bukan di kode. Yang diubah di kode hanya rumus atau knob baru:
 
-Langkah 4 tampak melanggar aturan "jangan edit migrasi yang sudah dijalankan",
-dan ini satu-satunya pengecualian. Aman karena `scripts/migrate.mjs` melewati
-file yang sudah tercatat di `racely_schema_migrations`, dan blok constraint di
-0001 dijaga `IF NOT EXISTS` — suntingan itu tidak akan pernah menyentuh
-database yang sudah ada. Gunanya untuk database baru, dan karena
-`tests/car-catalog-consistency.test.ts` hanya membaca 0001: tanpa langkah 4
-test itu merah, meski langkah 3 sudah benar.
+1. `lib/economy-config.ts` → `EconomyConfig`, `DEFAULT_ECONOMY`,
+   `economyConfigSchema`
+2. `app/admin/admin-economy.tsx` → daftarkan di `GROUPS`
+3. Pemakai membaca dari `game.economy.*` — jangan impor angka sebagai konstanta
+   modul.
 
-### Mengubah ekonomi, reward, atau biaya upgrade
+Rumus tetap di `lib/economy-config.ts` dan `lib/game-economy.ts` (murni, tanpa
+I/O). Jangan menaruh aturan ekonomi di `lib/game-server.ts`.
 
-**Nilainya tidak lagi ada di kode.** Seluruh angka ekonomi hidup di
-`EconomyConfig` (`lib/economy-config.ts`) dan disetel lewat panel admin di
-`/admin` → tab Ekonomi, tanpa deploy. `DEFAULT_ECONOMY` di file itu adalah
-nilai yang berlaku selama tabel `racely_economy_config` masih kosong.
+**Kolom atau tabel baru** — `migrations/000N_*.sql` **dan** `lib/db/schema.ts`,
+lalu `pnpm run db:migrate`.
 
-Yang diubah di kode hanyalah **rumus**, atau **knob baru**:
+**Komponen baru** — `components/game/shell/` kerangka · `scene/`
+react-three-fiber (wajib di sini) · `race/` panel balapan · `panels/` tab
+non-3D · `car/` pemilihan mobil.
 
-1. `lib/economy-config.ts` → tambah field di `EconomyConfig`, `DEFAULT_ECONOMY`,
-   dan `economyConfigSchema` (dengan batas yang masuk akal).
-2. `app/admin/admin-economy.tsx` → tambah field itu ke `GROUPS` supaya muncul di
-   panel. Knob yang tidak terdaftar di sana tidak bisa disetel siapa pun.
-3. Alirkan ke pemakainya. Config ikut di `GameState.economy`, jadi UI membacanya
-   dari `game.economy.*` — **jangan** mengimpor angka sebagai konstanta modul
-   lagi; itu yang dulu membuat tampilan dan server bisa menyimpang tanpa satu
-   error pun.
+## UI
 
-Rumus murni tetap di `lib/economy-config.ts` (`lapSecondsAt`, `lapRewardAt`,
-`upgradeCostAt`) dan penyelesaian balapan di `lib/game-economy.ts` — keduanya
-tanpa I/O. Jangan menaruh aturan ekonomi di `lib/game-server.ts`; file itu untuk
-persistensi. Pembacaan config dari database ada di `lib/economy-store.ts`
-(cache per-proses 30 detik, alasan yang sama dengan rate limiter).
+- Pakai token yang sudah ada di `:root` (`app/globals.css`) lewat utility
+  bersumber token (`px-xl`, `gap-md`, `text-read`), bukan angka literal
+  (`px-6`, `text-[14px]`). Kalau rung-nya belum ada, tambahkan di `:root`
+  dulu — dan jangan pakai awalan `--leading-*`/`--tracking-*` (namespace
+  Tailwind). Detail tangga token ada di README → "Token desain".
+- Jangan menambah library UI baru atau mendesain ulang layar yang tidak
+  diminta.
 
-Test: `tests/economy-config.test.ts` (batas + proyeksi),
-`tests/game-economy.test.ts` (mengunci nilai bawaan).
-
-### Menyentuh panel admin
-
-`/admin` adalah permukaan terpisah: browser desktop, bukan Telegram. Ia tidak
-memakai satu pun komponen atau kelas CSS milik app pemain.
-
-- `lib/admin-auth.ts` — password dari `RACELY_ADMIN_PASSWORD` + cookie sesi
-  bertanda tangan. **Tidak ada bypass development.** Kunci penanda tangan
-  diturunkan dari password, jadi rotasi password memutus semua sesi.
-- `lib/admin-ops.ts` — antrean penarikan, tabel perpindahan status, audit,
-  ringkasan kewajiban.
-- `lib/admin-api.ts` — `guardAdmin()`. Setiap route di `app/api/admin/` wajib
-  memanggilnya; yang mengubah sesuatu memakai `{ mutating: true }` (cek Origin).
-- `app/admin/admin.css` — gaya panel, semua bersumber token di `:root`.
-
-**`paid` dan `rejected` adalah status akhir.** Jangan pernah menambahkan jalur
-keluar dari keduanya di `ALLOWED_TRANSITIONS`: `rejected` mengembalikan koin ke
-saldo pemain, jadi menolak penarikan yang sudah dibayar akan memulangkan koin
-yang uangnya sudah keluar dari rekening. Alasan lengkapnya ada di migrasi 0008.
-Dijaga `tests/admin-ops.test.ts`.
-
-### Menambah kolom atau tabel
-
-`migrations/000N_*.sql` **dan** `lib/db/schema.ts`. Runner mengurutkan file
-berdasarkan nama dan mencatat yang sudah jalan di `racely_schema_migrations`,
-jadi penomoran harus naik. Jalankan `pnpm run db:migrate`.
-
-### Menambah endpoint API
-
-Ikuti pola `app/api/game/action/route.ts`: `runtime = "nodejs"`,
-`dynamic = "force-dynamic"`, autentikasi lewat `lib/telegram-auth.ts`,
-throttle lewat `consumeRateLimit`, dan baca body dengan `readJsonBody`
-(`lib/http-body.ts`) yang punya batas ukuran — jangan `request.json()`
-langsung.
-
-### Mengubah tampilan: spacing, tipografi, warna, sudut
-
-Semua nilai desain hidup sebagai token di `:root` (`app/globals.css`). **Jangan
-menulis angka langsung di call site** — cari rung yang cocok di tangga token,
-dan kalau memang belum ada, tambahkan rung baru di `:root` dulu. Tangganya:
-`--space-*` (ukuran & jarak), `--fs-*` (huruf), `--fw-*`, `--lh-*`, `--track-*`,
-`--icon-*`, `--corner-*`, plus `--stroke*`, `--focus-*`, `--z-*`, `--dur-*`.
-
-Yang tetap literal dan memang boleh: nilai struktural (`0`, `1`, `auto`,
-`100%`, rasio flex, track grid), keyframe, dan persentase `color-mix`.
-
-**Jangan memakai awalan `--leading-*` atau `--tracking-*` untuk token baru.**
-Keduanya namespace tema Tailwind v4; Tailwind meng-emit defaultnya ke `:root`,
-jadi menimpanya diam-diam mengubah utility `leading-tight`/`leading-relaxed`
-di seluruh app. Itu sebabnya token di sini bernama `--lh-*` dan `--track-*`.
-
-Di TSX pakai utility yang bersumber token (`px-xl`, `gap-md`, `text-read`) atau
-`py-(--space-20)` untuk nilai di luar alias — bukan `px-6`/`text-[14px]`.
-
-### Menambah komponen
-
-`components/game/shell/` kerangka · `scene/` react-three-fiber ·
-`race/` panel balapan · `panels/` panel tab non-3D · `car/` pemilihan mobil.
-Komponen react-three-fiber **wajib** di `scene/` (lihat AGENTS.md di sana).
-
-## Sebelum push
+## Sebelum selesai
 
 ```bash
 pnpm run typecheck && pnpm run lint && pnpm test
 PUBLIC_APP_URL=https://racely.fun pnpm run build
 ```
 
-Ini adalah pemeriksaan lokal utama. CI juga menjalankan `pnpm run db:migrate`
-sebelum test dengan Postgres sementara agar suite database tidak ter-skip.
-`PUBLIC_APP_URL` dibutuhkan saat build karena halaman `/` di-prerender dan
-`metadataBase` ikut dibekukan.
-
 Tanpa `DATABASE_URL`, `tests/database.test.ts` ter-skip secara lokal — itu
-normal. Di CI skip tidak diizinkan dan suite akan gagal kalau terjadi.
+normal.
 
 ## Jebakan
 
-- **Blok `nextjs-agent-rules` di atas ditulis ulang oleh `next dev`.** Hanya
-  isi di antara marker yang diganti; tulisan di luarnya aman. Jangan
-  memindahkan teks ini ke dalam blok.
-- **`vercel.json` jangan dihapus.** `"deploymentEnabled": false` adalah rem
-  yang menahan Vercel membuat deployment otomatis setiap push — repo ini
-  dideploy ke EC2, dan pengerjaan lewat v0 akan membanjiri riwayat deployment
-  kalau rem itu dilepas.
-- **`.env.development` memang di-commit**, isinya hanya flag preview
-  non-rahasia. Semua secret produksi hidup di `/etc/racely/racely.env`.
+- Blok `nextjs-agent-rules` di atas ditulis ulang oleh `next dev`; hanya isi
+  di antara marker yang diganti. Jangan memindahkan teks lain ke dalam blok.
+- `.env.development` memang di-commit — isinya hanya flag preview non-rahasia.
