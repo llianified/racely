@@ -34,6 +34,11 @@ histori Git, jangan melakukan rewrite hanya untuk merapikan commit lama.
 - Judul wajib memakai Conventional Commits berbahasa Inggris, ringkas, spesifik,
   dan sesuai perubahan nyata, misalnya `feat:`, `fix:`, `refactor:`, `perf:`,
   `docs:`, atau `chore:`.
+- Judul commit hasil PR wajib diakhiri ` (#<nomor>)` agar GitHub menampilkannya
+  sebagai tautan ke PR, misalnya `perf: reduce race scene rendering (#76)`.
+  Commit langsung non-PR tidak memakai suffix ini.
+- Judul PR harus tetap bersih tanpa menambahkan nomor PR miliknya sendiri;
+  suffix `(#<nomor>)` hanya berlaku pada judul commit hasil squash.
 - Body wajib berbahasa Inggris dan terdiri dari 1–2 kalimat ringkas yang
   menjelaskan perubahan serta tujuannya tanpa sekadar mengulang judul.
 - Pisahkan judul dan body dengan satu baris kosong. Jangan isi body dengan
