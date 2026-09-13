@@ -16,6 +16,7 @@ import { CircuitPanel } from "./race/circuit-panel";
 import { RacePanel, RaceReward } from "./race/race-panel";
 import { CarSelection } from "./car/car-selection";
 import {
+  GameRequestError,
   isSessionExpired,
   readGameResponse,
   requestHeaders,
@@ -207,8 +208,13 @@ export function GameDashboard() {
       await mutate(next, { revalidate: false });
       telegramHaptic();
       return next;
-    } catch {
-      toast.error("Aksi gagal");
+    } catch (cause) {
+      // Server sudah mengirim alasannya ("Koin belum cukup…", batas penarikan,
+      // 429 "Terlalu banyak aksi…"). Menampilkan "Aksi gagal" untuk semuanya
+      // membuang satu-satunya keterangan yang dimiliki pemain.
+      toast.error(
+        cause instanceof GameRequestError ? cause.message : "Aksi gagal",
+      );
       return null;
     } finally {
       mutationLocked.current = false;
@@ -297,7 +303,11 @@ export function GameDashboard() {
     return true;
   };
   const chooseCircuit = async (circuit: 1) => {
-    if (game.circuit >= circuit || game.laps < 25) return;
+    // Ambangnya dari config, sama seperti panel dan dialog sirkuit. Literal di
+    // sini membuat tombol yang ditawarkan dialog diam-diam tidak melakukan apa
+    // pun begitu ambangnya disetel di bawah 25.
+    if (game.circuit >= circuit || game.laps < game.economy.circuitUnlockLaps)
+      return;
     if (await runAction({ type: "circuit", circuit })) {
       setDialog(null);
       navigate("race");
@@ -307,7 +317,7 @@ export function GameDashboard() {
   const boost = async () => {
     if (game.cooldown > 0) return;
     if (await runAction({ type: "boost" }))
-      toast.success("Gaspol 2× aktif");
+      toast.success(`Gaspol ${game.economy.boostMultiplier}× aktif`);
   };
   const chooseColor = async (
     color: CarColor,

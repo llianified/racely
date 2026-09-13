@@ -726,6 +726,66 @@ describeDatabase("Neon Postgres persistence", () => {
     expect(restored.usingDefaults).toBe(true);
     expect(restored.config).toEqual(DEFAULT_ECONOMY);
   });
+
+  /**
+   * `returningPlayer` menentukan kalimat mana yang dilihat pemain di layar
+   * pemilihan mobil: sambutan pemain baru, atau penawaran untuk pemain yang
+   * progresnya sudah ada sebelum pemilihan mobil diperkenalkan. Penandanya
+   * dulu `balance !== startingBalance`, yang ikut berubah begitu saldo awal
+   * disetel dari panel -- setiap pemain baru lalu disapa sebagai pemain lama.
+   */
+  it("mengenali pemain lama dari riwayat aksinya, bukan dari saldo awal", async () => {
+    const store = await import("@/lib/economy-store");
+    const { DEFAULT_ECONOMY } = await import("@/lib/economy-config");
+    const fresh = `test-fresh-${randomUUID()}`;
+    const legacy = `test-legacy-${randomUUID()}`;
+    extraUserIds.push(fresh, legacy);
+    const identityFor = (userId: string) => ({
+      userId,
+      displayName: "Onboarding Racer",
+      username: null,
+      photoUrl: null,
+      startParam: null,
+    });
+
+    try {
+      // Saldo awal dinaikkan SETELAH pemain ini dibuat, jadi saldonya sekarang
+      // tidak sama dengan `startingBalance` yang berlaku -- justru kondisi yang
+      // dulu membuatnya salah ditandai.
+      const before = await gameServer.getGameState(identityFor(fresh));
+      expect(before.carSelection).toEqual({
+        model: null,
+        returningPlayer: false,
+      });
+
+      await store.writeEconomyConfig(
+        { ...DEFAULT_ECONOMY, startingBalance: DEFAULT_ECONOMY.startingBalance + 40 },
+        "test",
+      );
+      const after = await gameServer.getGameState(identityFor(fresh));
+      expect(after.balance).toBe(DEFAULT_ECONOMY.startingBalance);
+      expect(after.carSelection).toEqual({
+        model: null,
+        returningPlayer: false,
+      });
+
+      // Pemain yang benar-benar sudah pernah beraksi: version naik pada setiap
+      // aksi non-sync, dan itulah penandanya sekarang.
+      await gameServer.getGameState(identityFor(legacy));
+      await db!
+        .update(schema.players)
+        .set({ version: 3 })
+        .where(drizzle.eq(schema.players.userId, legacy));
+      const returning = await gameServer.getGameState(identityFor(legacy));
+      expect(returning.carSelection).toEqual({
+        model: null,
+        returningPlayer: true,
+      });
+    } finally {
+      await db!.delete(schema.economyConfig);
+      store.resetEconomyCache();
+    }
+  });
 });
 
 describe.skipIf(hasDatabase)("Neon Postgres persistence", () => {

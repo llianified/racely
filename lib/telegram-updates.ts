@@ -45,19 +45,30 @@ export async function claimTelegramUpdate(updateId: number, now = Date.now()) {
   if (!claimInMemory(updateId, now)) return false;
   if (!db) return true;
 
-  const inserted = await db
-    .insert(telegramUpdates)
-    .values({ updateId, receivedAt: new Date(now) })
-    .onConflictDoNothing()
-    .returning({ updateId: telegramUpdates.updateId });
+  try {
+    const inserted = await db
+      .insert(telegramUpdates)
+      .values({ updateId, receivedAt: new Date(now) })
+      .onConflictDoNothing()
+      .returning({ updateId: telegramUpdates.updateId });
 
-  if (inserted.length > 0 && Math.random() < PRUNE_PROBABILITY) {
-    await db
-      .delete(telegramUpdates)
-      .where(lt(telegramUpdates.receivedAt, new Date(now - RETENTION_MS)));
+    if (inserted.length > 0 && Math.random() < PRUNE_PROBABILITY) {
+      // Sapuan retensi tidak boleh menjatuhkan klaim yang sudah tertulis.
+      await db
+        .delete(telegramUpdates)
+        .where(lt(telegramUpdates.receivedAt, new Date(now - RETENTION_MS)))
+        .catch(() => undefined);
+    }
+
+    return inserted.length > 0;
+  } catch {
+    // Postgres tak terjangkau. Sebelum ini, exception-nya keluar dari route dan
+    // membalas 500 -- padahal klaim di memori SUDAH tercatat, jadi retry
+    // Telegram dijawab "duplicate" dan update itu hilang selamanya. Perlakukan
+    // sama dengan `!db` di atas: klaim memori adalah dedupe cadangannya, jadi
+    // update-nya diproses, bukan dibuang.
+    return true;
   }
-
-  return inserted.length > 0;
 }
 
 /** Gives the claim back so Telegram's retry can be processed after a transient failure. */
