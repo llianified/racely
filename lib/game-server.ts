@@ -317,11 +317,23 @@ async function payInviteeMilestone(
 }
 
 /**
- * Sisi pengajak dibayar SETELAH transaksi pemain yang diajak selesai. Keduanya
- * baris racely_players; mengunci keduanya sekaligus bisa deadlock kalau dua
- * pemain saling mengajak. `referral_paid_at` yang membuat percobaan ulangnya
- * aman: gagal berarti dicoba lagi pada sync berikutnya, berhasil berarti
- * berhenti.
+ * Sisi pengajak dibayar SETELAH transaksi pemain yang diajak selesai, supaya
+ * transaksi aksi pemain tidak ikut menahan baris orang lain.
+ *
+ * Transaksi ini sendiri tetap menyentuh DUA baris racely_players: saldo si
+ * pengajak dan `referral_paid_at` si diajak. A mengajak B sementara B mengajak A
+ * itu mungkin (`bindReferrer` hanya menolak mengajak diri sendiri), jadi dua
+ * pembayaran yang berjalan bersamaan bisa mengunci pasangan yang sama dari dua
+ * arah berlawanan -- siklus deadlock yang klasik.
+ *
+ * Karena itu kedua baris dikunci DI DEPAN, berurutan menurut user_id. Urutan
+ * penguncian yang sama untuk semua transaksi berarti siklusnya tidak bisa
+ * terbentuk sama sekali. Dua pernyataan terpisah, bukan satu `IN (...)`:
+ * Postgres mengunci baris sesuai urutan produksi plan, dan itu bukan sesuatu
+ * yang dijanjikan klausa ORDER BY.
+ *
+ * `referral_paid_at` tetap jadi jaring pengamannya: gagal berarti dicoba lagi
+ * pada sync berikutnya, berhasil berarti berhenti.
  */
 async function payInviter(row: PlayerRow, economy: EconomyConfig) {
   if (!row.referredBy) return;
@@ -330,6 +342,14 @@ async function payInviter(row: PlayerRow, economy: EconomyConfig) {
   const inviterId = row.referredBy;
   await getDatabase()
     .transaction(async (tx) => {
+      for (const userId of [inviterId, row.userId].sort()) {
+        await tx
+          .select({ userId: players.userId })
+          .from(players)
+          .where(eq(players.userId, userId))
+          .for("update");
+      }
+
       const [inviter] = await tx
         .select({ userId: players.userId })
         .from(players)
