@@ -1,4 +1,4 @@
-import { displaySpeedKmh, formatCoins } from "@/lib/game";
+import { displaySpeedKmh, formatCoins, formatSpeedKmh } from "@/lib/game";
 import { powertrainTuning, type DrivingState } from "@/lib/race-dynamics";
 
 export function RacePositionHud({ position, followCamera, recovering }: {
@@ -40,7 +40,7 @@ export function RaceOverviewHud({ seconds, baseSeconds, reward, telemetry, boost
       <dl className="race-hud-telemetry">
         <div>
           <dt>Laju arena</dt>
-          <dd>{(recovering ? 0 : displaySpeedKmh(baseSeconds) * telemetry.visualSpeed).toFixed(1)}<small>km/j</small></dd>
+          <dd>{formatSpeedKmh(recovering ? 0 : displaySpeedKmh(baseSeconds) * telemetry.visualSpeed)}<small>km/j</small></dd>
         </div>
         <div>
           <dt>RPM</dt>

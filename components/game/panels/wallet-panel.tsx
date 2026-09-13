@@ -140,7 +140,7 @@ export function WalletPanel({
       </section>
 
       <Sheet open={open} onOpenChange={(next) => { setOpen(next); if (!next) setError(null); }}>
-    <SheetContent side="bottom" className="game-sheet wallet-dialog p-lg">
+    <SheetContent side="bottom" className="game-sheet wallet-dialog p-md">
       <SheetHeader className="p-0">
             <SheetTitle>
               <Send aria-hidden="true" />
