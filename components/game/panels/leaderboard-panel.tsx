@@ -48,44 +48,84 @@ function RacerInitial({ name }: { name: string }) {
 
 function Podium({ entries }: { entries: LeaderboardEntry[] }) {
   return (
-    <ol className="leaderboard-podium" aria-label="Podium pembalap">
-      {entries.slice(0, 3).map((entry, index) => (
-        <li key={index} data-place={entry.rank}>
-          <div className="leaderboard-podium-medal" aria-hidden="true">
-            {entry.rank === 1 ? <Crown /> : <Medal />}
-          </div>
-          <RacerInitial name={entry.name} />
-          <strong className="leaderboard-podium-name" title={entry.name}><bdi>{entry.name}</bdi></strong>
-          {entry.isCurrentPlayer && <Badge variant="secondary">Kamu</Badge>}
-          <p><strong>{number(entry.laps)}</strong><span>putaran</span></p>
-          <span className="leaderboard-podium-place"><span className="sr-only">Peringkat </span>#{number(entry.rank)}</span>
-        </li>
-      ))}
-    </ol>
+    <section className="leaderboard-podium-section" aria-labelledby="podium-title">
+      <div className="leaderboard-podium-heading">
+        <div>
+          <p className="eyebrow">Barisan terdepan</p>
+          <h2 id="podium-title">Podium</h2>
+        </div>
+        <Badge variant="outline">Top 3</Badge>
+      </div>
+      <ol className="leaderboard-podium" aria-label="Tiga pembalap teratas">
+        {entries.slice(0, 3).map((entry, index) => (
+          <li key={`${entry.rank}-${entry.name}-${index}`} data-place={entry.rank}>
+            <div className="leaderboard-podium-mark" aria-hidden="true">
+              <span>#{number(entry.rank)}</span>
+              {index === 0 ? <Crown /> : <Medal />}
+            </div>
+            <RacerInitial name={entry.name} />
+            <strong className="leaderboard-podium-name" title={entry.name}><bdi>{entry.name}</bdi></strong>
+            {entry.isCurrentPlayer && <Badge variant="secondary">Kamu</Badge>}
+            <p><strong>{number(entry.laps)}</strong><span>putaran</span></p>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 
 function PersonalRank({ data, onRace }: { data: Leaderboard; onRace: () => void }) {
   const { currentPlayer: me, nextRival: rival } = data;
   const gap = me && rival ? lapsToOvertake(me.laps, rival.laps) : null;
+  const targetLabel = !me
+    ? "Masuk klasemen"
+    : rival
+      ? "Target berikutnya"
+      : data.developmentPreview
+        ? "Sesi preview"
+        : "Pertahankan posisi";
+
   return (
     <section className="panel leaderboard-personal" aria-labelledby="personal-rank-title">
       <div className="leaderboard-personal-heading">
-        <h2 id="personal-rank-title">Posisimu</h2>
+        <div>
+          <p className="eyebrow">Performa pembalap</p>
+          <h2 id="personal-rank-title">Posisimu</h2>
+        </div>
         <Badge variant="secondary">{data.developmentPreview ? "Preview" : "Sepanjang masa"}</Badge>
       </div>
-      <div className="leaderboard-personal-stats">
-        <div><strong>{me ? `#${number(me.rank)}` : "—"}</strong><span>{me ? `dari ${number(data.totalPlayers)} pembalap` : "Belum masuk peringkat"}</span></div>
-        <div><strong>{number(me?.laps ?? 0)}</strong><span>putaran tercatat</span></div>
+      <div className="leaderboard-personal-score">
+        <div className="leaderboard-rank-score">
+          <span>Peringkat</span>
+          <strong>
+            {me ? <><span aria-hidden="true">#</span>{number(me.rank)}</> : "—"}
+          </strong>
+          <small>{me ? `dari ${number(data.totalPlayers)} pembalap` : "Belum masuk peringkat"}</small>
+        </div>
+        <dl className="leaderboard-lap-score">
+          <div>
+            <dt>Total putaran</dt>
+            <dd>{number(me?.laps ?? 0)}</dd>
+          </div>
+        </dl>
       </div>
       <div className="leaderboard-challenge">
-        {me && rival && gap ? (
+        <div className="leaderboard-target-heading">
+          <span>{targetLabel}</span>
+          {rival && (
+            <strong title={rival.name}>
+              <bdi>{rival.name}</bdi>
+              <small>{number(rival.laps)} putaran</small>
+            </strong>
+          )}
+        </div>
+        {me && rival && gap !== null ? (
           <>
-            <p><strong>{number(gap)} putaran lagi</strong> untuk menyalip <bdi>{rival.name}</bdi>.</p>
+            <p><strong>{number(gap)} putaran lagi</strong> untuk menyalip.</p>
             <Progress value={Math.min(100, me.laps / (rival.laps + 1) * 100)} aria-label="Progres menyalip rival" aria-valuetext={`${number(gap)} putaran lagi`} />
           </>
         ) : (
-          <p>{!me ? "Selesaikan putaran pertamamu untuk masuk peringkat." : data.developmentPreview ? "Progres preview tidak masuk peringkat global." : "Kamu di puncak! Terus tambah putaran untuk mempertahankan posisi."}</p>
+          <p>{!me ? "Selesaikan putaran pertamamu untuk tercatat di klasemen." : data.developmentPreview ? "Progres preview hanya berlaku untuk sesi ini." : "Kamu di puncak. Tambah putaran untuk menjaga jarak."}</p>
         )}
         <Button variant="gold" className="w-full" onClick={onRace}>
           <Flag data-icon="inline-start" aria-hidden="true" />
@@ -101,23 +141,29 @@ function Rankings({ data }: { data: Leaderboard }) {
   return (
     <section className="panel leaderboard-rankings" aria-labelledby="rankings-title">
       <div className="leaderboard-list-heading">
-        <h2 id="rankings-title">{data.developmentPreview ? "Peringkat preview" : `Top ${LEADERBOARD_LIMIT} pembalap`}</h2>
-        <span>{number(data.totalPlayers)} pembalap</span>
+        <div>
+          <p className="eyebrow">Klasemen lengkap</p>
+          <h2 id="rankings-title">{data.developmentPreview ? "Peringkat preview" : `Top ${LEADERBOARD_LIMIT}`}</h2>
+        </div>
+        <Badge variant="outline">{number(data.totalPlayers)} pembalap</Badge>
       </div>
       <table>
         <caption className="sr-only">Peringkat berdasarkan total putaran yang sudah dicatat server</caption>
         <thead><tr><th scope="col">Pos.</th><th scope="col">Pembalap</th><th scope="col">Putaran</th></tr></thead>
         <tbody>
           {data.entries.map((entry, index) => (
-            <tr key={index} className={cn(entry.isCurrentPlayer && "leaderboard-row-self")}>
-              <td><span className="leaderboard-row-rank" data-place={entry.rank}>#{number(entry.rank)}</span></td>
+            <tr key={`${entry.rank}-${entry.name}-${index}`} className={cn(entry.isCurrentPlayer && "leaderboard-row-self")}>
+              <td><span className="leaderboard-row-rank" data-place={entry.rank}><span className="sr-only">Peringkat </span>{number(entry.rank)}</span></td>
               <th scope="row">
                 <div className="leaderboard-racer">
                   <RacerInitial name={entry.name} />
-                  <div><span className="leaderboard-racer-name" title={entry.name}><bdi>{entry.name}</bdi></span>{entry.isCurrentPlayer && <Badge variant="secondary">Kamu</Badge>}</div>
+                  <div>
+                    <span className="leaderboard-racer-name" title={entry.name}><bdi>{entry.name}</bdi></span>
+                    {entry.isCurrentPlayer && <Badge variant="secondary">Kamu</Badge>}
+                  </div>
                 </div>
               </th>
-              <td>{number(entry.laps)}</td>
+              <td><strong>{number(entry.laps)}</strong><span className="sr-only"> putaran</span></td>
             </tr>
           ))}
         </tbody>
@@ -147,22 +193,35 @@ export function LeaderboardPanel({ initData, onRace }: { initData: string; onRac
   );
   const expired = isSessionExpired(error);
   const refresh = () => void mutate().catch(() => undefined);
+  const syncLabel = expired
+    ? "Sesi berakhir"
+    : isValidating
+      ? "Memperbarui"
+      : error
+        ? "Data terakhir"
+        : data?.developmentPreview
+          ? "Preview"
+          : "Live";
+  const syncState = expired || error ? "warning" : isValidating ? "updating" : "ready";
 
   return (
-    <div className="leaderboard-layout section-enter">
+    <div className="leaderboard-layout section-enter" aria-busy={isValidating}>
       <header className="leaderboard-heading">
-        <div><p className="eyebrow">Mobil kecil. Ambisi besar.</p><h1>Leaderboard</h1><p>Tambah putaran. Tinggalkan lawan.</p></div>
-        <span className="leaderboard-emblem" aria-hidden="true"><Trophy /></span>
+        <div className="leaderboard-heading-copy">
+          <p className="eyebrow">Klasemen total putaran</p>
+          <h1>Leaderboard</h1>
+          <p>Balapan lebih jauh. Rebut posisi teratas.</p>
+        </div>
+        <div className="leaderboard-heading-tools">
+          <span className="leaderboard-sync" data-state={syncState} aria-live="polite"><i aria-hidden="true" />{syncLabel}</span>
+          <Button variant="outline" size="icon-sm" aria-label="Perbarui leaderboard" title="Perbarui leaderboard" onClick={refresh} disabled={isValidating || expired}>
+            <RefreshCw aria-hidden="true" />
+          </Button>
+        </div>
       </header>
       {data?.developmentPreview && (
-        <p className="leaderboard-preview" role="note">Mode preview · Hanya progres sesi ini. Tidak terhubung ke peringkat pemain asli.</p>
+        <p className="leaderboard-preview" role="note"><strong>Mode preview.</strong> Progres sesi ini tidak masuk klasemen pemain asli.</p>
       )}
-      <div className="leaderboard-toolbar">
-        <Badge variant="outline">Total putaran · Sepanjang masa</Badge>
-        <Button variant="ghost" size="icon-lg" aria-label="Perbarui leaderboard" title="Perbarui leaderboard" onClick={refresh} disabled={isValidating || expired}>
-          <RefreshCw aria-hidden="true" />
-        </Button>
-      </div>
       {isLoading && !data && <p className="panel leaderboard-feedback" role="status">Memuat peringkat pembalap…</p>}
       {error && (
         <div className="panel leaderboard-feedback" role="alert">
@@ -173,23 +232,25 @@ export function LeaderboardPanel({ initData, onRace }: { initData: string; onRac
       )}
       {data && !expired && (
         <>
-          {data.entries.length > 0 && <Podium entries={data.entries} />}
           <PersonalRank data={data} onRace={onRace} />
+          {data.entries.length >= 3 && <Podium entries={data.entries} />}
           {data.entries.length > 0 ? <Rankings data={data} /> : (
             <section className="panel leaderboard-empty" aria-labelledby="leaderboard-empty-title">
               <Trophy aria-hidden="true" /><h2 id="leaderboard-empty-title">Garis start masih terbuka.</h2>
               <p>Belum ada putaran tercatat. Jadilah pembalap pertama di leaderboard!</p>
             </section>
           )}
-          <p className="leaderboard-updated" role="status">
-            {isValidating ? "Memperbarui peringkat…" : <>Diperbarui <time dateTime={data.updatedAt}>{new Date(data.updatedAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</time> · Otomatis setiap 30 detik</>}
-          </p>
+          <footer className="leaderboard-meta">
+            <p className="leaderboard-updated">
+              {isValidating ? "Memperbarui peringkat…" : <>Diperbarui <time dateTime={data.updatedAt}>{new Date(data.updatedAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</time> · Otomatis tiap {number(LEADERBOARD_REFRESH_MS / 1_000)} dtk</>}
+            </p>
+            <div className="leaderboard-rules">
+              <ShieldCheck aria-hidden="true" />
+              <p>Hanya putaran selesai yang tercatat server; progres offline masuk setelah sinkron. Saat total sama, peringkat sama dan waktu bergabung menentukan urutan. Tanpa hadiah koin otomatis.</p>
+            </div>
+          </footer>
         </>
       )}
-      <footer className="leaderboard-rules">
-        <ShieldCheck aria-hidden="true" />
-        <p>Hanya putaran selesai yang sudah dicatat server. Putaran offline masuk setelah progres disinkronkan. Jumlah sama mendapat peringkat sama; urutan tampilan memakai waktu bergabung. Tidak ada hadiah koin otomatis.</p>
-      </footer>
     </div>
   );
 }
