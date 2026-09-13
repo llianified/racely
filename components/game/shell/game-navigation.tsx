@@ -77,7 +77,6 @@ export function Topbar({
   onWallet,
   onHelp,
 }: {
-  tab: GameTab;
   balance: number;
   level: number;
   racerName: string;

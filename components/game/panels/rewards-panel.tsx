@@ -79,12 +79,12 @@ function dailyNote(daily: GameState["daily"], economy: GameState["economy"]) {
 function RowStatus({ state }: { state: Exclude<RowState, "ready"> }) {
   return state === "claimed" ? (
     <span className="mission-status">
-      <Check size={14} aria-hidden="true" />
+      <Check aria-hidden="true" />
       Diklaim
     </span>
   ) : (
     <span className="mission-status">
-      <LockKeyhole size={14} aria-hidden="true" />
+      <LockKeyhole aria-hidden="true" />
       Belum siap
     </span>
   );
@@ -294,13 +294,8 @@ export function RewardsPanel({
                   >
                     Klaim
                   </Button>
-                ) : row.state === "waiting" ? (
-                  <Button variant="secondary" disabled>
-                    <LockKeyhole data-icon="inline-start" />
-                    Belum siap
-                  </Button>
                 ) : (
-                  <RowStatus state="claimed" />
+                  <RowStatus state={row.state} />
                 )}
               </div>
             </li>

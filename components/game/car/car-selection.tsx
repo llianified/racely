@@ -137,7 +137,7 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
       </div>
 
       <footer className="selection-footer">
-        {failed && <p role="alert">Belum tersimpan. Pilihanmu tetap di sini; coba lagi.</p>}
+        {failed && <p className="form-error" role="alert">Belum tersimpan. Pilihanmu tetap di sini; coba lagi.</p>}
         <div className="selection-actions">
           {step === 2 && (
             <Button variant="outline" size="icon-lg" className="press-button" aria-label="Kembali ke pilihan mobil" disabled={busy} onClick={() => { setStep(1); setFailed(false); }}>

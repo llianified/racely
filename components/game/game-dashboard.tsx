@@ -373,7 +373,6 @@ export function GameDashboard() {
       />
       <div className="main-shell">
         <Topbar
-          tab={tab}
           balance={game.balance}
           level={totalLevel(game)}
           racerName={game.player.name}

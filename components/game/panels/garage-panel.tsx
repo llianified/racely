@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { memo, useRef, useState } from "react";
-import { ArrowUp, BatteryMedium, CarFront, Check, Cog, CircleDot, LoaderCircle, Wrench } from "lucide-react";
+import { ArrowUp, BatteryMedium, Check, Cog, CircleDot, LoaderCircle, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -19,7 +19,7 @@ const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
   ssr: false,
   loading: () => (
     <div className="scene-loading" role="status">
-      <CarFront aria-hidden="true" />
+      <LoaderCircle className="animate-spin" aria-hidden="true" />
       <strong>Menyiapkan mobil 3D…</strong>
     </div>
   ),

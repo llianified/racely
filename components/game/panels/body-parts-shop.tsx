@@ -117,7 +117,7 @@ function ShopContents({ game, disabled, onAction, onPending }: Omit<ShopProps, "
               ? shortfall > 0 ? "Klaim hasil balapan atau hadiah untuk menambah saldo." : "Kosmetik murni. Beli sekali, lalu lepas-pasang gratis dari koleksimu."
               : installed ? "Sedang aktif. Lepas untuk kembali ke setelan pabrik tanpa menghapus koleksi." : equipped[part.slot] ? `Akan menggantikan ${PART_CATALOG[equipped[part.slot]!].name}; part lama tetap dimiliki.` : "Siap dipasang tanpa biaya tambahan."}</p>
           </div>
-          {error && <p role="alert">{error}</p>}
+          {error && <p className="form-error" role="alert">{error}</p>}
         </section>
       </div>
     </div>
@@ -133,10 +133,10 @@ function ShopContents({ game, disabled, onAction, onPending }: Omit<ShopProps, "
 
 export function BodyPartsShop({ game, active, disabled, onAction }: ShopProps) {
   const [open, setOpen] = useState(false);
-  const pending = useRef(false);
+  const [pending, setPending] = useState(false);
   const ownedCount = game.bodyParts?.owned.length ?? 0;
   const equippedCount = Object.keys(game.bodyParts?.equipped ?? {}).length;
-  return <Sheet open={open && active} onOpenChange={value => { if (!pending.current) setOpen(value); }}>
+  return <Sheet open={open && active} onOpenChange={value => { if (!pending) setOpen(value); }}>
     <section id="aero-kit" tabIndex={-1} className="panel garage-parts" aria-label="Aero kit">
       <SectionCardHeading
         icon={Wind}
@@ -157,12 +157,12 @@ export function BodyPartsShop({ game, active, disabled, onAction }: ShopProps) {
         <SheetTrigger render={<Button variant="gold" size="sm" disabled={disabled} />}><ShoppingBag data-icon="inline-start" />Buka toko</SheetTrigger>
       </div>
     </section>
-    <SheetContent side="bottom" className="game-sheet">
+    <SheetContent side="bottom" className="game-sheet" showCloseButton={!pending}>
       <SheetHeader>
         <SheetTitle>Toko aero kit</SheetTitle>
         <SheetDescription>Coba langsung pada mobilmu, koleksi, lalu pasang ke slot yang sesuai.</SheetDescription>
       </SheetHeader>
-      {open && active && <ShopContents game={game} disabled={disabled} onAction={onAction} onPending={value => { pending.current = value; }} />}
+      {open && active && <ShopContents game={game} disabled={disabled} onAction={onAction} onPending={setPending} />}
     </SheetContent>
   </Sheet>;
 }
