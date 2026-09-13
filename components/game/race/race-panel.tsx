@@ -2,9 +2,10 @@
 
 import dynamic from "next/dynamic";
 import { useId, useRef, useState, useSyncExternalStore } from "react";
-import { Camera, ChevronDown, Coins, Flag, LoaderCircle, Maximize, Minimize, RotateCcw, SlidersHorizontal, Zap } from "lucide-react";
+import { Camera, ChevronDown, Coins, Flag, LoaderCircle, Maximize, Minimize, RotateCcw, SlidersHorizontal, SwitchCamera, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { batteryTelemetry, coins, formatCoins, lapReward, lapSeconds, raceOpponentLapSeconds, racePosition, type GameState } from "@/lib/game";
 import { RaceOverviewHud, RacePositionHud } from "./race-overview-hud";
 import { cn } from "@/lib/utils";
@@ -94,6 +95,14 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
       toast.info("Layar penuh tak tersedia");
     }
   };
+  // Kail progresi ikut di kepala panel: di layar 384x595 kartu "Trek berikutnya"
+  // baru terlihat setelah menggulir, padahal itu satu-satunya alasan pemain
+  // balik besok. Ambangnya tetap dibaca dari config, sama seperti CircuitPanel.
+  const unlockLaps = game.economy.circuitUnlockLaps;
+  // Hanya saat masih di trek 1: ambangnya bisa dinaikkan operator lewat /admin
+  // setelah pemain pindah, dan kail "menuju Midnight" tidak boleh muncul di
+  // kepala panel pemain yang sedang balapan di Midnight.
+  const lapsToUnlock = game.circuit === 0 ? Math.max(0, unlockLaps - game.laps) : 0;
   const openCircuits = async () => {
     if (document.fullscreenElement) {
       try { await document.exitFullscreen(); }
@@ -111,6 +120,16 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
             <ChevronDown data-icon="inline-end" />
           </Button>
         </h2>
+        {lapsToUnlock > 0 && (
+          <div className="track-unlock">
+            <span>{lapsToUnlock} lap lagi → Midnight</span>
+            <Progress
+              value={Math.min((game.laps / unlockLaps) * 100, 100)}
+              aria-label={`Midnight Speedway terbuka setelah ${lapsToUnlock} putaran lagi`}
+              className="flex-1"
+            />
+          </div>
+        )}
       </div>
       <div className={cn("scene-wrap", inspect && "is-inspecting", !inspect && cinematic && "is-cinematic", !inspect && telemetry.recovery > 0 && "is-course-out", !inspect && telemetry.grip < 40 && "is-grip-critical")}>
         {!inspect && <div className="race-vignette" aria-hidden="true" />}
@@ -130,7 +149,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
             setCameraChoice(nextFollowCamera);
             setControlFeedback(nextFollowCamera ? "Kamera kembali mengikuti mobil." : "Kamera overview aktif. Geser lintasan untuk memutar.");
           }} aria-pressed={!followCamera} aria-label={followCamera ? "Aktifkan kamera overview" : "Kembali ke kamera follow mobil"} title={followCamera ? "Lihat seluruh lintasan" : "Kembali mengikuti mobil"}>
-            <Camera aria-hidden="true" />
+            <SwitchCamera aria-hidden="true" />
           </Button>
           </>}
           <Button variant="outline" size="icon-sm" onClick={fullscreen} aria-label={isFullscreen ? "Keluar dari layar penuh" : "Buka layar penuh"} title={isFullscreen ? "Keluar layar penuh" : "Layar penuh"}>
@@ -192,11 +211,15 @@ export function RaceReward({ pending, onClaim, disabled = false, claiming = fals
       <div className="reward-copy">
         <header className="reward-heading">
           <h2>Hasil balapan</h2>
-          <span className="reward-status">{rewardStatus}</span>
+          {readyToClaim ? (
+            <span className="reward-status">{rewardStatus}</span>
+          ) : (
+            <Progress className="reward-progress" value={Math.min(pending * 100, 100)} aria-label={rewardStatus} />
+          )}
         </header>
         <strong>{coins(pending)}</strong>
       </div>
-      <Button size="sm" variant={readyToClaim ? "gold" : "secondary"} disabled={disabled || !readyToClaim} onClick={onClaim} aria-busy={claiming} aria-label={readyToClaim ? "Klaim koin hasil balapan" : `Belum bisa diklaim. ${rewardStatus}`}>
+      <Button size="sm" variant={readyToClaim ? "goldSoft" : "secondary"} disabled={disabled || !readyToClaim} onClick={onClaim} aria-busy={claiming} aria-label={readyToClaim ? "Klaim koin hasil balapan" : `Belum bisa diklaim. ${rewardStatus}`}>
         {claiming ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <Coins data-icon="inline-start" />}
         {claiming ? "Mengklaim…" : "Klaim"}
       </Button>

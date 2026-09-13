@@ -184,14 +184,14 @@
   --telegram-wordmark-width: 96px;
   --nav-height: var(--space-56);
   /* ── tangga huruf — satu tangga menaik, tanpa lubang ─���───────────────────
-     2xs 8 · xs 9 · nano 10 · micro 11 · small 12 · body 13 · read 14 ·
-     title 15 · lead 16 · display 19 · xl 21 · 2xl 22 · 3xl 23 · 4xl 24 ·
+     nano 10 · micro 11 · small 12 · body 13 · read 14 · title 15 ·
+     lead 16 · display 19 · xl 21 · 2xl 22 · 3xl 23 · 4xl 24 ·
      5xl 28 · 6xl 30 · 7xl 32 · 8xl 36 · 9xl 48 · 10xl 68
+     Tangga berhenti di 10px: di bawah itu huruf tidak lagi nyaman dibaca di
+     layar ponsel, seberapa pun kontrasnya, jadi rung-nya sengaja tidak ada.
      nano..body hanya boleh di-override oleh permukaan non-halaman (lembar
      bawah .game-sheet). Tab pemain memakai tangga ini apa
      adanya supaya semuanya seukuran halaman depan. */
-  --fs-2xs: 8px;
-  --fs-xs: 9px;
   --fs-nano: 10px;
   --fs-micro: 11px;
   --fs-small: 12px;
@@ -348,7 +348,7 @@
 .parts-shop-preview-state > span { width: var(--space-6); height: var(--space-6); flex-shrink: 0; border-radius: var(--corner-round); background: var(--accent); box-shadow: 0 0 0 var(--space-3) color-mix(in srgb, var(--accent) 18%, transparent); }
 .parts-shop-preview-state > div { min-width: 0; }
 .parts-shop-preview-state small, .parts-shop-preview-state strong { display: block; }
-.parts-shop-preview-state small { font-size: var(--fs-xs); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps-lg); }
+.parts-shop-preview-state small { font-size: var(--fs-nano); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps-lg); }
 .parts-shop-preview-state strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--foreground); }
 .parts-shop-content { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-md); }
 .parts-shop-catalog { display: flex; gap: var(--space-sm); overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--space-xs); padding: var(--space-xs); }
@@ -588,10 +588,17 @@
 
 /* ── track ───���������─────────────────────────────────────── */
 .track-panel { position: relative; border-radius: var(--corner-2xl); }
-.track-top { display: flex; align-items: center; gap: var(--space-xs); min-height: var(--space-48); padding: var(--space-6) var(--space-md); border-bottom: var(--stroke) solid var(--border); }
+.track-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs); min-height: var(--space-48); padding: var(--space-6) var(--space-md); border-bottom: var(--stroke) solid var(--border); }
 .track-title { flex: 1; min-width: 0; }
 .circuit-number { display: grid; place-items: center; flex-shrink: 0; width: var(--space-30); height: var(--space-30); border: var(--stroke) solid var(--border); border-bottom: var(--stroke-2) solid var(--accent); border-radius: var(--corner-xs); font-size: var(--fs-title); font-weight: var(--fw-black); font-variant-numeric: tabular-nums; color: var(--foreground); background: var(--background); }
 .circuit-trigger { max-width: 100%; white-space: normal; text-align: left; padding-inline: var(--space-sm); font-size: var(--fs-body); font-weight: var(--fw-heavy); }
+/* Baris kail progresi membungkus ke bawah judul. min-height kepala dilepas
+   ketika barisnya ada supaya arena tidak ikut terdorong turun ke balik nav. */
+.track-top:has(.track-unlock) { min-height: 0; row-gap: var(--space-3); }
+.track-unlock { flex: 1 0 100%; display: flex; align-items: center; gap: var(--space-sm); min-width: 0; }
+.track-unlock > span { flex-shrink: 0; color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-heavy); line-height: var(--lh-none); letter-spacing: var(--track-caps-xs); text-transform: uppercase; font-variant-numeric: tabular-nums; }
+.track-unlock [data-slot='progress-track'] { height: var(--space-xs); background: var(--background); }
+.track-unlock [data-slot='progress-indicator'] { background: var(--accent); }
 .scene-wrap { height: var(--scene-h); position: relative; overflow: hidden; background: var(--card); isolation: isolate; }
 /* ── arena sinematik & simulasi sesi (tidak menyentuh koin/lap) ── */
 .race-boost-action { margin-left: auto; }
@@ -601,7 +608,7 @@
 .is-grip-critical .race-vignette, .is-course-out .race-vignette { box-shadow: var(--vignette-alert); }
 .race-settings { border-top: var(--stroke) solid var(--border); background: var(--background); }
 .race-settings-group { border-bottom: var(--stroke) solid var(--border); }
-.race-settings-title { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-sm); margin: 0; padding: var(--space-10) var(--space-md) var(--space-2); color: var(--muted-foreground); font-size: var(--fs-2xs); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps); text-transform: uppercase; }
+.race-settings-title { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-sm); margin: 0; padding: var(--space-10) var(--space-md) var(--space-2); color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps); text-transform: uppercase; }
 .race-settings-title small { font-size: var(--fs-nano); font-weight: var(--fw-medium); letter-spacing: var(--track-flat); text-transform: none; }
 .race-setting { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); padding: var(--space-8) var(--space-md); }
 .race-setting-copy { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
@@ -620,7 +627,7 @@
 .scene-overlay { position: absolute; z-index: var(--z-overlay); pointer-events: none; }
 .lane-hud { left: var(--space-10); bottom: var(--space-md); display: grid; grid-template-columns: var(--space-3) auto; align-items: center; column-gap: var(--space-6); font-size: var(--fs-nano); line-height: var(--lh-hud); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps); padding: var(--space-5) var(--space-7); border-radius: var(--corner-xs); background: color-mix(in srgb, var(--background) 88%, transparent); }
 .lane-hud i { width: var(--space-3); height: var(--space-23); grid-row: span 2; }
-.lane-hud span { font-size: var(--fs-2xs); color: var(--muted-foreground); font-weight: var(--fw-semibold); letter-spacing: var(--track-caps-xl); }
+.lane-hud span { font-size: var(--fs-nano); color: var(--muted-foreground); font-weight: var(--fw-semibold); letter-spacing: var(--track-caps-xl); }
 .scene-controls { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-6); padding: var(--space-10) var(--space-md); background: var(--background); }
 .scene-controls [data-slot='button'] { flex-shrink: 0; min-height: var(--space-40); font-variant-numeric: tabular-nums; }
 .scene-controls .race-boost-action { flex: 1; }
@@ -700,6 +707,9 @@
 .reward-heading h2 { flex-shrink: 0; font-size: var(--fs-nano); font-weight: var(--fw-bold); line-height: var(--lh-snug); letter-spacing: var(--track-caps-lg); text-transform: uppercase; color: var(--muted-foreground); }
 .reward-status { min-width: 0; padding: var(--space-1) var(--space-6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: var(--stroke) solid var(--border); border-radius: var(--corner-xs); background: color-mix(in srgb, var(--secondary) 60%, transparent); font-size: var(--fs-nano); font-weight: var(--fw-medium); line-height: var(--lh-snug); color: var(--muted-foreground); }
 .reward-ready .reward-status { border-color: color-mix(in srgb, var(--accent) 30%, transparent); background: color-mix(in srgb, var(--accent) 8%, transparent); color: var(--accent); }
+.reward-progress { flex: 1 1 auto; min-width: 0; }
+.reward-progress [data-slot='progress-track'] { height: var(--space-xs); background: var(--background); }
+.reward-progress [data-slot='progress-indicator'] { background: var(--accent); }
 .reward-copy > strong { display: block; margin-top: var(--space-2); font-size: var(--fs-title); font-weight: var(--fw-heavier); line-height: var(--lh-tight); letter-spacing: var(--track-tight-xs); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .race-reward > [data-slot='button'] { flex-shrink: 0; }
 
@@ -748,7 +758,7 @@
 .upgrade-name p { margin-top: var(--space-2); font-size: var(--fs-micro); color: var(--muted-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .upgrade-buy { flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .upgrade-specs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-sm); }
-.upgrade-specs > div { min-width: 0; padding: var(--space-6) var(--space-10); border: var(--stroke) solid var(--border); border-radius: var(--corner-sm); background: color-mix(in srgb, var(--background) 28%, var(--card)); }
+.upgrade-specs > div { min-width: 0; padding: var(--space-7) var(--space-10); border-radius: var(--corner-sm); background: color-mix(in srgb, var(--background) 46%, var(--card)); }
 .upgrade-specs dt { display: flex; align-items: baseline; gap: var(--space-xs); color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-semibold); letter-spacing: var(--track-caps-sm); text-transform: uppercase; white-space: nowrap; }
 .upgrade-specs dt small { font-size: inherit; font-weight: var(--fw-medium); letter-spacing: inherit; opacity: .7; }
 .upgrade-specs dd { margin-top: var(--space-2); color: var(--muted-foreground); font-size: var(--fs-body); line-height: var(--lh-snug); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -804,7 +814,7 @@
 .stat-hero-stats > div { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; padding: var(--space-sm) var(--space-md); }
 .stat-hero-stats > div + div { border-left: var(--stroke) solid var(--border); }
 .stat-hero-stats dt, .stat-hero-stats dd { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.stat-hero-stats dt { font-size: var(--fs-xs); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps-lg); text-transform: uppercase; color: var(--subtle-foreground); }
+.stat-hero-stats dt { font-size: var(--fs-nano); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps-lg); text-transform: uppercase; color: var(--subtle-foreground); }
 .stat-hero-stats dd { font-size: var(--fs-read); font-weight: var(--fw-bold); line-height: var(--lh-tight); font-variant-numeric: tabular-nums; color: var(--foreground); }
 
 /* ── hadiah ──────────��─────────────────────────────── */
@@ -820,7 +830,7 @@
 .reward-row-copy { min-width: 0; }
 .reward-row-copy h3 { font-size: var(--fs-body); font-weight: var(--fw-heavy); line-height: var(--lh-normal); }
 .reward-row-copy p { margin-top: var(--space-xs); font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); }
-.reward-row-action { grid-column: 2; display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); min-width: 0; margin: var(--space-md) 0; padding: var(--space-10); border: var(--stroke) solid var(--border); border-radius: var(--corner-panel); background: var(--secondary); }
+.reward-row-action { grid-column: 2; display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); min-width: 0; margin: var(--space-md) 0; padding: var(--space-9) var(--space-10); border-radius: var(--corner-panel); background: var(--secondary); }
 .reward-row-action > strong { font-size: var(--fs-lead); font-weight: var(--fw-heavy); color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .reward-row-action > strong > span { font-size: var(--fs-micro); font-weight: var(--fw-medium); color: var(--muted-foreground); }
 .reward-row-action > button { min-width: var(--withdraw-action-w); min-height: var(--claim-action-h); height: var(--claim-action-h); }
