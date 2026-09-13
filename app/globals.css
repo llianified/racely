@@ -537,7 +537,7 @@
 /* Telemetri = satu grid 3×2: kolom kecepatan/RPM/boost di atas, lap/waktu/hadiah
    di bawah pada kolom yang sama. Garis pemisah dibuat dari gap selebar --stroke
    di atas latar --border, jadi tidak ada sel yang terlihat menganga. */
-.race-hud-grid { display: grid; grid-template-columns: auto 1fr 1fr; gap: var(--stroke); margin: 0; background: var(--border); }
+.race-hud-grid { display: grid; grid-template-columns: auto 1fr 1fr; gap: var(--stroke); margin: 0; border-bottom: var(--stroke) solid var(--border); background: var(--border); }
 .race-hud-cell { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; padding: var(--space-8) var(--space-12); background: var(--background); }
 .race-hud-cell:nth-child(3n + 1) { padding-left: var(--space-md); }
 .race-hud-cell:nth-child(3n) { padding-right: var(--space-md); }
@@ -658,7 +658,7 @@
   .upgrade-info { flex-basis: 100%; }
 }
 
-/* ── misi & sirkuit ───────────��────────────────────── */
+/* ── misi & sirkuit ───────────��──────────────��─────── */
 .circuit-panel { padding: var(--space-md); }
 .section-card-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-sm); min-height: var(--space-28); }
 .panel:not(.circuit-panel) > .section-card-heading { margin-inline: calc(var(--gutter) * -1); padding: 0 var(--gutter) var(--space-md); border-bottom: var(--stroke) solid var(--border); }
