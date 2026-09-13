@@ -12,9 +12,9 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { formatCoins } from "@/lib/game";
 
-export type GameTab = "menu" | "race" | "garage" | "rewards" | "wallet" | "referral";
+export type GameTab = "menu" | "race" | "garage" | "rewards" | "wallet" | "referral" | "leaderboard";
 /** Tab yang tidak punya tombol di nav bawah; dibuka dari Menu dan menyorot "Menu" saat aktif. */
-const MENU_CHILD_TABS: ReadonlySet<GameTab> = new Set(["referral"]);
+const MENU_CHILD_TABS: ReadonlySet<GameTab> = new Set(["referral", "leaderboard"]);
 export const NAV_ITEMS = [
   { id: "menu" as const, label: "Menu", icon: Menu },
   { id: "race" as const, label: "Balapan", icon: Flag },

@@ -1,4 +1,4 @@
-import { desc } from "drizzle-orm";
+import { desc, sql } from "drizzle-orm";
 import {
   bigint,
   bigserial,
@@ -53,7 +53,11 @@ export const players = pgTable("racely_players", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+}, (table) => [
+  index("racely_players_leaderboard_idx")
+    .on(desc(table.laps), table.createdAt, table.userId)
+    .where(sql`${table.laps} > 0 AND ${table.userId} ~ '^[0-9]+$'`),
+]);
 
 /**
  * Pemain yang sudah membuka percakapan dengan bot. Tanpa foreign key ke
