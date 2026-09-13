@@ -271,6 +271,29 @@ const KMH_PER_LAP_PER_SECOND = 192;
 export const displaySpeedKmh = (secondsPerLap: number) =>
   KMH_PER_LAP_PER_SECOND / secondsPerLap;
 
+/**
+ * Satu format untuk laju, dipakai HUD balapan dan statistik garasi.
+ *
+ * Desimalnya dilepas mulai 100 km/j. Dengan level maksimum dan Gaspol, laju
+ * tembus 156 km/j -- lima karakter, dan kolom HUD tidak muat selebar itu di
+ * lebar HP mana pun (tumpah 18px di 320, masih 6px di 390). Di angka segitu
+ * presisi 0,1 km/j juga tidak memberi tahu pemain apa pun.
+ *
+ * Pembulatan dilakukan sebelum ambangnya diuji, supaya 99,96 jadi "100" dan
+ * bukan "100,0" yang justru lima karakter lagi.
+ *
+ * Locale id-ID dipakai supaya laju tidak tampil "19.7" di HUD tapi "19,7" di
+ * garasi -- dan supaya titik tidak berarti desimal di kolom laju sekaligus
+ * ribuan di kolom RPM tepat sebelahnya.
+ */
+export const formatSpeedKmh = (kmh: number) => {
+  const digits = Math.round(kmh * 10) / 10 >= 100 ? 0 : 1;
+  return kmh.toLocaleString("id-ID", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+};
+
 // Derive reserve from the authoritative boost timers, so reloads cannot refill it.
 export function batteryTelemetry(
   s: Pick<GameState, "boostLeft" | "cooldown" | "economy">,
