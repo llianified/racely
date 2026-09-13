@@ -13,6 +13,17 @@ const describeDatabase = hasDatabase ? describe : describe.skip;
 // that matters most -- balances, withdrawals, idempotency, retention -- into a
 // silent no-op while the run still reports green. The workflow provisions a
 // Postgres service, so a missing DATABASE_URL there is a broken workflow.
+/**
+ * Akun yang sudah lolos pagar penarikan Fase 0. Fixture di bawah memakainya
+ * supaya yang diuji tetap antrean, idempotensi, dan refund -- bukan syarat
+ * siapa yang boleh antre, yang punya test sendiri.
+ */
+const WITHDRAW_READY = {
+  laps: 1_000_000,
+  createdAt: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000),
+};
+
+
 describe("Database coverage", () => {
   it("is not silently skipped in CI", () => {
     if (process.env.CI) expect(hasDatabase).toBe(true);
@@ -35,6 +46,22 @@ describeDatabase("Neon Postgres persistence", () => {
   let drizzle: typeof import("drizzle-orm");
   const claimedUpdateIds: number[] = [];
   const extraUserIds: string[] = [];
+
+  /**
+   * Mendanai saldo sekaligus melewatkan pagar penarikan: cukup putaran, akun
+   * cukup tua, dan jeda sejak permintaan terakhir sudah lewat. Test di bawah
+   * menguji antrean, idempotensi, dan refund; pagarnya diuji tersendiri.
+   */
+  async function fundForWithdraw(userId: string, balance: number) {
+    await db!
+      .update(schema.players)
+      .set({ balance, laps: WITHDRAW_READY.laps, createdAt: WITHDRAW_READY.createdAt })
+      .where(drizzle.eq(schema.players.userId, userId));
+    await db!
+      .update(schema.withdrawals)
+      .set({ createdAt: WITHDRAW_READY.createdAt })
+      .where(drizzle.eq(schema.withdrawals.userId, userId));
+  }
 
   beforeAll(async () => {
     [db, schema, gameServer, updates, drizzle] = await Promise.all([
@@ -135,10 +162,7 @@ describeDatabase("Neon Postgres persistence", () => {
   });
 
   it("stores a withdrawal as pending and debits the balance", async () => {
-    await db!
-      .update(schema.players)
-      .set({ balance: 500 })
-      .where(drizzle.eq(schema.players.userId, identity.userId));
+    await fundForWithdraw(identity.userId, 500);
 
     const result = await gameServer.performGameAction(identity, randomUUID(), {
       type: "withdraw",
@@ -161,14 +185,17 @@ describeDatabase("Neon Postgres persistence", () => {
       .where(drizzle.eq(schema.withdrawals.userId, identity.userId));
     expect(row.status).toBe("pending");
     expect(row.processedAt).toBeNull();
-    expect(row.amountIdr).toBe(150 * 100);
+    // Biaya penarikan memotong rupiah yang dicatat, bukan koin yang dipotong
+    // dari saldo. Dihitung lewat helper yang sama dengan servernya, jadi
+    // menyetel withdrawFeePct tidak menuntut angka baru ditulis di sini.
+    const { withdrawAmountIdr } = await import("@/lib/game-economy");
+    const { DEFAULT_ECONOMY } = await import("@/lib/economy-config");
+    expect(row.amountIdr).toBe(withdrawAmountIdr(DEFAULT_ECONOMY, 150));
+    expect(row.coins).toBe(150);
   });
 
   it("keeps withdrawal account data out of the action receipt table", async () => {
-    await db!
-      .update(schema.players)
-      .set({ balance: 800 })
-      .where(drizzle.eq(schema.players.userId, identity.userId));
+    await fundForWithdraw(identity.userId, 800);
     await gameServer.performGameAction(identity, randomUUID(), {
       type: "withdraw",
       method: "bca",
@@ -237,10 +264,7 @@ describeDatabase("Neon Postgres persistence", () => {
     // Every one of these four aborted its own transaction in production -- the
     // reward credit, the purchase and the race settlement rolled back together
     // -- until migration 0007 widened the list.
-    await db!
-      .update(schema.players)
-      .set({ balance: 500 })
-      .where(drizzle.eq(schema.players.userId, identity.userId));
+    await fundForWithdraw(identity.userId, 500);
 
     const before = await gameServer.performGameAction(identity, randomUUID(), {
       type: "sync",
@@ -283,10 +307,7 @@ describeDatabase("Neon Postgres persistence", () => {
   });
 
   it("refunds a rejected withdrawal exactly once", async () => {
-    await db!
-      .update(schema.players)
-      .set({ balance: 500 })
-      .where(drizzle.eq(schema.players.userId, identity.userId));
+    await fundForWithdraw(identity.userId, 500);
 
     await gameServer.performGameAction(identity, randomUUID(), {
       type: "withdraw",
@@ -549,10 +570,7 @@ describeDatabase("Neon Postgres persistence", () => {
       model: "luna-gt",
       color: "#b9a1ed",
     });
-    await db!
-      .update(schema.players)
-      .set({ balance: 400 })
-      .where(drizzle.eq(schema.players.userId, userId));
+    await fundForWithdraw(userId, 400);
     await gameServer.performGameAction(operator, randomUUID(), {
       type: "withdraw",
       method: "dana",
@@ -637,10 +655,7 @@ describeDatabase("Neon Postgres persistence", () => {
       model: "luna-gt",
       color: "#b9a1ed",
     });
-    await db!
-      .update(schema.players)
-      .set({ balance: 300 })
-      .where(drizzle.eq(schema.players.userId, userId));
+    await fundForWithdraw(userId, 300);
     await gameServer.performGameAction(player, randomUUID(), {
       type: "withdraw",
       method: "dana",

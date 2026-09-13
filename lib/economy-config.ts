@@ -356,6 +356,22 @@ export const lapScrapAt = (
   );
 };
 
+/**
+ * Rem emisi global. Anggaran yang terlampaui menurunkan bayaran koin bertahap
+ * sampai hari berganti, bukan memutusnya: pemain yang sedang menonton layar
+ * tidak boleh tiba-tiba mendapat nol tanpa sebab yang terlihat.
+ *
+ * Anggaran 0 berarti tanpa anggaran dan tanpa rem -- itu sebabnya tidak ada
+ * knob boolean terpisah untuk menyalakannya.
+ */
+export const emissionBrakeAt = (e: EconomyConfig, coinsMintedToday: number) => {
+  if (e.dailyEmissionBudgetIdr <= 0) return 1;
+  const spent = coinsMintedToday * e.coinToIdr;
+  const share = spent / e.dailyEmissionBudgetIdr;
+  if (share < 1) return 1;
+  return share < 1.5 ? 0.75 : 0.5;
+};
+
 /** Koin yang masih boleh dicetak untuk pemain ini hari ini. */
 export const coinCapRemaining = (e: EconomyConfig, coinsToday: number) =>
   Math.max(0, e.dailyCoinCapPerPlayer - Math.max(0, coinsToday));

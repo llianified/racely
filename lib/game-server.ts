@@ -50,6 +50,7 @@ import {
 } from "@/lib/economy-config";
 import { readEconomyConfig } from "@/lib/economy-store";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
+import { emissionBrake, recordMinted } from "@/lib/emission-store";
 import { referralLink } from "@/lib/telegram-bot";
 
 const carColorSchema = z.string().regex(/^#[0-9a-f]{6}$/i);
@@ -445,6 +446,26 @@ async function readReferralSummary(
   };
 }
 
+/**
+ * Kolom yang dimiliki settlement. Dikumpulkan di satu tempat karena ada tiga
+ * penulis berbeda: kolom baru yang hanya ditambahkan ke salah satunya akan
+ * tersimpan pada satu jalur dan hilang di jalur lain, tanpa error apa pun.
+ */
+function settledColumns(row: PlayerRow) {
+  return {
+    pending: row.pending,
+    earned: row.earned,
+    scrap: row.scrap,
+    scrapEarned: row.scrapEarned,
+    starterScrapAt: row.starterScrapAt,
+    dayKey: row.dayKey,
+    dayCoins: row.dayCoins,
+    laps: row.laps,
+    progress: row.progress,
+    lastSettledAt: row.lastSettledAt,
+  };
+}
+
 export type SettledPlayer = {
   row: PlayerRow;
   offline: OfflineEarnings | null;
@@ -596,7 +617,14 @@ export async function getGameState(
       .for("update");
 
     const bound = await bindReferrer(tx, locked, identity.startParam);
-    const settled = settlePlayerRow(bound, now, economy);
+    // Rem emisi dibaca dari cache per-proses, jadi biasanya tidak menambah
+    // query di dalam transaksi yang sedang memegang kunci baris.
+    const settled = settlePlayerRow(
+      bound,
+      now,
+      economy,
+      await emissionBrake(economy, now),
+    );
     const rewarded = await refundRejectedWithdrawals(
       tx,
       await payInviteeMilestone(tx, settled.row, economy),
@@ -605,16 +633,14 @@ export async function getGameState(
     const [saved] = await tx
       .update(players)
       .set({
+        ...settledColumns(settled.row),
         balance: rewarded.balance,
-        pending: settled.row.pending,
-        earned: settled.row.earned,
-        laps: settled.row.laps,
-        progress: settled.row.progress,
-        lastSettledAt: settled.row.lastSettledAt,
         updatedAt: now,
       })
       .where(eq(players.userId, locked.userId))
       .returning();
+
+    await recordMinted(tx, settled.day, settled.minted, economy);
 
     const history = await tx
       .select()
@@ -694,7 +720,12 @@ export async function performGameAction(
       .for("update");
 
     const bound = await bindReferrer(tx, locked, identity.startParam);
-    const settled = settlePlayerRow(bound, now, economy);
+    const settled = settlePlayerRow(
+      bound,
+      now,
+      economy,
+      await emissionBrake(economy, now),
+    );
     let next = await refundRejectedWithdrawals(
       tx,
       await payInviteeMilestone(tx, settled.row, economy),
@@ -718,16 +749,13 @@ export async function performGameAction(
         const [saved] = await tx
           .update(players)
           .set({
+            ...settledColumns(next),
             balance: next.balance,
-            pending: next.pending,
-            earned: next.earned,
-            laps: next.laps,
-            progress: next.progress,
-            lastSettledAt: next.lastSettledAt,
             updatedAt: now,
           })
           .where(eq(players.userId, identity.userId))
           .returning();
+        await recordMinted(tx, settled.day, settled.minted, economy);
         const replayHistory = await tx
           .select()
           .from(withdrawals)
@@ -964,11 +992,8 @@ export async function performGameAction(
     const [saved] = await tx
       .update(players)
       .set({
+        ...settledColumns(next),
         balance: next.balance,
-        pending: next.pending,
-        earned: next.earned,
-        laps: next.laps,
-        progress: next.progress,
         engineLevel: next.engineLevel,
         tiresLevel: next.tiresLevel,
         batteryLevel: next.batteryLevel,
@@ -981,12 +1006,13 @@ export async function performGameAction(
         ownedCars: next.ownedCars,
         color: next.color,
         circuit: next.circuit,
-        lastSettledAt: next.lastSettledAt,
         version: next.version + (action.type === "sync" ? 0 : 1),
         updatedAt: now,
       })
       .where(eq(players.userId, identity.userId))
       .returning();
+
+    await recordMinted(tx, settled.day, settled.minted, economy);
 
     const history = await tx
       .select()

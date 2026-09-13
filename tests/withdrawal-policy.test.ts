@@ -190,6 +190,49 @@ describe("Withdrawals stay a manual, pending-only queue", () => {
     );
   });
 
+  it("menyimpan setiap kolom settlement lewat satu helper, di semua penulis", () => {
+    // Ada beberapa tempat yang menulis ke tabel players; hanya sebagian yang
+    // menyimpan hasil settlement (sisanya menyentuh referral dan refund).
+    // Sebelum helper ini setiap penulis mengetik daftar kolomnya sendiri, jadi
+    // kolom baru bisa tersimpan di satu jalur dan hilang di jalur lain tanpa
+    // error apa pun. Penjaganya: payload mana pun yang menyebut kolom milik
+    // settlement harus menyebutnya lewat spread, bukan satu per satu.
+    const OWNED = [
+      "pending", "earned", "scrap", "scrapEarned", "starterScrapAt",
+      "dayKey", "dayCoins", "laps", "progress", "lastSettledAt",
+    ];
+
+    const payloads: string[] = [];
+    for (const match of gameServerSource.matchAll(/\.update\(players\)\s*\n\s*\.set\(\{/g)) {
+      let depth = 1;
+      let index = match.index! + match[0].length;
+      while (index < gameServerSource.length && depth > 0) {
+        if (gameServerSource[index] === "{") depth += 1;
+        if (gameServerSource[index] === "}") depth -= 1;
+        index += 1;
+      }
+      payloads.push(gameServerSource.slice(match.index!, index));
+    }
+    expect(payloads.length).toBeGreaterThanOrEqual(3);
+
+    for (const payload of payloads) {
+      const named = OWNED.filter((column) =>
+        new RegExp(`\\n\\s*${column}:`).test(payload),
+      );
+      if (named.length > 0) {
+        expect(payload, `kolom settlement ditulis satu per satu: ${named.join(", ")}`)
+          .toContain("...settledColumns(");
+      }
+    }
+
+    // Dan helper itu sendiri harus menyebut seluruh kolomnya.
+    const helper = gameServerSource.slice(
+      gameServerSource.indexOf("function settledColumns"),
+      gameServerSource.indexOf("export type SettledPlayer"),
+    );
+    for (const column of OWNED) expect(helper).toContain(`${column}:`);
+  });
+
   it("keeps the server writer free of any payout or status mutation", () => {
     expect(gameServerSource).toContain("insert(withdrawals)");
 
