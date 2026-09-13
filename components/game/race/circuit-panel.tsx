@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Flag, Trophy, LockKeyhole, ArrowRight } from "lucide-react";
+import { Check, Trophy, LockKeyhole, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -15,26 +15,26 @@ export function CircuitPanel({ game, onChoose, disabled = false }: { game: GameS
   const unlockLaps = game.economy.circuitUnlockLaps;
   const unlocked = game.laps >= unlockLaps;
   const active = game.circuit === 1;
+  const lapsDone = Math.min(game.laps, unlockLaps);
   return (
-    <section className="panel circuit-panel">
+    <section className="panel stat-card circuit-panel">
       <SectionCardHeading
         icon={Trophy}
         title={active ? "Trek aktif" : "Trek berikutnya"}
         aside={
-          <Badge variant="secondary">{!unlocked ? <LockKeyhole data-icon="inline-start" /> : active ? <Check data-icon="inline-start" /> : <Flag data-icon="inline-start" />}{!unlocked ? "Terkunci" : active ? "Aktif" : "Terbuka"}</Badge>
+          unlocked && !active
+            ? <Button size="sm" variant="gold" disabled={disabled} onClick={() => onChoose(1)}>Gas ke Midnight<ArrowRight data-icon="inline-end" /></Button>
+            : <Badge variant="secondary">{active ? <Check data-icon="inline-start" /> : <LockKeyhole data-icon="inline-start" />}{active ? "Aktif" : "Terkunci"}</Badge>
         }
       />
-      <div className="circuit-preview">
-        <span className="circuit-ticket-label">Trek 2</span>
-        <div><h3>Midnight Speedway</h3><p>Bonus permanen +{formatCoins(game.economy.lapRewardPerCircuit)} koin/lap</p></div>
-        <Flag className="circuit-ticket-flag" aria-hidden="true" />
-      </div>
-      {!unlocked && <>
-        <p className="circuit-description">{unlockLaps - game.laps} putaran lagi menuju Midnight.</p>
-        <div className="mission-progress circuit-progress"><Progress value={Math.min((game.laps / unlockLaps) * 100, 100)} aria-label="Buka Midnight Speedway" className="flex-1" /><span>{Math.min(game.laps, unlockLaps)}/{unlockLaps}</span></div>
-      </>}
-      {active && <p className="circuit-description">Reward tertinggi tetap aktif.</p>}
-      {unlocked && !active && <Button variant="gold" className="mt-md w-full" disabled={disabled} onClick={() => onChoose(1)}>Gas ke Midnight<ArrowRight data-icon="inline-end" /></Button>}
+      <h3 className="stat-card-value">Midnight Speedway</h3>
+      <p className="stat-card-meta"><span className="circuit-ticket-label">Trek 2</span>Bonus permanen <b>+{formatCoins(game.economy.lapRewardPerCircuit)} koin/lap</b></p>
+      {!unlocked && (
+        <div className="circuit-unlock">
+          <div className="circuit-unlock-row"><span>{unlockLaps - lapsDone} putaran lagi</span><span>{lapsDone}/{unlockLaps} lap</span></div>
+          <Progress value={(lapsDone / unlockLaps) * 100} aria-label="Buka Midnight Speedway" />
+        </div>
+      )}
     </section>
   );
 }
