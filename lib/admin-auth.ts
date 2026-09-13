@@ -153,12 +153,30 @@ export function adminCookieOptions(request: Request, maxAge: number) {
  * Permintaan tanpa header Origin (curl, beberapa klien lama) tetap diterima:
  * yang ditolak hanya Origin yang ADA dan berbeda -- pola browser inilah yang
  * dipakai CSRF.
+ *
+ * Di produksi, reverse proxy bisa membuat `request.url` berisi alamat internal
+ * (`localhost:3000`). `PUBLIC_APP_URL` adalah asal publik kanonis yang memang
+ * dikonfigurasi operator, jadi ia ikut menjadi pembanding tanpa mempercayai
+ * header host yang dapat dipalsukan klien.
  */
 export function hasSameOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
+  const originHeader = request.headers.get("origin");
+  if (!originHeader) return true;
+
   try {
-    return new URL(origin).host === new URL(request.url).host;
+    const origin = new URL(originHeader).origin;
+    const requestOrigin = new URL(request.url).origin;
+    let publicOrigin: string | null = null;
+
+    try {
+      publicOrigin = process.env.PUBLIC_APP_URL
+        ? new URL(process.env.PUBLIC_APP_URL).origin
+        : null;
+    } catch {
+      // Nilai konfigurasi yang rusak tidak boleh melonggarkan pemeriksaan CSRF.
+    }
+
+    return origin === requestOrigin || origin === publicOrigin;
   } catch {
     return false;
   }
