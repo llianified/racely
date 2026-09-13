@@ -116,6 +116,11 @@
 
   --upgrade-action-w: 104px;
   --withdraw-action-w: 80px;
+  /* Tombol klaim di baris hadiah lebih pendek dari tombol biasa (--space-40):
+     barisnya sudah punya nominal koin di sebelahnya, jadi tombolnya tidak perlu
+     setinggi tombol utama. Hanya tingginya yang lepas dari ukuran bawaan --
+     huruf, padding samping, dan lebar minimumnya tetap ikut tombol. */
+  --claim-action-h: var(--space-32);
   /* Muat "24,95/25" (65,7px) tanpa memendekkan bar misi mana pun. */
   --mission-count-w: 68px;
   --edition-max-w: 100px;
@@ -726,7 +731,7 @@
 .reward-row-action { grid-column: 2; display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); min-width: 0; margin: var(--space-md) 0; padding: var(--space-10); border: var(--stroke) solid var(--border); border-radius: var(--corner-panel); background: var(--secondary); }
 .reward-row-action > strong { font-size: var(--fs-lead); font-weight: var(--fw-heavy); color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .reward-row-action > strong > span { font-size: var(--fs-micro); font-weight: var(--fw-medium); color: var(--muted-foreground); }
-.reward-row-action > button { min-width: var(--withdraw-action-w); }
+.reward-row-action > button { min-width: var(--withdraw-action-w); min-height: var(--claim-action-h); height: var(--claim-action-h); }
 .reward-row.is-claimed .reward-row-action > strong { color: var(--muted-foreground); }
 
 /* ── dompet ────────────────────────────────────────── */
