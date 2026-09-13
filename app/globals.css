@@ -114,7 +114,6 @@
 
   /* Lebar popover info; di luar tangga ukuran karena tidak berulang. */
   --popover-w: 288px;
-  --upgrade-action-w: 104px;
   --withdraw-action-w: 80px;
   /* Tombol klaim di baris hadiah lebih pendek dari tombol biasa (--space-40):
      barisnya sudah punya nominal koin di sebelahnya, jadi tombolnya tidak perlu
@@ -629,27 +628,21 @@
 .garage-stats strong { color: var(--foreground); font-size: var(--fs-2xl); font-variant-numeric: tabular-nums; }
 
 .upgrade-list { padding-inline: 0; }
-.upgrade-row { display: flex; align-items: flex-end; gap: var(--space-md); padding: var(--space-md); border-bottom: var(--stroke) solid var(--border); }
+/* Tombol ikut di baris judul, bukan kolom samping: kolom samping memaksa teks
+   melipat sempit dan menyisakan ruang kosong di atas tombol. */
+.upgrade-row { display: flex; flex-direction: column; gap: var(--space-6); padding: var(--space-md); border-bottom: var(--stroke) solid var(--border); }
 .upgrade-row:last-child { border-bottom: none; }
-.upgrade-info { flex: 1 1 auto; min-width: 0; }
-.upgrade-name { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-6); }
+.upgrade-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); }
+.upgrade-name { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-6); min-width: 0; }
 .upgrade-name h3 { font-size: var(--fs-body); font-weight: var(--fw-heavy); }
 .upgrade-name svg { width: var(--icon-base); height: var(--icon-base); flex-shrink: 0; color: var(--muted-foreground); }
 .level-label { font-size: var(--fs-small); font-weight: var(--fw-bold); color: var(--accent); white-space: nowrap; }
-.upgrade-info p { margin-top: var(--space-6); font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.upgrade-arena-info { margin-top: var(--space-sm); padding-top: var(--space-xs); border-top: var(--stroke) solid var(--border); }
-.upgrade-arena-info strong { color: var(--foreground); font-weight: var(--fw-semibold); }
-/* Paragraf pembuka panel Bengkel (bukan catatan kaki seperti .race-settings-note
-   di laci pengaturan balapan): pakai rung prosa sekunder yang sama
-   dengan .upgrade-info p supaya tidak jadi satu-satunya teks besar di Bengkel. */
-.upgrade-arena-note { padding: var(--space-md); border-bottom: var(--stroke) solid var(--border); color: var(--muted-foreground); font-size: var(--fs-small); line-height: var(--lh-normal); }
-.level-segments { display: flex; gap: var(--space-3); margin-top: var(--space-10); }
+.upgrade-row > p { font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.upgrade-arena-tag { display: inline-block; margin-right: var(--space-6); padding: 0 var(--space-6); border-radius: var(--corner-2xs); background: var(--secondary); color: var(--foreground); font-size: var(--fs-micro); font-weight: var(--fw-semibold); letter-spacing: var(--track-flat); text-transform: uppercase; vertical-align: middle; }
+.level-segments { display: flex; gap: var(--space-3); margin-top: var(--space-xs); }
 .level-segments > span { height: var(--space-xs); flex: 1; background: var(--secondary); border-radius: var(--corner-2xs); }
 .level-segments > span.filled { background: var(--primary); }
-.upgrade-action { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-end; flex: 0 0 var(--upgrade-action-w); min-width: 0; }
-.upgrade-buy { width: 100%; min-height: var(--space-40); font-variant-numeric: tabular-nums; }
-.upgrade-buy[data-short] { font-size: var(--fs-body); }
-.upgrade-buy[data-short] svg { width: var(--icon-xs); height: var(--icon-xs); }
+.upgrade-buy { flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .body-colors { display: flex; align-items: center; gap: var(--space-xs); }
 .color-swatch { height: var(--space-40); width: var(--space-40); border: var(--swatch-ring-w) solid var(--card); border-radius: var(--corner-round); background: var(--swatch); color: var(--background); display: grid; place-items: center; }
 .color-swatch svg { width: var(--icon-base); height: var(--icon-base); stroke-width: var(--icon-stroke-bold); }
@@ -657,8 +650,6 @@
 .color-swatch:focus-visible { outline: var(--focus-w) solid var(--foreground); outline-offset: var(--focus-offset); }
 @media (max-width: 359px) {
   .garage-customize { flex-direction: column; align-items: flex-start; }
-  .upgrade-row { flex-wrap: wrap; }
-  .upgrade-info { flex-basis: 100%; }
 }
 
 /* ── misi & sirkuit ───────────��──────────────��─────── */
@@ -888,7 +879,6 @@
   .brand-word { font-size: var(--fs-2xl); }
   .coin-balance { padding-inline: var(--space-sm); }
   .coin-balance > svg { display: none; }
-  .upgrade-action { flex-basis: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
