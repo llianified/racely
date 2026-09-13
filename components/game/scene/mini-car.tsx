@@ -5,6 +5,8 @@ import { useFrame } from '@react-three/fiber'
 import type { CarModelId } from '@/lib/car-catalog'
 import type { GameState } from '@/lib/game'
 import { PART_CATALOG, type BodyParts, type PartId } from '@/lib/car-parts'
+import { addBodywork, addStockWing, type Finish } from './car-bodywork'
+import { CarMarkings } from './car-markings'
 import * as THREE from 'three'
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js'
 
@@ -16,10 +18,13 @@ export const COLORS = { blue: '#7841ee', navy: '#090c1d', surface: '#191939', gr
 type Point = [number, number]
 type Position = [number, number, number]
 type Section = [z: number, halfWidth: number, y: number, height: number, x?: number]
-type Finish = 'body' | 'chassis' | 'rubber' | 'alloy' | 'gold' | 'livery' | 'glass'
 
 const SIDES = [-1, 1] as const
 const AXLES = [-.265, .265] as const
+const MATERIAL_COLORS = {
+  panel: '#25282b', chassis: '#171a1d', rubber: '#151617',
+  alloy: '#c2c9ce', gold: '#b59a51', livery: '#f5f4ef', glass: '#091117',
+} as const
 
 function sculptedShell(sections: Section[], lengthSegments = 36, radialSegments = 32) {
   const outline = new THREE.CatmullRomCurve3(
@@ -108,7 +113,7 @@ function mergeIndexed(geometries: THREE.BufferGeometry[]) {
 
 function createCarGeometry(model: CarModelId) {
   const parts: Record<Finish, THREE.BufferGeometry[]> = {
-    body: [], chassis: [], rubber: [], alloy: [], gold: [], livery: [], glass: [],
+    body: [], panel: [], chassis: [], rubber: [], alloy: [], gold: [], livery: [], glass: [],
   }
   const internalParts: Partial<Record<Finish, THREE.BufferGeometry[]>> = {}
   let internal = false
@@ -147,106 +152,7 @@ function createCarGeometry(model: CarModelId) {
     [.145, -.14], [.184, -.20], [.184, -.29], [.115, -.36],
   ], .035), [0, .082, 0])
 
-  if (model === 'neo-falcon') {
-  add('body', sculptedShell([
-    [-.355, .053, .151, .013], [-.29, .101, .173, .046],
-    [-.19, .114, .190, .058], [-.075, .104, .190, .061],
-    [.045, .080, .181, .060], [.17, .067, .165, .044],
-    [.30, .079, .147, .025], [.385, .088, .134, .009],
-  ]))
-
-  add('glass', sculptedShell([
-    [-.214, .035, .240, .003], [-.15, .066, .245, .051],
-    [-.06, .067, .240, .068], [.035, .052, .227, .054],
-    [.135, .027, .205, .013], [.165, .002, .194, .002],
-  ], 36, 40))
-
-  for (const side of SIDES) {
-    add('body', sculptedShell([
-      [-.325, .010, .163, .008, side * .117],
-      [-.22, .030, .193, .043, side * .147],
-      [-.09, .049, .187, .050, side * .166],
-      [.075, .041, .179, .034, side * .167],
-      [.18, .018, .159, .018, side * .133],
-      [.315, .004, .140, .006, side * .090],
-    ]))
-    add('livery', sculptedShell([
-      [-.275, .005, .223, .003, side * .136],
-      [-.16, .010, .241, .003, side * .165],
-      [-.045, .011, .238, .003, side * .179],
-      [.075, .006, .214, .003, side * .177],
-      [.18, .001, .177, .002, side * .140],
-    ], 24, 8))
-    add('livery', sculptedShell([
-      [.115, .001, .226, .002, side * .031],
-      [.20, .009, .205, .002, side * .034],
-      [.30, .012, .174, .002, side * .037],
-      [.379, .014, .145, .002, side * .040],
-    ], 24, 8))
-    add('livery', sculptedShell([
-      [-.15, .002, .285, .002, side * .059],
-      [-.045, .003, .290, .002, side * .062],
-      [.055, .002, .253, .002, side * .048],
-      [.14, .001, .213, .001, side * .023],
-    ], 24, 8))
-
-    add('chassis', sculptedShell([
-      [-.125, .020, .199, .010, side * .208],
-      [-.04, .025, .194, .016, side * .208],
-      [.065, .021, .186, .013, side * .202],
-      [.10, .009, .177, .003, side * .189],
-    ], 16, 16))
-    for (let i = 0; i < 4; i++) {
-      add('chassis', plate([[-.020, -.004], [.020, -.004], [.014, .004], [-.020, .004]], .002),
-        [side * .151, .235 - i * .003, -.117 + i * .027], [0, side * .18, side * -.18])
-    }
-    add('chassis', plate([
-      [-.037, -.22], [.025, -.17], [.025, .15], [-.027, .21], [-.037, .12],
-    ].map(([x, z]) => [x * side, z] as Point), .013), [side * .165, .099, 0])
-  }
-
-  } else {
-    add('body', sculptedShell([
-      [-.35, .095, .153, .018], [-.28, .15, .176, .046],
-      [-.13, .172, .184, .055], [.045, .163, .179, .048],
-      [.19, .145, .158, .036], [.31, .135, .146, .029],
-      [.38, .083, .139, .010],
-    ]))
-    add('glass', sculptedShell([
-      [-.24, .060, .217, .009], [-.16, .108, .231, .065],
-      [-.055, .112, .229, .085], [.06, .092, .219, .064],
-      [.17, .038, .189, .013], [.19, .002, .181, .002],
-    ], 36, 40))
-    add('body', sculptedShell([
-      [-.165, .015, .289, .002], [-.12, .074, .297, .010],
-      [-.055, .087, .305, .010], [.015, .062, .295, .008],
-      [.04, .006, .277, .002],
-    ], 24, 32))
-    for (const side of SIDES) {
-      add('body', sculptedShell([
-        [-.32, .010, .156, .006, side * .13],
-        [-.24, .042, .177, .040, side * .161],
-        [-.05, .032, .165, .035, side * .178],
-        [.17, .035, .15, .028, side * .159],
-        [.32, .008, .139, .009, side * .115],
-      ]))
-      add('livery', sculptedShell([
-        [-.29, .003, .143, .003, side * .159],
-        [-.14, .004, .148, .004, side * .188],
-        [.08, .004, .14, .004, side * .184],
-        [.26, .002, .128, .003, side * .148],
-      ], 24, 12))
-      const lamp = new THREE.SphereGeometry(1, 24, 12)
-      lamp.scale(.034, .012, .018)
-      add('livery', lamp, [side * .091, .173, .316], [-.25, side * -.25, 0])
-      const rearLamp = new THREE.SphereGeometry(1, 16, 8)
-      rearLamp.scale(.029, .007, .008)
-      add('livery', rearLamp, [side * .088, .169, -.341])
-    }
-    add('chassis', sculptedShell([
-      [.34, .06, .127, .008], [.369, .066, .126, .009], [.387, .04, .125, .003],
-    ], 12, 16))
-  }
+  addBodywork(model, add)
 
   for (const z of AXLES) {
     add('alloy', cylinder(.010, .565, 16), [0, .124, z], [0, 0, Math.PI / 2])
@@ -259,24 +165,26 @@ function createCarGeometry(model: CarModelId) {
         [.122, -.031], [.122, .031], [.120, .045], [.114, .053],
         [.104, .057], [.077, .057], [.077, -.057],
       ]), [x, .124, z], [0, 0, Math.PI / 2])
-      add('alloy', turned([
+      const rimFinish = model === 'neo-falcon' ? 'body' : 'alloy'
+      add(rimFinish, turned([
         [.073, -.045], [.081, -.045], [.085, -.039], [.085, .039],
         [.081, .045], [.073, .045], [.073, -.045],
       ]), [x, .124, z], [0, 0, Math.PI / 2])
       const faceX = x + side * .046
-      add('alloy', ring(.081, .0035), [faceX, .124, z], [0, Math.PI / 2, 0])
+      add(rimFinish, ring(.081, .0035), [faceX, .124, z], [0, Math.PI / 2, 0])
       add('rubber', ring(.107, .0015), [x + side * .054, .124, z], [0, Math.PI / 2, 0])
       add('body', cylinder(.027, .020), [faceX, .124, z], [0, 0, Math.PI / 2])
       add('alloy', cylinder(.010, .023, 6), [faceX + side * .004, .124, z], [0, 0, Math.PI / 2])
-      for (let spoke = 0; spoke < 6; spoke++) {
-        const angle = spoke / 6 * Math.PI * 2
+      const spokeCount = model === 'neo-falcon' ? 12 : 8
+      for (let spoke = 0; spoke < spokeCount; spoke++) {
+        const angle = spoke / spokeCount * Math.PI * 2
         const spokeGeometry = plate([
-          [.022, -.009], [.070, -.011], [.079, -.001], [.068, .010], [.022, .005],
-        ], .008)
+          [.022, -.004], [.055, -.006], [.080, -.003], [.080, .002], [.052, .003], [.022, .005],
+        ], .005)
         spokeGeometry.rotateX(Math.PI / 2)
         spokeGeometry.rotateZ(angle)
         spokeGeometry.rotateY(Math.PI / 2)
-        add('alloy', spokeGeometry, [faceX, .124, z])
+        add(rimFinish, spokeGeometry, [faceX, .124, z])
       }
       for (const offset of [-.028, 0, .028]) {
         add('chassis', ring(.122, .0012), [x + offset, .124, z], [0, Math.PI / 2, 0])
@@ -302,62 +210,47 @@ function createCarGeometry(model: CarModelId) {
       [-.24, -.19, .19, .24].map(x => [x, 0, .009])), [0, .10, z])
     add('alloy', plate(outline.map(([x, dz]) => [x, dz * end]), .002,
       [-.24, -.19, .19, .24].map(x => [x, 0, .009])), [0, .099, z])
+    add('body', plate([
+      [-.30, -.026], [-.15, -.042], [.15, -.042], [.30, -.026],
+      [.30, .023], [.14, .007], [-.14, .007], [-.30, .023],
+    ].map(([x, dz]) => [x, dz * end]), .009), [0, .083, z])
+    for (const x of [-.268, -.214, -.155, -.08, .08, .155, .214, .268]) {
+      add('alloy', cylinder(.009, .004, 12), [x, .118, z - end * .015])
+      add('chassis', new THREE.BoxGeometry(.012, .001, .002), [x, .1205, z - end * .015])
+    }
     for (const side of SIDES) {
       const x = side * .324
-      add('alloy', cylinder(.010, .099, 16), [x, .151, z])
-      add('gold', turned([
-        [.011, -.014], [.048, -.014], [.057, -.010], [.059, -.004],
-        [.059, .006], [.056, .012], [.048, .014], [.011, .014], [.011, -.014],
-      ]), [x, .140, z])
-      add('rubber', ring(.058, .003), [x, .140, z], [Math.PI / 2, 0, 0])
-      add('alloy', cylinder(.021, .006), [x, .158, z])
-      add('chassis', cylinder(.009, .008, 6), [x, .164, z])
-      add('gold', cylinder(.032, .012), [x, .186, z])
-      add('alloy', cylinder(.009, .005, 6), [x, .195, z])
-      for (let hole = 0; hole < 6; hole++) {
-        const angle = hole / 6 * Math.PI * 2
-        add('chassis', cylinder(.006, .0015, 12),
-          [x + Math.cos(angle) * .037, .155, z + Math.sin(angle) * .037])
+      const rear = end < 0
+      const top = rear ? .336 : .29
+      add('alloy', cylinder(.008, top - .103, 16), [x, (top + .103) / 2, z])
+      add('alloy', cylinder(.015, .026, 24), [x, .171, z])
+      for (const y of [rear ? .144 : .135, rear ? .295 : .155]) {
+        add('body', turned([
+          [.009, -.008], [.049, -.008], [.057, -.004], [.057, .003],
+          [.05, .008], [.009, .008], [.009, -.008],
+        ], 32), [x, y, z])
+        add('rubber', ring(.055, .0017), [x, y, z], [Math.PI / 2, 0, 0])
+        add('alloy', cylinder(.015, .004, 24), [x, y + .01, z])
+        add('chassis', cylinder(.006, .005, 6), [x, y + .014, z])
+        for (let hole = 0; hole < 5; hole++) {
+          const angle = hole / 5 * Math.PI * 2
+          add('chassis', cylinder(.003, .001, 8), [x + Math.cos(angle) * .037, y + .0085, z + Math.sin(angle) * .037])
+        }
       }
+      add('rubber', new THREE.SphereGeometry(.018, 16, 12), [x, top, z])
+      add('alloy', cylinder(.01, .004, 12), [x, top - .016, z])
       add('alloy', cylinder(.012, .008, 6), [side * .112, .123, z - end * .035])
+      const damperX = side * .197
+      const damperZ = z - end * .056
+      add('alloy', cylinder(.006, .094, 12), [damperX, .164, damperZ])
+      add('gold', cylinder(.026, .038, 32), [damperX, .145, damperZ])
+      add('alloy', cylinder(.009, .004, 12), [damperX, .213, damperZ])
+      add('chassis', ring(.025, .0015), [damperX, .16, damperZ], [Math.PI / 2, 0, 0])
     }
   }
 
   spoiler = true
-  if (model === 'neo-falcon') {
-  for (const side of SIDES) {
-    add('chassis', plate([
-      [-.010, -.054], [.010, -.050], [.009, .045], [-.005, .046],
-    ], .013), [side * .12, .234, -.304], [.68, 0, 0])
-    add('body', sculptedShell([
-      [-.057, .015, 0, .003], [-.047, .040, 0, .003],
-      [.035, .041, 0, .003], [.059, .016, 0, .003],
-    ], 16, 12), [side * .247, .349, -.336], [0, 0, Math.PI / 2])
-    add('livery', plate([[-.012, -.05], [.012, -.05], [.012, .04], [-.012, .04]], .001),
-      [side * .198, .350, -.334], [0, 0, side * -.055])
-    add('alloy', cylinder(.009, .006, 6), [side * .12, .251, -.266])
-  }
-  add('body', sculptedShell([
-    [-.249, .041, 0, .006], [-.222, .057, 0, .011],
-    [-.12, .050, .006, .012], [0, .045, .009, .012],
-    [.12, .050, .006, .012], [.222, .057, 0, .011], [.249, .041, 0, .006],
-  ], 40, 24), [0, .333, -.336], [0, Math.PI / 2, 0])
-  add('chassis', plate([[-.087, -.016], [.087, -.016], [.072, .016], [-.072, .016]], .012), [0, .202, -.304])
-  for (let i = 0; i < 5; i++) {
-    add('alloy', cylinder(.003, .132, 8), [0, .195 - i * .009, -.336], [0, 0, Math.PI / 2])
-  }
-
-  } else {
-    for (const side of SIDES) {
-      add('chassis', new THREE.BoxGeometry(.015, .05, .025), [side * .09, .214, -.29])
-    }
-    add('body', sculptedShell([
-      [-.18, .016, 0, .004], [-.14, .035, .003, .009],
-      [0, .038, .009, .011], [.14, .035, .003, .009], [.18, .016, 0, .004],
-    ], 32, 20), [0, .249, -.299], [0, Math.PI / 2, 0])
-    add('livery', new THREE.BoxGeometry(.25, .003, .009), [0, .258, -.327])
-  }
-
+  addStockWing(model, add)
   spoiler = false
   internal = true
   add('alloy', cylinder(.037, .15), [0, .158, -.225], [0, 0, Math.PI / 2])
@@ -387,14 +280,15 @@ function CarSurfaces({ parts, color, model, inspect = false }: {
   parts: Partial<Record<Finish, THREE.BufferGeometry>>; color: string; model: CarModelId; inspect?: boolean
 }) {
   return <>{(Object.entries(parts) as [Finish, THREE.BufferGeometry][]).map(([finish, geometry]) => {
-    if (inspect && ['body', 'glass', 'livery'].includes(finish)) return null
+    if (inspect && ['body', 'panel', 'glass', 'livery'].includes(finish)) return null
     return <mesh key={finish} geometry={geometry} dispose={null} castShadow receiveShadow>
-      {finish === 'body' ? <meshPhysicalMaterial color={color} roughness={.24} metalness={.35} clearcoat={1} clearcoatRoughness={.12} />
-        : finish === 'glass' ? <meshPhysicalMaterial color={COLORS.navy} roughness={.08} metalness={.15} clearcoat={1} clearcoatRoughness={.04} />
+      {finish === 'body' ? <meshPhysicalMaterial color={color} roughness={.29} metalness={.25} clearcoat={1} clearcoatRoughness={.16} />
+        : finish === 'panel' ? <meshPhysicalMaterial color={MATERIAL_COLORS.panel} roughness={.31} metalness={.42} clearcoat={.7} />
+        : finish === 'glass' ? <meshPhysicalMaterial color={MATERIAL_COLORS.glass} roughness={.12} metalness={.35} clearcoat={1} clearcoatRoughness={.06} />
         : <meshStandardMaterial
-          color={finish === 'gold' ? (model === 'luna-gt' ? COLORS.white : COLORS.gold) : ['alloy', 'livery'].includes(finish) ? COLORS.white : COLORS.navy}
-          roughness={finish === 'rubber' ? .96 : finish === 'chassis' ? .68 : .3}
-          metalness={['alloy', 'gold'].includes(finish) ? .85 : finish === 'chassis' ? .15 : 0}
+          color={finish === 'gold' && model === 'luna-gt' ? MATERIAL_COLORS.alloy : MATERIAL_COLORS[finish]}
+          roughness={finish === 'rubber' ? .92 : finish === 'chassis' ? .58 : .27}
+          metalness={['alloy', 'gold'].includes(finish) ? .85 : finish === 'chassis' ? .3 : 0}
         />}
     </mesh>
   })}</>
@@ -507,6 +401,7 @@ export const MiniCar = memo(function MiniCar({ color, model = 'neo-falcon', scal
   const geometry = GEOMETRY_CACHE[model] ?? (GEOMETRY_CACHE[model] = createCarGeometry(model))
   return <group scale={scale}>
     <CarSurfaces parts={geometry.shell} color={color} model={model} inspect={inspect} />
+    {!inspect && <CarMarkings model={model} stockWing={!equipped?.spoiler} />}
     {!equipped?.spoiler && <CarSurfaces parts={geometry.spoiler} color={color} model={model} inspect={inspect} />}
     {!inspect && Object.values(equipped ?? {}).map(id => <AeroPart key={id} id={id} color={color} model={model} />)}
     {inspect && <CarSurfaces parts={geometry.internals} color={color} model={model} />}
