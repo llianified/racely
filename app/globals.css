@@ -496,23 +496,33 @@
 .race-vignette { position: absolute; inset: 0; z-index: var(--z-base); pointer-events: none; background: var(--race-hud-gradient); box-shadow: var(--vignette); transition: box-shadow var(--dur-slower); }
 .is-cinematic .race-vignette { box-shadow: var(--vignette-cinematic); }
 .is-grip-critical .race-vignette, .is-course-out .race-vignette { box-shadow: var(--vignette-alert); }
-.race-director-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); padding: var(--space-6) var(--space-md); background: var(--background); border-bottom: var(--stroke) solid var(--border); }
-.race-director-bar > span { display: flex; align-items: center; gap: var(--space-6); color: var(--muted-foreground); font-size: var(--fs-2xs); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps); }
 .race-settings { border-top: var(--stroke) solid var(--border); background: var(--background); }
-.grip-challenge { display: flex; flex-direction: column; gap: var(--space-9); padding: var(--space-10) var(--space-md) var(--space-md); background: color-mix(in srgb, var(--background) 40%, var(--card)); border-bottom: var(--stroke) solid var(--border); }
-.grip-heading, .grip-controls, .grip-reading, .grip-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); }
-.grip-heading > span { display: flex; align-items: center; gap: var(--space-6); color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps-lg); }
-.grip-heading > span svg { width: var(--icon-sm); height: var(--icon-sm); flex-shrink: 0; }
-.grip-telemetry { flex: 1; min-width: 0; }
-.grip-reading { font-size: var(--fs-micro); margin-bottom: var(--space-7); }
-.grip-reading strong { font-variant-numeric: tabular-nums; color: var(--accent); }
+.race-settings-group { border-bottom: var(--stroke) solid var(--border); }
+.race-settings-title { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-sm); margin: 0; padding: var(--space-10) var(--space-md) var(--space-2); color: var(--muted-foreground); font-size: var(--fs-2xs); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps); text-transform: uppercase; }
+.race-settings-title small { font-size: var(--fs-nano); font-weight: var(--fw-medium); letter-spacing: var(--track-flat); text-transform: none; }
+.race-setting { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); padding: var(--space-8) var(--space-md); }
+.race-setting-copy { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.race-setting-copy strong { font-size: var(--fs-small); font-weight: var(--fw-semibold); line-height: var(--lh-snug); }
+.race-setting-copy span { font-size: var(--fs-nano); line-height: var(--lh-normal); color: var(--muted-foreground); text-wrap: pretty; }
+.race-setting [data-slot='button'] { flex-shrink: 0; }
+.race-switch { position: relative; flex-shrink: 0; width: var(--space-40); height: var(--space-24); padding: 0; border: var(--stroke) solid var(--border); border-radius: var(--corner-pill); background: var(--secondary); cursor: pointer; transition: background var(--dur-fast), border-color var(--dur-fast); }
+.race-switch i { position: absolute; top: var(--space-3); left: var(--space-3); width: var(--space-16); height: var(--space-16); border-radius: var(--corner-round); background: var(--muted-foreground); transition: transform var(--dur-fast), background var(--dur-fast); }
+.race-switch[aria-checked='true'] { background: var(--accent); border-color: var(--accent); }
+.race-switch[aria-checked='true'] i { transform: translateX(var(--space-16)); background: var(--background); }
+.race-switch:disabled { opacity: .45; cursor: not-allowed; }
+.race-switch:focus-visible { outline: var(--focus-w) solid var(--ring); outline-offset: var(--focus-offset); }
+.race-settings-note { margin: 0; padding: var(--space-8) var(--space-md) var(--space-10); color: var(--muted-foreground); font-size: var(--fs-nano); line-height: var(--lh-normal); text-wrap: pretty; }
+.grip-challenge { border-bottom: var(--stroke) solid var(--border); }
+.grip-detail { display: flex; flex-direction: column; gap: var(--space-8); padding: 0 var(--space-md) var(--space-10); }
 .grip-meter { height: var(--space-5); overflow: hidden; border-radius: var(--corner-2xs); background: var(--secondary); }
 .grip-meter i { display: block; height: 100%; background: var(--accent); transform-origin: left; transition: transform var(--dur-instant) linear; }
 .grip-challenge[data-danger='true'] .grip-meter i { background: var(--warning); }
-.grip-challenge[data-danger='true'] .grip-reading { color: var(--warning); }
-.grip-footer { font-size: var(--fs-nano); color: var(--muted-foreground); }
-.grip-footer strong { color: var(--accent); font-variant-numeric: tabular-nums; }
-.grip-help { font-size: var(--fs-nano); color: var(--muted-foreground); line-height: var(--lh-relaxed); margin: 0; }
+.grip-challenge[data-danger='true'] .race-setting-copy span { color: var(--warning); }
+.grip-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-xs); margin: 0; }
+.grip-stats > div { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.grip-stats dt { font-size: var(--fs-nano); color: var(--muted-foreground); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.grip-stats dd { margin: 0; font-size: var(--fs-small); font-weight: var(--fw-semibold); color: var(--accent); font-variant-numeric: tabular-nums; }
+.grip-tip { font-size: var(--fs-nano); color: var(--muted-foreground); line-height: var(--lh-normal); text-wrap: pretty; }
 @media (prefers-reduced-motion: reduce) { .race-vignette, .grip-meter i { transition: none; } }
 .scene-wrap canvas { touch-action: none; }
 .scene-overlay { position: absolute; z-index: var(--z-overlay); pointer-events: none; }
@@ -528,8 +538,6 @@
 .scene-controls [data-slot='button']:focus-visible { outline-offset: calc(var(--focus-offset) * -1); }
 .scene-controls [data-slot='button']:not(.gold-button):hover { background: var(--secondary); }
 .scene-controls [data-slot='button'][aria-pressed='true'] { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--background) 88%, var(--accent)); }
-.lap-progress { flex-shrink: 0; height: var(--space-2); margin: 0; background: var(--secondary); overflow: hidden; }
-.lap-progress > div { width: 100%; height: 100%; transform-origin: left; background: var(--accent); }
 .race-overview-hud { flex-shrink: 0; border-top: var(--stroke) solid var(--border); background: var(--background); color: var(--foreground); font-variant-numeric: tabular-nums; }
 .race-hud-top { position: absolute; inset: var(--space-md) var(--space-md) auto; z-index: var(--z-overlay); display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-sm); pointer-events: none; font-variant-numeric: tabular-nums; }
 .race-hud-position { display: flex; align-items: baseline; gap: var(--space-6); padding: var(--space-5) var(--space-10); border: var(--stroke) solid var(--border); border-radius: var(--corner-md); background: color-mix(in srgb, var(--background) 88%, transparent); color: var(--foreground); }
@@ -537,35 +545,24 @@
 .race-hud-position strong { color: var(--accent); font-weight: var(--fw-black); font-size: var(--fs-xl); line-height: var(--lh-tight); }
 .race-hud-mode { padding: var(--space-6) var(--space-sm); border-radius: var(--corner-md); background: color-mix(in srgb, var(--background) 88%, transparent); color: var(--muted-foreground); font-size: var(--fs-read); font-weight: var(--fw-semibold); }
 .is-course-out .race-hud-mode { color: var(--accent); }
-.race-hud-telemetry { display: flex; align-items: center; margin: 0; padding-block: var(--space-12); }
-.race-hud-telemetry > div { flex: 1; min-width: 0; padding-inline: var(--space-md); }
-.race-hud-telemetry > div:first-child { flex: 1.2; }
-.race-hud-telemetry > div + div { border-left: var(--stroke) solid var(--border); }
-.race-hud-telemetry dt { margin-bottom: var(--space-3); color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-semibold); letter-spacing: var(--track-caps-md); text-transform: uppercase; line-height: var(--lh-tight); }
-.race-hud-telemetry dd { display: flex; align-items: baseline; gap: var(--space-3); margin: 0; font-size: var(--fs-xl); font-weight: var(--fw-heavy); line-height: var(--lh-none); letter-spacing: var(--track-tight-sm); }
-.race-hud-telemetry > div:first-child dd { font-size: var(--fs-7xl); font-style: italic; }
-.race-hud-telemetry small { font-size: var(--fs-micro); font-style: normal; font-weight: var(--fw-medium); letter-spacing: var(--track-flat); color: var(--muted-foreground); }
-.race-hud-telemetry .race-hud-meter { display: block; height: var(--space-3); margin-top: var(--space-6); overflow: hidden; border-radius: var(--corner-pill); background: var(--secondary); }
+.race-hud-main { display: flex; align-items: center; gap: var(--space-md); padding: var(--space-8) var(--space-md) var(--space-6); }
+.race-hud-speed { display: flex; align-items: baseline; gap: var(--space-3); margin: 0; flex-shrink: 0; line-height: var(--lh-none); }
+.race-hud-speed strong { font-size: var(--fs-5xl); font-style: normal; font-weight: var(--fw-heavy); letter-spacing: var(--track-tight-sm); font-variant-numeric: tabular-nums; }
+.race-hud-speed-unit { color: var(--muted-foreground); font-family: var(--font-sans); font-size: var(--fs-micro); font-style: normal; font-synthesis: none; font-variation-settings: "slnt" 0; font-weight: var(--fw-medium); letter-spacing: var(--track-flat); }
+.race-hud-gauges { display: flex; flex: 1; min-width: 0; gap: var(--space-sm); margin: 0; }
+.race-hud-gauges > div { flex: 1; min-width: 0; display: grid; grid-template-columns: auto 1fr; align-items: baseline; column-gap: var(--space-4); row-gap: var(--space-3); }
+.race-hud-gauges dt { color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-semibold); letter-spacing: var(--track-caps-md); text-transform: uppercase; line-height: var(--lh-tight); }
+.race-hud-gauges dd { display: flex; align-items: baseline; justify-content: flex-end; gap: var(--space-2); margin: 0; font-size: var(--fs-small); font-weight: var(--fw-bold); line-height: var(--lh-tight); font-variant-numeric: tabular-nums; }
+.race-hud-gauges small { font-size: var(--fs-nano); font-weight: var(--fw-medium); color: var(--muted-foreground); }
+.race-hud-gauges .race-hud-meter { grid-column: 1 / -1; display: block; height: var(--space-3); overflow: hidden; border-radius: var(--corner-pill); background: var(--secondary); }
 .race-hud-meter > span { display: block; width: 100%; height: 100%; transform-origin: left; background: var(--accent); }
-.race-hud-server { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-xs) var(--space-md); margin: 0; padding: var(--space-7) var(--space-md); border-top: var(--stroke) solid var(--border); background: color-mix(in srgb, var(--card) 35%, var(--background)); font-size: var(--fs-small); line-height: var(--lh-normal); }
-.race-hud-server > div { display: flex; align-items: baseline; gap: var(--space-6); }
-.race-hud-server dt { color: var(--muted-foreground); }
-.race-hud-server dd { display: flex; align-items: baseline; gap: var(--space-3); margin: 0; font-weight: var(--fw-bold); }
-.race-hud-server small { font-size: inherit; color: var(--muted-foreground); font-weight: var(--fw-normal); }
-.race-hud-reward { color: var(--accent); }
-.race-powertrain-note { padding: var(--space-md); color: var(--muted-foreground); font-size: var(--fs-read); line-height: var(--lh-normal); text-wrap: pretty; }
-@media (max-width: 359px) { .race-hud-telemetry > div { padding-inline: var(--space-sm); } }
-@media (max-width: 359px) {
-  .race-hud-telemetry > div { padding-inline: var(--space-sm); }
-  /* Di 320px kolomnya tinggal ~78px dan "ENERGI BOOST" pecah jadi dua baris,
-     sementara dua label lain tetap satu baris -- angkanya ikut turun sendiri
-     dan ketiga kolom berhenti sebaris. Turunkan label ke rung yang sudah
-     dipakai HUD lain (.race-director-bar, .lane-hud) supaya tetap satu baris
-     tanpa menaikkan tinggi HUD. */
-  .race-hud-telemetry dt { font-size: var(--fs-2xs); letter-spacing: var(--track-caps-sm); white-space: nowrap; }
-  /* "19.7" + "km/j" melewati kolomnya 3px dan menempel garis pemisah. */
-  .race-hud-telemetry > div:first-child dd { font-size: var(--fs-6xl); }
-}
+.race-hud-lap { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-sm); margin: 0; padding: var(--space-4) var(--space-md) var(--space-6); color: var(--muted-foreground); font-size: var(--fs-nano); line-height: var(--lh-tight); font-variant-numeric: tabular-nums; }
+.race-hud-lap span { white-space: nowrap; }
+.race-hud-lap strong { color: var(--foreground); font-size: var(--fs-small); font-weight: var(--fw-bold); }
+.race-hud-reward, .race-hud-reward strong { color: var(--accent); }
+/* Di 320px angka kecepatan berebut ruang dengan dua gauge; turunkan satu rung
+   dan rapatkan celahnya supaya semuanya tetap satu baris. */
+@media (max-width: 359px) { .race-hud-main { gap: var(--space-sm); } .race-hud-speed strong { font-size: var(--fs-4xl); } }
 .reward-value { color: var(--accent); }
 .race-actions { padding: var(--space-md) var(--gutter); border-top: var(--stroke) solid var(--border); }
 .scene-wrap.is-inspecting { height: var(--scene-h-inspect); }
@@ -645,8 +642,8 @@
 .upgrade-info p { margin-top: var(--space-6); font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .upgrade-arena-info { margin-top: var(--space-sm); padding-top: var(--space-xs); border-top: var(--stroke) solid var(--border); }
 .upgrade-arena-info strong { color: var(--foreground); font-weight: var(--fw-semibold); }
-/* Kembaran .race-powertrain-note, tapi di sini ia paragraf pembuka panel dan
-   bukan catatan di dalam laci pengaturan: pakai rung prosa sekunder yang sama
+/* Paragraf pembuka panel Bengkel (bukan catatan kaki seperti .race-settings-note
+   di laci pengaturan balapan): pakai rung prosa sekunder yang sama
    dengan .upgrade-info p supaya tidak jadi satu-satunya teks besar di Bengkel. */
 .upgrade-arena-note { padding: var(--space-md); border-bottom: var(--stroke) solid var(--border); color: var(--muted-foreground); font-size: var(--fs-small); line-height: var(--lh-normal); }
 .level-segments { display: flex; gap: var(--space-3); margin-top: var(--space-10); }

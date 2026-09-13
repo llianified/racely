@@ -10,6 +10,7 @@ import { RaceOverviewHud, RacePositionHud } from "./race-overview-hud";
 import { cn } from "@/lib/utils";
 import { createDrivingState, resetGripChallenge } from "@/lib/race-dynamics";
 import { GripChallenge } from "./grip-challenge";
+import { RaceSwitch, SettingRow } from "./setting-row";
 
 const RaceScene = dynamic(() => import("../scene/race-scene"), {
   ssr: false,
@@ -119,10 +120,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
         <RaceScene equipped={game.bodyParts?.equipped} driving={driving} onTelemetry={setTelemetry} cinematic={cinematic && !reducedMotion} levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.progress} seconds={seconds} baseSeconds={baseSeconds} opponentSeconds={opponents} color={game.color} boosted={boosted} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
         {inspect && <div className="scene-overlay inspect-hint">Geser untuk memutar · balapan tetap jalan</div>}
       </div>
-      {!inspect && <RaceOverviewHud seconds={seconds} baseSeconds={baseSeconds} reward={lapReward(game)} telemetry={telemetry} boosted={boosted} batteryLevel={game.levels.battery} />}
-      <div className="lap-progress" role="progressbar" aria-label="Progres putaran saat ini" aria-valuenow={Math.round(game.progress * 100)} aria-valuemin={0} aria-valuemax={100}>
-        <div style={{ transform: `scaleX(${game.progress})` }} />
-      </div>
+      {!inspect && <RaceOverviewHud seconds={seconds} baseSeconds={baseSeconds} reward={lapReward(game)} progress={game.progress} telemetry={telemetry} boosted={boosted} batteryLevel={game.levels.battery} />}
       <div className="scene-controls" role="group" aria-label="Kontrol balapan dan kamera">
           {inspect ? <>
             <Button variant="outline" size="sm" onClick={() => setBodyVisible(value => !value)} aria-pressed={bodyVisible} aria-label={bodyVisible ? "Lepas bodi untuk melihat baterai" : "Pasang bodi untuk melihat detail mobil"}>{bodyVisible ? "Lepas bodi" : "Pasang bodi"}</Button>
@@ -150,36 +148,38 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
           <span className="sr-only" role="status" aria-live="polite">{controlFeedback}</span>
       </div>
       <section className="race-settings" id={settingsId} hidden={!settingsOpen} aria-label="Pengaturan balapan">
-        <div className="race-director-bar">
-          <span>RESET KAMERA</span>
-          <Button variant="outline" size="sm" onClick={() => {
-            setCameraChoice(null);
-            setCameraMode(0);
-            setResetKey(value => value + 1);
-            setControlFeedback(reducedMotion ? "Kamera direset ke overview." : "Kamera direset untuk mengikuti mobil.");
-          }}><RotateCcw data-icon="inline-start" />Reset</Button>
+        <div className="race-settings-group" role="group" aria-labelledby={`${settingsId}-camera`}>
+          <h3 className="race-settings-title" id={`${settingsId}-camera`}>Kamera</h3>
+          <SettingRow label="Kamera sinematik" hint={reducedMotion ? 'Nonaktif karena perangkat mengurangi gerak' : 'Kamera bergerak dinamis mengikuti balapan'}>
+            <RaceSwitch checked={cinematic && !reducedMotion} disabled={reducedMotion} label="Kamera sinematik" onChange={() => setCinematic(value => !value)} />
+          </SettingRow>
+          {!inspect && !followCamera && <SettingRow label="Sudut overview" hint={`Preset ${cameraMode + 1} dari 3`}>
+            <Button variant="outline" size="sm" onClick={() => setCameraMode((v) => (v + 1) % 3)} aria-label={`Ganti sudut overview, sekarang preset ${cameraMode + 1} dari 3`}>Ganti</Button>
+          </SettingRow>}
+          <SettingRow label="Posisi kamera" hint="Kembalikan ke tampilan awal">
+            <Button variant="outline" size="sm" onClick={() => {
+              setCameraChoice(null);
+              setCameraMode(0);
+              setResetKey(value => value + 1);
+              setControlFeedback(reducedMotion ? "Kamera direset ke overview." : "Kamera direset untuk mengikuti mobil.");
+            }}><RotateCcw data-icon="inline-start" />Reset</Button>
+          </SettingRow>
         </div>
-        <div className="race-director-bar">
-          <span>INSPEKSI MOBIL</span>
-          <Button variant="outline" size="sm" aria-pressed={inspect} onClick={() => {
-            setInspect(value => !value);
-            panel.current?.scrollIntoView({ block: "start", behavior: reducedMotion ? "instant" : "smooth" });
-          }}>{inspect ? "Kembali balapan" : "Lihat sasis"}</Button>
+        <div className="race-settings-group" role="group" aria-labelledby={`${settingsId}-sim`}>
+          <h3 className="race-settings-title" id={`${settingsId}-sim`}>Simulasi arena <small>Hanya tampilan</small></h3>
+          {!inspect && <GripChallenge state={telemetry} tires={game.levels.tires} ceiling={game.economy.maxUpgradeLevel} onToggle={() => {
+            const enabled = !driving.current.enabled;
+            resetGripChallenge(driving.current, enabled);
+            setTelemetry({ ...driving.current });
+          }} />}
+          <SettingRow label="Inspeksi mobil" hint={inspect ? 'Sedang melihat sasis' : 'Putar mobil, lihat sasis & baterai'}>
+            <Button variant="outline" size="sm" aria-pressed={inspect} onClick={() => {
+              setInspect(value => !value);
+              panel.current?.scrollIntoView({ block: "start", behavior: reducedMotion ? "instant" : "smooth" });
+            }}>{inspect ? "Kembali balapan" : "Lihat sasis"}</Button>
+          </SettingRow>
         </div>
-        <p className="race-powertrain-note">Mesin mempercepat akselerasi setelah tikungan dan pemulihan. Baterai memperpanjang dorongan boost di arena; energi pulih saat Gaspol tidak aktif. Laju, RPM, dan energi arena hanya simulasi, terpisah dari baterai idle dan timer Gaspol server. Lap dan koin tetap mengikuti server.</p>
-        <div className="race-director-bar">
-          <span>{reducedMotion ? 'GERAK DIKURANGI' : 'KAMERA SINEMATIK'}</span>
-          <Button variant="ghost" size="xs" aria-label="Kamera sinematik" aria-pressed={cinematic && !reducedMotion} disabled={reducedMotion} onClick={() => setCinematic(value => !value)}>{cinematic && !reducedMotion ? 'Aktif' : 'Nonaktif'}</Button>
-        </div>
-        {!inspect && !followCamera && <div className="race-director-bar">
-          <span>SUDUT OVERVIEW</span>
-          <Button variant="outline" size="sm" onClick={() => setCameraMode((v) => (v + 1) % 3)} aria-label={`Ganti sudut overview, preset ${cameraMode + 1} dari 3`}>{cameraMode + 1}/3</Button>
-        </div>}
-        {!inspect && <GripChallenge state={telemetry} tires={game.levels.tires} ceiling={game.economy.maxUpgradeLevel} onToggle={() => {
-          const enabled = !driving.current.enabled;
-          resetGripChallenge(driving.current, enabled);
-          setTelemetry({ ...driving.current });
-        }} />}
+        <p className="race-settings-note">Laju, RPM, energi, dan grip di arena hanya simulasi. Lap dan koin tetap mengikuti server.</p>
       </section>
     </section>
   );
