@@ -50,6 +50,92 @@ describe("Config ekonomi", () => {
   });
 
   /**
+   * Setiap hadiah di bawah ini dibayar lewat sebuah baris
+   * `racely_reward_claims`, yang kolomnya `bigint NOT NULL CHECK (amount > 0)`.
+   * Nol dan pecahan DITOLAK Postgres, bukan dibulatkan -- dan insert-nya ada di
+   * dalam transaksi aksi pemain, jadi kegagalannya ikut me-rollback hasil
+   * balapan yang baru diselesaikan. Pemain hanya melihat 500, setiap kali,
+   * selamanya, sampai ada yang menyetel ulang config dari panel.
+   *
+   * Satu-satunya tempat yang bisa mencegahnya adalah di sini, sebelum angkanya
+   * pernah tersimpan.
+   */
+  const rewardFields = [
+    "starterGift",
+    "referralRewardInviter",
+    "referralRewardInvitee",
+    "missionLapsReward",
+    "missionUpgradeReward",
+    "missionEarnReward",
+  ] as const;
+
+  it.each(rewardFields)(
+    "menolak %s yang nol atau pecahan -- kolomnya bigint CHECK (amount > 0)",
+    (field) => {
+      expect(economyConfigSchema.safeParse({ ...E, [field]: 0 }).success).toBe(
+        false,
+      );
+      expect(
+        economyConfigSchema.safeParse({ ...E, [field]: 15.5 }).success,
+      ).toBe(false);
+      expect(economyConfigSchema.safeParse({ ...E, [field]: 1 }).success).toBe(
+        true,
+      );
+    },
+  );
+
+  it("menolak rung check-in harian yang nol atau pecahan", () => {
+    expect(
+      economyConfigSchema.safeParse({ ...E, dailyRewards: [0, 2, 3] }).success,
+    ).toBe(false);
+    expect(
+      economyConfigSchema.safeParse({ ...E, dailyRewards: [1, 2.5] }).success,
+    ).toBe(false);
+    expect(
+      economyConfigSchema.safeParse({ ...E, dailyRewards: [1, 2, 3] }).success,
+    ).toBe(true);
+  });
+
+  /**
+   * Angka per-putaran justru HARUS boleh pecahan: muaranya `pending`/`earned`
+   * yang `double precision`, dan nilai bawaannya sendiri 0,05. Pagar hadiah di
+   * atas tidak boleh ikut mengeraskannya.
+   */
+  it("tetap mengizinkan angka per-putaran yang pecahan", () => {
+    expect(
+      economyConfigSchema.safeParse({ ...E, lapRewardBase: 0.05 }).success,
+    ).toBe(true);
+    expect(
+      economyConfigSchema.safeParse({ ...E, lapRewardPerBattery: 0.01 }).success,
+    ).toBe(true);
+    expect(
+      economyConfigSchema.safeParse({ ...E, missionEarnTarget: 25.5 }).success,
+    ).toBe(true);
+  });
+
+  /**
+   * `calculateRaceSettlement` hanya menghitung boost di dalam jendela
+   * heartbeat. Boost yang lebih panjang membuat ekornya dibayar tarif offline:
+   * pemain menekan Gaspol, tidak mendapat Gaspol, tanpa satu pun error.
+   */
+  it("menolak durasi boost yang melebihi jendela heartbeat", () => {
+    expect(
+      economyConfigSchema.safeParse({
+        ...E,
+        boostDurationSeconds: 600,
+        heartbeatCapSeconds: 120,
+      }).success,
+    ).toBe(false);
+    expect(
+      economyConfigSchema.safeParse({
+        ...E,
+        boostDurationSeconds: 120,
+        heartbeatCapSeconds: 120,
+      }).success,
+    ).toBe(true);
+  });
+
+  /**
    * `amount_idr` dihitung di JavaScript sebelum masuk kolom bigint. Batas
    * per-field saja masih mengizinkan hasil kali di atas 2^53, tempat rupiah
    * mulai kehilangan presisi tanpa error apa pun.
