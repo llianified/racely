@@ -230,7 +230,9 @@
 .garage-parts-slots dd > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--foreground); font-weight: var(--fw-bold); }
 .garage-parts-slots dd > span { color: var(--muted-foreground); }
 .garage-parts-slots dd svg { width: var(--icon-xs); height: var(--icon-xs); color: var(--accent); flex-shrink: 0; }
-.garage-parts-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); margin-top: var(--space-md); }
+/* Kaki menempel ke tepi kartu (margin negatif menelan padding .garage-parts)
+   supaya garis pemisahnya penuh dari sisi ke sisi, seperti kaki .game-sheet. */
+.garage-parts-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); margin: var(--space-md) calc(var(--space-md) * -1) calc(var(--space-md) * -1); padding: var(--space-sm) var(--space-md); border-top: var(--stroke) solid var(--border); border-radius: 0 0 var(--corner-panel) var(--corner-panel); background: color-mix(in srgb, var(--background) 34%, var(--card)); }
 .garage-parts-foot > p { min-width: 0; font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); text-wrap: pretty; }
 .garage-parts-foot > p > strong { color: var(--foreground); font-variant-numeric: tabular-nums; }
 .garage-parts-foot > [data-slot='button'] { flex-shrink: 0; }
