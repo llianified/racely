@@ -1,10 +1,11 @@
-import { Camera, Check, Flag, Gauge, Timer, Zap } from "lucide-react";
+import { ArrowRight, Camera, Check, Flag, Gauge, Lock, Timer, Zap } from "lucide-react";
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -31,20 +32,17 @@ const DIALOG_COPY: Record<DialogKind, { title: string; description: string }> =
     },
     help: {
       title: "Mobil kecil. Langsung jalan.",
-      description:
-        "Racely adalah game mini 4WD 3D independen dan tidak berafiliasi dengan produsen kendaraan atau mainan mana pun.",
+      description: "Empat hal inti sebelum kamu mulai.",
     },
   };
 
 function WelcomeBack({
   offline,
   offlineCapSeconds,
-  onClose,
 }: {
   offline: OfflineEarnings;
   /** Dari config ekonomi, bukan konstanta build -- lihat lib/economy-config.ts. */
   offlineCapSeconds: number;
-  onClose: () => void;
 }) {
   return (
     <div className="welcome-back">
@@ -78,10 +76,55 @@ function WelcomeBack({
             : ""}
         </span>
       </p>
-      <Button variant="gold" size="lg" onClick={onClose}>
-        Lanjut balapan
-      </Button>
     </div>
+  );
+}
+
+type CircuitRowState = "active" | "open" | "locked" | "passed";
+
+function CircuitRow({
+  name,
+  meta,
+  state,
+  disabled,
+  onClick,
+}: {
+  name: string;
+  meta: string;
+  state: CircuitRowState;
+  disabled?: boolean;
+  onClick?: () => void;
+}) {
+  const label =
+    state === "active"
+      ? "Aktif"
+      : state === "open"
+        ? "Pilih"
+        : state === "locked"
+          ? "Terkunci"
+          : "Selesai";
+  return (
+    <li>
+      <button
+        type="button"
+        className="circuit-row"
+        data-state={state}
+        disabled={disabled || state !== "open"}
+        aria-current={state === "active" ? "true" : undefined}
+        onClick={onClick}
+      >
+        <div>
+          <strong>{name}</strong>
+          <small>{meta}</small>
+        </div>
+        <span>
+          {label}
+          {state === "active" && <Check aria-hidden="true" />}
+          {state === "open" && <ArrowRight aria-hidden="true" />}
+          {state === "locked" && <Lock aria-hidden="true" />}
+        </span>
+      </button>
+    </li>
   );
 }
 
@@ -109,6 +152,7 @@ export function GameDialog({
   // eslint-disable-next-line react-hooks/refs
   const active = kind ?? shown.current;
   const unlockLaps = game.economy.circuitUnlockLaps;
+  const midnightLocked = game.laps < unlockLaps;
 
   return (
     <Sheet
@@ -117,94 +161,105 @@ export function GameDialog({
         if (!open) onClose();
       }}
     >
-    <SheetContent side="bottom" className="game-sheet p-md">
-      <SheetHeader className="p-0">
+      <SheetContent side="bottom" className="game-sheet">
+        <SheetHeader>
           <SheetTitle>{DIALOG_COPY[active].title}</SheetTitle>
           <SheetDescription>
             {DIALOG_COPY[active].description}
           </SheetDescription>
         </SheetHeader>
         {active === "welcome" && offline ? (
-          <WelcomeBack
-            offline={offline}
-            offlineCapSeconds={game.economy.offlineCapSeconds}
-            onClose={onClose}
-          />
+          <>
+            <div className="sheet-body">
+              <WelcomeBack
+                offline={offline}
+                offlineCapSeconds={game.economy.offlineCapSeconds}
+              />
+            </div>
+            <SheetFooter>
+              <Button variant="gold" onClick={onClose}>
+                Lanjut balapan
+              </Button>
+            </SheetFooter>
+          </>
         ) : active === "circuits" ? (
-          <div className="circuit-choices">
-            <Button variant="circuit" disabled>
-              Jakarta Raceway
-              <span>
-                {coins(lapReward({ ...game, circuit: 0 }))} / putaran
-                {game.circuit === 0 ? " · Aktif" : " · Trek awal"}
-              </span>
-              {game.circuit === 0 && <Check data-icon="inline-end" />}
-            </Button>
-            <Button
-              variant="circuit"
-              disabled={disabled || game.laps < unlockLaps || game.circuit === 1}
-              onClick={() => onChooseCircuit(1)}
-            >
-              Midnight Speedway
-              <span>
-                {game.laps < unlockLaps
-                  ? `${game.laps}/${unlockLaps} putaran`
-                  : `${coins(lapReward({ ...game, circuit: 1 }))} / putaran${game.circuit === 1 ? " · Aktif" : ""}`}
-              </span>
-              {game.circuit === 1 && <Check data-icon="inline-end" />}
-            </Button>
+          <div className="sheet-body">
+            <ul className="circuit-list">
+              <CircuitRow
+                name="Jakarta Raceway"
+                meta={`${coins(lapReward({ ...game, circuit: 0 }))} / putaran`}
+                state={game.circuit === 0 ? "active" : "passed"}
+              />
+              <CircuitRow
+                name="Midnight Speedway"
+                meta={
+                  midnightLocked
+                    ? `Butuh ${unlockLaps} putaran · ${game.laps}/${unlockLaps}`
+                    : `${coins(lapReward({ ...game, circuit: 1 }))} / putaran`
+                }
+                state={
+                  game.circuit === 1 ? "active" : midnightLocked ? "locked" : "open"
+                }
+                disabled={disabled}
+                onClick={() => onChooseCircuit(1)}
+              />
+            </ul>
           </div>
         ) : (
-          <div className="help-steps">
-            <div className="help-step">
-              <Flag />
-              <p>
-                <strong>Balapan otomatis.</strong>
-                <span>
-                  Koin terkumpul setiap putaran dan tersimpan di server. Dua
-                  mobil lain adalah bot latihan.
-                </span>
-              </p>
+          <div className="sheet-body">
+            <div className="help-steps">
+              <div className="help-step">
+                <Flag aria-hidden="true" />
+                <p>
+                  <strong>Balapan otomatis</strong>
+                  <span>
+                    Koin terkumpul setiap putaran dan tersimpan di server. Dua
+                    mobil lain adalah bot latihan.
+                  </span>
+                </p>
+              </div>
+              <div className="help-step">
+                <Zap aria-hidden="true" />
+                <p>
+                  <strong>Boost, klaim, lalu upgrade</strong>
+                  <span>
+                    Gaspol {game.economy.boostMultiplier}× selama{" "}
+                    {game.economy.boostDurationSeconds} detik, lalu isi ulang{" "}
+                    {game.economy.batteryRechargeSeconds} detik. Balapan normal
+                    tetap jalan selama baterai terisi.
+                  </span>
+                </p>
+              </div>
+              <div className="help-step">
+                <Timer aria-hidden="true" />
+                <p>
+                  <strong>Ditinggal pun tetap ngumpulin koin</strong>
+                  <span>
+                    {/* Lajunya `offlineRate`, bukan selalu setengah: nilainya bisa
+                        disetel dari panel admin. */}
+                    Saat aplikasi ditutup, mobilmu jalan{" "}
+                    {Math.round(game.economy.offlineRate * 100)}% kecepatan
+                    sampai {formatDuration(game.economy.offlineCapSeconds)}.
+                    Hasilnya masuk koin pending.
+                  </span>
+                </p>
+              </div>
+              <div className="help-step">
+                <Camera aria-hidden="true" />
+                <p>
+                  <strong>Lintasanmu, dari semua sudut</strong>
+                  <span>
+                    Geser untuk orbit, cubit untuk zoom, tombol kamera untuk
+                    berganti sudut.
+                  </span>
+                </p>
+              </div>
             </div>
-            <div className="help-step">
-              <Zap />
-              <p>
-                <strong>Boost, klaim, lalu upgrade.</strong>
-                <span>
-                  Gaspol {game.economy.boostMultiplier}× selama{" "}
-                  {game.economy.boostDurationSeconds} detik, lalu isi ulang
-                  selama {game.economy.batteryRechargeSeconds} detik.
-                  Baterai terisi otomatis dan balapan normal tetap jalan.
-                </span>
-              </p>
-            </div>
-            <div className="help-step">
-              <Timer />
-              <p>
-                <strong>Ditinggal pun tetap ngumpulin koin.</strong>
-                <span>
-                  {/* Lajunya `offlineRate`, bukan selalu setengah: nilainya bisa
-                      disetel dari panel admin. */}
-                  Saat kamu tutup aplikasi, mobilmu jalan{" "}
-                  {Math.round(game.economy.offlineRate * 100)}% kecepatan
-                  sampai {formatDuration(game.economy.offlineCapSeconds)}. Hasilnya
-                  langsung masuk koin pending.
-                </span>
-              </p>
-            </div>
-            <div className="help-step">
-              <Camera />
-              <p>
-                <strong>Lintasanmu, dari semua sudut.</strong>
-                <span>
-                  Geser untuk orbit. Cubit untuk zoom. Gunakan tombol kamera
-                  untuk berganti sudut.
-                </span>
-              </p>
-            </div>
-            <p className="help-footnote">
-              Semua hadiah dan transaksi dihitung oleh server Racely. Progres
-              terikat ke akun Telegram yang membuka Mini App.
+            <p className="sheet-note">
+              Semua hadiah dan transaksi dihitung oleh server Racely; progres
+              terikat ke akun Telegram yang membuka Mini App. Racely adalah game
+              mini 4WD 3D independen, tidak berafiliasi dengan produsen kendaraan
+              atau mainan mana pun.
             </p>
           </div>
         )}
