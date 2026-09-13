@@ -4,10 +4,11 @@ export type CarModelId = (typeof CAR_MODEL_IDS)[number];
 export const CAR_CATALOG = {
   "neo-falcon": {
     name: "Neo Falcon",
-    description: "Garis tegas, sayap lebar. Siap melesat di setiap tikungan.",
+    description: "Bodi hitam bersudut, hidung tajam, dan roller bertingkat. Dibangun untuk lintasan.",
     chassis: "Super-II · Mini 4WD",
-    defaultColor: "#4275ff",
+    defaultColor: "#e32636",
     colors: [
+      { color: "#e32636", name: "Crimson Red" },
       { color: "#4275ff", name: "Electric Blue" },
       { color: "#f4b65b", name: "Champagne Gold" },
       { color: "#e9eef7", name: "Arctic White" },
@@ -15,7 +16,7 @@ export const CAR_CATALOG = {
   },
   "luna-gt": {
     name: "Luna GT",
-    description: "Bodi membulat, siluet elegan. Tetap sporty di lintasan.",
+    description: "Siluet GT lebar, kap grafit, dan sayap belakang. Elegan dengan karakter balap.",
     chassis: "GT · Mini 4WD",
     defaultColor: "#b9a1ed",
     colors: [
