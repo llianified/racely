@@ -32,7 +32,7 @@ export type PlayerProfile = {
  * `REFERRAL_PARAM_PREFIX` tetap konstanta: itu bentuk deep link Telegram, bukan
  * angka ekonomi.
  */
-/** Awalan `start_param` pada deep link Telegram: `?startapp=ref_<userId>`. */
+/** Awalan payload referral Telegram: `?start=ref_<userId>` dan `?startapp=ref_<userId>`. */
 export const REFERRAL_PARAM_PREFIX = "ref_";
 
 export const WITHDRAW_METHODS = [

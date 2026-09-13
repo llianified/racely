@@ -4,6 +4,7 @@ import {
   isValidWebhookSecret,
   MAX_TELEGRAM_UPDATE_BYTES,
   parsePublicAppUrl,
+  resolveReferralStartContext,
   sendTelegramReply,
   telegramUpdateSchema,
 } from "@/lib/telegram-bot";
@@ -90,7 +91,10 @@ export async function POST(request: Request) {
     const chat = update.data.message?.chat;
     if (chat?.type === "private") await recordBotChat(chat.id);
 
-    const reply = buildTelegramReply(update.data, publicAppUrl);
+    const referral = await resolveReferralStartContext(update.data).catch(
+      () => null,
+    );
+    const reply = buildTelegramReply(update.data, publicAppUrl, referral);
     if (reply) await sendTelegramReply(reply);
     return NextResponse.json({ ok: true }, { headers: noStoreHeaders });
   } catch {
