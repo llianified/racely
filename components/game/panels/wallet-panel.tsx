@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Banknote, Clock, Coins, Send, Wallet } from "lucide-react";
+import { Banknote, Clock, Send, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/sheet";
 import { InfoHint } from "./info-hint";
 import { SectionCardHeading } from "../shell/section-card-heading";
+import { StatHero } from "../shell/stat-hero";
 import { cn } from "@/lib/utils";
 import {
   accountPattern,
@@ -108,36 +109,33 @@ export function WalletPanel({
 
   return (
     <div className="wallet-layout section-enter flex flex-col gap-lg">
-      <section className="wallet-hero" aria-label="Saldo koin">
-        <div className="wallet-balance">
-          <span className="eyebrow">Koin kamu</span>
-          <strong>{formatCoins(balance)} <span>koin</span></strong>
-        </div>
-        <Button
-          variant={balance < minWithdraw ? "secondary" : "gold"}
-          size="lg"
-          className="w-full"
-          disabled={disabled || balance < minWithdraw}
-          onClick={() => setOpen(true)}
-        >
-          <Send data-icon="inline-start" />
-          {balance < minWithdraw
-            ? `Penarikan mulai ${coins(minWithdraw)}`
-            : "Tarik koin"}
-        </Button>
-        <div className="wallet-hero-side">
-          <span className="wallet-pending">
-            <Coins aria-hidden="true" />
-            {coins(game.pending)} belum diklaim
-          </span>
+      <StatHero
+        ariaLabel="Saldo koin"
+        label="Koin kamu"
+        figure={formatCoins(balance)}
+        info={
           <InfoHint title="Cara kerja saldo">
             Koin dari balapan masuk ke &quot;belum diklaim&quot; dulu. Setiap 1
             koin penuh bisa kamu klaim ke saldo. Saldo bisa ditarik ke e-wallet
             atau rekening bank saat mencapai {coins(minWithdraw)}, dengan nilai
             1 koin = {idr(1, economy)}.
           </InfoHint>
-        </div>
-      </section>
+        }
+        action={
+          <Button
+            variant="gold"
+            disabled={disabled || balance < minWithdraw}
+            onClick={() => setOpen(true)}
+          >
+            <Send data-icon="inline-start" />
+            Tarik koin
+          </Button>
+        }
+        stats={[
+          { label: "Belum diklaim", value: coins(game.pending) },
+          { label: "Min. tarik", value: coins(minWithdraw) },
+        ]}
+      />
 
       <Sheet open={open} onOpenChange={(next) => { setOpen(next); if (!next) setError(null); }}>
     <SheetContent side="bottom" className="game-sheet wallet-dialog p-md">
