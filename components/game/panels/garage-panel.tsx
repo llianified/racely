@@ -163,7 +163,7 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
             <h3>{title}</h3>
             <p>{preview.currentPart}</p>
           </div>
-          <SheetTrigger render={<Button variant="gold" size="sm" className="upgrade-buy" disabled={blocked || maxed} />} aria-label={maxed ? `${title} level maksimal` : `Modifikasi ${title}`}>
+          <SheetTrigger render={<Button variant="goldSoft" size="sm" className="upgrade-buy" disabled={blocked || maxed} />} aria-label={maxed ? `${title} level maksimal` : `Modifikasi ${title}`}>
             {maxed ? <Check data-icon="inline-start" /> : <Wrench data-icon="inline-start" />}
             {maxed ? "MAX" : "Modif"}
           </SheetTrigger>

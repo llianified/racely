@@ -10,6 +10,11 @@ const buttonVariants = cva(
       variant: {
         default: 'bg-primary text-primary-foreground hover:bg-primary/85',
         gold: 'press-button gold-button',
+        // Pasangan tonal dari `gold`, untuk aksi per-baris: emas tetap
+        // menandai aksi, tapi tanpa isian penuh yang membuat setiap baris
+        // berebut jadi tombol utama layar.
+        goldSoft:
+          'border-accent/45 bg-accent/12 text-accent hover:bg-accent/22 focus-visible:border-accent focus-visible:ring-accent/25',
         outline:
           'border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50',
         secondary:
