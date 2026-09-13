@@ -4,7 +4,7 @@ import '@fontsource-variable/google-sans-flex'
 import './globals.css'
 
 const description =
-  'Mobil kecil, ambisi besar. Balapan mini 4WD 3D, kumpulkan koin virtual, dan rakit mobil impianmu bersama Racely.'
+  'Mobil kecil, ambisi besar. Balapan mini 4WD 3D, kejar puncak leaderboard, kumpulkan koin virtual, dan rakit mobil impianmu bersama Racely.'
 
 // Social cards need absolute image URLs. Without this the build falls back to
 // http://localhost:3000 and every shared link renders a broken preview, so
