@@ -410,7 +410,11 @@ function ContextMonitor({ onLost }: { onLost: () => void }) {
   const { gl } = useThree()
   useEffect(() => {
     const canvas = gl.domElement
-    const lost = (event: Event) => { event.preventDefault(); onLost() }
+    // Tanpa preventDefault: itu meminta browser menyiapkan context restoration
+    // lewat 'webglcontextrestored', padahal onLost() membongkar Canvas-nya dan
+    // retry membangun context yang benar-benar baru. Memintanya lalu pergi cuma
+    // menyuruh browser menyiapkan sesuatu yang tidak akan pernah dipakai.
+    const lost = () => onLost()
     canvas.addEventListener('webglcontextlost', lost)
     return () => canvas.removeEventListener('webglcontextlost', lost)
   }, [gl, onLost])
