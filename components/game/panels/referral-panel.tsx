@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Link2, ListChecks, UserPlus } from "lucide-react";
+import { Copy, Link2, ListChecks, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InfoHint } from "./info-hint";
 import { SectionCardHeading } from "../shell/section-card-heading";
@@ -10,15 +10,18 @@ import { coins, formatCoins, type GameState } from "@/lib/game";
 export function ReferralPanel({
   game,
   onInvite,
+  onCopy,
   disabled = false,
 }: {
   game: GameState;
+  /** Membuka dialog bagikan Telegram; di luar Telegram jatuh ke salin link. */
   onInvite: () => void;
+  onCopy: () => void;
   disabled?: boolean;
 }) {
   const { referral, economy } = game;
   const steps = [
-    { title: "Bagikan link", note: "Salin link ajakanmu, kirim ke teman lewat Telegram." },
+    { title: "Bagikan link", note: "Satu tap kirim ajakanmu ke kontak atau grup Telegram." },
     { title: "Teman mulai balapan", note: `Dia membuka Racely dari link itu dan menyelesaikan ${economy.referralMilestoneLaps} putaran.` },
     { title: "Koin masuk", note: `Kamu ${coins(economy.referralRewardInviter)}, temanmu ${coins(economy.referralRewardInvitee)}. Langsung ke saldo, tanpa klaim.` },
   ];
@@ -37,8 +40,8 @@ export function ReferralPanel({
         }
         action={
           <Button variant="gold" disabled={disabled || !referral.link} onClick={onInvite}>
-            <Copy data-icon="inline-start" />
-            Salin link
+            <Send data-icon="inline-start" />
+            Bagikan ke Telegram
           </Button>
         }
         stats={[
@@ -50,15 +53,26 @@ export function ReferralPanel({
       <section className="panel referral-card" aria-label="Link ajakan">
         <SectionCardHeading icon={Link2} title="Link ajakan" />
         <code className="referral-link">{referral.link || "Link belum tersedia"}</code>
-        <Button
-          variant="outline"
-          className="w-full"
-          disabled={disabled || !referral.link}
-          onClick={onInvite}
-        >
-          <UserPlus data-icon="inline-start" />
-          Salin dan ajak teman
-        </Button>
+        <div className="flex flex-col gap-sm">
+          <Button
+            variant="gold"
+            className="w-full"
+            disabled={disabled || !referral.link}
+            onClick={onInvite}
+          >
+            <Send data-icon="inline-start" />
+            Bagikan ke Telegram
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full"
+            disabled={disabled || !referral.link}
+            onClick={onCopy}
+          >
+            <Copy data-icon="inline-start" />
+            Salin link
+          </Button>
+        </div>
       </section>
 
       <section className="panel referral-card" aria-label="Cara kerja ajak teman">

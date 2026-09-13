@@ -32,8 +32,12 @@ export type PlayerProfile = {
  * `REFERRAL_PARAM_PREFIX` tetap konstanta: itu bentuk deep link Telegram, bukan
  * angka ekonomi.
  */
-/** Awalan `start_param` pada deep link Telegram: `?startapp=ref_<userId>`. */
+/** Awalan payload deep link Telegram: `?start=ref_<userId>` dan `?startapp=ref_<userId>`. */
 export const REFERRAL_PARAM_PREFIX = "ref_";
+
+/** Teks ajakan yang ikut dikirim lewat dialog bagikan Telegram. */
+export const referralShareText = (inviteeBonus: number, milestoneLaps: number) =>
+  `Ayo balapan di Racely bareng aku! Masuk lewat link ini, kamu dapat bonus ${inviteeBonus} koin setelah ${milestoneLaps} putaran.`;
 
 export const WITHDRAW_METHODS = [
   { id: "dana", label: "DANA", kind: "ewallet" },

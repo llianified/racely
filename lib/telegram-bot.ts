@@ -14,10 +14,40 @@ export function botUsername() {
   return raw && /^[A-Za-z0-9_]{5,32}$/.test(raw) ? raw : DEFAULT_BOT_USERNAME;
 }
 
-/** `startapp` membuka Mini App langsung, bukan cuma chat botnya. */
+/**
+ * Link yang dibagikan pemain. Memakai `start=` (bukan `startapp=`) dengan
+ * sengaja: teman yang mengeklik mendarat di chat bot dan bot menerima
+ * `/start ref_<id>`, jadi balasannya bisa menyebut siapa yang mengajak dan
+ * bonusnya -- sekaligus mencatat `bot_chats` supaya ia bisa dikirimi
+ * notifikasi nanti. Tombol di balasan itulah yang membuka Mini App dengan
+ * `startapp`, sehingga `start_param` tetap sampai ke `bindReferrer`.
+ */
 export function referralLink(userId: string) {
+  return `https://t.me/${botUsername()}?start=${REFERRAL_PARAM_PREFIX}${userId}`;
+}
+
+/** Deep link Mini App yang membawa `start_param` referral ke initData. */
+export function miniAppReferralLink(userId: string) {
   return `https://t.me/${botUsername()}?startapp=${REFERRAL_PARAM_PREFIX}${userId}`;
 }
+
+/** Id pengajak dari payload `/start ref_<id>`; null kalau bukan payload referral. */
+export function parseStartReferral(text: string | undefined) {
+  if (!text) return null;
+  const [command, payload] = text.trim().split(/\s+/, 2);
+  if (command?.split("@", 1)[0]?.toLowerCase() !== "/start") return null;
+  if (!payload?.startsWith(REFERRAL_PARAM_PREFIX)) return null;
+  const inviterId = payload.slice(REFERRAL_PARAM_PREFIX.length);
+  return /^\d{1,20}$/.test(inviterId) ? inviterId : null;
+}
+
+/** Konteks sosial untuk balasan `/start` berpayload referral. */
+export type ReferralGreeting = {
+  inviterId: string;
+  inviterName: string;
+  inviteeBonus: number;
+  milestoneLaps: number;
+};
 
 const telegramMessageSchema = z
   .object({
@@ -42,13 +72,15 @@ const botTokenSchema = z
   .min(20)
   .regex(/^\d+:[A-Za-z0-9_-]+$/);
 
+export type TelegramInlineButton =
+  | { text: string; web_app: { url: string } }
+  | { text: string; url: string };
+
 export type TelegramReply = {
   chat_id: number;
   text: string;
   reply_markup: {
-    inline_keyboard: Array<
-      Array<{ text: string; web_app: { url: string } }>
-    >;
+    inline_keyboard: TelegramInlineButton[][];
   };
 };
 
@@ -84,6 +116,7 @@ export function parsePublicAppUrl(value = process.env.PUBLIC_APP_URL) {
 export function buildTelegramReply(
   update: unknown,
   publicAppUrl: string,
+  greeting: ReferralGreeting | null = null,
 ): TelegramReply | null {
   const parsed = telegramUpdateSchema.safeParse(update);
   if (!parsed.success) return null;
@@ -93,6 +126,22 @@ export function buildTelegramReply(
   const commandToken = message.text.trim().split(/\s+/, 1)[0]?.toLowerCase();
   const command = commandToken?.split("@", 1)[0];
   const isLaunchCommand = command === "/start" || command === "/play";
+
+  // Tombol `url` ke deep link startapp, bukan `web_app`: hanya jalur itu yang
+  // membawa `start_param` ke initData supaya ikatan referral terjadi.
+  if (greeting && command === "/start") {
+    return {
+      chat_id: message.chat.id,
+      text:
+        `Kamu diajak ${greeting.inviterName}! Selesaikan ${greeting.milestoneLaps} putaran pertama ` +
+        `dan bonus ${greeting.inviteeBonus} koin langsung masuk saldo. Buka Racely lewat tombol di bawah supaya ajakannya tercatat.`,
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "Main Racely", url: miniAppReferralLink(greeting.inviterId) }],
+        ],
+      },
+    };
+  }
 
   return {
     chat_id: message.chat.id,

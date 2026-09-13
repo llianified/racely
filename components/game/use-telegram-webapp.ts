@@ -20,6 +20,7 @@ type TelegramWebApp = {
   onEvent?: (event: string, handler: () => void) => void;
   offEvent?: (event: string, handler: () => void) => void;
   HapticFeedback?: { impactOccurred: (style: "light" | "medium") => void };
+  openTelegramLink?: (url: string) => void;
 };
 
 declare global {
@@ -107,6 +108,22 @@ export function useTelegramWebApp() {
   }, []);
 
   return { initData, clientReady };
+}
+
+/**
+ * Membuka dialog "bagikan ke" milik Telegram -- satu tap langsung memilih
+ * kontak atau grup. Mengembalikan false di luar Telegram supaya pemanggil bisa
+ * jatuh ke salin link.
+ */
+export function shareToTelegram(url: string, text: string) {
+  const app = window.Telegram?.WebApp;
+  if (!app || app.platform === "unknown" || !app.openTelegramLink) return false;
+  if (!app.isVersionAtLeast("6.1")) return false;
+  const share = new URL("https://t.me/share/url");
+  share.searchParams.set("url", url);
+  share.searchParams.set("text", text);
+  app.openTelegramLink(share.toString());
+  return true;
 }
 
 /** No-op outside Telegram and on clients older than 6.1. */

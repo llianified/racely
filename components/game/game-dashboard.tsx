@@ -24,13 +24,14 @@ import {
   requestHeaders,
   type GameKey,
 } from "./game-client";
-import { telegramHaptic, useTelegramWebApp } from "./use-telegram-webapp";
+import { shareToTelegram, telegramHaptic, useTelegramWebApp } from "./use-telegram-webapp";
 import {
   coins,
   gameReducer,
   INITIAL_GAME,
   missions,
   missionValue,
+  referralShareText,
   totalLevel,
   upgradeCost,
   type GameCommand,
@@ -257,7 +258,7 @@ export function GameDashboard() {
     if (await runAction({ type: "daily" }))
       toast.success(`Harian +${coins(amount)}`);
   };
-  const invite = async () => {
+  const copyInvite = async () => {
     const link = game.referral.link;
     if (!link) return;
     try {
@@ -267,6 +268,23 @@ export function GameDashboard() {
     } catch {
       toast.error("Link gagal disalin");
     }
+  };
+  const invite = async () => {
+    const link = game.referral.link;
+    if (!link) return;
+    const shared = shareToTelegram(
+      link,
+      referralShareText(
+        game.economy.referralRewardInvitee,
+        game.economy.referralMilestoneLaps,
+      ),
+    );
+    if (shared) {
+      telegramHaptic();
+      return;
+    }
+    // Di luar Telegram tidak ada dialog bagikan; salin link adalah jalur terbaiknya.
+    await copyInvite();
   };
   const gift = async () => {
     if (game.rewardClaimed) return;
@@ -451,6 +469,7 @@ export function GameDashboard() {
             <ReferralPanel
               game={game}
               onInvite={invite}
+              onCopy={copyInvite}
               disabled={Boolean(busyAction)}
             />
           ) : (

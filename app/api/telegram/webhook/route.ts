@@ -4,6 +4,7 @@ import {
   isValidWebhookSecret,
   MAX_TELEGRAM_UPDATE_BYTES,
   parsePublicAppUrl,
+  parseStartReferral,
   sendTelegramReply,
   telegramUpdateSchema,
 } from "@/lib/telegram-bot";
@@ -12,6 +13,8 @@ import {
   releaseTelegramUpdate,
 } from "@/lib/telegram-updates";
 import { recordBotChat } from "@/lib/bot-chats";
+import { readReferralGreeting } from "@/lib/referral-server";
+import { readEconomyConfig } from "@/lib/economy-store";
 import { readTextBody, RequestBodyTooLargeError } from "@/lib/http-body";
 
 export const runtime = "nodejs";
@@ -90,7 +93,19 @@ export async function POST(request: Request) {
     const chat = update.data.message?.chat;
     if (chat?.type === "private") await recordBotChat(chat.id);
 
-    const reply = buildTelegramReply(update.data, publicAppUrl);
+    // `/start ref_<id>`: sebutkan siapa yang mengajak dan bonusnya. Gagal
+    // membaca konteksnya tidak boleh menahan sapaan biasa.
+    const inviterId = parseStartReferral(update.data.message?.text);
+    const greeting =
+      inviterId && chat?.type === "private"
+        ? await readReferralGreeting(
+            inviterId,
+            chat.id,
+            await readEconomyConfig(),
+          ).catch(() => null)
+        : null;
+
+    const reply = buildTelegramReply(update.data, publicAppUrl, greeting);
     if (reply) await sendTelegramReply(reply);
     return NextResponse.json({ ok: true }, { headers: noStoreHeaders });
   } catch {
