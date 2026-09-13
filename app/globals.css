@@ -635,7 +635,10 @@
 .upgrade-row { display: flex; flex-direction: column; gap: var(--space-sm); padding: var(--space-md); border-bottom: var(--stroke) solid var(--border); }
 .upgrade-row:last-child { border-bottom: none; }
 .upgrade-head { display: flex; align-items: center; gap: var(--space-sm); }
-.upgrade-head > svg { width: var(--icon-base); height: var(--icon-base); flex-shrink: 0; color: var(--accent); }
+/* Tile ikon setinggi tombol `sm` (--space-32) supaya baris judul rata kiri-kanan;
+   kulitnya sama dengan sel .upgrade-specs di bawahnya. */
+.upgrade-icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: var(--space-32); height: var(--space-32); border: var(--stroke) solid var(--border); border-radius: var(--corner-sm); background: color-mix(in srgb, var(--background) 28%, var(--card)); color: var(--accent); }
+.upgrade-icon > svg { width: var(--icon-base); height: var(--icon-base); }
 .upgrade-name { flex: 1 1 auto; min-width: 0; line-height: var(--lh-tight); }
 .upgrade-name h3 { font-size: var(--fs-read); font-weight: var(--fw-heavy); }
 .upgrade-name p { margin-top: var(--space-2); font-size: var(--fs-micro); color: var(--muted-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

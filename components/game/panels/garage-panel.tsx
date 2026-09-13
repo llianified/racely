@@ -158,7 +158,7 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
     <Sheet open={open} onOpenChange={(value) => { if (!installLock.current) setOpen(value); }}>
       <div className="upgrade-row">
         <div className="upgrade-head">
-          <Icon aria-hidden="true" />
+          <span className="upgrade-icon" aria-hidden="true"><Icon /></span>
           <div className="upgrade-name">
             <h3>{title}</h3>
             <p>{preview.currentPart}</p>
