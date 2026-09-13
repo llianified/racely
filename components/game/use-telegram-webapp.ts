@@ -13,6 +13,7 @@ type TelegramWebApp = {
   setHeaderColor: (color: string) => void;
   setBackgroundColor: (color: string) => void;
   setBottomBarColor?: (color: string) => void;
+  openTelegramLink?: (url: string) => void;
   requestFullscreen?: () => void;
   isFullscreen?: boolean;
   safeAreaInset?: SafeAreaInsets;
@@ -107,6 +108,38 @@ export function useTelegramWebApp() {
   }, []);
 
   return { initData, clientReady };
+}
+
+export type ReferralShareResult = "telegram" | "shared" | "copied" | "cancelled";
+
+export async function shareReferralLink(link: string): Promise<ReferralShareResult> {
+  const text = "Ayo balapan bareng aku di Racely!";
+  const app = window.Telegram?.WebApp;
+  if (app?.platform !== "unknown" && app?.openTelegramLink) {
+    try {
+      const shareUrl = new URL("https://t.me/share/url");
+      shareUrl.searchParams.set("url", link);
+      shareUrl.searchParams.set("text", text);
+      app.openTelegramLink(shareUrl.toString());
+      return "telegram";
+    } catch {
+      // Klien Telegram lama turun ke mekanisme berbagi browser di bawah.
+    }
+  }
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "Racely", text, url: link });
+      return "shared";
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return "cancelled";
+      }
+    }
+  }
+
+  await navigator.clipboard.writeText(link);
+  return "copied";
 }
 
 /** No-op outside Telegram and on clients older than 6.1. */

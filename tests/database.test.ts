@@ -140,7 +140,7 @@ describeDatabase("Neon Postgres persistence", () => {
       expect(unranked.currentPlayer).toBeNull();
       expect(unranked.nextRival).toBeNull();
       expect((await getLeaderboard("preview:fake", client)).currentPlayer).toBeNull();
-      expect((await getLeaderboard("30", client)).nextRival).toEqual({ name: "First", laps: 1000 });
+      expect((await getLeaderboard("30", client)).nextRival).toEqual({ name: "First", score: 1000, laps: 1000 });
 
       await client.query(`INSERT INTO racely_players
         SELECT (100 + n)::text, 'Racer ' || n, 800 - n, '2026-02-01'::timestamptz
@@ -148,8 +148,8 @@ describeDatabase("Neon Postgres persistence", () => {
       const outside = await getLeaderboard("160", client);
       expect(outside.entries).toHaveLength(50);
       expect(outside.entries.some((entry) => entry.isCurrentPlayer)).toBe(false);
-      expect(outside.currentPlayer).toEqual({ rank: 63, name: "Racer 60", laps: 740, isCurrentPlayer: true });
-      expect(outside.nextRival).toEqual({ name: "Racer 59", laps: 741 });
+      expect(outside.currentPlayer).toEqual({ rank: 63, name: "Racer 60", score: 740, laps: 740, isCurrentPlayer: true });
+      expect(outside.nextRival).toEqual({ name: "Racer 59", score: 741, laps: 741 });
       expect(outside.totalPlayers).toBe(63);
       expect(JSON.stringify(outside)).not.toMatch(/user_id|userId|created_at|balance|username|photo/);
       expect((await getLeaderboard("'; DROP TABLE racely_players; --", client)).currentPlayer).toBeNull();

@@ -24,7 +24,11 @@ import {
   requestHeaders,
   type GameKey,
 } from "./game-client";
-import { telegramHaptic, useTelegramWebApp } from "./use-telegram-webapp";
+import {
+  shareReferralLink,
+  telegramHaptic,
+  useTelegramWebApp,
+} from "./use-telegram-webapp";
 import {
   coins,
   gameReducer,
@@ -261,11 +265,14 @@ export function GameDashboard() {
     const link = game.referral.link;
     if (!link) return;
     try {
-      await navigator.clipboard.writeText(link);
+      const result = await shareReferralLink(link);
+      if (result === "cancelled") return;
       telegramHaptic();
-      toast.success("Link disalin");
+      toast.success(
+        result === "copied" ? "Link disalin" : "Ajakan siap dibagikan",
+      );
     } catch {
-      toast.error("Link gagal disalin");
+      toast.error("Ajakan gagal dibagikan");
     }
   };
   const gift = async () => {
@@ -446,7 +453,11 @@ export function GameDashboard() {
               disabled={Boolean(busyAction)}
             />
           ) : tab === "leaderboard" ? (
-            <LeaderboardPanel initData={initData} onRace={() => navigate("race")} />
+            <LeaderboardPanel
+              initData={initData}
+              onRace={() => navigate("race")}
+              onInvite={() => navigate("referral")}
+            />
           ) : tab === "referral" ? (
             <ReferralPanel
               game={game}

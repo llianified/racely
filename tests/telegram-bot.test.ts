@@ -1,9 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_ECONOMY } from "../lib/economy-config";
 import {
   buildTelegramReply,
   isValidWebhookSecret,
   MAX_TELEGRAM_UPDATE_BYTES,
   parsePublicAppUrl,
+  parseReferralStart,
+  referralLink,
+  resolveReferralStartContext,
   sendTelegramReply,
   telegramUpdateSchema,
 } from "../lib/telegram-bot";
@@ -30,6 +34,11 @@ const message = (text: string | undefined, overrides: object = {}) => ({
     ...overrides,
   },
 });
+
+function webAppUrl(reply: NonNullable<ReturnType<typeof buildTelegramReply>>) {
+  const button = reply.reply_markup.inline_keyboard[0][0];
+  return "web_app" in button ? button.web_app.url : null;
+}
 
 beforeEach(() => resetTelegramUpdateMemory());
 afterEach(() => vi.unstubAllEnvs());
@@ -64,10 +73,6 @@ describe("Public app URL parsing", () => {
   });
 
   it("refuses a missing value regardless of the ambient environment", () => {
-    // parsePublicAppUrl() defaults to process.env.PUBLIC_APP_URL, so passing
-    // undefined reads whatever the shell exports. Both CI and the deploy
-    // runbook source the env file before running this suite, so the variable is
-    // set there -- pin it instead of depending on the caller's shell.
     vi.stubEnv("PUBLIC_APP_URL", "");
     try {
       expect(() => parsePublicAppUrl(undefined)).toThrow();
@@ -84,14 +89,83 @@ describe("Bot command replies", () => {
       const reply = buildTelegramReply(message(text), APP_URL);
       expect(reply?.chat_id).toBe(4242);
       expect(reply?.text).toContain("Mesin siap");
-      expect(reply?.reply_markup.inline_keyboard[0][0].web_app.url).toBe(APP_URL);
+      expect(webAppUrl(reply!)).toBe(APP_URL);
     }
+  });
+
+  it("acknowledges a valid referral with configured milestone and rewards", async () => {
+    const update = message("/start ref_777", { from: { id: 4242 } });
+    const lookup = vi.fn().mockResolvedValue({
+      inviterName: "Nadia",
+      invitee: null,
+    });
+    const context = await resolveReferralStartContext(
+      update,
+      lookup,
+      async () => ({
+        ...DEFAULT_ECONOMY,
+        referralMilestoneLaps: 120,
+        referralRewardInviter: 30,
+        referralRewardInvitee: 12,
+      }),
+    );
+
+    expect(lookup).toHaveBeenCalledWith("777", "4242");
+    expect(context).toMatchObject({ inviterId: "777", inviterName: "Nadia" });
+    const reply = buildTelegramReply(update, APP_URL, context);
+    expect(reply?.text).toContain("Nadia mengajakmu");
+    expect(reply?.text).toContain("120 putaran");
+    expect(reply?.text).toContain("12 koin");
+    expect(reply?.text).toContain("30 koin");
+    const button = reply!.reply_markup.inline_keyboard[0][0];
+    expect("url" in button ? button.url : null).toContain("startapp=ref_777");
+  });
+
+  it("rejects malformed and self-referral payloads before lookup", async () => {
+    const lookup = vi.fn();
+    for (const update of [
+      message("/start ref_"),
+      message("/start ref_abc"),
+      message("/start ref_777 extra"),
+      message("/play ref_777"),
+      message("/start ref_4242", { from: { id: 4242 } }),
+    ]) {
+      expect(parseReferralStart(update)).toBeNull();
+      expect(
+        await resolveReferralStartContext(update, lookup, async () => DEFAULT_ECONOMY),
+      ).toBeNull();
+    }
+    expect(lookup).not.toHaveBeenCalled();
+  });
+
+  it("falls back to normal /start when inviter or invitee eligibility is invalid", async () => {
+    const update = message("/start ref_777", { from: { id: 4242 } });
+    expect(
+      await resolveReferralStartContext(update, async () => null),
+    ).toBeNull();
+    expect(
+      await resolveReferralStartContext(update, async () => ({
+        inviterName: "Nadia",
+        invitee: { referredBy: "111", laps: 0 },
+      })),
+    ).toBeNull();
+    expect(
+      await resolveReferralStartContext(update, async () => ({
+        inviterName: "Nadia",
+        invitee: { referredBy: null, laps: 1 },
+      })),
+    ).toBeNull();
+    expect(buildTelegramReply(update, APP_URL)?.text).toContain("Mesin siap");
+  });
+
+  it("builds a bot referral link that reaches contextual /start first", () => {
+    expect(referralLink("777")).toContain("?start=ref_777");
   });
 
   it("nudges unknown text toward /play but still offers the button", () => {
     const reply = buildTelegramReply(message("halo bot"), APP_URL);
     expect(reply?.text).toContain("/play");
-    expect(reply?.reply_markup.inline_keyboard[0][0].web_app.url).toBe(APP_URL);
+    expect(webAppUrl(reply!)).toBe(APP_URL);
   });
 
   it("ignores non-private chats, textless messages and unrelated updates", () => {
