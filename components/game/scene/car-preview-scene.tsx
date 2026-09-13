@@ -18,13 +18,13 @@ type CarPreviewProps = {
 }
 
 function PreviewCar({ color, model, levels, inspect, equipped }: CarPreviewProps) {
-  return <group rotation={[0, .6, 0]}><MiniCar color={color} model={model} levels={levels} inspect={inspect} equipped={equipped} /></group>
+  return <group rotation={[0, -.35, 0]}><MiniCar color={color} model={model} levels={levels} inspect={inspect} equipped={equipped} /></group>
 }
 
 function PreviewCamera() {
   const { size } = useThree()
   return <>
-    <OrthographicCamera makeDefault position={[1.6, 1.1, 1.9]} zoom={Math.min(size.width / 1.25, size.height / .95)} near={.1} far={40} />
+    <OrthographicCamera makeDefault position={[1.6, 1.1, 1.9]} zoom={Math.min(size.width / 1.15, size.height / .8)} near={.1} far={40} />
     <OrbitControls makeDefault enablePan={false} enableZoom={false} enableDamping={false} minPolarAngle={.15} maxPolarAngle={Math.PI / 2.1} />
   </>
 }

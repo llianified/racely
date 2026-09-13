@@ -29,7 +29,7 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
   onConfirm: (model: CarModelId, color: CarColor) => Promise<boolean>;
 }) {
   const [model, setModel] = useState<CarModelId>("neo-falcon");
-  const [color, setColor] = useState<CarColor>(isCarColor("neo-falcon", initialColor) ? initialColor : CAR_CATALOG["neo-falcon"].defaultColor);
+  const [color, setColor] = useState<CarColor>(returningPlayer && isCarColor("neo-falcon", initialColor) ? initialColor : CAR_CATALOG["neo-falcon"].defaultColor);
   const [failed, setFailed] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const [submitting, setSubmitting] = useState(false);
