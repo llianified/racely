@@ -611,17 +611,16 @@
 /* varian kecil: bevel lebih tipis biar proporsional */
 .gold-button[data-size='sm']:not(:disabled), .gold-button[data-size='xs']:not(:disabled) { --press-depth: var(--space-2); --press-shift: var(--stroke); }
 
-/* ── kartu stat: hasil balapan & trek berikutnya ─────────
-   Satu kerangka untuk keduanya: heading (ikon + judul, aksi di kanan),
-   satu baris nilai, satu baris keterangan. Semua jarak bersumber dari
-   token yang sama agar kedua kartu sejajar saat ditumpuk. */
-.stat-card { display: flex; flex-direction: column; padding: var(--space-md); border: var(--stroke) solid var(--border); border-radius: var(--corner-xl); background: var(--card); transition: border-color var(--dur-base); }
-.stat-card > .section-card-heading { flex-wrap: nowrap; min-height: var(--space-32); }
-.stat-card .heading-aside [data-slot='button'] { margin-right: 0; }
-.stat-card-value { display: block; margin-top: var(--space-sm); font-size: var(--fs-display); font-weight: var(--fw-heavier); line-height: var(--lh-snug); letter-spacing: var(--track-tight-xs); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.stat-card-meta { display: flex; align-items: center; gap: var(--space-6); margin-top: var(--space-2); min-width: 0; font-size: var(--fs-small); line-height: var(--lh-snug); color: var(--muted-foreground); }
-.stat-card-meta > b { font-weight: var(--fw-bold); color: var(--accent); }
+/* ── hasil balapan ────────────��─────────────────�����──── */
+.race-reward { position: relative; display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md); border: var(--stroke) solid var(--border); border-radius: var(--corner-xl); background: var(--card); transition: border-color var(--dur-base); }
+.race-reward::before { content: ''; position: absolute; left: 0; top: var(--space-14); bottom: var(--space-14); width: var(--space-3); background: var(--secondary); transition: background var(--dur-base); }
 .reward-ready { border-color: color-mix(in srgb, var(--accent) 32%, transparent); }
+.reward-ready::before { background: var(--accent); }
+.reward-copy > small { display: block; margin-top: var(--space-2); font-size: var(--fs-nano); color: var(--muted-foreground); }
+.reward-copy { flex: 1 1 auto; min-width: 0; }
+.reward-copy > span { display: block; font-size: var(--fs-nano); font-weight: var(--fw-bold); letter-spacing: var(--track-caps-lg); text-transform: uppercase; color: var(--muted-foreground); }
+.reward-copy > strong { display: block; font-size: var(--fs-display); font-weight: var(--fw-heavier); line-height: var(--lh-snug); letter-spacing: var(--track-tight-xs); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.race-reward [data-slot='button'] { flex: 0 0 auto; }
 
 /* ── garasi ─────────────────��──────────────────────── */
 .car-stage { position: relative; height: var(--stage-garage-h); margin: var(--space-md) var(--space-md) 0; overflow: hidden; border: var(--stroke) solid var(--border); border-radius: var(--corner-panel); background:
@@ -822,14 +821,17 @@
   .boot-content { min-height: var(--boot-content-h-short); gap: var(--space-xl); }
   .boot-logo { width: var(--logo-boot-w-short); }
 }
+.circuit-preview { display: flex; align-items: center; gap: var(--space-md); margin: var(--space-10) calc(var(--space-md) * -1) 0; padding: var(--space-md); border-block: var(--stroke) dashed var(--border); color: var(--foreground); }
+.circuit-ticket-label { flex-shrink: 0; align-self: stretch; display: flex; align-items: center; margin-block: calc(var(--space-md) * -1); padding: var(--space-md) var(--space-md) var(--space-md) 0; border-right: var(--stroke) solid var(--border); color: var(--subtle-foreground); font-size: var(--fs-read); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps-md); line-height: var(--lh-none); text-transform: uppercase; }
+.circuit-ticket-flag { width: var(--space-20); height: var(--space-20); flex-shrink: 0; color: var(--subtle-foreground); margin-left: auto; }
 .circuit-panel { border-radius: var(--corner-xl); }
-/* Chip nomor trek: satu ukuran dengan teks meta di sebelahnya, hanya dibedakan kapital + bingkai. */
-.circuit-ticket-label { flex-shrink: 0; padding: var(--space-1) var(--space-6); border: var(--stroke) solid var(--border); border-radius: var(--corner-xs); font-size: var(--fs-nano); font-weight: var(--fw-bold); letter-spacing: var(--track-caps-md); line-height: var(--lh-snug); text-transform: uppercase; color: var(--subtle-foreground); }
-.circuit-unlock { display: flex; flex-direction: column; gap: var(--space-6); margin-top: var(--space-md); }
-.circuit-unlock-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-sm); font-size: var(--fs-small); line-height: var(--lh-snug); color: var(--muted-foreground); }
-.circuit-unlock-row > span:last-child { flex-shrink: 0; font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; color: var(--foreground); }
-.circuit-unlock [data-slot='progress-track'] { height: var(--space-xs); }
-.circuit-unlock [data-slot='progress-indicator'] { transition: transform var(--dur-slow) ease-out; }
+.circuit-panel .section-card-heading h2 { font-size: var(--fs-lead); }
+.circuit-panel .section-card-heading h2 svg { width: var(--icon-base); height: var(--icon-base); }
+.circuit-panel .circuit-progress [data-slot='progress-track'] { height: var(--space-xs); }
+.circuit-panel .circuit-progress [data-slot='progress-indicator'] { transition: transform var(--dur-slow) ease-out; }
+.circuit-preview h3 { font-size: var(--fs-title); line-height: var(--lh-snug); text-wrap: balance; }
+.circuit-preview p { color: var(--accent); font-size: var(--fs-micro); font-weight: var(--fw-bold); margin-top: var(--space-2); }
+.circuit-description { font-size: var(--fs-micro); color: var(--muted-foreground); margin-top: var(--space-sm); }
 
 /* ── menu ─────────────────────────────���────────────── */
 .menu-panel { padding: var(--space-md) var(--gutter); }
