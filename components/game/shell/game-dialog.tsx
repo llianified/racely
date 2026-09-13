@@ -117,7 +117,7 @@ export function GameDialog({
         if (!open) onClose();
       }}
     >
-    <SheetContent side="bottom" className="game-sheet p-lg">
+    <SheetContent side="bottom" className="game-sheet p-md">
       <SheetHeader className="p-0">
           <SheetTitle>{DIALOG_COPY[active].title}</SheetTitle>
           <SheetDescription>
