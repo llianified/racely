@@ -70,4 +70,24 @@ describe("Content-Security-Policy", () => {
   it("tidak pernah membatasi frame-ancestors di app pemain", async () => {
     expect(await cspFor("/")).not.toContain("frame-ancestors");
   });
+
+  /**
+   * Avatar pemain pernah mati diam-diam di produksi: `photo_url` menunjuk ke
+   * t.me, t.me membalas 302 ke CDN-nya, dan CSP ikut memeriksa host target
+   * redirect -- jadi policy yang hanya menyebut t.me memblokir gambarnya.
+   *
+   * Tidak terlihat di luar produksi: identitas preview selalu punya photoUrl
+   * null, jadi <img> itu tidak pernah dirender saat `pnpm dev`.
+   */
+  it("mengizinkan foto profil Telegram beserta CDN tujuan redirectnya", async () => {
+    const policy = await cspFor("/");
+    const imgSrc = policy
+      ?.split(";")
+      .map((directive) => directive.trim())
+      .find((directive) => directive.startsWith("img-src "));
+
+    expect(imgSrc).toBeDefined();
+    expect(imgSrc).toContain("https://t.me");
+    expect(imgSrc).toContain("https://*.cdn-telegram.org");
+  });
 });
