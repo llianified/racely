@@ -21,7 +21,6 @@ const buttonVariants = cva(
         link: 'text-primary underline-offset-4 hover:underline',
         menu: 'justify-start whitespace-normal text-left font-semibold text-secondary-foreground hover:bg-menu-header [&_svg]:text-muted-foreground',
         menuDirect: 'menu-direct justify-start whitespace-normal text-left [&_svg:last-child]:ml-auto',
-        circuit: 'justify-between whitespace-normal bg-secondary text-left text-secondary-foreground hover:bg-secondary/80 [&>span]:shrink-0 [&>span]:text-sm [&>span]:text-muted-foreground',
       },
       size: {
         default: 'min-h-(--space-40) gap-sm px-(--space-14) py-sm',
