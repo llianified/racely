@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarCheck, Check, Coins, Flag, Gift, LockKeyhole, Trophy } from "lucide-react";
+import { CalendarCheck, Check, Coins, Flag, Gift, LockKeyhole, Trophy, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -29,8 +29,15 @@ type RewardRow = {
   onClaim: () => void;
 };
 
+const MISSION_ICONS: Record<MissionId, typeof Gift> = {
+  laps: Flag,
+  upgrade: Wrench,
+  earn: Coins,
+};
+
 type MissionRow = {
   id: MissionId;
+  icon: typeof Gift;
   label: string;
   note: string;
   amount: number;
@@ -140,6 +147,7 @@ export function RewardsPanel({
     const claimed = game.missionsClaimed.includes(mission.id);
     return {
       id: mission.id,
+      icon: MISSION_ICONS[mission.id],
       label: mission.title,
       note: mission.description,
       amount: mission.reward,
@@ -246,26 +254,24 @@ export function RewardsPanel({
             </Badge>
           }
         />
-        <ul className="mission-list">
+        <ul className="reward-list">
           {missionRows.map((row) => (
             <li
               key={row.id}
               id={`reward-${row.id}`}
               tabIndex={-1}
               className={cn(
-                "mission-row",
+                "reward-row",
                 row.state === "ready" && "is-ready",
                 row.state === "claimed" && "is-claimed",
               )}
             >
-              <div className="mission-row-head">
+              <span className="reward-row-icon" aria-hidden="true">
+                <row.icon />
+              </span>
+              <div className="reward-row-copy">
                 <h3>{row.label}</h3>
-                <strong className="mission-row-reward">
-                  +{formatCoins(row.amount)} <span>koin</span>
-                </strong>
-              </div>
-              <p>{row.note}</p>
-              <div className="mission-row-foot">
+                <p>{row.note}</p>
                 <div className="mission-progress">
                   <Progress
                     value={(row.value / row.target) * 100}
@@ -276,10 +282,12 @@ export function RewardsPanel({
                     {row.value.toLocaleString("id-ID")}/{row.target.toLocaleString("id-ID")}
                   </span>
                 </div>
+              </div>
+              <div className="reward-row-action">
+                <strong>{formatCoins(row.amount)} <span>koin</span></strong>
                 {row.state === "ready" ? (
                   <Button
                     variant="gold"
-                    size="sm"
                     disabled={disabled}
                     onClick={row.onClaim}
                     aria-label={`Klaim ${row.label}`}
