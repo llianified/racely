@@ -294,8 +294,13 @@ export function RewardsPanel({
                   >
                     Klaim
                   </Button>
+                ) : row.state === "waiting" ? (
+                  <Button variant="secondary" disabled>
+                    <LockKeyhole data-icon="inline-start" />
+                    Belum siap
+                  </Button>
                 ) : (
-                  <RowStatus state={row.state} />
+                  <RowStatus state="claimed" />
                 )}
               </div>
             </li>
