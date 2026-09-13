@@ -10,6 +10,7 @@ import { RaceOverviewHud, RacePositionHud } from "./race-overview-hud";
 import { cn } from "@/lib/utils";
 import { createDrivingState } from "@/lib/race-dynamics";
 import { RaceSwitch, SettingRow } from "./setting-row";
+import { SectionCardHeading } from "../shell/section-card-heading";
 
 const RaceScene = dynamic(() => import("../scene/race-scene"), {
   ssr: false,
@@ -188,16 +189,19 @@ export function RaceReward({ pending, onClaim, disabled = false, claiming = fals
       : "Selesaikan putaran untuk mulai mengumpulkan";
 
   return (
-    <section className={cn("race-reward", readyToClaim && "reward-ready")} aria-label="Hasil balapan">
-      <div className="reward-copy">
-        <span>Hasil balapan</span>
-        <strong>{coins(pending)}</strong>
-        <small>{rewardStatus}</small>
-      </div>
-      <Button variant={readyToClaim ? "gold" : "secondary"} disabled={disabled || !readyToClaim} onClick={onClaim} aria-busy={claiming} aria-label={readyToClaim ? "Klaim koin hasil balapan" : `Belum bisa diklaim. ${rewardStatus}`}>
-        {claiming ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <Coins data-icon="inline-start" />}
-        {claiming ? "Mengklaim…" : "Klaim"}
-      </Button>
+    <section className={cn("stat-card race-reward", readyToClaim && "reward-ready")} aria-label="Hasil balapan">
+      <SectionCardHeading
+        icon={Coins}
+        title="Hasil balapan"
+        aside={
+          <Button size="sm" variant={readyToClaim ? "gold" : "secondary"} disabled={disabled || !readyToClaim} onClick={onClaim} aria-busy={claiming} aria-label={readyToClaim ? "Klaim koin hasil balapan" : `Belum bisa diklaim. ${rewardStatus}`}>
+            {claiming ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <Coins data-icon="inline-start" />}
+            {claiming ? "Mengklaim…" : "Klaim"}
+          </Button>
+        }
+      />
+      <strong className="stat-card-value">{coins(pending)}</strong>
+      <p className="stat-card-meta">{rewardStatus}</p>
     </section>
   );
 }
