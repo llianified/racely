@@ -378,7 +378,6 @@ export function GameDashboard() {
           racerName={game.player.name}
           racerPhotoUrl={game.player.photoUrl}
           onWallet={() => navigate("wallet")}
-          onHelp={() => setDialog("help")}
         />
         <main id="page-content" tabIndex={-1} className="page-content" aria-busy={Boolean(busyAction)}>
           {raceMounted && (

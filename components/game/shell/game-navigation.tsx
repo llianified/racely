@@ -52,7 +52,7 @@ export function GameNavigation({
       key={id}
       onClick={() => onTab(id)}
       className={cn("nav-item", activeTab === id && "active")}
-      aria-current={activeTab === id ? "page" : undefined}
+      aria-current={tab === id ? "page" : undefined}
     >
       <span className="nav-icon">
         <Icon />
@@ -75,14 +75,12 @@ export function Topbar({
   racerName,
   racerPhotoUrl,
   onWallet,
-  onHelp,
 }: {
   balance: number;
   level: number;
   racerName: string;
   racerPhotoUrl: string | null;
   onWallet: () => void;
-  onHelp: () => void;
 }) {
   const initial = Array.from(racerName.trim())[0]?.toUpperCase() || "R";
   const displayedBalance = formatCoins(Math.floor(balance));
@@ -108,12 +106,11 @@ export function Topbar({
             <strong>{displayedBalance}</strong>
           </span>
         </button>
-        <button
-          type="button"
-          onClick={onHelp}
+        <div
           className="racer-avatar"
-          aria-label={`${racerName}, level ${level}. Cara bermain`}
-          title={`${racerName} · Level ${level} · Cara bermain`}
+          role="img"
+          aria-label={`${racerName}, level ${level}`}
+          title={`${racerName} · Level ${level}`}
         >
           {racerPhotoUrl ? (
             <Image
@@ -129,7 +126,7 @@ export function Topbar({
             <span className="racer-initial" aria-hidden="true">{initial}</span>
           )}
           <span className="racer-level" aria-hidden="true">LV {level}</span>
-        </button>
+        </div>
       </div>
     </header>
   );

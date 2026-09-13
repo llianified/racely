@@ -23,6 +23,10 @@ const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
   ),
 });
 
+/** Satu kalimat untuk setiap penolakan server, dipakai dua kali di submit(). */
+const REJECTED =
+  "Perubahan belum dikonfirmasi. Periksa pesan kesalahan lalu coba lagi; status di sini mengikuti data server.";
+
 type ShopProps = {
   game: GameState;
   active: boolean;
@@ -52,10 +56,26 @@ function ShopContents({ game, disabled, onAction, onPending }: Omit<ShopProps, "
     onPending(true);
     setError(null);
     try {
-      if (await onAction(action)) {
-        if (action.type !== "buy-part") setTrying(false);
+      if (!(await onAction(action))) {
+        setError(REJECTED);
+        return;
+      }
+      // Kosmetik yang dibeli tapi tidak terpasang tidak mengubah apa pun di
+      // mobil, sementara pratinjau sudah menampilkannya menempel. Slot yang
+      // masih kosong karena itu langsung diisi: tidak ada part yang tergusur,
+      // dan pemain tidak menutup sheet dengan koin terpotong tanpa hasil.
+      // Slot yang sudah terisi tetap dua langkah -- mengganti part adalah
+      // keputusan tersendiri, dan catatan penggantinya sudah disiapkan.
+      if (action.type === "buy-part") {
+        if (!equipped[part.slot]) {
+          if (!(await onAction({ type: "equip-part", partId: action.partId }))) {
+            setError(REJECTED);
+            return;
+          }
+          setTrying(false);
+        }
       } else {
-        setError("Perubahan belum dikonfirmasi. Periksa pesan kesalahan lalu coba lagi; status di sini mengikuti data server.");
+        setTrying(false);
       }
     } catch {
       setError("Part belum bisa diproses. Coba lagi setelah koneksi pulih.");
@@ -76,8 +96,8 @@ function ShopContents({ game, disabled, onAction, onPending }: Omit<ShopProps, "
           <span aria-hidden="true" />
           <div><small>MODE VISUAL</small><strong>{trying ? "Pratinjau part" : "Setelan terpasang"}</strong></div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setTrying(value => !value)} aria-pressed={trying}>
-          <RotateCcw data-icon="inline-start" />{trying ? "Bandingkan" : "Coba part"}
+        <Button variant="outline" size="sm" onClick={() => setTrying(value => !value)}>
+          <RotateCcw data-icon="inline-start" />{trying ? "Lihat terpasang" : "Lihat pratinjau"}
         </Button>
       </div>
       <div className="parts-shop-content">

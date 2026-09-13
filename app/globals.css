@@ -486,7 +486,6 @@
 .brand-word { font-size: var(--fs-4xl); font-weight: var(--fw-ultra); font-style: italic; letter-spacing: var(--track-tight-3xl); line-height: var(--lh-none); }
 .brand-word > span { color: var(--accent); }
 .racer-avatar { display: flex; align-items: stretch; justify-content: center; flex-shrink: 0; min-width: var(--space-36); height: var(--space-32); overflow: hidden; border: var(--stroke) solid color-mix(in srgb, var(--primary) 55%, var(--background)); border-radius: var(--corner-2xl); background: color-mix(in srgb, var(--primary) 18%, var(--background)); color: var(--foreground); text-align: center; }
-.racer-avatar:hover { background: color-mix(in srgb, var(--primary) 30%, var(--background)); border-color: var(--primary); }
 .racer-photo, .racer-initial { width: var(--space-30); height: var(--space-30); aspect-ratio: 1; flex-shrink: 0; }
 .racer-photo { object-fit: cover; }
 .racer-initial { display: flex; align-items: center; justify-content: center; font-size: var(--fs-lead); font-weight: var(--fw-heavier); line-height: var(--lh-snug); }

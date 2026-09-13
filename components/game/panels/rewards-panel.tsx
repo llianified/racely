@@ -113,10 +113,7 @@ export function RewardsPanel({
       id: "race",
       icon: Flag,
       label: "Hasil balapan",
-      note:
-        game.pending >= 1
-          ? "Koin dari putaran yang sudah selesai."
-          : `Terkumpul ${coins(game.pending)} · butuh 1 koin penuh.`,
+      note: `Terkumpul ${coins(game.pending)} · hanya koin utuh yang masuk saldo.`,
       amount: Math.floor(game.pending),
       state: game.pending >= 1 ? "ready" : "waiting",
       onClaim: onClaimRace,

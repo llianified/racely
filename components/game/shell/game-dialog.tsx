@@ -49,7 +49,7 @@ function WelcomeBack({
       <div className="welcome-haul">
         <span>Koin offline</span>
         <strong>+{coins(offline.coins)}</strong>
-        <small>Koin pending. Klaim di panel Balapan.</small>
+        <small>Masuk ke koin belum diklaim.</small>
       </div>
       <dl className="welcome-stats">
         <div>

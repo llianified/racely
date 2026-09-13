@@ -139,7 +139,7 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
   const arena = key === "engine"
     ? { label: "Akselerasi", now: `${seconds(Math.log(10) / currentPowertrain.accelerationRate)} d`, next: `${seconds(Math.log(10) / nextPowertrain.accelerationRate)} d` }
     : key === "tires"
-      ? { label: "Grip", now: `−${currentGrip.drainReductionPercent}%`, next: `−${nextGrip.drainReductionPercent}%` }
+      ? { label: "Grip", now: `${currentGrip.drainReductionPercent}%`, next: `${nextGrip.drainReductionPercent}%` }
       : { label: "Boost", now: `${seconds(currentPowertrain.boostCapacitySeconds)} d`, next: `${seconds(nextPowertrain.boostCapacitySeconds)} d` };
 
   const install = async () => {
@@ -208,8 +208,8 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
               <div className="flex flex-wrap items-center justify-between gap-sm border-t border-border p-md">
                 <span aria-live="polite">{showAfter ? "Setelah" : "Sebelum"} · Lv. {showAfter ? nextLevel : level}</span>
                 <div className="flex flex-wrap gap-sm">
-                  <Button variant="outline" size="sm" onClick={() => setShowAfter(value => !value)} aria-pressed={showAfter}>{showAfter ? "Lihat sebelum" : "Lihat setelah"}</Button>
-                  <Button variant="outline" size="sm" onClick={() => setInspect(value => !value)} aria-pressed={inspect}>{inspect ? "Pasang bodi" : "Lepas bodi"}</Button>
+                  <Button variant="outline" size="sm" onClick={() => setShowAfter(value => !value)}>{showAfter ? "Lihat sebelum" : "Lihat setelah"}</Button>
+                  <Button variant="outline" size="sm" onClick={() => setInspect(value => !value)}>{inspect ? "Pasang bodi" : "Lepas bodi"}</Button>
                 </div>
               </div>
             </div>
