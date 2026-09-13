@@ -223,7 +223,7 @@ export function RewardsPanel({
                 <strong>{formatCoins(row.amount)} <span>koin</span></strong>
                 {row.state === "ready" ? (
                   <Button
-                    variant="gold"
+                    variant="goldSoft"
                     disabled={disabled}
                     onClick={row.onClaim}
                     aria-label={`Klaim ${row.label}`}
@@ -287,7 +287,7 @@ export function RewardsPanel({
                 <strong>{formatCoins(row.amount)} <span>koin</span></strong>
                 {row.state === "ready" ? (
                   <Button
-                    variant="gold"
+                    variant="goldSoft"
                     disabled={disabled}
                     onClick={row.onClaim}
                     aria-label={`Klaim ${row.label}`}
