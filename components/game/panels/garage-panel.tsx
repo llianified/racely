@@ -205,7 +205,7 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
             </div>
           </div>
           <div className="border-b border-border bg-background px-md py-md text-foreground">
-            <div className="overflow-hidden rounded-(--corner-panel) border border-border">
+            <div className="overflow-hidden rounded-(--corner-box) border border-border">
               <div className="h-(--stage-inspect-h)" role="img" aria-label={`${showAfter ? "Setelah" : "Sebelum"} modifikasi ${title}, level ${showAfter ? nextLevel : level}${inspect ? ", bodi dilepas" : ""}. Geser untuk memutar.`}>
                 {open && <CarPreviewScene color={game.color} equipped={game.bodyParts?.equipped} model={game.carSelection?.model ?? "neo-falcon"} levels={showAfter ? { ...game.levels, [key]: nextLevel } : game.levels} inspect={inspect} />}
               </div>
