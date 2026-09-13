@@ -137,26 +137,24 @@ export function BodyPartsShop({ game, active, disabled, onAction }: ShopProps) {
   const ownedCount = game.bodyParts?.owned.length ?? 0;
   const equippedCount = Object.keys(game.bodyParts?.equipped ?? {}).length;
   return <Sheet open={open && active} onOpenChange={value => { if (!pending.current) setOpen(value); }}>
-    <section className="panel garage-parts" aria-label="Aero kit">
+    <section id="aero-kit" tabIndex={-1} className="panel garage-parts" aria-label="Aero kit">
       <SectionCardHeading
         icon={Wind}
         title="Aero kit"
-        level={3}
-        className="garage-parts-heading"
-        aside={<Badge variant="secondary">{equippedCount} / {PART_SLOTS.length} aktif</Badge>}
+        aside={<Badge variant="secondary">{equippedCount}/{PART_SLOTS.length} terpasang</Badge>}
       />
-      <p className="garage-parts-note">{ownedCount} dari {PART_IDS.length} part sudah masuk koleksi.</p>
-      <dl className="garage-parts-slots" aria-label="Slot aero kit terpasang">
+      <dl className="garage-parts-slots" aria-label="Slot aero kit">
         {PART_SLOTS.map(slot => {
           const id = game.bodyParts?.equipped[slot];
           return <div key={slot} data-fitted={Boolean(id)}>
-            <dt><span aria-hidden="true" />{SLOT_LABELS[slot]}</dt>
-            <dd><strong>{id ? PART_CATALOG[id].name : "Part bawaan"}</strong><span>{id ? <><Check aria-hidden="true" />Aktif</> : "Setelan pabrik"}</span></dd>
+            <dt>{SLOT_LABELS[slot]}</dt>
+            <dd>{id ? <><Check aria-hidden="true" /><strong>{PART_CATALOG[id].name}</strong></> : <span>Bawaan</span>}</dd>
           </div>;
         })}
       </dl>
-      <div className="pt-lg">
-        <SheetTrigger render={<Button variant="gold" className="w-full" disabled={disabled} />}><ShoppingBag data-icon="inline-start" />Buka toko</SheetTrigger>
+      <div className="garage-parts-foot">
+        <p><strong>{ownedCount}/{PART_IDS.length}</strong> part dimiliki · kosmetik, tidak memengaruhi kecepatan</p>
+        <SheetTrigger render={<Button variant="gold" size="sm" disabled={disabled} />}><ShoppingBag data-icon="inline-start" />Buka toko</SheetTrigger>
       </div>
     </section>
     <SheetContent side="bottom" className="game-sheet">

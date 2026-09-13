@@ -217,18 +217,25 @@
   --space-xl: var(--space-24);
   --gutter: var(--space-md);
 }
-.garage-parts { padding: var(--space-md); background: color-mix(in srgb, var(--background) 22%, var(--card)); font-size: var(--fs-body); line-height: var(--lh-normal); }
-.garage-parts-note { margin-top: var(--space-3); font-size: var(--fs-small); color: var(--muted-foreground); text-wrap: pretty; }
+/* ── aero kit (garasi) ─ kepala · 4 sel slot · kaki koleksi + tombol ──────
+   Sel slot meniru .upgrade-specs di Bengkel supaya kedua panel garasi terasa
+   satu alat. Status terpasang dibaca dari garis emas + centang, tanpa baris
+   teks tambahan. */
+.garage-parts { padding: var(--space-md); font-size: var(--fs-body); line-height: var(--lh-normal); }
 .garage-parts-slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-sm); margin-top: var(--space-md); }
-.garage-parts-slots > div { min-width: 0; padding: var(--space-10); border: var(--stroke) solid var(--border); border-radius: var(--corner-md); background: var(--card); }
-.garage-parts-slots > div[data-fitted='true'] { border-color: color-mix(in srgb, var(--accent) 48%, var(--border)); background: color-mix(in srgb, var(--secondary) 72%, var(--card)); }
-.garage-parts-slots dt { display: flex; align-items: center; gap: var(--space-6); font-size: var(--fs-small); color: var(--muted-foreground); }
-.garage-parts-slots dt > span { width: var(--space-6); height: var(--space-6); border-radius: var(--corner-round); background: var(--muted-foreground); }
-.garage-parts-slots [data-fitted='true'] dt > span { background: var(--accent); }
-.garage-parts-slots dd { display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-6); min-width: 0; }
-.garage-parts-slots dd > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--foreground); }
-.garage-parts-slots dd > span { display: flex; align-items: center; gap: var(--space-3); color: var(--muted-foreground); font-size: var(--fs-micro); }
+.garage-parts-slots > div { min-width: 0; padding: var(--space-6) var(--space-10); border: var(--stroke) solid var(--border); border-radius: var(--corner-sm); background: color-mix(in srgb, var(--background) 28%, var(--card)); }
+.garage-parts-slots > div[data-fitted='true'] { border-color: color-mix(in srgb, var(--accent) 48%, var(--border)); }
+.garage-parts-slots dt { color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-semibold); letter-spacing: var(--track-caps-sm); text-transform: uppercase; white-space: nowrap; }
+.garage-parts-slots dd { display: flex; align-items: center; gap: var(--space-xs); min-width: 0; margin-top: var(--space-2); line-height: var(--lh-snug); }
+.garage-parts-slots dd > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--foreground); font-weight: var(--fw-bold); }
+.garage-parts-slots dd > span { color: var(--muted-foreground); }
 .garage-parts-slots dd svg { width: var(--icon-xs); height: var(--icon-xs); color: var(--accent); flex-shrink: 0; }
+/* Kaki menempel ke tepi kartu (margin negatif menelan padding .garage-parts)
+   supaya garis pemisahnya penuh dari sisi ke sisi, seperti kaki .game-sheet. */
+.garage-parts-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); margin: var(--space-md) calc(var(--space-md) * -1) calc(var(--space-md) * -1); padding: var(--space-sm) var(--space-md); border-top: var(--stroke) solid var(--border); border-radius: 0 0 var(--corner-panel) var(--corner-panel); background: color-mix(in srgb, var(--background) 34%, var(--card)); }
+.garage-parts-foot > p { min-width: 0; font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); text-wrap: pretty; }
+.garage-parts-foot > p > strong { color: var(--foreground); font-variant-numeric: tabular-nums; }
+.garage-parts-foot > [data-slot='button'] { flex-shrink: 0; }
 .parts-shop-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); }
 .parts-shop-heading > div { min-width: 0; }
 .parts-shop-heading h3 { margin-top: var(--space-3); font-size: var(--fs-lead); font-weight: var(--fw-heavy); }
@@ -732,16 +739,19 @@
 .reward-row-copy { min-width: 0; }
 .reward-row-copy h3 { font-size: var(--fs-body); font-weight: var(--fw-heavy); line-height: var(--lh-normal); }
 .reward-row-copy p { margin-top: var(--space-xs); font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); }
-.reward-row-copy .mission-progress { margin-top: var(--space-md); }
-/* Beberapa bar bertumpuk dalam satu daftar: hitungannya dikunci lebarnya
-   supaya semua bar berhenti di garis yang sama, bukan rata-rata kanan. */
-.reward-row-copy .mission-progress > span { min-width: var(--mission-count-w); text-align: right; }
-.reward-row-copy [data-slot='progress-track'] { background: var(--background); height: var(--space-5); }
 .reward-row-action { grid-column: 2; display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); min-width: 0; margin: var(--space-md) 0; padding: var(--space-10); border: var(--stroke) solid var(--border); border-radius: var(--corner-panel); background: var(--secondary); }
 .reward-row-action > strong { font-size: var(--fs-lead); font-weight: var(--fw-heavy); color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .reward-row-action > strong > span { font-size: var(--fs-micro); font-weight: var(--fw-medium); color: var(--muted-foreground); }
 .reward-row-action > button { min-width: var(--withdraw-action-w); min-height: var(--claim-action-h); height: var(--claim-action-h); }
 .reward-row.is-claimed .reward-row-action > strong { color: var(--muted-foreground); }
+
+/* Misi memakai .reward-row yang sama; hanya bar progres yang ditambahkan di
+   bawah keterangan. Hitungannya dikunci lebarnya supaya semua bar dalam satu
+   daftar berhenti di garis yang sama, bukan rata-rata kanan. */
+.reward-row-copy .mission-progress { margin-top: var(--space-md); }
+.reward-row-copy .mission-progress > span { min-width: var(--mission-count-w); text-align: right; }
+.reward-row-copy [data-slot='progress-track'] { background: var(--background); height: var(--space-5); }
+.reward-row.is-ready [data-slot='progress-indicator'] { background: var(--accent); }
 
 /* ── dompet ────────────────────────────────────────── */
 .wallet-hero { overflow: hidden; border: var(--stroke) solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: var(--radius); background: var(--card); }
@@ -872,9 +882,14 @@
 .circuit-row:focus-visible { outline: var(--focus-w) solid var(--accent); outline-offset: var(--focus-offset); }
 
 /* ── kartu ajak teman ───────────────���─────────���────── */
+/* ── ajak teman ─ halaman sendiri: hero · kartu link · langkah ─────────── */
 .referral-card { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-md) var(--gutter); }
-.referral-note { font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); }
 .referral-link { display: block; overflow-wrap: anywhere; padding: var(--space-md); border: var(--stroke) solid var(--border); border-radius: var(--corner-panel); background: var(--secondary); color: var(--accent); font-size: var(--fs-small); line-height: var(--lh-base); }
+.referral-steps { display: flex; flex-direction: column; gap: var(--space-md); }
+.referral-steps > li { display: grid; grid-template-columns: var(--space-28) minmax(0, 1fr); column-gap: var(--space-md); align-items: start; }
+.referral-steps > li > span { display: grid; place-items: center; width: var(--space-28); height: var(--space-28); border: var(--stroke) solid color-mix(in srgb, var(--accent) 48%, var(--border)); border-radius: var(--corner-round); color: var(--accent); font-size: var(--fs-small); font-weight: var(--fw-heavy); font-variant-numeric: tabular-nums; }
+.referral-steps h3 { font-size: var(--fs-body); font-weight: var(--fw-heavy); line-height: var(--lh-normal); }
+.referral-steps p { margin-top: var(--space-2); font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); text-wrap: pretty; }
 
 /* ── dialog selamat datang kembali (hasil offline) ─── */
 .welcome-back { display: flex; flex-direction: column; gap: var(--space-md); }

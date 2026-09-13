@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarCheck, Check, Coins, Copy, Flag, Gift, LockKeyhole, Trophy, UserPlus } from "lucide-react";
+import { CalendarCheck, Check, Coins, Flag, Gift, LockKeyhole, Trophy, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -17,14 +17,33 @@ import {
   type MissionId,
 } from "@/lib/game";
 
+type RowState = "ready" | "waiting" | "claimed";
+
 type RewardRow = {
   id: string;
   icon: typeof Gift;
   label: string;
   note: string;
   amount: number;
-  state: "ready" | "waiting" | "claimed";
-  progress?: { value: number; target: number };
+  state: RowState;
+  onClaim: () => void;
+};
+
+const MISSION_ICONS: Record<MissionId, typeof Gift> = {
+  laps: Flag,
+  upgrade: Wrench,
+  earn: Coins,
+};
+
+type MissionRow = {
+  id: MissionId;
+  icon: typeof Gift;
+  label: string;
+  note: string;
+  amount: number;
+  state: RowState;
+  value: number;
+  target: number;
   onClaim: () => void;
 };
 
@@ -57,45 +76,17 @@ function dailyNote(daily: GameState["daily"], economy: GameState["economy"]) {
     : "Klaim tiap hari untuk tambahan koin.";
 }
 
-function ReferralCard({
-  referral,
-  economy,
-  onInvite,
-  disabled,
-}: {
-  referral: GameState["referral"];
-  economy: GameState["economy"];
-  onInvite: () => void;
-  disabled: boolean;
-}) {
-  return (
-    <section className="panel referral-card" aria-label="Ajak teman">
-      <SectionCardHeading
-        icon={UserPlus}
-        title="Ajak teman"
-        aside={
-          <Badge variant="secondary">
-            {referral.invited} diajak · {coins(referral.earned)} didapat
-          </Badge>
-        }
-      />
-      <p className="referral-note">
-        Kamu dapat {coins(economy.referralRewardInviter)} dan temanmu{" "}
-        {coins(economy.referralRewardInvitee)} begitu dia menyelesaikan{" "}
-        {economy.referralMilestoneLaps} putaran. Koinnya masuk saat dia benar-benar
-        main, bukan saat daftar.
-      </p>
-      <code className="referral-link">{referral.link}</code>
-      <Button
-        variant="outline"
-        className="w-full"
-        disabled={disabled || !referral.link}
-        onClick={onInvite}
-      >
-        <Copy data-icon="inline-start" />
-        Salin link ajakan
-      </Button>
-    </section>
+function RowStatus({ state }: { state: Exclude<RowState, "ready"> }) {
+  return state === "claimed" ? (
+    <span className="mission-status">
+      <Check size={14} aria-hidden="true" />
+      Diklaim
+    </span>
+  ) : (
+    <span className="mission-status">
+      <LockKeyhole size={14} aria-hidden="true" />
+      Belum siap
+    </span>
   );
 }
 
@@ -106,7 +97,6 @@ export function RewardsPanel({
   onClaimGift,
   onClaimMission,
   onClaimAll,
-  onInvite,
   disabled = false,
 }: {
   game: GameState;
@@ -115,19 +105,18 @@ export function RewardsPanel({
   onClaimGift: () => void;
   onClaimMission: (id: MissionId) => void;
   onClaimAll: () => void;
-  onInvite: () => void;
   disabled?: boolean;
 }) {
   const total = claimableTotal(game);
-  const rows: RewardRow[] = [
+  const rewards: RewardRow[] = [
     {
       id: "race",
       icon: Flag,
       label: "Hasil balapan",
       note:
         game.pending >= 1
-          ? "Koin dari putaran yang sudah selesai"
-          : `Terkumpul ${coins(game.pending)} · butuh 1 koin penuh`,
+          ? "Koin dari putaran yang sudah selesai."
+          : `Terkumpul ${coins(game.pending)} · butuh 1 koin penuh.`,
       amount: Math.floor(game.pending),
       state: game.pending >= 1 ? "ready" : "waiting",
       onClaim: onClaimRace,
@@ -145,27 +134,33 @@ export function RewardsPanel({
       id: "gift",
       icon: Gift,
       label: "Bonus starter",
-      note: game.rewardClaimed ? "Bonus sudah masuk ke saldo kamu." : "Hadiah pertamamu. Sekali klaim, langsung masuk saldo.",
+      note: game.rewardClaimed
+        ? "Bonus sudah masuk ke saldo kamu."
+        : "Hadiah pertamamu. Sekali klaim, langsung masuk saldo.",
       amount: game.economy.starterGift,
       state: game.rewardClaimed ? "claimed" : "ready",
       onClaim: onClaimGift,
     },
-    ...missions(game.economy).map((mission) => {
-      const value = Math.min(mission.target, missionValue(game, mission.id));
-      const claimed = game.missionsClaimed.includes(mission.id);
-      return {
-        id: mission.id,
-        icon: Trophy,
-        label: mission.title,
-        note: mission.description,
-        amount: mission.reward,
-        state: claimed ? "claimed" : value >= mission.target ? "ready" : "waiting",
-        progress: value >= mission.target ? undefined : { value, target: mission.target },
-        onClaim: () => onClaimMission(mission.id),
-      } satisfies RewardRow;
-    }),
   ];
-  const readyCount = rows.filter((row) => row.state === "ready").length;
+  const missionRows: MissionRow[] = missions(game.economy).map((mission) => {
+    const value = Math.min(mission.target, missionValue(game, mission.id));
+    const claimed = game.missionsClaimed.includes(mission.id);
+    return {
+      id: mission.id,
+      icon: MISSION_ICONS[mission.id],
+      label: mission.title,
+      note: mission.description,
+      amount: mission.reward,
+      state: claimed ? "claimed" : value >= mission.target ? "ready" : "waiting",
+      value: claimed ? mission.target : value,
+      target: mission.target,
+      onClaim: () => onClaimMission(mission.id),
+    };
+  });
+  const readyCount =
+    rewards.filter((row) => row.state === "ready").length +
+    missionRows.filter((row) => row.state === "ready").length;
+  const missionsDone = missionRows.filter((row) => row.state === "claimed").length;
 
   return (
     <div className="rewards-layout section-enter flex flex-col gap-lg">
@@ -190,28 +185,23 @@ export function RewardsPanel({
           </Button>
         }
         stats={[
-          { label: "Menunggu", value: `${readyCount} hadiah` },
+          { label: "Item siap", value: `${readyCount} item` },
           { label: "Streak harian", value: `${game.daily.streak} hari` },
         ]}
       />
 
-      <ReferralCard
-        referral={game.referral}
-        economy={game.economy}
-        onInvite={onInvite}
-        disabled={disabled}
-      />
-
-      <section className="panel rewards-list-panel" aria-label="Rincian hadiah">
+      <section className="panel rewards-list-panel" aria-label="Hadiah">
         <SectionCardHeading
           icon={Gift}
-          title="Rincian hadiah"
+          title="Hadiah"
           aside={
-            <Badge variant="secondary">{game.missionsClaimed.length}/{missions(game.economy).length} misi diklaim</Badge>
+            <Badge variant="secondary">
+              {rewards.filter((row) => row.state === "ready").length} siap
+            </Badge>
           }
         />
         <ul className="reward-list">
-          {rows.map((row) => (
+          {rewards.map((row) => (
             <li
               key={row.id}
               id={row.id === "gift" ? "starter-gift" : `reward-${row.id}`}
@@ -228,28 +218,10 @@ export function RewardsPanel({
               <div className="reward-row-copy">
                 <h3>{row.label}</h3>
                 <p>{row.note}</p>
-                {row.progress && (
-                  <div className="mission-progress">
-                    <Progress
-                      value={(row.progress.value / row.progress.target) * 100}
-                      aria-label={row.note}
-                      className="flex-1"
-                    />
-                    <span>
-                      {row.progress.value.toLocaleString("id-ID")}/
-                      {row.progress.target.toLocaleString("id-ID")}
-                    </span>
-                  </div>
-                )}
               </div>
               <div className="reward-row-action">
                 <strong>{formatCoins(row.amount)} <span>koin</span></strong>
-                {row.state === "claimed" ? (
-                  <span className="mission-status">
-                    <Check size={14} aria-hidden="true" />
-                    Diklaim
-                  </span>
-                ) : row.state === "ready" ? (
+                {row.state === "ready" ? (
                   <Button
                     variant="gold"
                     disabled={disabled}
@@ -259,10 +231,71 @@ export function RewardsPanel({
                     Klaim
                   </Button>
                 ) : (
-                  <span className="mission-status">
-                    <LockKeyhole size={14} aria-hidden="true" />
-                    Belum siap
+                  <RowStatus state={row.state} />
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section
+        id="missions"
+        tabIndex={-1}
+        className="panel rewards-list-panel"
+        aria-label="Misi"
+      >
+        <SectionCardHeading
+          icon={Trophy}
+          title="Misi"
+          aside={
+            <Badge variant="secondary">
+              {missionsDone}/{missionRows.length} selesai
+            </Badge>
+          }
+        />
+        <ul className="reward-list">
+          {missionRows.map((row) => (
+            <li
+              key={row.id}
+              id={`reward-${row.id}`}
+              tabIndex={-1}
+              className={cn(
+                "reward-row",
+                row.state === "ready" && "is-ready",
+                row.state === "claimed" && "is-claimed",
+              )}
+            >
+              <span className="reward-row-icon" aria-hidden="true">
+                <row.icon />
+              </span>
+              <div className="reward-row-copy">
+                <h3>{row.label}</h3>
+                <p>{row.note}</p>
+                <div className="mission-progress">
+                  <Progress
+                    value={(row.value / row.target) * 100}
+                    aria-label={`${row.label}: ${row.value.toLocaleString("id-ID")} dari ${row.target.toLocaleString("id-ID")}`}
+                    className="flex-1"
+                  />
+                  <span>
+                    {row.value.toLocaleString("id-ID")}/{row.target.toLocaleString("id-ID")}
                   </span>
+                </div>
+              </div>
+              <div className="reward-row-action">
+                <strong>{formatCoins(row.amount)} <span>koin</span></strong>
+                {row.state === "ready" ? (
+                  <Button
+                    variant="gold"
+                    disabled={disabled}
+                    onClick={row.onClaim}
+                    aria-label={`Klaim ${row.label}`}
+                  >
+                    Klaim
+                  </Button>
+                ) : (
+                  <RowStatus state={row.state} />
                 )}
               </div>
             </li>
