@@ -8,8 +8,7 @@ import { Button } from "@/components/ui/button";
 import { batteryTelemetry, coins, formatCoins, lapReward, lapSeconds, raceOpponentLapSeconds, racePosition, type GameState } from "@/lib/game";
 import { RaceOverviewHud, RacePositionHud } from "./race-overview-hud";
 import { cn } from "@/lib/utils";
-import { createDrivingState, resetGripChallenge } from "@/lib/race-dynamics";
-import { GripChallenge } from "./grip-challenge";
+import { createDrivingState } from "@/lib/race-dynamics";
 import { RaceSwitch, SettingRow } from "./setting-row";
 
 const RaceScene = dynamic(() => import("../scene/race-scene"), {
@@ -167,11 +166,6 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
         </div>
         <div className="race-settings-group" role="group" aria-labelledby={`${settingsId}-sim`}>
           <h3 className="race-settings-title" id={`${settingsId}-sim`}>Simulasi arena <small>Hanya tampilan</small></h3>
-          {!inspect && <GripChallenge state={telemetry} tires={game.levels.tires} ceiling={game.economy.maxUpgradeLevel} onToggle={() => {
-            const enabled = !driving.current.enabled;
-            resetGripChallenge(driving.current, enabled);
-            setTelemetry({ ...driving.current });
-          }} />}
           <SettingRow label="Inspeksi mobil" hint={inspect ? 'Sedang melihat sasis' : 'Putar mobil, lihat sasis & baterai'}>
             <Button variant="outline" size="sm" aria-pressed={inspect} onClick={() => {
               setInspect(value => !value);
@@ -179,7 +173,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
             }}>{inspect ? "Kembali balapan" : "Lihat sasis"}</Button>
           </SettingRow>
         </div>
-        <p className="race-settings-note">Laju, RPM, energi, dan grip di arena hanya simulasi. Lap dan koin tetap mengikuti server.</p>
+        <p className="race-settings-note">Laju, RPM, dan energi di arena hanya simulasi. Lap dan koin tetap mengikuti server.</p>
       </section>
     </section>
   );
