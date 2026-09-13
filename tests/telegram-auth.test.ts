@@ -206,9 +206,9 @@ describe("Preview bypass gating", () => {
     }
   });
 
-  it("is on by default in development, on any preview host", () => {
+  it("needs an explicit opt-in, on any preview host", () => {
     vi.stubEnv("NODE_ENV", "development");
-    vi.stubEnv("RACELY_ENABLE_PREVIEW", "");
+    vi.stubEnv("RACELY_ENABLE_PREVIEW", "true");
     expect(isPreviewBypassAllowed(localRequest())).toBe(true);
     expect(
       isPreviewBypassAllowed(new Request("http://127.0.0.1:3000/api/game")),
@@ -220,10 +220,15 @@ describe("Preview bypass gating", () => {
     ).toBe(true);
   });
 
-  it("can still be switched off explicitly in development", () => {
+  // Gagal-tertutup: yang dilonggarkan gerbang ini adalah autentikasi pemain,
+  // jadi flag yang hilang atau salah eja harus berarti gerbangnya tetap
+  // terkunci -- bukan terbuka. `.env.development` yang menyalakannya di dev.
+  it("stays off in development for anything that is not exactly \"true\"", () => {
     vi.stubEnv("NODE_ENV", "development");
-    vi.stubEnv("RACELY_ENABLE_PREVIEW", "false");
-    expect(isPreviewBypassAllowed(localRequest())).toBe(false);
+    for (const flag of ["", "false", "1", "TRUE", "yes"] as const) {
+      vi.stubEnv("RACELY_ENABLE_PREVIEW", flag);
+      expect(isPreviewBypassAllowed(localRequest())).toBe(false);
+    }
   });
 
   it("never shadows a real Telegram session, even in development", () => {
