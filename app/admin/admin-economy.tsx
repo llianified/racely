@@ -135,6 +135,13 @@ const GROUPS: Group[] = [
     ],
   },
   {
+    legend: "Lawan",
+    fields: [
+      { key: "rivalTrackingStrength", label: "Lawan mengikuti level pemain", hint: "0 = statis seperti dulu", step: "0.05" },
+      { key: "rivalDailyJitter", label: "Goyangan level harian", hint: "level", step: "1" },
+    ],
+  },
+  {
     legend: "Pagar penarikan",
     fields: [
       { key: "withdrawFeePct", label: "Biaya penarikan", hint: "persen", step: "0.5" },

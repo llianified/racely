@@ -119,6 +119,15 @@ export type EconomyConfig = {
    * menyatakan "mati" maupun "sebesar ini".
    */
   dailyEmissionBudgetIdr: number;
+
+  /**
+   * Seberapa dekat lawan mengikuti level pemain. 0 mengembalikan lawan statis
+   * seperti sebelumnya -- dipakai test kompatibilitas, dan jalan keluar kalau
+   * rival adaptif ternyata terasa menghukum.
+   */
+  rivalTrackingStrength: number;
+  /** Goyangan level lawan per hari, supaya balapan tidak terasa sama tiap hari. */
+  rivalDailyJitter: number;
 };
 
 /**
@@ -188,6 +197,9 @@ export const DEFAULT_ECONOMY: EconomyConfig = {
   withdrawMinAccountAgeDays: 7,
 
   dailyEmissionBudgetIdr: 500_000,
+
+  rivalTrackingStrength: 0.9,
+  rivalDailyJitter: 2,
 };
 
 /** Batas maksimum level upgrade yang boleh dipilih tanpa migrasi baru. */
@@ -270,6 +282,9 @@ export const economyConfigSchema = z
     withdrawMinAccountAgeDays: days,
 
     dailyEmissionBudgetIdr: z.number().int().min(0).max(1_000_000_000_000),
+
+    rivalTrackingStrength: rate,
+    rivalDailyJitter: z.number().int().min(0).max(30),
   })
   .strict()
   .refine((value) => value.maxWithdrawCoins >= value.minWithdrawCoins, {
@@ -427,23 +442,121 @@ export const lapRewardAt = (
       100,
   ) / 100;
 
+/**
+ * Hari balapan berganti tengah malam WIB, bukan UTC. Tanpa ini pemain Indonesia
+ * kehilangan atau mendapat satu hari ekstra tiap kali melewati jam 07:00 pagi.
+ *
+ * Tinggal di berkas ini, bukan di `game-economy.ts`, karena rival harian butuh
+ * seed yang diturunkan darinya sementara `game-economy.ts` mengimpor
+ * `game.ts` -- menaruhnya di sana membuat lingkarannya tertutup.
+ */
+export const RACING_DAY_OFFSET_MINUTES = 7 * 60;
+
+/** Kunci hari balapan, "YYYY-MM-DD" menurut WIB. */
+export function racingDayKey(now: Date) {
+  return new Date(now.getTime() + RACING_DAY_OFFSET_MINUTES * 60_000)
+    .toISOString()
+    .slice(0, 10);
+}
+
+/** Seed harian yang dihitung identik di server dan client. */
+export const racingDaySeed = (now: Date) => hashSeed(racingDayKey(now));
+
 export type RacePosition = 1 | 2 | 3;
 
-const rivalLevelsAt = (e: EconomyConfig, circuit: number) => {
+/**
+ * Hash 32-bit deterministik untuk seed harian. Bukan kriptografi -- yang
+ * dibutuhkan hanya "sama untuk hari yang sama, berbeda untuk hari berbeda",
+ * dan itu harus dihitung ulang identik di server maupun client.
+ */
+export function hashSeed(value: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+/** Angka 0..1 dari sebuah seed; langkah berbeda memberi arus yang berbeda. */
+const seededUnit = (seed: number, step: number) => {
+  let value = (seed + step * 0x9e3779b9) >>> 0;
+  value ^= value >>> 15;
+  value = Math.imul(value, 0x2c1b3c6d);
+  value ^= value >>> 12;
+  value = Math.imul(value, 0x297a2d39);
+  value ^= value >>> 15;
+  return (value >>> 0) / 0x100000000;
+};
+
+/** Jumlah mentah ketiga level; 3 saat semuanya level 1. */
+export const levelSum = (levels: Record<UpgradeKey, number>) =>
+  levels.engine + levels.tires + levels.battery;
+
+/** Membagi total level ke tiga komponen, masing-masing dibatasi maxUpgradeLevel. */
+function splitLevels(e: EconomyConfig, total: number) {
+  const levels = { engine: 1, tires: 1, battery: 1 };
+  const order: UpgradeKey[] = ["engine", "tires", "battery"];
+  let sisa = Math.max(0, total - 3);
+  // Berputar supaya kelebihan tidak menumpuk di satu komponen saat salah satu
+  // sudah mentok di batas level.
+  for (let putaran = 0; putaran < e.maxUpgradeLevel * 3 && sisa > 0; putaran += 1) {
+    const key = order[putaran % 3];
+    if (levels[key] >= e.maxUpgradeLevel) continue;
+    levels[key] += 1;
+    sisa -= 1;
+  }
+  return levels;
+}
+
+/**
+ * Level lawan. Dengan `rivalTrackingStrength` 0 hasilnya persis tangga tetap
+ * yang lama -- itu yang dikunci test kompatibilitas. Di atas 0, lawan mengikuti
+ * level pemain sehingga upgrade terasa seperti menyalip, bukan seperti
+ * meninggalkan lawan yang sudah lama tertinggal.
+ */
+export const rivalLevelsAt = (
+  e: EconomyConfig,
+  circuit: number,
+  /** Jumlah mentah ketiga level pemain (3 saat semuanya level 1), bukan totalLevel(). */
+  playerTotalLevel = 0,
+  daySeed = 0,
+) => {
   const tier = circuit > 0 ? 1 : 0;
   const level = (value: number) => Math.min(e.maxUpgradeLevel, value);
-  return [
+  const statis = [
     { engine: level(3 + tier), tires: level(1 + tier), battery: 1 },
     { engine: level(1 + tier), tires: level(2 + tier), battery: 1 },
   ] as const;
+  if (e.rivalTrackingStrength <= 0) return statis;
+
+  const atap = e.maxUpgradeLevel * 3;
+  return [0, 1].map((index) => {
+    const goyang =
+      e.rivalDailyJitter > 0
+        ? Math.round((seededUnit(daySeed, index + 1) * 2 - 1) * e.rivalDailyJitter)
+        : 0;
+    // Yang memimpin sedikit di atas pemain, yang mengejar sedikit di bawah:
+    // tanpa itu, posisi P1 dan P3 tidak pernah berganti sepanjang hari.
+    const condong = index === 0 ? 1 : -1;
+    const target = Math.round(
+      playerTotalLevel * e.rivalTrackingStrength + goyang + condong,
+    );
+    return splitLevels(e, Math.min(atap, Math.max(3, target)));
+  }) as unknown as readonly [
+    Record<UpgradeKey, number>,
+    Record<UpgradeKey, number>,
+  ];
 };
 
 /** Waktu lawan tetap server-derived; model atau input client tidak memengaruhinya. */
 export const raceOpponentLapSecondsAt = (
   e: EconomyConfig,
   circuit: number,
+  playerTotalLevel = 0,
+  daySeed = 0,
 ): readonly [number, number] => {
-  const [leader, chaser] = rivalLevelsAt(e, circuit);
+  const [leader, chaser] = rivalLevelsAt(e, circuit, playerTotalLevel, daySeed);
   return [
     lapSecondsAt(e, leader, false),
     lapSecondsAt(e, chaser, false),
@@ -455,11 +568,16 @@ export const racePositionAt = (
   levels: Record<UpgradeKey, number>,
   circuit: number,
   boosted: boolean,
+  playerTotalLevel = 0,
+  daySeed = 0,
 ): RacePosition => {
   const playerSeconds = lapSecondsAt(e, levels, boosted);
-  const losses = raceOpponentLapSecondsAt(e, circuit).filter(
-    (opponentSeconds) => opponentSeconds < playerSeconds,
-  ).length;
+  const losses = raceOpponentLapSecondsAt(
+    e,
+    circuit,
+    playerTotalLevel,
+    daySeed,
+  ).filter((opponentSeconds) => opponentSeconds < playerSeconds).length;
   return (losses + 1) as RacePosition;
 };
 
@@ -468,8 +586,17 @@ export const raceRewardAt = (
   levels: Record<UpgradeKey, number>,
   circuit: number,
   boosted: boolean,
+  playerTotalLevel = 0,
+  daySeed = 0,
 ) => {
-  const position = racePositionAt(e, levels, circuit, boosted);
+  const position = racePositionAt(
+    e,
+    levels,
+    circuit,
+    boosted,
+    playerTotalLevel,
+    daySeed,
+  );
   const multiplier = 1 + (2 - position) * e.racePositionRewardStep;
   return (
     Math.round(lapRewardAt(e, levels.battery, circuit) * multiplier * 100) /

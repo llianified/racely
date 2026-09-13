@@ -1,5 +1,6 @@
 import {
   lapScrapAt,
+  levelSum,
   lapSecondsAt,
   raceRewardAt,
   upgradeCostAt,
@@ -57,7 +58,16 @@ function rowFor(
   circuit: number,
 ): PayoutRow {
   const secondsPerLap = lapSecondsAt(e, levels, false);
-  const coinsPerLap = raceRewardAt(e, levels, circuit, false);
+  // Level pemain wajib diteruskan: tanpa itu lawan mengecil ke batas bawah dan
+  // proyeksi memakai hadiah P1 untuk semua orang. Goyangan harian dimatikan --
+  // proyeksi harus menjawab "berapa biasanya", bukan "berapa hari ini".
+  const coinsPerLap = raceRewardAt(
+    { ...e, rivalDailyJitter: 0 },
+    levels,
+    circuit,
+    false,
+    levelSum(levels),
+  );
   const lapsPerHour = secondsPerLap > 0 ? 3600 / secondsPerLap : 0;
   const coinsPerHour = lapsPerHour * coinsPerLap;
   const scrapPerLap = lapScrapAt(e, levels, circuit);

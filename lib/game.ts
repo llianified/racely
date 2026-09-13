@@ -5,9 +5,11 @@ import {
   DEFAULT_ECONOMY,
   boostCooldownSeconds,
   lapSecondsAt,
+  levelSum,
   raceOpponentLapSecondsAt,
   racePositionAt,
   raceRewardAt,
+  racingDaySeed,
   upgradeCostAt,
   type EconomyConfig,
   type RacePosition,
@@ -220,6 +222,11 @@ export const lapReward = (
     s.levels,
     s.circuit,
     s.boostLeft > 0,
+    levelSum(s.levels),
+    // Seed berganti sekali sehari, jadi memanggil jam sekarang di sini aman:
+    // server dan client menghitung kunci hari yang sama kecuali dalam hitungan
+    // detik di sekitar tengah malam WIB, dan sync berikutnya merapikannya.
+    racingDaySeed(new Date()),
   );
 export const lapSeconds = (
   s: Pick<GameState, "levels" | "boostLeft" | "economy">,
@@ -232,10 +239,18 @@ export const racePosition = (
     s.levels,
     s.circuit,
     s.boostLeft > 0,
+    levelSum(s.levels),
+    racingDaySeed(new Date()),
   );
 export const raceOpponentLapSeconds = (
-  s: Pick<GameState, "circuit" | "economy">,
-) => raceOpponentLapSecondsAt(s.economy, s.circuit);
+  s: Pick<GameState, "levels" | "circuit" | "economy">,
+) =>
+  raceOpponentLapSecondsAt(
+    s.economy,
+    s.circuit,
+    levelSum(s.levels),
+    racingDaySeed(new Date()),
+  );
 export const MODIFICATION_PARTS: Record<Upgrade, readonly string[]> = {
   engine: ["Motor standar", "Motor sport", "Motor racing", "Motor pro"],
   tires: ["Ban & roller standar", "Ban low-friction", "Roller bearing", "Ban & roller pro"],

@@ -10,6 +10,7 @@ import {
 import {
   coinCapRemaining,
   lapScrapAt,
+  racingDayKey,
   type EconomyConfig,
 } from "./economy-config";
 
@@ -244,10 +245,11 @@ export function withdrawBlocker(
 }
 
 /**
- * Hari balapan berganti tengah malam WIB, bukan UTC. Tanpa ini pemain Indonesia
- * kehilangan atau mendapat satu hari ekstra tiap kali melewati jam 07:00 pagi.
+ * Hari balapan kini tinggal di `economy-config.ts` -- lapisan rival butuh seed
+ * harian dan tidak bisa mengimpor berkas ini. Diekspor ulang supaya seluruh
+ * pemanggil yang sudah ada tidak perlu berpindah.
  */
-export const RACING_DAY_OFFSET_MINUTES = 7 * 60;
+export { RACING_DAY_OFFSET_MINUTES, racingDayKey } from "./economy-config";
 
 /** Berapa hari ke belakang yang dibaca untuk menghitung streak. */
 export const DAILY_HISTORY_DAYS = 30;
@@ -259,13 +261,6 @@ export const DAILY_CLAIM_PREFIX = "daily:";
  * tertentu, sedangkan perbandingan rentang selalu memakai indeks.
  */
 export const DAILY_CLAIM_END = "daily;";
-
-/** Kunci hari balapan, "YYYY-MM-DD" menurut WIB. */
-export function racingDayKey(now: Date) {
-  return new Date(now.getTime() + RACING_DAY_OFFSET_MINUTES * 60_000)
-    .toISOString()
-    .slice(0, 10);
-}
 
 function previousDay(key: string) {
   const day = new Date(`${key}T00:00:00.000Z`);

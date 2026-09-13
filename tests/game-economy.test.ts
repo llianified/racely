@@ -6,7 +6,7 @@ import {
   racingDayKey,
 } from "../lib/game-economy";
 import { INITIAL_GAME, batteryTelemetry, formatDuration, gameReducer, lapReward, lapSeconds, modificationPartName, modificationPreview, raceOpponentLapSeconds, racePosition } from "../lib/game";
-import { DEFAULT_ECONOMY, upgradeCostAt } from "../lib/economy-config";
+import { DEFAULT_ECONOMY, hashSeed, rivalLevelsAt, upgradeCostAt } from "../lib/economy-config";
 
 /**
  * Angka ekonomi sekarang bisa disetel dari panel admin, jadi berkas ini mengunci
@@ -120,18 +120,73 @@ describe("Racely economy", () => {
     expect(upgradeCostAt(E, "battery", 1)).toBe(20);
   });
 
+  /**
+   * Goyangan harian dimatikan di sini: dengannya, hasil test bergantung pada
+   * tanggal saat ia dijalankan. Goyangan itu punya test sendiri di bawah.
+   */
   it("ranks three racers and scales rewards conservatively by position", () => {
-    const second = { ...INITIAL_GAME, levels: { ...INITIAL_GAME.levels, engine: 2 } };
-    const first = { ...INITIAL_GAME, levels: { ...INITIAL_GAME.levels, engine: 3 } };
-    const boosted = { ...INITIAL_GAME, boostLeft: 1 };
+    const tenang = { ...E, rivalDailyJitter: 0 };
+    const at = (over: Partial<typeof INITIAL_GAME>) => ({
+      ...INITIAL_GAME,
+      economy: tenang,
+      ...over,
+    });
+    const dasar = at({});
+    const second = at({ levels: { ...INITIAL_GAME.levels, engine: 2 } });
+    const first = at({ levels: { ...INITIAL_GAME.levels, engine: 3 } });
+    const boosted = at({ boostLeft: 1 });
 
-    expect(raceOpponentLapSeconds(INITIAL_GAME)[0]).toBeLessThan(
-      raceOpponentLapSeconds(INITIAL_GAME)[1],
+    expect(raceOpponentLapSeconds(dasar)[0]).toBeLessThan(
+      raceOpponentLapSeconds(dasar)[1],
     );
-    expect([racePosition(INITIAL_GAME), lapReward(INITIAL_GAME)]).toEqual([3, 0.04]);
+    // Pemain baru tidak lagi juru kunci permanen: ia mulai di tengah.
+    expect([racePosition(dasar), lapReward(dasar)]).toEqual([2, 0.05]);
     expect([racePosition(second), lapReward(second)]).toEqual([2, 0.05]);
+    // Dan upgrade benar-benar menyalip, bukan sekadar menambah angka.
     expect([racePosition(first), lapReward(first)]).toEqual([1, 0.06]);
     expect([racePosition(boosted), lapReward(boosted)]).toEqual([1, 0.06]);
+  });
+
+  /**
+   * Jalan keluar kalau rival adaptif ternyata terasa menghukum: menyetel
+   * kekuatannya ke 0 harus mengembalikan tangga lawan yang lama, persis.
+   */
+  it("mengembalikan lawan statis lama saat rivalTrackingStrength = 0", () => {
+    const statis = { ...E, rivalTrackingStrength: 0 };
+    for (const circuit of [0, 1]) {
+      expect(rivalLevelsAt(statis, circuit, 30, 12345)).toEqual([
+        { engine: Math.min(E.maxUpgradeLevel, 3 + circuit), tires: Math.min(E.maxUpgradeLevel, 1 + circuit), battery: 1 },
+        { engine: Math.min(E.maxUpgradeLevel, 1 + circuit), tires: Math.min(E.maxUpgradeLevel, 2 + circuit), battery: 1 },
+      ]);
+    }
+    // Dan level pemain maupun seed harian tidak boleh mengubahnya sedikit pun.
+    expect(rivalLevelsAt(statis, 0, 3, 1)).toEqual(rivalLevelsAt(statis, 0, 28, 999));
+  });
+
+  it("menaikkan lawan bersama pemain, dan menggoyangnya per hari", () => {
+    const tenang = { ...E, rivalDailyJitter: 0 };
+    const rendah = rivalLevelsAt(tenang, 0, 3, 0);
+    const tinggi = rivalLevelsAt(tenang, 0, 24, 0);
+    const jumlah = (l: Record<string, number>) => l.engine + l.tires + l.battery;
+    expect(jumlah(tinggi[0])).toBeGreaterThan(jumlah(rendah[0]));
+
+    // Seed berbeda memberi lawan yang berbeda; seed sama selalu sama.
+    const seedA = rivalLevelsAt(E, 0, 15, hashSeed("2026-09-11"));
+    const seedB = rivalLevelsAt(E, 0, 15, hashSeed("2026-09-12"));
+    expect(rivalLevelsAt(E, 0, 15, hashSeed("2026-09-11"))).toEqual(seedA);
+    expect(seedA).not.toEqual(seedB);
+
+    // Berapa pun seed dan level, lawan tidak pernah menembus batas level.
+    for (const seed of [0, 1, 7, 99, 12345]) {
+      for (const [leader, chaser] of [rivalLevelsAt(E, 1, 30, seed)]) {
+        for (const rival of [leader, chaser]) {
+          for (const value of Object.values(rival)) {
+            expect(value).toBeGreaterThanOrEqual(1);
+            expect(value).toBeLessThanOrEqual(E.maxUpgradeLevel);
+          }
+        }
+      }
+    }
   });
 
   it("settles completed laps and carries fractional progress", () => {
@@ -141,7 +196,7 @@ describe("Racely economy", () => {
     );
 
     expect(result.completedLaps).toBe(2);
-    expect(result.income).toBe(0.08);
+    expect(result.income).toBe(0.1);
     expect(result.progress).toBeCloseTo(0);
   });
 
@@ -165,13 +220,18 @@ describe("Racely economy", () => {
     expect(result.offline).toBeNull();
     expect(result.creditedSeconds).toBe(E.heartbeatCapSeconds);
     expect(result.completedLaps).toBe(15);
-    expect(result.income).toBe(0.6);
+    expect(result.income).toBe(0.75);
   });
 });
 
 /**
- * Base settlement state laps every 8s and finishes P3 for 0.04 coins, so the
+ * Base settlement state laps every 8s and finishes P2 for 0.05 coins, so the
  * whole table below is derived from those two numbers.
+ *
+ * Dulu P3 dan 0,04: lawan statis selalu mengalahkan pemain level 1. Sejak lawan
+ * mengikuti level pemain, pemain baru finis di tengah, dan setiap angka koin di
+ * bawah naik tepat 1,25x -- selisih pengali posisi P2 (1,0) terhadap P3 (0,8).
+ * Detik dan jumlah putarannya tidak berubah sama sekali.
  */
 describe("Offline earnings", () => {
   const settleAfter = (seconds: number) =>
@@ -188,10 +248,10 @@ describe("Offline earnings", () => {
       creditedSeconds: 480,
       capped: false,
       laps: 30,
-      coins: 1.2,
+      coins: 1.5,
     });
     expect(result.completedLaps).toBe(45);
-    expect(result.income).toBe(1.8);
+    expect(result.income).toBe(2.25);
     expect(result.creditedSeconds).toBe(600);
   });
 
@@ -203,10 +263,10 @@ describe("Offline earnings", () => {
       creditedSeconds: E.offlineCapSeconds - E.heartbeatCapSeconds,
       capped: false,
       laps: 892,
-      coins: 35.68,
+      coins: 44.6,
     });
     expect(result.completedLaps).toBe(907);
-    expect(result.income).toBe(36.28);
+    expect(result.income).toBe(45.35);
     expect(result.creditedSeconds).toBe(E.offlineCapSeconds);
   });
 
@@ -218,13 +278,13 @@ describe("Offline earnings", () => {
       creditedSeconds: E.offlineCapSeconds,
       capped: true,
       laps: 900,
-      coins: 36,
+      coins: 45,
     });
     // A full day away pays exactly the same as the capped four hours.
     expect(settleAfter(24 * 60 * 60).offline).toMatchObject({
       creditedSeconds: E.offlineCapSeconds,
       laps: 900,
-      coins: 36,
+      coins: 45,
     });
   });
 
@@ -282,10 +342,10 @@ describe("Batas koin harian", () => {
 
   it("memangkas koin di batas, dan mencatat sisanya sebagai tertahan", () => {
     const result = capped();
-    // Tanpa batas, empat jam membayar 36,28 koin.
+    // Tanpa batas, empat jam membayar 45,35 koin.
     expect(result.income).toBe(E.dailyCoinCapPerPlayer);
-    expect(result.withheld).toBeCloseTo(36.28 - E.dailyCoinCapPerPlayer, 2);
-    expect(result.income + result.withheld).toBeCloseTo(36.28, 2);
+    expect(result.withheld).toBeCloseTo(45.35 - E.dailyCoinCapPerPlayer, 2);
+    expect(result.income + result.withheld).toBeCloseTo(45.35, 2);
   });
 
   it("tidak memangkas Sparepart -- itu bukan kewajiban rupiah", () => {
@@ -301,7 +361,7 @@ describe("Batas koin harian", () => {
     // Dialog "selamat datang kembali" membaca angka ini sebagai isi saldo,
     // jadi ia harus ikut terpangkas, bukan menyebut jumlah sebelum batas.
     expect(result.offline?.coins).toBeLessThanOrEqual(E.dailyCoinCapPerPlayer);
-    expect(result.offline?.coins).toBeLessThan(35.68);
+    expect(result.offline?.coins).toBeLessThan(44.6);
   });
 
   it("menghitung jatah terhadap hari yang sedang berjalan", () => {

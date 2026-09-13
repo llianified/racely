@@ -165,6 +165,8 @@ const NON_COIN_FIELDS = [
   "lapScrapBase", "lapScrapPerLevel", "lapScrapPerCircuit", "startingScrap",
   // Pagar emisi.
   "dailyCoinCapPerPlayer", "dailyEmissionBudgetIdr",
+  // Lawan: mengubah siapa yang menang, bukan berapa koin yang dicetak.
+  "rivalTrackingStrength", "rivalDailyJitter",
 ] as const satisfies readonly (keyof typeof DEFAULT_ECONOMY)[];
 
 describe("Aturan emas: keran koin tidak boleh bertambah diam-diam", () => {
@@ -258,9 +260,15 @@ describe("Proyeksi ekonomi", () => {
   it("menerjemahkan config bawaan jadi rupiah per jam", () => {
     const { rows } = projectEconomy(E);
     expect(rows).toHaveLength(2);
-    // Level 1 finishes P3: 0,04 koin tiap 8 detik = 18 koin/jam = Rp1.800.
-    expect(rows[0].coinsPerHour).toBeCloseTo(18);
-    expect(rows[0].idrPerHour).toBeCloseTo(1800);
+    // Sejak lawan mengikuti level pemain, pemain level 1 finis P2, bukan P3
+    // permanen: 0,05 koin tiap 8 detik = 22,5 koin/jam = Rp2.250. Dulu 18
+    // koin/jam, saat lawan statis selalu mengalahkan pemain baru.
+    expect(rows[0].coinsPerHour).toBeCloseTo(22.5);
+    expect(rows[0].idrPerHour).toBeCloseTo(2250);
+    // Kenaikan ini tidak menembus pagar: atap harian tetap yang mengikat.
+    expect(rows[0].idrPerDayIdle).toBeLessThanOrEqual(
+      E.dailyCoinCapPerPlayer * E.coinToIdr,
+    );
     // Upgrade maksimum jauh lebih cepat DAN lebih mahal per putaran.
     expect(rows[1].coinsPerHour).toBeGreaterThan(rows[0].coinsPerHour);
   });
@@ -274,7 +282,7 @@ describe("Proyeksi ekonomi", () => {
 
   it("turun saat putaran diperlambat", () => {
     const lambat = projectEconomy({ ...E, lapBaseSeconds: E.lapBaseSeconds * 4 });
-    expect(lambat.rows[0].coinsPerHour).toBeCloseTo(18 / 4);
+    expect(lambat.rows[0].coinsPerHour).toBeCloseTo(22.5 / 4);
   });
 
   it("menghitung nilai akun baru dan biaya max-out", () => {
