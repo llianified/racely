@@ -28,13 +28,32 @@ export type PlayerIdentity = {
 
 export const PREVIEW_SESSION_COOKIE = "racely-preview-session";
 
-// The dev server is reachable through the v0 preview proxy under a hostname we
-// cannot enumerate ahead of time, so development trusts any host. A production
-// build never sets NODE_ENV to development, so the deployed app stays gated.
+/**
+ * SATU-SATUNYA gerbang mode preview. Setiap route yang boleh melewati
+ * verifikasi Telegram harus memanggil fungsi ini -- jangan menuliskan ulang
+ * syaratnya di tempat lain.
+ *
+ * Dulu syarat ini ditulis ulang di `app/api/game/leaderboard/route.ts` dengan
+ * bentuk yang berbeda, dan keduanya memberi jawaban berbeda: `pnpm dev` tanpa
+ * `RACELY_ENABLE_PREVIEW` membuat permainan jalan tapi tab Leaderboard membalas
+ * 401 -- bug yang hanya terlihat setelah seseorang membuka tab itu.
+ *
+ * Syaratnya opt-in, persis seperti aturan keras di AGENTS.md: butuh flag yang
+ * eksplisit BESERTA NODE_ENV development. Gagal-tertutup disengaja -- yang
+ * dilonggarkan gerbang ini adalah autentikasi pemain, jadi lupa menyetel flag
+ * harus berarti "gerbang tetap terkunci", bukan "gerbang terbuka". `pnpm dev`
+ * tetap jalan tanpa konfigurasi apa pun karena `.env.development` ikut
+ * di-commit dan sudah menyalakan flagnya.
+ *
+ * Host tidak ikut diperiksa: dev server dijangkau lewat proxy preview v0 di
+ * hostname yang tidak bisa didaftarkan lebih dulu. Build produksi tidak pernah
+ * menyetel NODE_ENV ke development, dan `ecosystem.config.cjs` juga memaksa
+ * flagnya "false", jadi app yang ter-deploy tetap tergembok dua lapis.
+ */
 export function isPreviewBypassAllowed(_request: Request) {
   return (
     process.env.NODE_ENV === "development" &&
-    process.env.RACELY_ENABLE_PREVIEW !== "false"
+    process.env.RACELY_ENABLE_PREVIEW === "true"
   );
 }
 

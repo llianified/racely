@@ -3,7 +3,11 @@ import { getLeaderboard } from "@/lib/leaderboard-server";
 import { previewLeaderboard } from "@/lib/leaderboard";
 import { getPreviewGameState } from "@/lib/preview-game";
 import { readEconomyConfig } from "@/lib/economy-store";
-import { authenticateTelegramRequest, TelegramAuthError } from "@/lib/telegram-auth";
+import {
+  authenticateTelegramRequest,
+  isPreviewBypassAllowed,
+  TelegramAuthError,
+} from "@/lib/telegram-auth";
 import { consumeRateLimit, type RateLimitRule } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -24,7 +28,9 @@ export async function GET(request: Request) {
     }
 
     if (identity.userId.startsWith("preview:")) {
-      if (process.env.NODE_ENV === "production" || process.env.RACELY_ENABLE_PREVIEW !== "true") {
+      // Gerbangnya dibaca dari lib/telegram-auth.ts, bukan ditulis ulang di
+      // sini: dua salinan syarat yang sama pernah memberi dua jawaban berbeda.
+      if (!isPreviewBypassAllowed(request)) {
         throw new TelegramAuthError();
       }
       // Never write the preview cookie here: a leaderboard read must not
