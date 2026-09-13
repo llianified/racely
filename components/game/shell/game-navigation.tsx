@@ -97,7 +97,7 @@ export function Topbar({
           type="button"
           onClick={onWallet}
           className="coin-balance"
-          aria-label={`Saldo ${displayedBalance} koin. Buka dompet dan tarik koin`}
+          aria-label={`${displayedBalance} koin. Buka dompet`}
           title="Buka dompet"
         >
           <Coins aria-hidden="true" />

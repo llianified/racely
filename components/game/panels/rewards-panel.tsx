@@ -81,8 +81,8 @@ function ReferralCard({
       <p className="referral-note">
         Kamu dapat {coins(economy.referralRewardInviter)} dan temanmu{" "}
         {coins(economy.referralRewardInvitee)} begitu dia menyelesaikan{" "}
-        {economy.referralMilestoneLaps} putaran. Dibayar saat dia benar-benar main,
-        bukan saat daftar.
+        {economy.referralMilestoneLaps} putaran. Koinnya masuk saat dia benar-benar
+        main, bukan saat daftar.
       </p>
       <code className="referral-link">{referral.link}</code>
       <Button
@@ -189,8 +189,8 @@ export function RewardsPanel({
             {readyCount > 0 ? `${readyCount} hadiah menunggu` : "Belum ada hadiah menunggu"}
           </span>
           <InfoHint title="Tentang hadiah">
-            Semua hadiah berupa koin Racely dan bisa ditarik lewat tab Dompet
-            setelah saldo cukup.
+            Semua hadiah berupa koin Racely. Pakai buat upgrade mesin atau
+            kosmetik mobil di garasi.
           </InfoHint>
         </div>
       </section>
