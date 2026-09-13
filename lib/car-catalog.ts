@@ -33,6 +33,7 @@ export const CAR_CATALOG = {
     name: "Bebek Sultan",
     description: "Bukan bebek kaleng. Ini sultan yang nyasar ke lintasan.",
     chassis: "Koleksi spesial · Raja kwek",
+    tagline: "Si paling sultan",
     detail: "Mahkota emas, paruh manyun & pelampung",
     defaultColor: "#ffcf48",
     colors: [
@@ -45,6 +46,7 @@ export const CAR_CATALOG = {
     name: "Burger Oleng",
     description: "Double patty, zero rem. Pesananmu sedang menyalip!",
     chassis: "Koleksi spesial · Extra ngaco",
+    tagline: "Si paling lapar",
     detail: "Roti wijen, double patty & keju meleleh",
     defaultColor: "#eaae64",
     colors: [
@@ -57,6 +59,7 @@ export const CAR_CATALOG = {
     name: "UFO Gabut",
     description: "Jauh-jauh dari galaksi lain, cuma mau ikut balapan.",
     chassis: "Koleksi spesial · Alien magang",
+    tagline: "Si paling gabut",
     detail: "Pilot alien, kubah kristal & cincin orbit",
     defaultColor: "#a5e5ce",
     colors: [

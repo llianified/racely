@@ -60,21 +60,38 @@ Tambahkan juga testnya di `tests/`.
 
 Id mobil diulang di SQL dan tidak ikut otomatis dari TypeScript.
 
-1. `lib/car-catalog.ts` → id di `CAR_MODEL_IDS` + entri di `CAR_CATALOG`.
-2. `components/game/scene/mini-car.tsx` → geometri mobilnya.
+1. `lib/car-catalog.ts` → id di `STARTER_CAR_IDS` **atau** `PREMIUM_CAR_IDS`
+   (`CAR_MODEL_IDS` dirakit dari keduanya) + entri di `CAR_CATALOG`. Mobil
+   koleksi wajib punya `tagline`; itu yang dirender kartu katalognya.
+2. `components/game/scene/mini-car.tsx` → geometri mobilnya. Bodi bergaya
+   karakter hidup di `components/game/scene/playful-car-body.ts`.
 3. `migrations/000N_*.sql` → migrasi **baru** yang menjatuhkan lalu membuat
-   ulang `racely_players_car_model_check` dengan daftar id baru. Inilah yang
-   memperbarui database yang sudah berjalan.
+   ulang `racely_players_car_model_check` dengan daftar id baru, **dan**
+   `racely_players_owned_cars_check` dengan daftar yang sama. Inilah yang
+   memperbarui database yang sudah berjalan. Daftar `owned_cars` yang
+   ketinggalan adalah yang paling mahal: katalog menawarkan mobil yang lalu
+   ditolak database begitu pemain membelinya.
 4. `migrations/0001_racely_core.sql` → perbarui **juga** kedua daftar
    `car_model IN (...)` di dalamnya.
+
+Khusus mobil koleksi, tiga tempat lagi — semuanya ditulis manual:
+
+5. `lib/economy-config.ts` → knob harga di `EconomyConfig`, `DEFAULT_ECONOMY`,
+   `economyConfigSchema`, dan cabangnya di `carPriceAt`.
+6. `app/admin/admin-economy.tsx` → knob itu di grup "Mobil koleksi", kalau
+   tidak harganya tidak bisa disetel siapa pun.
+7. `components/game/car/car-collection.tsx` → ikon karakternya di
+   `COLLECTION_ICONS`. Petanya diketik `Record<PremiumCarId, LucideIcon>`,
+   jadi yang ini ketahuan saat build, bukan saat dilihat pemain.
 
 Langkah 4 tampak melanggar aturan "jangan edit migrasi yang sudah dijalankan",
 dan ini satu-satunya pengecualian. Aman karena `scripts/migrate.mjs` melewati
 file yang sudah tercatat di `racely_schema_migrations`, dan blok constraint di
 0001 dijaga `IF NOT EXISTS` — suntingan itu tidak akan pernah menyentuh
-database yang sudah ada. Gunanya untuk database baru, dan karena
-`tests/car-catalog-consistency.test.ts` hanya membaca 0001: tanpa langkah 4
-test itu merah, meski langkah 3 sudah benar.
+database yang sudah ada. Gunanya untuk database baru.
+
+`tests/car-catalog-consistency.test.ts` membaca **semua** migrasi, jadi daftar
+id yang ketinggalan di langkah 3 maupun 4 memerahkan test itu.
 
 ### Mengubah ekonomi, reward, atau biaya upgrade
 

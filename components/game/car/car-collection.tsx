@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useRef, useState } from "react";
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
-import { ArrowRight, Check, Crown, LoaderCircle, Orbit, Sandwich, ShoppingBag, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Crown, LoaderCircle, Orbit, Sandwich, ShoppingBag, Sparkles, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -16,10 +16,10 @@ import { SectionCardHeading } from "../shell/section-card-heading";
 
 const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
   ssr: false,
-  loading: () => <div className="scene-loading" role="status"><LoaderCircle className="animate-spin" aria-hidden="true" /><strong>Menyiapkan si paling lucu…</strong></div>,
+  loading: () => <div className="scene-loading" role="status"><LoaderCircle className="animate-spin" aria-hidden="true" /><strong>Menyiapkan mobil 3D…</strong></div>,
 });
 
-const COLLECTION_ICONS = { "bebek-sultan": Crown, "burger-oleng": Sandwich, "ufo-gabut": Orbit };
+const COLLECTION_ICONS: Record<PremiumCarId, LucideIcon> = { "bebek-sultan": Crown, "burger-oleng": Sandwich, "ufo-gabut": Orbit };
 
 export function CarCollection({ game, active, disabled, onAction }: {
   game: GameState;
@@ -57,8 +57,8 @@ export function CarCollection({ game, active, disabled, onAction }: {
   };
 
   return <>
-    <section className="panel car-collection" aria-label="Koleksi mobil">
-      <SectionCardHeading icon={Sparkles} title="Garasi si paling…" aside={<Badge variant="secondary">{collectionCount}/3 spesial</Badge>} />
+    <section id="car-collection" tabIndex={-1} className="panel car-collection" aria-label="Koleksi mobil">
+      <SectionCardHeading icon={Sparkles} title="Garasi si paling…" aside={<Badge variant="secondary">{collectionCount}/{PREMIUM_CAR_IDS.length} spesial</Badge>} />
       <p className="collection-intro">Bukan mobil biasa. Ini geng pembuat onar.</p>
       <div className="collection-catalog">
         {PREMIUM_CAR_IDS.map((id, index) => {
@@ -67,7 +67,7 @@ export function CarCollection({ game, active, disabled, onAction }: {
           return <button key={id} type="button" className="collection-card" data-character={id} disabled={blocked} onClick={() => { setSelected(id); setError(null); }} aria-label={`Lihat ${CAR_CATALOG[id].name}`}>
             <span className="collection-card-top"><span className="collection-number">0{index + 1}</span><Icon aria-hidden="true" /></span>
             <strong>{CAR_CATALOG[id].name}</strong>
-            <span className="collection-tagline">{id === "bebek-sultan" ? "Si paling sultan" : id === "burger-oleng" ? "Si paling lapar" : "Si paling gabut"}</span>
+            <span className="collection-tagline">{CAR_CATALOG[id].tagline}</span>
             <span className="collection-card-price">{has ? <><Check aria-hidden="true" />{current === id ? "Aktif" : "Dimiliki"}</> : <>{coins(carPriceAt(game.economy, id))}<ArrowRight aria-hidden="true" /></>}</span>
           </button>;
         })}
@@ -83,7 +83,7 @@ export function CarCollection({ game, active, disabled, onAction }: {
         </ToggleGroup>
         <p>Ganti mobil gratis. Level upgrade dan part tetap milikmu.</p>
       </div>
-      {error && !selected && <p className="collection-error" role="alert">{error}</p>}
+      {error && !selected && <p className="form-error" role="alert">{error}</p>}
     </section>
     <Sheet open={Boolean(selected) && active} onOpenChange={value => { if (!value && !lock.current) setSelected(null); }}>
       <SheetContent side="bottom" className="game-sheet collection-sheet" showCloseButton={!pending}>
@@ -105,7 +105,7 @@ export function CarCollection({ game, active, disabled, onAction }: {
                 {!hasSelected && <><div><dt>Harga mobil</dt><dd>{coins(price)}</dd></div><div><dt>{shortfall > 0 ? "Masih kurang" : "Saldo setelah beli"}</dt><dd>{coins(shortfall > 0 ? shortfall : game.balance - price)}</dd></div></>}
               </dl>
               <p role="status">{!hasSelected && shortfall > 0 ? "Kumpulkan koin dari balapan dan hadiah, lalu mampir lagi!" : "Mobil lama tetap di garasi. Upgrade dan part tidak hilang saat ganti mobil."}</p>
-              {error && <p role="alert">{error}</p>}
+              {error && <p className="form-error" role="alert">{error}</p>}
             </div>
           </div>
           <SheetFooter>

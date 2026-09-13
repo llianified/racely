@@ -3,7 +3,7 @@
 import {
   ArrowUpRight, ChevronDown, ChevronRight, CircleHelp, ClipboardList,
   Coins, Flag, Gift, Gauge, MapPinned, Paintbrush, ShieldCheck,
-  Trophy, UserPlus, Warehouse, Wind, Wrench, Zap,
+  Sparkles, Trophy, UserPlus, Warehouse, Wind, Wrench, Zap,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ export function MenuPanel({
       title: "Garasi", icon: Warehouse,
       items: [
         { label: "Mobil kamu", icon: Zap, action: () => onNavigate("garage") },
+        { label: "Koleksi mobil", icon: Sparkles, action: () => onNavigate("garage", "car-collection") },
         { label: "Upgrade performa", icon: Wrench, action: () => onNavigate("garage", "upgrades") },
         { label: "Warna bodi", icon: Paintbrush, action: () => onNavigate("garage", "body-colors") },
         { label: "Aero kit", icon: Wind, action: () => onNavigate("garage", "aero-kit") },
