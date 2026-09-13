@@ -127,16 +127,26 @@ function toConfig(form: FormState): EconomyConfig | null {
   const draft = {} as Record<string, unknown>;
   for (const group of GROUPS) {
     for (const field of group.fields) {
-      const value = Number(form[field.key]);
+      const raw = form[field.key].trim();
+      // `Number("")` itu 0, dan 0 lolos Number.isFinite -- jadi cek finite saja
+      // memperlakukan kolom yang dikosongkan sebagai nol yang disengaja.
+      // Operator yang menghapus isian untuk mengetik ulang lalu menyimpan tidak
+      // sedang menyetel nol; ia sedang mengetik. Tolak kosongnya di sini.
+      if (raw === "") return null;
+      const value = Number(raw);
       if (!Number.isFinite(value)) return null;
       draft[field.key] = value;
     }
   }
-  const rungs = form.dailyRewards
-    .split(",")
-    .map((part) => Number(part.trim()))
-    .filter((value) => Number.isFinite(value));
-  if (rungs.length === 0) return null;
+  // Segmen kosong ("1, , 3" atau koma menggantung) dulu ikut jadi 0 lewat
+  // Number(" "), lalu tersaring lolos karena 0 itu finite. Dibuang dulu, lalu
+  // sisanya wajib angka semua -- satu rung yang salah ketik membatalkan
+  // penyimpanan, bukan diam-diam memendekkan tangga hadiahnya.
+  const parts = form.dailyRewards.split(",").map((part) => part.trim());
+  const rungs = parts.filter((part) => part !== "").map(Number);
+  if (rungs.length === 0 || rungs.some((value) => !Number.isFinite(value))) {
+    return null;
+  }
   draft.dailyRewards = rungs;
   return draft as EconomyConfig;
 }
