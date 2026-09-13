@@ -17,7 +17,13 @@ const STATUS_ORDER: WithdrawStatus[] = ["pending", "processing", "paid", "reject
  * sungguhan begitu pemain menekan tarik.
  */
 export function AdminOverview({ overview }: { overview: Overview }) {
-  const { liability, economy, audit } = overview;
+  const { liability, economy, audit, emission } = overview;
+  // Anggaran 0 berarti tanpa anggaran dan tanpa rem; tidak ada yang bisa
+  // ditampilkan sebagai persentase, jadi bar-nya ikut hilang.
+  const budget = economy.dailyEmissionBudgetIdr;
+  const usedShare = budget > 0 ? emission.todayIdr / budget : 0;
+  const overBudget = budget > 0 && usedShare >= 1;
+  const nearBudget = budget > 0 && !overBudget && usedShare >= 0.8;
   const outstandingCoins = liability.balanceCoins + liability.pendingCoins;
   const queuedCoins =
     liability.byStatus.pending.coins + liability.byStatus.processing.coins;
@@ -45,6 +51,54 @@ export function AdminOverview({ overview }: { overview: Overview }) {
             &quot;belum diklaim&quot; ikut dihitung karena satu klik memindahkannya
             ke saldo.
           </InfoHint>
+        </div>
+      </section>
+
+      <section className="panel wallet-history-panel" aria-label="Emisi koin">
+        <SectionCardHeading
+          icon={Coins}
+          title="Emisi koin"
+          aside={
+            <InfoHint title="Cara baca emisi">
+              Koin baru yang dicetak per hari balapan (WIB), dicatat saat
+              pencetakan dengan kurs yang berlaku saat itu -- menyetel nilai koin
+              belakangan tidak menulis ulang angka ini. Pencatatan dimulai sejak
+              migrasi 0011, jadi hari sebelum itu kosong, bukan nol.
+            </InfoHint>
+          }
+        />
+        {(overBudget || nearBudget) && (
+          <p className="admin-notice" data-tone={overBudget ? "error" : undefined} role="status">
+            {overBudget
+              ? `Anggaran harian terlampaui: ${rupiah(emission.todayIdr)} dari ${rupiah(budget)}. Pengali hadiah putaran diturunkan sampai hari berganti.`
+              : `Emisi hari ini ${Math.round(usedShare * 100)}% dari anggaran ${rupiah(budget)}.`}
+          </p>
+        )}
+        <div className="admin-figures">
+          <div className="admin-figure">
+            <span className="eyebrow">Hari ini</span>
+            <strong>{rupiah(emission.todayIdr)}</strong>
+            <span>{decimal(emission.today)} koin dicetak</span>
+          </div>
+          <div className="admin-figure">
+            <span className="eyebrow">Anggaran harian</span>
+            <strong>{budget > 0 ? rupiah(budget) : "—"}</strong>
+            <span>
+              {budget > 0
+                ? `terpakai ${Math.round(usedShare * 100)}%`
+                : "tanpa anggaran & tanpa rem"}
+            </span>
+          </div>
+          <div className="admin-figure">
+            <span className="eyebrow">7 hari</span>
+            <strong>{rupiah(emission.weekIdr)}</strong>
+            <span>{decimal(emission.week)} koin</span>
+          </div>
+          <div className="admin-figure">
+            <span className="eyebrow">30 hari</span>
+            <strong>{rupiah(emission.monthIdr)}</strong>
+            <span>{decimal(emission.month)} koin</span>
+          </div>
         </div>
       </section>
 

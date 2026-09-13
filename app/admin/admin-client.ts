@@ -11,11 +11,22 @@ import type { WithdrawStatus } from "@/lib/game";
  * diperiksa di route, jadi tidak ada dua jalur autentikasi yang bisa menyimpang.
  * Halaman kosong yang terkirim ke browser tidak membawa rahasia apa pun.
  */
+/** Koin yang dicetak per jendela waktu, beserta nilainya dalam rupiah. */
+export type EmissionSummary = {
+  today: number;
+  todayIdr: number;
+  week: number;
+  weekIdr: number;
+  month: number;
+  monthIdr: number;
+};
+
 export type Overview = {
   economy: EconomyConfig;
   liability: LiabilitySnapshot;
   audit: AuditRow[];
   projection: EconomyProjection;
+  emission: EmissionSummary;
 };
 
 export type EconomySnapshot = {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Banknote, Clock, Send, Wallet } from "lucide-react";
+import { Banknote, Clock, Send, Wallet, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,13 +43,23 @@ export type WithdrawPayload = {
 const quickAmounts = (min: number) =>
   [min, min * 2.5, min * 5, min * 10].map((value) => Math.round(value));
 
+/**
+ * Nominal tukar diturunkan dari saldo, bukan ditulis lepas: daftar tetap akan
+ * menawarkan angka yang lebih besar dari saldo pemain, dan tombol yang selalu
+ * mati bukan pilihan -- itu cuma terlihat rusak.
+ */
+const convertAmounts = (balance: number) =>
+  [10, 25, 50, 100].filter((value) => value <= balance);
+
 export function WalletPanel({
   game,
   onWithdraw,
+  onConvertScrap,
   disabled = false,
 }: {
   game: GameState;
   onWithdraw: (payload: WithdrawPayload) => Promise<boolean>;
+  onConvertScrap: (coins: number) => Promise<boolean>;
   disabled?: boolean;
 }) {
   const { economy } = game;
@@ -60,6 +70,7 @@ export function WalletPanel({
   const [accountName, setAccountName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [convert, setConvert] = useState(0);
 
   const balance = Math.floor(game.balance);
   const requested = Number.parseInt(amount, 10) || 0;
@@ -280,6 +291,52 @@ export function WalletPanel({
           </SheetFooter>
         </SheetContent>
       </Sheet>
+
+      <section className="panel wallet-convert" aria-label="Tukar koin jadi Sparepart">
+        <SectionCardHeading
+          icon={Wrench}
+          title="Tukar ke Sparepart"
+          aside={
+            <InfoHint title="Kenapa cuma satu arah">
+              Sparepart dipakai membangun mobil dan tidak bisa ditarik jadi
+              rupiah. Karena itu koin bisa jadi Sparepart, tapi tidak
+              sebaliknya: Sparepart yang bisa kembali jadi koin akan membuat
+              setiap hadiah Sparepart berubah jadi uang sungguhan.
+            </InfoHint>
+          }
+        />
+        <p className="wallet-convert-rate">
+          1 koin = {formatCoins(economy.coinToScrapRate)} Sparepart · kamu punya{" "}
+          <strong>{formatCoins(Math.floor(game.scrap))}</strong> Sparepart
+        </p>
+        <div className="wallet-chips" role="group" aria-label="Jumlah koin yang ditukar">
+          {convertAmounts(balance).map((value) => (
+            <button
+              key={value}
+              type="button"
+              className={cn("wallet-chip", convert === value && "is-active")}
+              aria-pressed={convert === value}
+              disabled={disabled}
+              onClick={() => setConvert(value)}
+            >
+              {formatCoins(value)}
+            </button>
+          ))}
+        </div>
+        <Button
+          variant="outline"
+          className="w-full"
+          disabled={disabled || convert <= 0 || convert > balance}
+          onClick={async () => {
+            if (await onConvertScrap(convert)) setConvert(0);
+          }}
+        >
+          <Wrench data-icon="inline-start" />
+          {convert > 0
+            ? `Tukar ${coins(convert)} jadi ${formatCoins(convert * economy.coinToScrapRate)} Sparepart`
+            : "Pilih jumlah koin"}
+        </Button>
+      </section>
 
       <section className="panel wallet-history-panel" aria-label="Riwayat penarikan">
         <SectionCardHeading

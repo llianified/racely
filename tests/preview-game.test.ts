@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CAR_CATALOG, CAR_MODEL_IDS, isCarColor } from "../lib/car-catalog";
 import { gameReducer, INITIAL_GAME, lapReward, lapSeconds } from "../lib/game";
@@ -18,6 +19,46 @@ const selectLuna = { type: "select-car", model: "luna-gt", color: "#b9a1ed" } as
 
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(now); });
 afterEach(() => vi.useRealTimers());
+
+/**
+ * Penyerap koin sukarela. Satu arah, dan itu bukan detail: Sparepart yang bisa
+ * kembali jadi koin akan mengubah setiap hadiah Sparepart -- misi harian, kotak
+ * bonus, duel, leaderboard -- menjadi kewajiban rupiah.
+ */
+describe("Tukar koin jadi Sparepart", () => {
+  const berjalan = () => {
+    const fresh = getPreviewGameState(request(), identity, E);
+    return action(fresh.cookieValue, selectLuna).cookieValue;
+  };
+
+  it("memotong koin dan menambah Sparepart sesuai rate", () => {
+    const cookie = berjalan();
+    const awal = getPreviewGameState(request(cookie), identity, E).state;
+    const hasil = action(cookie, { type: "convert-scrap", coins: 5 });
+
+    expect(hasil.state.balance).toBe(awal.balance - 5);
+    expect(hasil.state.scrap).toBe(awal.scrap + 5 * E.coinToScrapRate);
+    expect(hasil.state.scrapEarned).toBe(awal.scrapEarned + 5 * E.coinToScrapRate);
+  });
+
+  it("menolak jumlah di atas saldo, tanpa menyentuh apa pun", () => {
+    const cookie = berjalan();
+    const awal = getPreviewGameState(request(cookie), identity, E).state;
+    const hasil = action(cookie, { type: "convert-scrap", coins: awal.balance + 1 });
+
+    expect(hasil.state.balance).toBe(awal.balance);
+    expect(hasil.state.scrap).toBe(awal.scrap);
+  });
+
+  it("tidak punya jalur balik", () => {
+    // Skema server adalah tempat jalur itu harus ditolak, bukan UI.
+    const source = readFileSync("lib/game-server.ts", "utf8");
+    expect(source).toContain('z.literal("convert-scrap")');
+    for (const terlarang of ["convert-coins", "scrap-to-coin", "sell-scrap"]) {
+      expect(source).not.toContain(terlarang);
+    }
+  });
+});
 
 describe("Workshop installation", () => {
   it("installs a part once, deducts its cost, and preserves it on reload", () => {

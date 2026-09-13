@@ -536,6 +536,13 @@
 .coin-balance > span { display: flex; flex-direction: column; min-width: 0; }
 .coin-balance strong { display: block; overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-lead); font-weight: var(--fw-heavier); font-variant-numeric: tabular-nums; line-height: var(--lh-snug); white-space: nowrap; }
 .coin-balance small { @apply sr-only; }
+/* Sparepart meminjam bentuk .coin-balance supaya keduanya terbaca sebagai
+   saldo, tapi warnanya mengikuti --primary, bukan emas: emas di app ini
+   berarti uang, dan Sparepart justru yang tidak bisa jadi uang. */
+.scrap-balance { display: inline-flex; align-items: center; gap: var(--space-6); height: var(--space-32); min-width: 0; padding-inline: var(--space-8); border-radius: var(--corner-2xl); color: var(--foreground); background: color-mix(in srgb, var(--primary) 10%, var(--background)); border: var(--stroke) solid color-mix(in srgb, var(--primary) 32%, transparent); }
+.scrap-balance > svg { width: var(--icon-base); height: var(--icon-base); flex-shrink: 0; color: var(--ring); }
+.scrap-balance strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-body); font-weight: var(--fw-heavy); font-variant-numeric: tabular-nums; }
+[data-telegram-fullscreen='true'] .scrap-balance { height: var(--space-40); border-radius: var(--corner-md); }
 
 /* ── page content ──────────────────────────────────── */
 .page-content { position: relative; overflow: clip; overflow-clip-margin: var(--space-8); padding: var(--space-md) var(--gutter) calc(var(--nav-height) + var(--safe-bottom) + var(--space-lg)); }
@@ -614,6 +621,10 @@
 .race-hud-grid { --hud-streak: linear-gradient(60deg, transparent 9%, color-mix(in srgb, var(--foreground) 19%, transparent) 9%, color-mix(in srgb, var(--foreground) 19%, transparent) 18%, transparent 18%); }
 .race-hud-meter > span { display: block; width: 100%; height: 100%; transform-origin: left; background: var(--hud-streak), var(--accent); }
 .race-hud-reward dd { color: var(--accent); }
+/* Baris jatah koin harian: dibaca sebagai target, bukan hukuman -- sampai ia
+   benar-benar penuh, dan barulah warnanya berubah. */
+.race-hud-cap { margin-top: auto; color: var(--muted-foreground); font-weight: var(--fw-medium); font-variant-numeric: tabular-nums; }
+.race-hud-cap[data-full] { color: var(--warning); }
 /* Sel Lap: label + angka di kiri, cincin progres di kanan mengisi ruang kosong
    di bawah angka kecepatan. Cincin = conic-gradient yang di-mask jadi donat. */
 .race-hud-lap { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; align-items: center; column-gap: var(--space-sm); }
@@ -801,7 +812,10 @@
 .wallet-hero-side { display: flex; align-items: center; justify-content: space-between; padding: var(--space-md); border-top: var(--stroke) solid var(--border); background: color-mix(in srgb, var(--background) 25%, var(--card)); }
 .wallet-pending { display: inline-flex; align-items: center; gap: var(--space-sm); color: var(--muted-foreground); font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
 .wallet-pending svg { width: var(--icon-base); height: var(--icon-base); flex-shrink: 0; color: var(--accent); }
-.wallet-form-panel, .wallet-history-panel { padding: var(--space-md) var(--gutter); }
+.wallet-form-panel, .wallet-history-panel, .wallet-convert { padding: var(--space-md) var(--gutter); }
+.wallet-convert { display: flex; flex-direction: column; gap: var(--space-md); }
+.wallet-convert-rate { font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); text-wrap: pretty; }
+.wallet-convert-rate > strong { color: var(--foreground); font-variant-numeric: tabular-nums; }
 .wallet-form { display: flex; flex-direction: column; gap: var(--space-md); }
 .wallet-field > label, .wallet-method-fieldset > legend { display: block; margin-bottom: var(--space-sm); font-size: var(--fs-small); font-weight: var(--fw-semibold); color: var(--foreground); }
 .wallet-field > p { margin-top: var(--space-sm); font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); }
@@ -973,6 +987,8 @@
   .brand-word { font-size: var(--fs-2xl); }
   .coin-balance { padding-inline: var(--space-sm); }
   .coin-balance > svg { display: none; }
+  .scrap-balance { padding-inline: var(--space-6); }
+  .scrap-balance > svg { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }

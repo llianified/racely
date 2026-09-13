@@ -330,9 +330,9 @@ async function payInviteeMilestone(
     })
     .onConflictDoNothing()
     .returning({ id: rewardClaims.id });
-  return inserted.length > 0
-    ? { ...row, balance: row.balance + economy.referralRewardInvitee }
-    : row;
+  if (inserted.length === 0) return row;
+  await recordMinted(tx, racingDayKey(new Date()), economy.referralRewardInvitee, economy);
+  return { ...row, balance: row.balance + economy.referralRewardInvitee };
 }
 
 /**
@@ -374,6 +374,12 @@ async function payInviter(row: PlayerRow, economy: EconomyConfig) {
               balance: sql`${players.balance} + ${economy.referralRewardInviter}`,
             })
             .where(eq(players.userId, inviterId));
+          await recordMinted(
+            tx,
+            racingDayKey(new Date()),
+            economy.referralRewardInviter,
+            economy,
+          );
         }
       }
 
@@ -903,6 +909,9 @@ export async function performGameAction(
           })
           .onConflictDoNothing()
           .returning({ id: rewardClaims.id });
+        if (inserted.length > 0) {
+          await recordMinted(tx, settled.day, economy.starterGift, economy);
+        }
         next = {
           ...next,
           rewardClaimed: true,
@@ -942,6 +951,7 @@ export async function performGameAction(
           .onConflictDoNothing()
           .returning({ id: rewardClaims.id });
         if (inserted.length > 0) {
+          await recordMinted(tx, settled.day, status.reward, economy);
           next = { ...next, balance: next.balance + status.reward };
           dailyClaims = [today, ...dailyClaims];
         }
@@ -966,6 +976,9 @@ export async function performGameAction(
           })
           .onConflictDoNothing()
           .returning({ id: rewardClaims.id });
+        if (inserted.length > 0) {
+          await recordMinted(tx, settled.day, mission.reward, economy);
+        }
         next = {
           ...next,
           balance: next.balance + (inserted.length > 0 ? mission.reward : 0),

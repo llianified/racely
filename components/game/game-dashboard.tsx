@@ -26,6 +26,7 @@ import {
 import { telegramHaptic, useTelegramWebApp } from "./use-telegram-webapp";
 import {
   coins,
+  formatCoins,
   gameReducer,
   INITIAL_GAME,
   missions,
@@ -304,6 +305,13 @@ export function GameDashboard() {
     }
     toast.success(`Hadiah +${coins(total)}`);
   };
+  const convertScrap = async (amount: number) => {
+    if (amount <= 0 || game.balance < amount) return false;
+    const next = await runAction({ type: "convert-scrap", coins: amount });
+    if (!next) return false;
+    toast.success(`+${formatCoins(amount * game.economy.coinToScrapRate)} Sparepart`);
+    return true;
+  };
   const withdraw = async (payload: WithdrawPayload) => {
     const next = await runAction({ type: "withdraw", ...payload }, "withdraw");
     if (!next) return false;
@@ -381,6 +389,7 @@ export function GameDashboard() {
       <div className="main-shell">
         <Topbar
           balance={game.balance}
+          scrap={game.scrap}
           level={totalLevel(game)}
           racerName={game.player.name}
           racerPhotoUrl={game.player.photoUrl}
@@ -447,6 +456,7 @@ export function GameDashboard() {
             <WalletPanel
               game={game}
               onWithdraw={withdraw}
+              onConvertScrap={convertScrap}
               disabled={Boolean(busyAction)}
             />
           ) : tab === "referral" ? (

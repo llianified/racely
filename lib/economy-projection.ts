@@ -1,4 +1,5 @@
 import {
+  lapScrapAt,
   lapSecondsAt,
   raceRewardAt,
   upgradeCostAt,
@@ -27,12 +28,25 @@ export type PayoutRow = {
   secondsPerLap: number;
   coinsPerLap: number;
   coinsPerHour: number;
+  /**
+   * Sparepart tidak punya kolom rupiah, dan itu memang intinya: ia mata uang
+   * progres yang tidak pernah bisa ditarik. Ditampilkan berdampingan supaya
+   * terlihat berapa banyak kemajuan yang dibeli tanpa menambah kewajiban.
+   */
+  scrapPerLap: number;
+  scrapPerHour: number;
   idrPerHour: number;
   /** Rupiah per absen sepanjang jendela offline, dibayar setengah laju. */
   idrPerIdleWindow: number;
-  /** Proyeksi kalau pemain hanya membuka aplikasi tiap jendela offline penuh. */
+  /**
+   * Proyeksi kalau pemain hanya membuka aplikasi tiap jendela offline penuh.
+   * Sudah dibatasi `dailyCoinCapPerPlayer`: tanpa itu angkanya menjanjikan
+   * kewajiban yang tidak akan pernah benar-benar dicetak.
+   */
   idrPerDayIdle: number;
   idrPerMonthIdle: number;
+  /** Angka yang sama tanpa batas harian, untuk melihat seberapa keras batas itu menggigit. */
+  idrPerDayUncapped: number;
   hoursToMinWithdraw: number;
 };
 
@@ -44,22 +58,32 @@ function rowFor(
 ): PayoutRow {
   const secondsPerLap = lapSecondsAt(e, levels, false);
   const coinsPerLap = raceRewardAt(e, levels, circuit, false);
-  const coinsPerHour =
-    secondsPerLap > 0 ? (3600 / secondsPerLap) * coinsPerLap : 0;
+  const lapsPerHour = secondsPerLap > 0 ? 3600 / secondsPerLap : 0;
+  const coinsPerHour = lapsPerHour * coinsPerLap;
+  const scrapPerLap = lapScrapAt(e, levels, circuit);
   const idleHours = e.offlineCapSeconds / 3600;
   const idrPerIdleWindow =
     coinsPerHour * idleHours * e.offlineRate * e.coinToIdr;
   const windowsPerDay = idleHours > 0 ? 24 / idleHours : 0;
+  const idrPerDayUncapped = idrPerIdleWindow * windowsPerDay;
+  // Batas harian berlaku per pemain per hari balapan, jadi ia memotong proyeksi
+  // harian di sini -- bukan proyeksi per jam, yang masih boleh melampauinya
+  // selama sisa jatah hari itu belum habis.
+  const dailyCapIdr = e.dailyCoinCapPerPlayer * e.coinToIdr;
+  const idrPerDayIdle = Math.min(idrPerDayUncapped, dailyCapIdr);
 
   return {
     label,
     secondsPerLap,
     coinsPerLap,
     coinsPerHour,
+    scrapPerLap,
+    scrapPerHour: lapsPerHour * scrapPerLap,
     idrPerHour: coinsPerHour * e.coinToIdr,
     idrPerIdleWindow,
-    idrPerDayIdle: idrPerIdleWindow * windowsPerDay,
-    idrPerMonthIdle: idrPerIdleWindow * windowsPerDay * 30,
+    idrPerDayIdle,
+    idrPerDayUncapped,
+    idrPerMonthIdle: idrPerDayIdle * 30,
     hoursToMinWithdraw:
       coinsPerHour > 0 ? e.minWithdrawCoins / coinsPerHour : Infinity,
   };
@@ -77,6 +101,14 @@ export type EconomyProjection = {
   /** Rupiah yang dibayarkan sepasang pengajak + yang diajak saat capaian. */
   referralPairIdr: number;
   minWithdrawIdr: number;
+  /**
+   * Atap kewajiban seorang pemain dalam sehari. Inilah angka yang membuat
+   * seluruh proyeksi di atas bisa dipercaya: berapa pun laju putarannya,
+   * seorang pemain tidak bisa mencetak lebih dari ini.
+   */
+  dailyCapIdrPerPlayer: number;
+  /** Anggaran harian dibagi atap di atas: berapa pemain aktif yang muat. */
+  playersWithinBudget: number;
 };
 
 export function projectEconomy(e: EconomyConfig): EconomyProjection {
@@ -99,6 +131,7 @@ export function projectEconomy(e: EconomyConfig): EconomyProjection {
   }
 
   const basePerHour = rows[0].coinsPerHour;
+  const dailyCapIdr = e.dailyCoinCapPerPlayer * e.coinToIdr;
   return {
     rows,
     maxOutCost,
@@ -108,5 +141,8 @@ export function projectEconomy(e: EconomyConfig): EconomyProjection {
     referralPairIdr:
       (e.referralRewardInviter + e.referralRewardInvitee) * e.coinToIdr,
     minWithdrawIdr: e.minWithdrawCoins * e.coinToIdr,
+    dailyCapIdrPerPlayer: dailyCapIdr,
+    playersWithinBudget:
+      dailyCapIdr > 0 ? e.dailyEmissionBudgetIdr / dailyCapIdr : Infinity,
   };
 }

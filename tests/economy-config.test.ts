@@ -15,6 +15,7 @@ import {
   upgradeCostAt,
 } from "../lib/economy-config";
 import { projectEconomy } from "../lib/economy-projection";
+import { calculateRaceSettlement, withdrawBlocker } from "../lib/game-economy";
 
 const E = DEFAULT_ECONOMY;
 
@@ -192,6 +193,50 @@ describe("Aturan emas: keran koin tidak boleh bertambah diam-diam", () => {
     ]);
   });
 
+  /**
+   * Setiap tempat yang menaikkan saldo koin harus digolongkan: mencetak koin
+   * baru (wajib tercatat di racely_emission_daily) atau memindahkan koin yang
+   * sudah ada. Daftarnya dibekukan, jadi ekspresi penambah saldo yang baru
+   * memerahkan test ini sampai seseorang memutuskan ia keran atau bukan.
+   *
+   * Tanpa ini, keran koin baru akan menambah kewajiban rupiah tanpa muncul di
+   * dashboard Kewajiban -- dan angka yang undercount lebih berbahaya daripada
+   * tidak ada angka sama sekali.
+   */
+  it("menggolongkan setiap penambah saldo sebagai keran koin atau pemindahan", () => {
+    const source = readFileSync("lib/game-server.ts", "utf8");
+    const penambah = source
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => /balance[^\n]*\+/.test(line));
+
+    // Mencetak koin baru: ketiganya harus punya recordMinted di dekatnya.
+    const KERAN = [
+      "return { ...row, balance: row.balance + economy.referralRewardInvitee };",
+      "balance: sql`${players.balance} + ${economy.referralRewardInviter}`,",
+      "next.balance + (inserted.length > 0 ? economy.starterGift : 0),",
+      "next = { ...next, balance: next.balance + status.reward };",
+      "balance: next.balance + (inserted.length > 0 ? mission.reward : 0),",
+    ];
+    // Memindahkan koin yang sudah ada; tidak menambah kewajiban apa pun.
+    const PEMINDAHAN = [
+      // Refund penarikan yang ditolak: koinnya sudah dicetak dan dicatat dulu.
+      "return { ...row, balance: row.balance + total };",
+      // Klaim: pending -> saldo. Dicetak dan dicatat saat settlement.
+      "balance: next.balance + settled,",
+    ];
+
+    expect([...KERAN, ...PEMINDAHAN].sort()).toEqual([...penambah].sort());
+
+    for (const keran of KERAN) {
+      const index = source.indexOf(keran);
+      expect(index, keran).toBeGreaterThan(-1);
+      // recordMinted harus berada di blok yang sama, bukan di ujung berkas.
+      const sekitar = source.slice(Math.max(0, index - 700), index + 700);
+      expect(sekitar, `keran tanpa recordMinted: ${keran}`).toContain("recordMinted(");
+    }
+  });
+
   it("membayar Sparepart tanpa menyentuh koin", () => {
     const levels = { engine: 1, tires: 1, battery: 1 };
     expect(lapScrapAt(E, levels, 0)).toBeGreaterThan(0);
@@ -265,6 +310,161 @@ describe("Proyeksi ekonomi", () => {
  * source, sama seperti tests/action-receipt-types.test.ts terhadap SQL, supaya
  * test lingkungan node tidak perlu mengimpor komponen React.
  */
+/**
+ * Proyeksi 30 hari untuk tiga arketipe pemain. Simulatornya memakai
+ * `calculateRaceSettlement` yang sama dengan server -- bukan rumus tandingan --
+ * jadi proyeksi ini tidak bisa menyimpang dari apa yang benar-benar dibayar.
+ *
+ * Yang dikunci: berapa pun cara bermainnya, seorang pemain tidak bisa mencetak
+ * lebih dari `dailyCoinCapPerPlayer` per hari balapan. Knob yang disetel
+ * sehingga menembus atap itu harus memerahkan test ini.
+ */
+describe("Proyeksi 30 hari per arketipe", () => {
+  const MULAI = new Date("2026-09-11T00:00:00.000Z");
+  const JAM = 60 * 60 * 1000;
+
+  type Arketipe = { nama: string; jedaJam: number[] };
+
+  /**
+   * Tiap arketipe dinyatakan sebagai jeda antar pembukaan aplikasi dalam sehari.
+   * Jeda panjang membayar lewat jendela offline, jeda pendek lewat heartbeat.
+   */
+  const ARKETIPE: Arketipe[] = [
+    { nama: "idle saja, 6 cek per hari", jedaJam: [4, 4, 4, 4, 4, 4] },
+    { nama: "rajin, 12 sesi", jedaJam: Array.from({ length: 12 }, () => 2) },
+    // Yang terburuk: menyinkron sesering mungkin sepanjang hari.
+    { nama: "bot baru, sinkron terus", jedaJam: Array.from({ length: 48 }, () => 0.5) },
+  ];
+
+  const jalankan = (arketipe: Arketipe, economy = E, hari = 30) => {
+    let state = {
+      progress: 0,
+      levels: { engine: 1, tires: 1, battery: 1 },
+      circuit: 0,
+      economy,
+      lastSettledAt: MULAI,
+      boostEndsAt: null as Date | null,
+      dayKey: null as string | null,
+      dayCoins: 0,
+    };
+    let waktu = MULAI.getTime();
+    let totalKoin = 0;
+    let totalScrap = 0;
+    const perHari = new Map<string, number>();
+
+    for (let d = 0; d < hari; d += 1) {
+      for (const jeda of arketipe.jedaJam) {
+        waktu += jeda * JAM;
+        const now = new Date(waktu);
+        const hasil = calculateRaceSettlement(state, now);
+        totalKoin += hasil.income;
+        totalScrap += hasil.scrap;
+        perHari.set(hasil.dayKey, (perHari.get(hasil.dayKey) ?? 0) + hasil.income);
+        state = {
+          ...state,
+          progress: hasil.progress,
+          lastSettledAt: now,
+          dayKey: hasil.dayKey,
+          dayCoins: hasil.dayCoins,
+        };
+      }
+    }
+    return { totalKoin, totalScrap, perHari };
+  };
+
+  for (const arketipe of ARKETIPE) {
+    it(`menahan ${arketipe.nama} di bawah atap harian`, () => {
+      const { perHari, totalScrap } = jalankan(arketipe);
+      const tertinggi = Math.max(...perHari.values());
+
+      // Atapnya per pemain per hari balapan. Ini angka yang membuat seluruh
+      // proyeksi kewajiban bisa dipercaya.
+      expect(tertinggi).toBeLessThanOrEqual(E.dailyCoinCapPerPlayer + 1e-9);
+
+      // Dan Sparepart tetap mengalir penuh -- pemain masih maju, yang berhenti
+      // hanya pencetakan rupiah.
+      expect(totalScrap).toBeGreaterThan(0);
+    });
+  }
+
+  it("mengunci kewajiban 30 hari per pemain pada atap harian kali nilai koin", () => {
+    for (const arketipe of ARKETIPE) {
+      const { totalKoin, perHari } = jalankan(arketipe);
+      // Diikat ke jumlah hari balapan yang benar-benar dilewati, bukan angka 30:
+      // hari balapan berganti tengah malam WIB, jadi 30 x 24 jam yang dimulai
+      // pada tengah malam UTC menyentuh 31 hari balapan. Yang dikunci di sini
+      // atapnya per hari, bukan panjang simulasinya.
+      const atap = perHari.size * E.dailyCoinCapPerPlayer;
+      expect(perHari.size).toBeGreaterThanOrEqual(30);
+      expect(totalKoin, arketipe.nama).toBeLessThanOrEqual(atap + 1e-9);
+      expect(totalKoin * E.coinToIdr, arketipe.nama).toBeLessThanOrEqual(
+        atap * E.coinToIdr + 1e-6,
+      );
+    }
+  });
+
+  it("memerah kalau atap harian dinaikkan menembus proyeksi panel", () => {
+    // Penjaga arah: proyeksi admin membaca atap yang sama, jadi keduanya tidak
+    // bisa menyimpang tanpa test ini ikut bicara.
+    const projeksi = projectEconomy(E);
+    expect(projeksi.dailyCapIdrPerPlayer).toBe(
+      E.dailyCoinCapPerPlayer * E.coinToIdr,
+    );
+    const { perHari } = jalankan(ARKETIPE[2]);
+    expect(Math.max(...perHari.values()) * E.coinToIdr).toBeLessThanOrEqual(
+      projeksi.dailyCapIdrPerPlayer + 1e-6,
+    );
+  });
+
+  /**
+   * Test di atas ikut naik kalau knob-nya dinaikkan, jadi ia saja belum
+   * memenuhi "knob yang menembus batas harus memerahkan test". Yang ini
+   * membekukan atapnya secara absolut: menaikkan batas koin harian atau nilai
+   * koin di atas angka ini menuntut suntingan sadar di sini, dengan orang yang
+   * sudah menghitung ulang kewajibannya.
+   */
+  it("membekukan atap kewajiban harian per pemain dalam rupiah", () => {
+    const ATAP_RUPIAH_PER_PEMAIN_PER_HARI = 3_000;
+    expect(E.dailyCoinCapPerPlayer * E.coinToIdr).toBeLessThanOrEqual(
+      ATAP_RUPIAH_PER_PEMAIN_PER_HARI,
+    );
+    // Dan anggaran harian harus muat untuk jumlah pemain yang masuk akal.
+    expect(projectEconomy(E).playersWithinBudget).toBeGreaterThanOrEqual(100);
+  });
+
+  it("menahan penarikan dari akun yang lebih muda dari syarat umurnya", () => {
+    const lahir = new Date("2026-09-11T00:00:00.000Z");
+    const cukupPutaran = E.withdrawMinLaps;
+
+    for (let umur = 0; umur < E.withdrawMinAccountAgeDays; umur += 1) {
+      const now = new Date(lahir.getTime() + umur * 24 * JAM);
+      expect(
+        withdrawBlocker(E, { laps: cukupPutaran, createdAt: lahir, lastWithdrawalAt: null }, now),
+        `umur ${umur} hari`,
+      ).toMatchObject({ kind: "accountAge" });
+    }
+
+    const cukupUmur = new Date(
+      lahir.getTime() + E.withdrawMinAccountAgeDays * 24 * JAM,
+    );
+    expect(
+      withdrawBlocker(E, { laps: cukupPutaran, createdAt: lahir, lastWithdrawalAt: null }, cukupUmur),
+    ).toBeNull();
+  });
+
+  it("menahan penarikan sebelum putaran minimum tercapai, apa pun umurnya", () => {
+    const lahir = new Date("2026-01-01T00:00:00.000Z");
+    const sekarang = new Date("2026-09-11T00:00:00.000Z");
+    expect(
+      withdrawBlocker(
+        E,
+        { laps: E.withdrawMinLaps - 1, createdAt: lahir, lastWithdrawalAt: null },
+        sekarang,
+      ),
+    ).toMatchObject({ kind: "laps" });
+  });
+});
+
 describe("Panel admin mencakup seluruh knob ekonomi", () => {
   const panelSource = readFileSync("app/admin/admin-economy.tsx", "utf8");
   const groupKeys = [

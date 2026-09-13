@@ -18,7 +18,7 @@ export function RacePositionHud({ position, followCamera, recovering }: {
   );
 }
 
-export function RaceOverviewHud({ seconds, baseSeconds, reward, progress, telemetry, boosted, batteryLevel }: {
+export function RaceOverviewHud({ seconds, baseSeconds, reward, progress, telemetry, boosted, batteryLevel, dayCoins, dailyCoinCap }: {
   seconds: number;
   baseSeconds: number;
   reward: number;
@@ -26,6 +26,9 @@ export function RaceOverviewHud({ seconds, baseSeconds, reward, progress, teleme
   telemetry: DrivingState;
   boosted: boolean;
   batteryLevel: number;
+  /** Koin yang sudah dicetak hari ini, dan atapnya. */
+  dayCoins: number;
+  dailyCoinCap: number;
 }) {
   const lapPercent = Math.min(100, Math.max(0, Math.round(progress * 100)));
   const lapSeconds = seconds.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -38,6 +41,10 @@ export function RaceOverviewHud({ seconds, baseSeconds, reward, progress, teleme
     ? energy === 100 ? "Penuh" : "Mengisi"
     : telemetry.boostExhausted ? "Habis" : recovering || telemetry.offRoad ? "Tertahan" : "Mendorong";
   const energyDescription = `${energyStatus}, ${energy} persen, cadangan ${reserveSeconds.toFixed(1)} detik dorongan`;
+  // Jatah koin harian habis berarti putaran berikutnya membayar nol koin.
+  // Menampilkan hadiah nominal di saat itu akan menjanjikan yang tidak datang.
+  const capReached = dailyCoinCap > 0 && dayCoins >= dailyCoinCap;
+  const shownReward = capReached ? 0 : reward;
   return (
     <section className="race-overview-hud font-sans" aria-label="Telemetri balapan">
       <dl className="race-hud-grid">
@@ -81,7 +88,13 @@ export function RaceOverviewHud({ seconds, baseSeconds, reward, progress, teleme
         </div>
         <div className="race-hud-cell race-hud-reward">
           <dt>Hadiah</dt>
-          <dd>+{formatCoins(reward)}<small>koin/lap</small></dd>
+          <dd>+{formatCoins(shownReward)}<small>koin/lap</small></dd>
+          {dailyCoinCap > 0 && (
+            <dd className="race-hud-cap" data-full={capReached || undefined}>
+              {formatCoins(Math.min(dayCoins, dailyCoinCap))}/{formatCoins(dailyCoinCap)}
+              <small>hari ini</small>
+            </dd>
+          )}
         </div>
       </dl>
     </section>

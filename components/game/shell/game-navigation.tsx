@@ -7,6 +7,7 @@ import {
   Coins,
   Menu,
   Wallet,
+  Wrench,
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -75,8 +76,11 @@ export function Topbar({
   racerName,
   racerPhotoUrl,
   onWallet,
+  scrap,
 }: {
   balance: number;
+  /** Sparepart: mata uang progres, tidak pernah bisa ditarik. */
+  scrap: number;
   level: number;
   racerName: string;
   racerPhotoUrl: string | null;
@@ -84,6 +88,7 @@ export function Topbar({
 }) {
   const initial = Array.from(racerName.trim())[0]?.toUpperCase() || "R";
   const displayedBalance = formatCoins(Math.floor(balance));
+  const displayedScrap = formatCoins(Math.floor(scrap));
 
   return (
     <header className="topbar font-sans">
@@ -106,6 +111,19 @@ export function Topbar({
             <strong>{displayedBalance}</strong>
           </span>
         </button>
+        {/* Sparepart berdampingan dengan koin karena keduanya saldo, tapi hanya
+            koin yang bernilai rupiah -- ikon dan warnanya sengaja berbeda. */}
+        <div
+          className="scrap-balance"
+          role="img"
+          aria-label={`${displayedScrap} Sparepart`}
+          title={`${displayedScrap} Sparepart · untuk upgrade, tidak bisa ditarik`}
+        >
+          <Wrench aria-hidden="true" />
+          <span aria-hidden="true">
+            <strong>{displayedScrap}</strong>
+          </span>
+        </div>
         <div
           className="racer-avatar"
           role="img"

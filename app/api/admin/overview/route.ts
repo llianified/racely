@@ -1,6 +1,7 @@
 import { adminJson, guardAdmin } from "@/lib/admin-api";
 import { AdminOpsError, readAuditTrail, readLiability } from "@/lib/admin-ops";
 import { readEconomyConfig } from "@/lib/economy-store";
+import { readEmissionSummary } from "@/lib/emission-store";
 import { projectEconomy } from "@/lib/economy-projection";
 
 export const runtime = "nodejs";
@@ -12,14 +13,16 @@ export async function GET(request: Request) {
 
   try {
     const economy = await readEconomyConfig();
-    const [liability, audit] = await Promise.all([
+    const [liability, audit, emission] = await Promise.all([
       readLiability(),
       readAuditTrail(20),
+      readEmissionSummary(),
     ]);
     return adminJson({
       economy,
       liability,
       audit,
+      emission,
       projection: projectEconomy(economy),
     });
   } catch (error) {
