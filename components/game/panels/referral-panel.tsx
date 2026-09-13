@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Link2, ListChecks, UserPlus } from "lucide-react";
+import { Copy, Link2, ListChecks } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InfoHint } from "./info-hint";
 import { SectionCardHeading } from "../shell/section-card-heading";
@@ -50,15 +50,6 @@ export function ReferralPanel({
       <section className="panel referral-card" aria-label="Link ajakan">
         <SectionCardHeading icon={Link2} title="Link ajakan" />
         <code className="referral-link">{referral.link || "Link belum tersedia"}</code>
-        <Button
-          variant="outline"
-          className="w-full"
-          disabled={disabled || !referral.link}
-          onClick={onInvite}
-        >
-          <UserPlus data-icon="inline-start" />
-          Salin dan ajak teman
-        </Button>
       </section>
 
       <section className="panel referral-card" aria-label="Cara kerja ajak teman">

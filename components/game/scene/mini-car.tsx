@@ -3,6 +3,7 @@
 import { memo, useRef, type RefObject } from 'react'
 import { useFrame } from '@react-three/fiber'
 import type { CarModelId } from '@/lib/car-catalog'
+import { addPlayfulBody, type PlayfulFinish } from './playful-car-body'
 import type { GameState } from '@/lib/game'
 import { PART_CATALOG, type BodyParts, type PartId } from '@/lib/car-parts'
 import * as THREE from 'three'
@@ -16,7 +17,9 @@ export const COLORS = { blue: '#7841ee', navy: '#090c1d', surface: '#191939', gr
 type Point = [number, number]
 type Position = [number, number, number]
 type Section = [z: number, halfWidth: number, y: number, height: number, x?: number]
-type Finish = 'body' | 'chassis' | 'rubber' | 'alloy' | 'gold' | 'livery' | 'glass'
+type Finish = PlayfulFinish | 'chassis' | 'alloy' | 'glass'
+
+const CHARACTER_COLORS = { candy: '#f092b0', mint: '#8ddbb5', snack: '#754330', orange: '#ff963e' }
 
 const SIDES = [-1, 1] as const
 const AXLES = [-.265, .265] as const
@@ -109,7 +112,10 @@ function mergeIndexed(geometries: THREE.BufferGeometry[]) {
 function createCarGeometry(model: CarModelId) {
   const parts: Record<Finish, THREE.BufferGeometry[]> = {
     body: [], chassis: [], rubber: [], alloy: [], gold: [], livery: [], glass: [],
+    candy: [], mint: [], snack: [], orange: [], dome: [],
   }
+  let character = false
+  const characterParts: Partial<Record<Finish, THREE.BufferGeometry[]>> = {}
   const internalParts: Partial<Record<Finish, THREE.BufferGeometry[]>> = {}
   let internal = false
   let spoiler = false
@@ -129,6 +135,8 @@ function createCarGeometry(model: CarModelId) {
       triangles.translate(-x, -y, -z)
       const wheelFinish = currentWheel.parts[finish] ??= []
       wheelFinish.push(triangles)
+    } else if (character) {
+      ;(characterParts[finish] ??= []).push(triangles)
     } else if (spoiler) {
       const spoilerFinish = spoilerParts[finish] ??= []
       spoilerFinish.push(triangles)
@@ -147,106 +155,9 @@ function createCarGeometry(model: CarModelId) {
     [.145, -.14], [.184, -.20], [.184, -.29], [.115, -.36],
   ], .035), [0, .082, 0])
 
-  if (model === 'neo-falcon') {
-  add('body', sculptedShell([
-    [-.355, .053, .151, .013], [-.29, .101, .173, .046],
-    [-.19, .114, .190, .058], [-.075, .104, .190, .061],
-    [.045, .080, .181, .060], [.17, .067, .165, .044],
-    [.30, .079, .147, .025], [.385, .088, .134, .009],
-  ]))
-
-  add('glass', sculptedShell([
-    [-.214, .035, .240, .003], [-.15, .066, .245, .051],
-    [-.06, .067, .240, .068], [.035, .052, .227, .054],
-    [.135, .027, .205, .013], [.165, .002, .194, .002],
-  ], 36, 40))
-
-  for (const side of SIDES) {
-    add('body', sculptedShell([
-      [-.325, .010, .163, .008, side * .117],
-      [-.22, .030, .193, .043, side * .147],
-      [-.09, .049, .187, .050, side * .166],
-      [.075, .041, .179, .034, side * .167],
-      [.18, .018, .159, .018, side * .133],
-      [.315, .004, .140, .006, side * .090],
-    ]))
-    add('livery', sculptedShell([
-      [-.275, .005, .223, .003, side * .136],
-      [-.16, .010, .241, .003, side * .165],
-      [-.045, .011, .238, .003, side * .179],
-      [.075, .006, .214, .003, side * .177],
-      [.18, .001, .177, .002, side * .140],
-    ], 24, 8))
-    add('livery', sculptedShell([
-      [.115, .001, .226, .002, side * .031],
-      [.20, .009, .205, .002, side * .034],
-      [.30, .012, .174, .002, side * .037],
-      [.379, .014, .145, .002, side * .040],
-    ], 24, 8))
-    add('livery', sculptedShell([
-      [-.15, .002, .285, .002, side * .059],
-      [-.045, .003, .290, .002, side * .062],
-      [.055, .002, .253, .002, side * .048],
-      [.14, .001, .213, .001, side * .023],
-    ], 24, 8))
-
-    add('chassis', sculptedShell([
-      [-.125, .020, .199, .010, side * .208],
-      [-.04, .025, .194, .016, side * .208],
-      [.065, .021, .186, .013, side * .202],
-      [.10, .009, .177, .003, side * .189],
-    ], 16, 16))
-    for (let i = 0; i < 4; i++) {
-      add('chassis', plate([[-.020, -.004], [.020, -.004], [.014, .004], [-.020, .004]], .002),
-        [side * .151, .235 - i * .003, -.117 + i * .027], [0, side * .18, side * -.18])
-    }
-    add('chassis', plate([
-      [-.037, -.22], [.025, -.17], [.025, .15], [-.027, .21], [-.037, .12],
-    ].map(([x, z]) => [x * side, z] as Point), .013), [side * .165, .099, 0])
-  }
-
-  } else {
-    add('body', sculptedShell([
-      [-.35, .095, .153, .018], [-.28, .15, .176, .046],
-      [-.13, .172, .184, .055], [.045, .163, .179, .048],
-      [.19, .145, .158, .036], [.31, .135, .146, .029],
-      [.38, .083, .139, .010],
-    ]))
-    add('glass', sculptedShell([
-      [-.24, .060, .217, .009], [-.16, .108, .231, .065],
-      [-.055, .112, .229, .085], [.06, .092, .219, .064],
-      [.17, .038, .189, .013], [.19, .002, .181, .002],
-    ], 36, 40))
-    add('body', sculptedShell([
-      [-.165, .015, .289, .002], [-.12, .074, .297, .010],
-      [-.055, .087, .305, .010], [.015, .062, .295, .008],
-      [.04, .006, .277, .002],
-    ], 24, 32))
-    for (const side of SIDES) {
-      add('body', sculptedShell([
-        [-.32, .010, .156, .006, side * .13],
-        [-.24, .042, .177, .040, side * .161],
-        [-.05, .032, .165, .035, side * .178],
-        [.17, .035, .15, .028, side * .159],
-        [.32, .008, .139, .009, side * .115],
-      ]))
-      add('livery', sculptedShell([
-        [-.29, .003, .143, .003, side * .159],
-        [-.14, .004, .148, .004, side * .188],
-        [.08, .004, .14, .004, side * .184],
-        [.26, .002, .128, .003, side * .148],
-      ], 24, 12))
-      const lamp = new THREE.SphereGeometry(1, 24, 12)
-      lamp.scale(.034, .012, .018)
-      add('livery', lamp, [side * .091, .173, .316], [-.25, side * -.25, 0])
-      const rearLamp = new THREE.SphereGeometry(1, 16, 8)
-      rearLamp.scale(.029, .007, .008)
-      add('livery', rearLamp, [side * .088, .169, -.341])
-    }
-    add('chassis', sculptedShell([
-      [.34, .06, .127, .008], [.369, .066, .126, .009], [.387, .04, .125, .003],
-    ], 12, 16))
-  }
+  character = true
+  addPlayfulBody(model, add)
+  character = false
 
   for (const z of AXLES) {
     add('alloy', cylinder(.010, .565, 16), [0, .124, z], [0, 0, Math.PI / 2])
@@ -377,7 +288,7 @@ function createCarGeometry(model: CarModelId) {
 
   const merge = (groups: Partial<Record<Finish, THREE.BufferGeometry[]>>) =>
     Object.fromEntries(Object.entries(groups).filter(([, geometries]) => geometries.length).map(([finish, geometries]) => [finish, mergeIndexed(geometries)])) as Partial<Record<Finish, THREE.BufferGeometry>>
-  return { shell: merge(parts), spoiler: merge(spoilerParts), internals: merge(internalParts), wheels: wheels.map(wheel => ({ position: wheel.position, parts: merge(wheel.parts) })) }
+  return { shell: merge(parts), character: merge(characterParts), spoiler: merge(spoilerParts), internals: merge(internalParts), wheels: wheels.map(wheel => ({ position: wheel.position, parts: merge(wheel.parts) })) }
 }
 
 // Both canvases share immutable geometry; batch details by finish instead of drawing each bolt separately.
@@ -389,7 +300,9 @@ function CarSurfaces({ parts, color, model, inspect = false }: {
   return <>{(Object.entries(parts) as [Finish, THREE.BufferGeometry][]).map(([finish, geometry]) => {
     if (inspect && ['body', 'glass', 'livery'].includes(finish)) return null
     return <mesh key={finish} geometry={geometry} dispose={null} castShadow receiveShadow>
-      {finish === 'body' ? <meshPhysicalMaterial color={color} roughness={.24} metalness={.35} clearcoat={1} clearcoatRoughness={.12} />
+      {finish === 'body' ? <meshPhysicalMaterial color={color} roughness={.32} metalness={.04} clearcoat={.8} clearcoatRoughness={.2} />
+        : finish === 'dome' ? <meshPhysicalMaterial color={COLORS.sky} transparent opacity={.18} depthWrite={false} roughness={.08} metalness={.12} clearcoat={1} />
+        : finish === 'candy' || finish === 'mint' || finish === 'snack' || finish === 'orange' ? <meshStandardMaterial color={CHARACTER_COLORS[finish]} roughness={.42} />
         : finish === 'glass' ? <meshPhysicalMaterial color={COLORS.navy} roughness={.08} metalness={.15} clearcoat={1} clearcoatRoughness={.04} />
         : <meshStandardMaterial
           color={finish === 'gold' ? (model === 'luna-gt' ? COLORS.white : COLORS.gold) : ['alloy', 'livery'].includes(finish) ? COLORS.white : COLORS.navy}
@@ -474,7 +387,7 @@ const AeroPart = memo(function AeroPart({ id, model, color }: { id: PartId; mode
   const key = `${model}:${id}`
   let geometry = AERO_CACHE.get(key)
   if (!geometry) { geometry = createAeroGeometry(id, model); AERO_CACHE.set(key, geometry) }
-  return <group name={`part-${id}`}><CarSurfaces parts={geometry} color={color} model={model} /></group>
+  return <group name={`part-${id}`} position={PART_CATALOG[id].slot === 'hood' ? [0, .36, -.16] : PART_CATALOG[id].slot === 'spoiler' ? [0, .1, -.08] : [0, 0, 0]}><CarSurfaces parts={geometry} color={color} model={model} /></group>
 })
 
 const STOCK_LEVELS = { engine: 1, tires: 1, battery: 1 };
@@ -507,6 +420,7 @@ export const MiniCar = memo(function MiniCar({ color, model = 'neo-falcon', scal
   const geometry = GEOMETRY_CACHE[model] ?? (GEOMETRY_CACHE[model] = createCarGeometry(model))
   return <group scale={scale}>
     <CarSurfaces parts={geometry.shell} color={color} model={model} inspect={inspect} />
+    {!inspect && <CarSurfaces parts={geometry.character} color={color} model={model} />}
     {!equipped?.spoiler && <CarSurfaces parts={geometry.spoiler} color={color} model={model} inspect={inspect} />}
     {!inspect && Object.values(equipped ?? {}).map(id => <AeroPart key={id} id={id} color={color} model={model} />)}
     {inspect && <CarSurfaces parts={geometry.internals} color={color} model={model} />}

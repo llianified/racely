@@ -261,7 +261,7 @@ export function WalletPanel({
           </div>
 
           {error && (
-            <p className="wallet-error" role="alert">
+            <p className="form-error" role="alert">
               {error}
             </p>
           )}

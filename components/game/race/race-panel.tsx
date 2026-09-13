@@ -122,14 +122,14 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
       {!inspect && <RaceOverviewHud seconds={seconds} baseSeconds={baseSeconds} reward={lapReward(game)} progress={game.progress} telemetry={telemetry} boosted={boosted} batteryLevel={game.levels.battery} />}
       <div className="scene-controls" role="group" aria-label="Kontrol balapan dan kamera">
           {inspect ? <>
-            <Button variant="outline" size="sm" onClick={() => setBodyVisible(value => !value)} aria-pressed={bodyVisible} aria-label={bodyVisible ? "Lepas bodi untuk melihat baterai" : "Pasang bodi untuk melihat detail mobil"}>{bodyVisible ? "Lepas bodi" : "Pasang bodi"}</Button>
+            <Button variant="outline" size="sm" onClick={() => setBodyVisible(value => !value)} aria-label={bodyVisible ? "Lepas bodi untuk melihat baterai" : "Pasang bodi untuk melihat detail mobil"}>{bodyVisible ? "Lepas bodi" : "Pasang bodi"}</Button>
             <Button variant="outline" size="sm" onClick={() => setInspect(false)}><Camera data-icon="inline-start" />Balapan</Button>
           </> : <>
           <Button variant="outline" size="icon-sm" onClick={() => {
             const nextFollowCamera = !followCamera;
             setCameraChoice(nextFollowCamera);
             setControlFeedback(nextFollowCamera ? "Kamera kembali mengikuti mobil." : "Kamera overview aktif. Geser lintasan untuk memutar.");
-          }} aria-pressed={!followCamera} aria-label={followCamera ? "Aktifkan kamera overview" : "Kembali ke kamera follow mobil"} title={followCamera ? "Lihat seluruh lintasan" : "Kembali mengikuti mobil"}>
+          }} aria-pressed={!followCamera} aria-label="Kamera overview" title={followCamera ? "Lihat seluruh lintasan" : "Kembali mengikuti mobil"}>
             <Camera aria-hidden="true" />
           </Button>
           </>}
@@ -167,7 +167,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
         <div className="race-settings-group" role="group" aria-labelledby={`${settingsId}-sim`}>
           <h3 className="race-settings-title" id={`${settingsId}-sim`}>Simulasi arena <small>Hanya tampilan</small></h3>
           <SettingRow label="Inspeksi mobil" hint={inspect ? 'Sedang melihat sasis' : 'Putar mobil, lihat sasis & baterai'}>
-            <Button variant="outline" size="sm" aria-pressed={inspect} onClick={() => {
+            <Button variant="outline" size="sm" onClick={() => {
               setInspect(value => !value);
               panel.current?.scrollIntoView({ block: "start", behavior: reducedMotion ? "instant" : "smooth" });
             }}>{inspect ? "Kembali balapan" : "Lihat sasis"}</Button>

@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { memo, useRef, useState } from "react";
-import { ArrowUp, BatteryMedium, CarFront, Check, Cog, CircleDot, LoaderCircle, Wrench } from "lucide-react";
+import { ArrowUp, BatteryMedium, Check, Cog, CircleDot, LoaderCircle, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -11,6 +11,8 @@ import { CarColorPicker } from "../car/car-color-picker";
 import { SectionCardHeading } from "../shell/section-card-heading";
 import { InfoHint } from "./info-hint";
 import { BodyPartsShop } from "./body-parts-shop";
+import { CarCollection } from "../car/car-collection";
+import type { CarCommand } from "@/lib/car-collection";
 import type { PartCommand } from "@/lib/car-parts";
 import { gripTuning, powertrainTuning } from "@/lib/race-dynamics";
 import { coins, displaySpeedKmh, formatCoins, formatSpeedKmh, lapReward, lapSeconds, modificationPreview, totalLevel, type GameState, type Upgrade } from "@/lib/game";
@@ -19,7 +21,7 @@ const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
   ssr: false,
   loading: () => (
     <div className="scene-loading" role="status">
-      <CarFront aria-hidden="true" />
+      <LoaderCircle className="animate-spin" aria-hidden="true" />
       <strong>Menyiapkan mobil 3D…</strong>
     </div>
   ),
@@ -62,12 +64,14 @@ export const GaragePanel = memo(function GaragePanel({
   active = true,
   onChooseColor,
   onPartAction,
+  onCarAction,
   disabled = false,
 }: {
   game: GameState;
   active?: boolean;
   onChooseColor: (color: CarColor, name: string) => void;
   onPartAction: (action: PartCommand) => Promise<boolean>;
+  onCarAction: (action: CarCommand) => Promise<boolean>;
   disabled?: boolean;
 }) {
   const model = game.carSelection?.model ?? "neo-falcon";
@@ -100,6 +104,7 @@ export const GaragePanel = memo(function GaragePanel({
           <div><dt>Hasil per putaran</dt><dd><strong>{formatCoins(lapReward(game))}</strong> koin</dd></div>
         </dl>
       </section>
+      <CarCollection game={game} active={active} disabled={disabled} onAction={onCarAction} />
       <BodyPartsShop game={game} active={active} disabled={disabled} onAction={onPartAction} />
     </>
   );
@@ -139,7 +144,7 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
   const arena = key === "engine"
     ? { label: "Akselerasi", now: `${seconds(Math.log(10) / currentPowertrain.accelerationRate)} d`, next: `${seconds(Math.log(10) / nextPowertrain.accelerationRate)} d` }
     : key === "tires"
-      ? { label: "Grip", now: `−${currentGrip.drainReductionPercent}%`, next: `−${nextGrip.drainReductionPercent}%` }
+      ? { label: "Grip", now: `${currentGrip.drainReductionPercent}%`, next: `${nextGrip.drainReductionPercent}%` }
       : { label: "Boost", now: `${seconds(currentPowertrain.boostCapacitySeconds)} d`, next: `${seconds(nextPowertrain.boostCapacitySeconds)} d` };
 
   const install = async () => {
@@ -208,8 +213,8 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
               <div className="flex flex-wrap items-center justify-between gap-sm border-t border-border p-md">
                 <span aria-live="polite">{showAfter ? "Setelah" : "Sebelum"} · Lv. {showAfter ? nextLevel : level}</span>
                 <div className="flex flex-wrap gap-sm">
-                  <Button variant="outline" size="sm" onClick={() => setShowAfter(value => !value)} aria-pressed={showAfter}>{showAfter ? "Lihat sebelum" : "Lihat setelah"}</Button>
-                  <Button variant="outline" size="sm" onClick={() => setInspect(value => !value)} aria-pressed={inspect}>{inspect ? "Pasang bodi" : "Lepas bodi"}</Button>
+                  <Button variant="outline" size="sm" onClick={() => setShowAfter(value => !value)}>{showAfter ? "Lihat sebelum" : "Lihat setelah"}</Button>
+                  <Button variant="outline" size="sm" onClick={() => setInspect(value => !value)}>{inspect ? "Pasang bodi" : "Lepas bodi"}</Button>
                 </div>
               </div>
             </div>

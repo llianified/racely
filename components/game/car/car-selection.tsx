@@ -8,7 +8,7 @@ import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { ArrowLeft, ArrowRight, Check, Flag, LoaderCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CAR_CATALOG, CAR_MODEL_IDS, isCarColor, type CarColor, type CarModelId } from "@/lib/car-catalog";
+import { CAR_CATALOG, STARTER_CAR_IDS, isCarColor, type CarColor, type CarModelId } from "@/lib/car-catalog";
 import { CarColorPicker } from "./car-color-picker";
 
 const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
@@ -83,15 +83,15 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
         </ol>
         <div className="selection-intro">
           <h1 ref={headingRef} tabIndex={-1}>
-            {step === 1 ? <>{returningPlayer ? "Kembali ke garasi." : "Mobil pertamamu."}<br /><span>Awal cerita baru.</span></> : <>Pilih warnanya.<br /><span>Tunjukkan gayamu.</span></>}
+            {step === 1 ? <>{returningPlayer ? "Kembali ke garasi." : "Mobil pertamamu."}<br /><span>Lucu dulu, ngebut kemudian.</span></> : <>Pilih warnanya.<br /><span>Tunjukkan gayamu.</span></>}
           </h1>
           <p>{step === 1
             ? returningPlayer
-              ? "Koin, upgrade, dan progresmu tetap aman. Model hanya dipilih sekali."
+              ? "Koin, upgrade, dan progresmu aman. Pilih starter, lalu koleksi mobil spesial di garasi."
               // Jumlahnya dari katalog: menambah mobil (lihat rute di AGENTS.md)
               // tidak boleh meninggalkan kalimat yang menyebut jumlah lama.
-              : `${CAR_MODEL_IDS.length} karakter. Satu pilihan. Mana jagoanmu? Model hanya dipilih sekali.${developmentPreview ? " Progres preview disimpan di browser ini." : ""}`
-            : "Sentuhan terakhir sebelum turun ke lintasan. Model tetap, warna bisa diganti."}</p>
+              : `${STARTER_CAR_IDS.length} starter gratis. Pilih satu teman ngebutmu. Mobil spesial menanti di garasi.${developmentPreview ? " Progres preview tersimpan di browser ini." : ""}`
+            : "Warna bisa diganti gratis. Starter pilihanmu tetap tersimpan saat membeli mobil spesial."}</p>
         </div>
       </header>
 
@@ -117,14 +117,14 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
             value={[model]}
             disabled={busy}
             onValueChange={(values) => {
-              const next = CAR_MODEL_IDS.find((id) => id === values[0]);
+              const next = STARTER_CAR_IDS.find((id) => id === values[0]);
               if (!next || next === model) return;
               setModel(next);
               setColor(CAR_CATALOG[next].defaultColor);
               setFailed(false);
             }}
           >
-            {CAR_MODEL_IDS.map((id) => (
+            {STARTER_CAR_IDS.map((id) => (
               <Toggle key={id} value={id} className="car-model-option">
                 <span>{CAR_CATALOG[id].name}</span>
                 <Check className="selection-check size-(--icon-base)" aria-hidden="true" />
@@ -137,7 +137,7 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
       </div>
 
       <footer className="selection-footer">
-        {failed && <p role="alert">Belum tersimpan. Pilihanmu tetap di sini; coba lagi.</p>}
+        {failed && <p className="form-error" role="alert">Belum tersimpan. Pilihanmu tetap di sini; coba lagi.</p>}
         <div className="selection-actions">
           {step === 2 && (
             <Button variant="outline" size="icon-lg" className="press-button" aria-label="Kembali ke pilihan mobil" disabled={busy} onClick={() => { setStep(1); setFailed(false); }}>
