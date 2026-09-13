@@ -131,15 +131,16 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
   const currentPowertrain = powertrainTuning(game.levels.engine, game.levels.battery);
   const nextPowertrain = powertrainTuning(key === "engine" ? nextLevel : game.levels.engine, key === "battery" ? nextLevel : game.levels.battery);
   const blocked = disabled || installing;
+  // Dua sel spek per part: dampak per putaran (server) dan efek arena (simulasi).
+  // Penjelasan panjangnya tetap ada di lembar modifikasi.
   const benefit = key === "battery"
-    ? `+${formatCoins(preview.afterReward - preview.beforeReward)} koin / putaran`
-    : `${seconds(preview.beforeSeconds - preview.afterSeconds)} dtk lebih cepat / putaran`;
-  // Satu baris ringkas per part; penjelasan panjangnya tetap ada di lembar modifikasi.
+    ? `+${formatCoins(preview.afterReward - preview.beforeReward)} koin`
+    : `−${seconds(preview.beforeSeconds - preview.afterSeconds)} dtk`;
   const arena = key === "engine"
-    ? `Respons ${seconds(Math.log(10) / currentPowertrain.accelerationRate)}${maxed ? "" : ` → ${seconds(Math.log(10) / nextPowertrain.accelerationRate)}`} d`
+    ? { label: "Akselerasi", now: `${seconds(Math.log(10) / currentPowertrain.accelerationRate)} d`, next: `${seconds(Math.log(10) / nextPowertrain.accelerationRate)} d` }
     : key === "tires"
-      ? `Grip −${currentGrip.drainReductionPercent}%${maxed ? "" : ` → −${nextGrip.drainReductionPercent}%`}`
-      : `Boost ${seconds(currentPowertrain.boostCapacitySeconds)}${maxed ? "" : ` → ${seconds(nextPowertrain.boostCapacitySeconds)}`} d`;
+      ? { label: "Grip", now: `−${currentGrip.drainReductionPercent}%`, next: `−${nextGrip.drainReductionPercent}%` }
+      : { label: "Boost", now: `${seconds(currentPowertrain.boostCapacitySeconds)} d`, next: `${seconds(nextPowertrain.boostCapacitySeconds)} d` };
 
   const install = async () => {
     if (installLock.current || blocked || maxed || shortfall > 0) return;
@@ -157,18 +158,33 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
     <Sheet open={open} onOpenChange={(value) => { if (!installLock.current) setOpen(value); }}>
       <div className="upgrade-row">
         <div className="upgrade-head">
-          <div className="upgrade-name"><Icon size={16} aria-hidden="true" /><h3>{title}</h3><span className="level-label">Lv. {level}</span></div>
+          <Icon aria-hidden="true" />
+          <div className="upgrade-name">
+            <h3>{title}</h3>
+            <p>{preview.currentPart}</p>
+          </div>
           <SheetTrigger render={<Button variant="gold" size="sm" className="upgrade-buy" disabled={blocked || maxed} />} aria-label={maxed ? `${title} level maksimal` : `Modifikasi ${title}`}>
             {maxed ? <Check data-icon="inline-start" /> : <Wrench data-icon="inline-start" />}
             {maxed ? "MAX" : "Modif"}
           </SheetTrigger>
         </div>
-        <p>{preview.currentPart} · {maxed ? "Modifikasi maksimal" : benefit}</p>
-        <p><span className="upgrade-arena-tag">Arena</span>{arena}</p>
-        {/* Jumlah segmen mengikuti config: ceiling yang disetel jadi 5 tidak
-            boleh menyisakan lima kotak yang tidak akan pernah terisi. */}
-        <div className="level-segments" aria-label={`Level ${level} dari ${ceiling}`}>
-          {Array.from({ length: ceiling }, (_, i) => <span key={i} className={i < level ? "filled" : undefined} />)}
+        <dl className="upgrade-specs">
+          <div>
+            <dt>Per putaran</dt>
+            <dd>{maxed ? "Maksimal" : <b>{benefit}</b>}</dd>
+          </div>
+          <div>
+            <dt>{arena.label} <small>arena</small></dt>
+            <dd>{arena.now}{!maxed && <><span aria-hidden="true"> → </span><b>{arena.next}</b></>}</dd>
+          </div>
+        </dl>
+        <div className="upgrade-level">
+          <span className="level-label">Lv. {level}</span>
+          {/* Jumlah segmen mengikuti config: ceiling yang disetel jadi 5 tidak
+              boleh menyisakan lima kotak yang tidak akan pernah terisi. */}
+          <div className="level-segments" aria-label={`Level ${level} dari ${ceiling}`}>
+            {Array.from({ length: ceiling }, (_, i) => <span key={i} className={i < level ? "filled" : undefined} />)}
+          </div>
         </div>
       </div>
       <SheetContent side="bottom" className="game-sheet gap-0 p-0 font-sans" showCloseButton={!installing}>
