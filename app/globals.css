@@ -628,21 +628,29 @@
 .garage-stats strong { color: var(--foreground); font-size: var(--fs-2xl); font-variant-numeric: tabular-nums; }
 
 .upgrade-list { padding-inline: 0; }
-/* Tombol ikut di baris judul, bukan kolom samping: kolom samping memaksa teks
-   melipat sempit dan menyisakan ruang kosong di atas tombol. */
-.upgrade-row { display: flex; flex-direction: column; gap: var(--space-6); padding: var(--space-md); border-bottom: var(--stroke) solid var(--border); }
+/* Lembar spek: judul + tombol di satu baris, dua sel angka, lalu rel level.
+   Tidak ada kolom samping — kolom samping memaksa teks melipat sempit dan
+   menyisakan ruang kosong di atas tombol. Sel angkanya sengaja meniru
+   .parts-shop-specs di lembar modifikasi supaya keduanya terasa satu alat. */
+.upgrade-row { display: flex; flex-direction: column; gap: var(--space-sm); padding: var(--space-md); border-bottom: var(--stroke) solid var(--border); }
 .upgrade-row:last-child { border-bottom: none; }
-.upgrade-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); }
-.upgrade-name { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-6); min-width: 0; }
-.upgrade-name h3 { font-size: var(--fs-body); font-weight: var(--fw-heavy); }
-.upgrade-name svg { width: var(--icon-base); height: var(--icon-base); flex-shrink: 0; color: var(--muted-foreground); }
-.level-label { font-size: var(--fs-small); font-weight: var(--fw-bold); color: var(--accent); white-space: nowrap; }
-.upgrade-row > p { font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.upgrade-arena-tag { display: inline-block; margin-right: var(--space-6); padding: 0 var(--space-6); border-radius: var(--corner-2xs); background: var(--secondary); color: var(--foreground); font-size: var(--fs-micro); font-weight: var(--fw-semibold); letter-spacing: var(--track-flat); text-transform: uppercase; vertical-align: middle; }
-.level-segments { display: flex; gap: var(--space-3); margin-top: var(--space-xs); }
+.upgrade-head { display: flex; align-items: center; gap: var(--space-sm); }
+.upgrade-head > svg { width: var(--icon-base); height: var(--icon-base); flex-shrink: 0; color: var(--accent); }
+.upgrade-name { flex: 1 1 auto; min-width: 0; line-height: var(--lh-tight); }
+.upgrade-name h3 { font-size: var(--fs-read); font-weight: var(--fw-heavy); }
+.upgrade-name p { margin-top: var(--space-2); font-size: var(--fs-micro); color: var(--muted-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.upgrade-buy { flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.upgrade-specs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-sm); }
+.upgrade-specs > div { min-width: 0; padding: var(--space-6) var(--space-10); border: var(--stroke) solid var(--border); border-radius: var(--corner-sm); background: color-mix(in srgb, var(--background) 28%, var(--card)); }
+.upgrade-specs dt { display: flex; align-items: baseline; gap: var(--space-xs); color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-semibold); letter-spacing: var(--track-caps-sm); text-transform: uppercase; white-space: nowrap; }
+.upgrade-specs dt small { font-size: inherit; font-weight: var(--fw-medium); letter-spacing: inherit; opacity: .7; }
+.upgrade-specs dd { margin-top: var(--space-2); color: var(--muted-foreground); font-size: var(--fs-body); line-height: var(--lh-snug); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.upgrade-specs dd b { color: var(--foreground); font-weight: var(--fw-bold); }
+.upgrade-level { display: flex; align-items: center; gap: var(--space-sm); }
+.level-label { flex-shrink: 0; min-width: var(--space-32); font-size: var(--fs-micro); font-weight: var(--fw-bold); color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.level-segments { display: flex; flex: 1 1 auto; gap: var(--space-3); }
 .level-segments > span { height: var(--space-xs); flex: 1; background: var(--secondary); border-radius: var(--corner-2xs); }
 .level-segments > span.filled { background: var(--primary); }
-.upgrade-buy { flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .body-colors { display: flex; align-items: center; gap: var(--space-xs); }
 .color-swatch { height: var(--space-40); width: var(--space-40); border: var(--swatch-ring-w) solid var(--card); border-radius: var(--corner-round); background: var(--swatch); color: var(--background); display: grid; place-items: center; }
 .color-swatch svg { width: var(--icon-base); height: var(--icon-base); stroke-width: var(--icon-stroke-bold); }
