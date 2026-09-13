@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_ECONOMY,
@@ -245,4 +245,45 @@ describe("Ambang sirkuit dibaca dari config di setiap permukaan", () => {
       expect(source).not.toMatch(/laps\s*[<>]=?\s*\d/);
     }
   });
+});
+
+/**
+ * Pagar regresi untuk angka ekonomi yang sempat ditulis lepas di teks UI. Tiap
+ * pola di bawah pernah benar-benar ada di kode: semuanya lolos typecheck, lint,
+ * dan test, lalu berbohong kepada pemain begitu knob-nya disetel dari panel.
+ * Daftar ini sengaja berupa literal yang dilarang, bukan aturan umum -- yang
+ * dijaga memang kalimat tertentu, dan "Respons 90%" atau "butuh 1 koin penuh"
+ * adalah sifat rumusnya, bukan knob.
+ */
+describe("Teks UI tidak menulis ulang angka ekonomi", () => {
+  const FORBIDDEN: { pattern: RegExp; field: string }[] = [
+    { pattern: /Gaspol \d/, field: "boostMultiplier" },
+    { pattern: /setengah kecepatan/, field: "offlineRate" },
+    { pattern: /maksimal level \d/, field: "maxUpgradeLevel" },
+    { pattern: /dari 10`/, field: "maxUpgradeLevel (aria-label segmen)" },
+    { pattern: /length: 10 \}/, field: "maxUpgradeLevel (jumlah segmen)" },
+    { pattern: /hari ketujuh/, field: "dailyRewards" },
+    { pattern: /\+\d+% tenaga/, field: "lapEnginePerLevel / lapTiresPerLevel" },
+    { pattern: /\+0,\d+ koin/, field: "lapRewardPerBattery / lapRewardPerCircuit" },
+  ];
+
+  const files = readdirSync("components/game", { recursive: true })
+    .map(String)
+    .filter((name) => name.endsWith(".tsx"))
+    // scene/ adalah geometri dan shader, bukan teks ekonomi.
+    .filter((name) => !name.startsWith("scene/"))
+    .map((name) => `components/game/${name}`);
+
+  it("memeriksa seluruh komponen non-3D, bukan cuma beberapa", () => {
+    expect(files.length).toBeGreaterThan(10);
+  });
+
+  for (const { pattern, field } of FORBIDDEN) {
+    it(`tidak menulis ${field} sebagai literal`, () => {
+      const offenders = files.filter((file) =>
+        pattern.test(readFileSync(file, "utf8")),
+      );
+      expect(offenders).toEqual([]);
+    });
+  }
 });
