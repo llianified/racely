@@ -128,6 +128,24 @@ const rate = z.number().finite().min(0).max(1);
 const positive = z.number().finite().gt(0).max(1_000_000);
 const lapCount = z.number().int().min(0).max(10_000_000);
 
+/**
+ * Hadiah yang dibayar lewat sebuah baris `racely_reward_claims`: hadiah starter,
+ * check-in harian, misi, dan kedua sisi ajakan.
+ *
+ * Bentuknya lebih ketat daripada `coin` karena kolom tujuannya lebih ketat.
+ * `racely_reward_claims.amount` adalah `bigint NOT NULL CHECK (amount > 0)` dan
+ * saldo pemain juga `bigint`, jadi nilai pecahan maupun nol DITOLAK Postgres --
+ * bukan dibulatkan diam-diam. Insert itu berjalan di dalam transaksi aksi
+ * pemain, jadi kegagalannya tidak berhenti pada hadiah yang batal: hasil
+ * balapan yang baru diselesaikan di transaksi yang sama ikut ter-rollback, dan
+ * pemain hanya melihat 500 setiap kali mencoba lagi.
+ *
+ * `coin` tetap dipakai untuk angka yang memang pecahan dan bermuara di kolom
+ * `double precision` (`lapRewardBase`, `pending`, `earned`) -- yang itu tidak
+ * boleh ikut dijadikan bilangan bulat.
+ */
+const rewardCoin = z.number().int().min(1).max(1_000_000);
+
 export const economyConfigSchema = z
   .object({
     coinToIdr: z.number().int().min(1).max(10_000_000),
@@ -135,7 +153,7 @@ export const economyConfigSchema = z
     maxWithdrawCoins: z.number().int().min(1).max(1_000_000_000),
 
     startingBalance: z.number().int().min(0).max(1_000_000),
-    starterGift: coin,
+    starterGift: rewardCoin,
 
     lapBaseSeconds: positive,
     lapEnginePerLevel: z.number().finite().min(0).max(100),
@@ -159,18 +177,18 @@ export const economyConfigSchema = z
     offlineCapSeconds: z.number().finite().min(0).max(30 * 86_400),
     offlineRate: rate,
 
-    dailyRewards: z.array(coin).min(1).max(31),
+    dailyRewards: z.array(rewardCoin).min(1).max(31),
 
     referralMilestoneLaps: lapCount,
-    referralRewardInviter: coin,
-    referralRewardInvitee: coin,
+    referralRewardInviter: rewardCoin,
+    referralRewardInvitee: rewardCoin,
 
     missionLapsTarget: lapCount,
-    missionLapsReward: coin,
+    missionLapsReward: rewardCoin,
     missionUpgradeTarget: z.number().int().min(0).max(100),
-    missionUpgradeReward: coin,
+    missionUpgradeReward: rewardCoin,
     missionEarnTarget: coin,
-    missionEarnReward: coin,
+    missionEarnReward: rewardCoin,
 
     circuitUnlockLaps: lapCount,
   })
@@ -191,6 +209,26 @@ export const economyConfigSchema = z
       message:
         "Penarikan maksimum dikali nilai koin melampaui batas presisi bilangan bulat.",
       path: ["maxWithdrawCoins"],
+    },
+  )
+  /**
+   * `calculateRaceSettlement` membagi waktu jadi dua: jendela heartbeat dibayar
+   * penuh, sisanya dibayar `offlineRate`. Boost hanya dihitung di dalam jendela
+   * heartbeat -- itu asumsi yang tertulis di `lib/game-economy.ts`, dan selama
+   * dua angka ini bisa disetel terpisah dari panel, asumsi itu tidak dijaga apa
+   * pun.
+   *
+   * Boost yang lebih panjang dari jendela heartbeat membuat ekornya dibayar
+   * dengan tarif normal kali `offlineRate`: pemain menekan Gaspol, tidak
+   * mendapat Gaspol, dan tidak ada satu pun error yang memberitahukannya. Tolak
+   * di sini, tempat operator masih bisa membacanya.
+   */
+  .refine(
+    (value) => value.boostDurationSeconds <= value.heartbeatCapSeconds,
+    {
+      message:
+        "Durasi boost tidak boleh melebihi jendela heartbeat -- kelebihannya akan dibayar dengan tarif offline.",
+      path: ["boostDurationSeconds"],
     },
   );
 
