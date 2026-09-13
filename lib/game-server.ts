@@ -19,7 +19,8 @@ import {
   dailyCheckIn,
   racingDayKey,
 } from "@/lib/game-economy";
-import { CAR_MODEL_IDS, isCarColor } from "@/lib/car-catalog";
+import { CAR_MODEL_IDS, isCarColor, isPremiumCar } from "@/lib/car-catalog";
+import { applyCarCommand, CarRuleError, ownedCarIds } from "@/lib/car-collection";
 import { applyPartCommand, PART_IDS, PART_SLOTS, PartRuleError } from "@/lib/car-parts";
 import {
   accountPattern,
@@ -66,6 +67,8 @@ const RECEIPT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const RECEIPT_PRUNE_PROBABILITY = 0.02;
 
 const commandSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("buy-car"), model: z.enum(CAR_MODEL_IDS) }).strict(),
+  z.object({ type: z.literal("equip-car"), model: z.enum(CAR_MODEL_IDS) }).strict(),
   z.object({ type: z.literal("buy-part"), partId: z.enum(PART_IDS) }).strict(),
   z.object({ type: z.literal("equip-part"), partId: z.enum(PART_IDS) }).strict(),
   z.object({ type: z.literal("unequip-part"), slot: z.enum(PART_SLOTS) }).strict(),
@@ -198,6 +201,7 @@ function stateFromRow(
     developmentPreview: false,
     economy,
     bodyParts: row.bodyParts,
+    ownedCars: ownedCarIds(row.ownedCars, row.carModel),
     // Left off the payload entirely when there is nothing to report, so the
     // client can treat its presence as "show the welcome-back dialog".
     offlineEarnings: offlineEarnings ?? undefined,
@@ -720,10 +724,18 @@ export async function performGameAction(
         // dipilih belakangan tidak boleh tersetel ulang ke warna pendaftaran.
         // Mode preview sudah berperilaku begini sejak awal.
       } else {
-        if (!isCarColor(action.model, action.color)) {
+        if (isPremiumCar(action.model) || !isCarColor(action.model, action.color)) {
           throw new GameRuleError("Model atau warna mobil tidak valid.", 400);
         }
-        next = { ...next, carModel: action.model, color: action.color };
+        next = { ...next, carModel: action.model, color: action.color, ownedCars: [action.model] };
+      }
+    } else if (action.type === "buy-car" || action.type === "equip-car") {
+      try {
+        const purchased = applyCarCommand(next, action, economy);
+        next = { ...next, ...purchased, ownedCars: purchased.ownedCars ?? next.ownedCars };
+      } catch (error) {
+        if (error instanceof CarRuleError) throw new GameRuleError(error.message);
+        throw error;
       }
     } else if (action.type === "buy-part" || action.type === "equip-part" || action.type === "unequip-part") {
       try {
@@ -884,6 +896,7 @@ export async function performGameAction(
         missionsClaimed: next.missionsClaimed,
         bodyParts: next.bodyParts,
         carModel: next.carModel,
+        ownedCars: next.ownedCars,
         color: next.color,
         circuit: next.circuit,
         lastSettledAt: next.lastSettledAt,

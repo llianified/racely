@@ -11,6 +11,8 @@ import { CarColorPicker } from "../car/car-color-picker";
 import { SectionCardHeading } from "../shell/section-card-heading";
 import { InfoHint } from "./info-hint";
 import { BodyPartsShop } from "./body-parts-shop";
+import { CarCollection } from "../car/car-collection";
+import type { CarCommand } from "@/lib/car-collection";
 import type { PartCommand } from "@/lib/car-parts";
 import { gripTuning, powertrainTuning } from "@/lib/race-dynamics";
 import { coins, displaySpeedKmh, formatCoins, formatSpeedKmh, lapReward, lapSeconds, modificationPreview, totalLevel, type GameState, type Upgrade } from "@/lib/game";
@@ -62,12 +64,14 @@ export const GaragePanel = memo(function GaragePanel({
   active = true,
   onChooseColor,
   onPartAction,
+  onCarAction,
   disabled = false,
 }: {
   game: GameState;
   active?: boolean;
   onChooseColor: (color: CarColor, name: string) => void;
   onPartAction: (action: PartCommand) => Promise<boolean>;
+  onCarAction: (action: CarCommand) => Promise<boolean>;
   disabled?: boolean;
 }) {
   const model = game.carSelection?.model ?? "neo-falcon";
@@ -100,6 +104,7 @@ export const GaragePanel = memo(function GaragePanel({
           <div><dt>Hasil per putaran</dt><dd><strong>{formatCoins(lapReward(game))}</strong> koin</dd></div>
         </dl>
       </section>
+      <CarCollection game={game} active={active} disabled={disabled} onAction={onCarAction} />
       <BodyPartsShop game={game} active={active} disabled={disabled} onAction={onPartAction} />
     </>
   );

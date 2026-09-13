@@ -39,7 +39,8 @@ import {
   type Upgrade,
 } from "@/lib/game";
 import { cn } from "@/lib/utils";
-import type { CarColor } from "@/lib/car-catalog";
+import { CAR_CATALOG, type CarColor } from "@/lib/car-catalog";
+import type { CarCommand } from "@/lib/car-collection";
 import { PART_CATALOG, SLOT_LABELS, type PartCommand } from "@/lib/car-parts";
 
 const GAME_TOAST_OFFSET = {
@@ -236,6 +237,12 @@ export function GameDashboard() {
       );
     return Boolean(next);
   };
+  const changeCar = async (action: CarCommand) => {
+    const next = await runAction(action);
+    if (!next) return false;
+    toast.success(`${CAR_CATALOG[action.model].name} ${action.type === "buy-car" ? "masuk garasi!" : "siap balapan!"}`);
+    return true;
+  };
   const modifyBodyPart = async (action: PartCommand) => {
     const next = await runAction(action);
     if (!next) return false;
@@ -420,6 +427,7 @@ export function GameDashboard() {
                 active={tab === "garage"}
                 onChooseColor={chooseColor}
                 onPartAction={modifyBodyPart}
+                onCarAction={changeCar}
                 disabled={Boolean(busyAction)}
               />
               <UpgradePanel

@@ -23,7 +23,8 @@ import {
   dailyCheckIn,
   racingDayKey,
 } from "./game-economy";
-import { CAR_MODEL_IDS, isCarColor } from "./car-catalog";
+import { CAR_MODEL_IDS, isCarColor, isPremiumCar } from "./car-catalog";
+import { applyCarCommand, CarRuleError, ownedCarIds } from "./car-collection";
 import { applyPartCommand, bodyPartsSchema, PartRuleError } from "./car-parts";
 import { referralLink } from "./telegram-bot";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
@@ -54,6 +55,7 @@ const previewGameSchema = z.object({
   state: z.object({
     developmentPreview: z.boolean().default(true),
     bodyParts: bodyPartsSchema.optional(),
+    ownedCars: z.array(z.enum(CAR_MODEL_IDS)).max(CAR_MODEL_IDS.length).optional(),
     carSelection: z.object({
       model: z.enum(CAR_MODEL_IDS).nullable(),
       returningPlayer: z.boolean(),
@@ -248,6 +250,7 @@ function previewResult(
 ): { state: GameState; cookieValue: string } {
   const state: GameState = {
     ...game.state,
+    ownedCars: ownedCarIds(game.state.ownedCars, game.state.carSelection?.model ?? null),
     economy,
     daily: dailyCheckIn(game.dailyClaims, new Date(now), economy),
     // Mode preview hanya punya satu pemain di dalam cookie, jadi tidak ada yang
@@ -319,7 +322,7 @@ export function performPreviewGameAction(
   const selection = game.state.carSelection;
 
   if (action.type === "select-car") {
-    if (!CAR_MODEL_IDS.includes(action.model) || !isCarColor(action.model, action.color)) {
+    if (!CAR_MODEL_IDS.includes(action.model) || isPremiumCar(action.model) || !isCarColor(action.model, action.color)) {
       throw new PreviewGameRuleError("Model atau warna mobil tidak valid.", 400);
     }
     if (selection?.model) {
@@ -346,8 +349,23 @@ export function performPreviewGameAction(
     state = {
       ...state,
       carSelection: { model: action.model, returningPlayer: selection?.returningPlayer ?? false },
+      ownedCars: [action.model],
       color: action.color,
     };
+  } else if (action.type === "buy-car" || action.type === "equip-car") {
+    try {
+      const purchased = applyCarCommand({ ...state, carModel: selection?.model ?? null }, action, economy);
+      state = {
+        ...state,
+        balance: purchased.balance,
+        ownedCars: purchased.ownedCars,
+        color: purchased.color,
+        carSelection: { model: purchased.carModel, returningPlayer: selection?.returningPlayer ?? false },
+      };
+    } catch (error) {
+      if (error instanceof CarRuleError) throw new PreviewGameRuleError(error.message);
+      throw error;
+    }
   } else if (action.type === "buy-part" || action.type === "equip-part" || action.type === "unequip-part") {
     try {
       state = { ...state, ...applyPartCommand(state, action) };

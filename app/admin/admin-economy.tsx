@@ -74,6 +74,14 @@ const GROUPS: Group[] = [
     ],
   },
   {
+    legend: "Mobil koleksi",
+    fields: [
+      { key: "carPriceBebek", label: "Bebek Sultan", hint: "koin", step: "1" },
+      { key: "carPriceBurger", label: "Burger Oleng", hint: "koin", step: "1" },
+      { key: "carPriceUfo", label: "UFO Gabut", hint: "koin", step: "1" },
+    ],
+  },
+  {
     legend: "Boost",
     fields: [
       { key: "boostDurationSeconds", label: "Durasi boost", hint: "detik", step: "1" },
