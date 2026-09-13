@@ -25,14 +25,34 @@ const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
   ),
 });
 
+/** Laju per level datang dari config, jadi "+15%" tidak boleh ditulis lepas. */
+const percent = (rate: number) =>
+  `${(rate * 100).toLocaleString("id-ID", { maximumFractionDigits: 2 })}%`;
+
 export const PARTS = [
-  { key: "engine" as Upgrade, title: "Mesin", subtitle: "+15% tenaga dasar", icon: Cog },
+  {
+    key: "engine" as Upgrade,
+    title: "Mesin",
+    subtitle: (e: GameState["economy"]) => `+${percent(e.lapEnginePerLevel)} tenaga dasar`,
+    icon: Cog,
+  },
   // Grip sengaja tidak disebut di sini: simulasinya menggerakkan racing line,
   // bukan koin atau lap server, jadi menjualnya di baris keputusan pembelian
   // menjanjikan penghasilan yang tidak akan datang. Rinciannya tetap ada di
   // tabel grip dalam lembar modifikasi, lengkap dengan batasannya.
-  { key: "tires" as Upgrade, title: "Ban & roller", subtitle: "+10% tenaga dasar", icon: CircleDot },
-  { key: "battery" as Upgrade, title: "Baterai", subtitle: "+0,01 koin / putaran", icon: BatteryMedium },
+  {
+    key: "tires" as Upgrade,
+    title: "Ban & roller",
+    subtitle: (e: GameState["economy"]) => `+${percent(e.lapTiresPerLevel)} tenaga dasar`,
+    icon: CircleDot,
+  },
+  {
+    key: "battery" as Upgrade,
+    title: "Baterai",
+    subtitle: (e: GameState["economy"]) =>
+      `+${formatCoins(e.lapRewardPerBattery)} koin / putaran`,
+    icon: BatteryMedium,
+  },
 ];
 
 export const BODY_COLORS = CAR_CATALOG["neo-falcon"].colors;
@@ -168,7 +188,7 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
             <Icon className="size-(--icon-xl) shrink-0 text-accent" aria-hidden="true" />
             <div className="min-w-0">
               <p className="font-bold">{preview.nextPart}</p>
-              <p className="text-muted-foreground">Level {level} → {nextLevel} · {part.subtitle}</p>
+              <p className="text-muted-foreground">Level {level} → {nextLevel} · {part.subtitle(game.economy)}</p>
             </div>
           </div>
           <div className="border-b border-border bg-background px-xl py-lg text-foreground">

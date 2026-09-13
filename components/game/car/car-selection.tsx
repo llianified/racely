@@ -88,7 +88,9 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
           <p>{step === 1
             ? returningPlayer
               ? "Koin, upgrade, dan progresmu tetap aman. Model hanya dipilih sekali."
-              : `Dua karakter. Satu pilihan. Mana jagoanmu? Model hanya dipilih sekali.${developmentPreview ? " Progres preview disimpan di browser ini." : ""}`
+              // Jumlahnya dari katalog: menambah mobil (lihat rute di AGENTS.md)
+              // tidak boleh meninggalkan kalimat yang menyebut jumlah lama.
+              : `${CAR_MODEL_IDS.length} karakter. Satu pilihan. Mana jagoanmu? Model hanya dipilih sekali.${developmentPreview ? " Progres preview disimpan di browser ini." : ""}`
             : "Sentuhan terakhir sebelum turun ke lintasan. Model tetap, warna bisa diganti."}</p>
         </div>
       </header>

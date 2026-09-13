@@ -71,14 +71,14 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
       ? "Gaspol aktif"
       : game.cooldown > 0
         ? "Mengisi ulang"
-        : "Gaspol 2×";
+        : `Gaspol ${game.economy.boostMultiplier}×`;
   const boostLabelForAssistiveTechnology = boosting
     ? "Memulai Gaspol"
     : boosted
       ? `Gaspol aktif, ${Math.ceil(game.boostLeft)} detik tersisa`
       : game.cooldown > 0
         ? `Baterai mengisi ulang, siap dalam ${battery.readyIn} detik`
-        : "Aktifkan Gaspol, kecepatan dua kali selama sepuluh detik";
+        : `Aktifkan Gaspol, kecepatan ${game.economy.boostMultiplier} kali selama ${game.economy.boostDurationSeconds} detik`;
   const fullscreen = async () => {
     try {
       if (document.fullscreenElement) {
@@ -175,7 +175,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
           <span>SUDUT OVERVIEW</span>
           <Button variant="outline" size="sm" onClick={() => setCameraMode((v) => (v + 1) % 3)} aria-label={`Ganti sudut overview, preset ${cameraMode + 1} dari 3`}>{cameraMode + 1}/3</Button>
         </div>}
-        {!inspect && <GripChallenge state={telemetry} tires={game.levels.tires} onToggle={() => {
+        {!inspect && <GripChallenge state={telemetry} tires={game.levels.tires} ceiling={game.economy.maxUpgradeLevel} onToggle={() => {
           const enabled = !driving.current.enabled;
           resetGripChallenge(driving.current, enabled);
           setTelemetry({ ...driving.current });
