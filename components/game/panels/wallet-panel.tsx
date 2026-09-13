@@ -39,9 +39,28 @@ export type WithdrawPayload = {
  * Nominal cepat diturunkan dari batas minimum, bukan ditulis lepas: minimum yang
  * disetel jadi 500 dari panel akan membuat chip "100" menawarkan penarikan yang
  * pasti ditolak server. Pada nilai bawaan hasilnya tetap 100/250/500/1000.
+ *
+ * Ikut dipagari batas ATAS. Kelipatannya bisa melewati `maxWithdrawCoins`
+ * (min 100 + max 500 menghasilkan chip 1000), dan chip yang ditawarkan sendiri
+ * lalu ditolak server sendiri adalah tombol yang memancing pemain gagal.
+ * Duplikat dibuang supaya rentang yang sempit tidak memunculkan chip kembar.
  */
-const quickAmounts = (min: number) =>
-  [min, min * 2.5, min * 5, min * 10].map((value) => Math.round(value));
+const quickAmounts = (min: number, max: number) => [
+  ...new Set(
+    [min, min * 2.5, min * 5, min * 10]
+      .map((value) => Math.round(value))
+      .filter((value) => value <= max),
+  ),
+];
+
+/**
+ * Berapa digit yang boleh diketik, diturunkan dari batas penarikan yang berlaku.
+ * Dulu dipatok 7 digit: begitu operator menaikkan `maxWithdrawCoins` di atas
+ * 9.999.999 (skemanya mengizinkan sampai satu miliar), nominal yang sah jadi
+ * tidak bisa diketik sama sekali -- sementara tombol "Semua" menyetelnya
+ * langsung tanpa lewat pemotongan ini, jadi dua jalur memakai dua aturan.
+ */
+const amountDigits = (max: number) => String(Math.max(1, Math.floor(max))).length;
 
 export function WalletPanel({
   game,
@@ -61,6 +80,7 @@ export function WalletPanel({
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
 
+  const maxWithdraw = economy.maxWithdrawCoins;
   const balance = Math.floor(game.balance);
   const requested = Number.parseInt(amount, 10) || 0;
   const isBank =
@@ -161,7 +181,11 @@ export function WalletPanel({
               autoComplete="off"
               value={amount}
               onChange={(event) =>
-                setAmount(event.target.value.replace(/\D/g, "").slice(0, 7))
+                setAmount(
+                  event.target.value
+                    .replace(/\D/g, "")
+                    .slice(0, amountDigits(maxWithdraw)),
+                )
               }
               className="wallet-input"
               aria-describedby="withdraw-amount-note"
@@ -172,7 +196,7 @@ export function WalletPanel({
           </div>
 
           <div className="wallet-chips" role="group" aria-label="Nominal cepat">
-            {quickAmounts(minWithdraw).map((value) => (
+            {quickAmounts(minWithdraw, maxWithdraw).map((value) => (
               <button
                 key={value}
                 type="button"
@@ -192,7 +216,7 @@ export function WalletPanel({
               type="button"
               className="wallet-chip"
               disabled={balance < minWithdraw}
-              onClick={() => setAmount(String(balance))}
+              onClick={() => setAmount(String(Math.min(balance, maxWithdraw)))}
             >
               Semua
             </button>
