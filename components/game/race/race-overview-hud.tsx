@@ -43,7 +43,7 @@ export function RaceOverviewHud({ seconds, baseSeconds, reward, progress, teleme
       <div className="race-hud-main">
         <p className="race-hud-speed" aria-label="Kecepatan">
           <strong>{formatSpeedKmh(recovering ? 0 : displaySpeedKmh(baseSeconds) * telemetry.visualSpeed)}</strong>
-          <small>km/j</small>
+          <span className="race-hud-speed-unit">km/j</span>
         </p>
         <dl className="race-hud-gauges">
           <div>
