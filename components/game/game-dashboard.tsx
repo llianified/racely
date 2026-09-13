@@ -11,6 +11,7 @@ import { GameDialog, type DialogKind } from "./shell/game-dialog";
 import { MenuPanel } from "./shell/menu-panel";
 import { GaragePanel, UpgradePanel } from "./panels/garage-panel";
 import { RewardsPanel, claimableTotal } from "./panels/rewards-panel";
+import { ReferralPanel } from "./panels/referral-panel";
 import { WalletPanel, type WithdrawPayload } from "./panels/wallet-panel";
 import { CircuitPanel } from "./race/circuit-panel";
 import { RacePanel, RaceReward } from "./race/race-panel";
@@ -442,6 +443,12 @@ export function GameDashboard() {
               onWithdraw={withdraw}
               disabled={Boolean(busyAction)}
             />
+          ) : tab === "referral" ? (
+            <ReferralPanel
+              game={game}
+              onInvite={invite}
+              disabled={Boolean(busyAction)}
+            />
           ) : (
             <RewardsPanel
               game={game}
@@ -450,7 +457,6 @@ export function GameDashboard() {
               onClaimGift={gift}
               onClaimMission={mission}
               onClaimAll={claimAll}
-              onInvite={invite}
               disabled={Boolean(busyAction)}
             />
           )}
