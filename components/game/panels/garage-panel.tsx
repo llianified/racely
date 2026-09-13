@@ -13,7 +13,7 @@ import { InfoHint } from "./info-hint";
 import { BodyPartsShop } from "./body-parts-shop";
 import type { PartCommand } from "@/lib/car-parts";
 import { gripTuning, powertrainTuning } from "@/lib/race-dynamics";
-import { coins, displaySpeedKmh, formatCoins, lapReward, lapSeconds, modificationPreview, totalLevel, type GameState, type Upgrade } from "@/lib/game";
+import { coins, displaySpeedKmh, formatCoins, formatSpeedKmh, lapReward, lapSeconds, modificationPreview, totalLevel, type GameState, type Upgrade } from "@/lib/game";
 
 const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
   ssr: false,
@@ -76,7 +76,7 @@ export const GaragePanel = memo(function GaragePanel({
         </div>
         <CarColorPicker model={model} color={game.color} disabled={disabled} onChoose={onChooseColor} />
         <dl className="garage-stats">
-          <div><dt>Kecepatan dasar</dt><dd><strong>{displaySpeedKmh(lapSeconds({ ...game, boostLeft: 0 })).toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</strong> km/j</dd></div>
+          <div><dt>Kecepatan dasar</dt><dd><strong>{formatSpeedKmh(displaySpeedKmh(lapSeconds({ ...game, boostLeft: 0 })))}</strong> km/j</dd></div>
           <div><dt>Hasil per putaran</dt><dd><strong>{formatCoins(lapReward(game))}</strong> koin</dd></div>
         </dl>
       </section>
