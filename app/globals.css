@@ -611,16 +611,16 @@
 /* varian kecil: bevel lebih tipis biar proporsional */
 .gold-button[data-size='sm']:not(:disabled), .gold-button[data-size='xs']:not(:disabled) { --press-depth: var(--space-2); --press-shift: var(--stroke); }
 
-/* ── hasil balapan ────────────��─────────────────�����──── */
-.race-reward { position: relative; display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md); border: var(--stroke) solid var(--border); border-radius: var(--corner-xl); background: var(--card); transition: border-color var(--dur-base); }
-.race-reward::before { content: ''; position: absolute; left: 0; top: var(--space-14); bottom: var(--space-14); width: var(--space-3); background: var(--secondary); transition: background var(--dur-base); }
+/* ── hasil balapan ───────────────────────────────────── */
+.race-reward { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-sm); padding: var(--space-sm); border: var(--stroke) solid var(--border); border-radius: var(--corner-xl); background: var(--card); transition: border-color var(--dur-base); }
 .reward-ready { border-color: color-mix(in srgb, var(--accent) 32%, transparent); }
-.reward-ready::before { background: var(--accent); }
-.reward-copy > small { display: block; margin-top: var(--space-2); font-size: var(--fs-nano); color: var(--muted-foreground); }
-.reward-copy { flex: 1 1 auto; min-width: 0; }
-.reward-copy > span { display: block; font-size: var(--fs-nano); font-weight: var(--fw-bold); letter-spacing: var(--track-caps-lg); text-transform: uppercase; color: var(--muted-foreground); }
-.reward-copy > strong { display: block; font-size: var(--fs-display); font-weight: var(--fw-heavier); line-height: var(--lh-snug); letter-spacing: var(--track-tight-xs); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.race-reward [data-slot='button'] { flex: 0 0 auto; }
+.reward-copy { min-width: 0; }
+.reward-heading { display: flex; align-items: center; gap: var(--space-6); min-width: 0; }
+.reward-heading h2 { flex-shrink: 0; font-size: var(--fs-nano); font-weight: var(--fw-bold); line-height: var(--lh-snug); letter-spacing: var(--track-caps-lg); text-transform: uppercase; color: var(--muted-foreground); }
+.reward-status { min-width: 0; padding: var(--space-1) var(--space-6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: var(--stroke) solid var(--border); border-radius: var(--corner-xs); background: color-mix(in srgb, var(--secondary) 60%, transparent); font-size: var(--fs-nano); font-weight: var(--fw-medium); line-height: var(--lh-snug); color: var(--muted-foreground); }
+.reward-ready .reward-status { border-color: color-mix(in srgb, var(--accent) 30%, transparent); background: color-mix(in srgb, var(--accent) 8%, transparent); color: var(--accent); }
+.reward-copy > strong { display: block; margin-top: var(--space-2); font-size: var(--fs-title); font-weight: var(--fw-heavier); line-height: var(--lh-tight); letter-spacing: var(--track-tight-xs); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.race-reward > [data-slot='button'] { flex-shrink: 0; }
 
 /* ── garasi ─────────────────��──────────────────────── */
 .car-stage { position: relative; height: var(--stage-garage-h); margin: var(--space-md) var(--space-md) 0; overflow: hidden; border: var(--stroke) solid var(--border); border-radius: var(--corner-panel); background:
@@ -726,7 +726,7 @@
 .stat-hero-stats dt { font-size: var(--fs-xs); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps-lg); text-transform: uppercase; color: var(--subtle-foreground); }
 .stat-hero-stats dd { font-size: var(--fs-read); font-weight: var(--fw-bold); line-height: var(--lh-tight); font-variant-numeric: tabular-nums; color: var(--foreground); }
 
-/* ── hadiah ────────────────────────────────────────── */
+/* ── hadiah ──────────��─────────────────────────────── */
 .rewards-list-panel { padding: var(--space-md) var(--gutter); }
 .reward-list { display: flex; flex-direction: column; margin: var(--space-md) calc(var(--gutter) * -1) 0; }
 .reward-row { display: grid; grid-template-columns: var(--space-32) minmax(0, 1fr); column-gap: var(--space-md); padding-inline: var(--gutter); border-bottom: var(--stroke) solid var(--border); }

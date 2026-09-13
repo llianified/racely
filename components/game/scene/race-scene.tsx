@@ -1,11 +1,12 @@
 'use client'
 
-import { Component, memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type ComponentRef, type RefObject } from 'react'
+import { Component, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type ComponentRef, type RefObject } from 'react'
 import { Flag, RotateCcw } from 'lucide-react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid, OrbitControls, OrthographicCamera, PerspectiveCamera } from '@react-three/drei'
 import { CarLighting } from './car-lighting'
 import * as THREE from 'three'
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js'
 import { COLORS, MiniCar } from './mini-car'
 import type { CarModelId } from '@/lib/car-catalog'
 import type { GameState } from '@/lib/game'
@@ -14,6 +15,10 @@ import { RacingEffects } from './racing-effects'
 
 const HALF = TRACK_HALF
 export type SceneProps = { equipped?: NonNullable<GameState['bodyParts']>['equipped']; driving?: RefObject<DrivingState>; onTelemetry?: (state: DrivingState) => void; cinematic?: boolean; levels?: GameState['levels']; model?: CarModelId; progress: number; seconds: number; baseSeconds: number; opponentSeconds: readonly [number, number]; color: string; boosted: boolean; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean }
+
+// The 10Hz game tick changes these every 100ms. They are consumed inside useFrame,
+// so they travel through a ref instead of props: a tick must not reconcile the 3D tree.
+type RaceTiming = Pick<SceneProps, 'progress' | 'seconds' | 'baseSeconds' | 'opponentSeconds' | 'boosted'>
 
 function trackPoint(t: number, radius: number) {
   const straight = HALF * 2
@@ -30,28 +35,34 @@ function trackPoint(t: number, radius: number) {
 }
 
 function Ribbon({ inner, outer, height = .12, color, y = 0, glow = false }: { inner: number; outer: number; height?: number; color: string; y?: number; glow?: boolean }) {
-  const shape = useMemo(() => {
-    const result = new THREE.Shape()
+  const geometry = useMemo(() => {
+    const shape = new THREE.Shape()
     const hole = new THREE.Path()
     for (let i = 0; i <= 200; i++) {
       const p = trackPoint(i / 200, outer)
-      if (i === 0) result.moveTo(p.x, -p.z); else result.lineTo(p.x, -p.z)
+      if (i === 0) shape.moveTo(p.x, -p.z); else shape.lineTo(p.x, -p.z)
       const h = trackPoint(1 - i / 200, inner)
       if (i === 0) hole.moveTo(h.x, -h.z); else hole.lineTo(h.x, -h.z)
     }
-    result.closePath(); hole.closePath(); result.holes.push(hole)
-    return result
-  }, [inner, outer])
-  return <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, y, 0]} receiveShadow castShadow>
-    <extrudeGeometry args={[shape, { depth: height, bevelEnabled: true, bevelSegments: 1, steps: 1, bevelSize: .018, bevelThickness: .018, curveSegments: 48 }]} />
+    shape.closePath(); hole.closePath(); shape.holes.push(hole)
+    const extruded = new THREE.ExtrudeGeometry(shape, { depth: height, bevelEnabled: true, bevelSegments: 1, steps: 1, bevelSize: .018, bevelThickness: .018, curveSegments: 48 })
+    // ExtrudeGeometry is non-indexed; welding only exact duplicates keeps every hard edge.
+    const indexed = mergeVertices(extruded, 1e-6)
+    extruded.dispose()
+    indexed.computeBoundingSphere()
+    return indexed
+  }, [inner, outer, height])
+  useEffect(() => () => geometry.dispose(), [geometry])
+  return <mesh geometry={geometry} rotation={[-Math.PI / 2, 0, 0]} position={[0, y, 0]} receiveShadow castShadow>
     <meshStandardMaterial color={color} roughness={.72} metalness={.14} emissive={glow ? color : '#000000'} emissiveIntensity={glow ? .75 : 0} toneMapped={!glow} />
   </mesh>
 }
 
-function Racer({ lane, color, model, progress, seconds, baseSeconds, boosted, playerRef, levels, driving, onTelemetry, reducedMotion, equipped }: { levels?: GameState['levels']; model?: CarModelId; lane: number; color: string; progress: number; seconds: number; baseSeconds: number; boosted: boolean; playerRef?: RefObject<THREE.Group | null> } & Pick<SceneProps, 'driving' | 'onTelemetry' | 'reducedMotion' | 'equipped'>) {
+const Racer = memo(function Racer({ lane, color, model, timing, playerRef, levels, driving, onTelemetry, reducedMotion, equipped }: { levels?: GameState['levels']; model?: CarModelId; lane: number; color: string; timing: RefObject<RaceTiming>; playerRef?: RefObject<THREE.Group | null> } & Pick<SceneProps, 'driving' | 'onTelemetry' | 'reducedMotion' | 'equipped'>) {
   const ownRef = useRef<THREE.Group>(null)
   const group = playerRef ?? ownRef
-  const phase = useRef(lane === 0 ? progress : lane * .32)
+  const phase = useRef(lane * .32)
+  const seeded = useRef(lane !== 0)
   const publishAfter = useRef(0)
   const tumble = useRef<THREE.Group>(null)
   const wheelSpeed = useRef(0)
@@ -61,6 +72,9 @@ function Racer({ lane, color, model, progress, seconds, baseSeconds, boosted, pl
   useFrame((_, delta) => {
     if (!group.current || document.hidden) return
     const dt = Math.min(delta, .1)
+    const { progress, baseSeconds, boosted } = timing.current
+    const seconds = lane === 0 ? timing.current.seconds : (timing.current.opponentSeconds[lane - 1] ?? timing.current.seconds)
+    if (!seeded.current) { phase.current = progress; seeded.current = true }
     const state = lane === 0 ? driving?.current : undefined
     if (state) {
       stepDriving(state, dt, phase.current, boosted && state.boostEnergy > 0 && !state.boostExhausted, levels?.tires)
@@ -134,7 +148,7 @@ function Racer({ lane, color, model, progress, seconds, baseSeconds, boosted, pl
       </group>
     </group>
   </group>
-}
+})
 
 function TrackBrand() {
   const texture = useMemo(() => {
@@ -256,7 +270,7 @@ function RacingLine({ playerRef, driving }: { playerRef: RefObject<THREE.Group |
   </instancedMesh>
 }
 
-function CameraRig({ mode, follow, resetKey, playerRef, active, reducedMotion, cinematic, driving }: { mode: number; follow: boolean; resetKey: number; playerRef: RefObject<THREE.Group | null>; active: boolean; boosted: boolean; reducedMotion: boolean } & Pick<SceneProps, 'cinematic' | 'driving'>) {
+function CameraRig({ mode, follow, resetKey, playerRef, active, reducedMotion, cinematic, driving }: { mode: number; follow: boolean; resetKey: number; playerRef: RefObject<THREE.Group | null>; active: boolean; reducedMotion: boolean } & Pick<SceneProps, 'cinematic' | 'driving'>) {
   const { camera, size } = useThree()
   const [overviewCamera] = useState(() => camera)
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null)
@@ -403,6 +417,35 @@ function ContextMonitor({ onLost }: { onLost: () => void }) {
   return null
 }
 
+type ArenaProps = Omit<SceneProps, keyof RaceTiming | 'followCamera' | 'active'> & { timing: RefObject<RaceTiming>; playerRef: RefObject<THREE.Group | null>; follow: boolean; running: boolean; onLost: () => void }
+
+// Everything inside the Canvas. Memoized so parent re-renders driven by telemetry or the
+// game tick bail out here instead of reconciling every mesh in the arena.
+const Arena = memo(function Arena(props: ArenaProps) {
+  const { playerRef, timing, follow, running } = props
+  return <>
+    <color attach="background" args={[COLORS.navy]} />
+    {!props.inspect && <fog attach="fog" args={[COLORS.navy, 30, 85]} />}
+    <CarLighting />
+    <ambientLight intensity={.3} />
+    <hemisphereLight args={[COLORS.white, COLORS.navy, .65]} />
+    <directionalLight position={[2, 10, 7]} intensity={2.2} castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={props.inspect ? -1.5 : -10} shadow-camera-right={props.inspect ? 1.5 : 10} shadow-camera-top={props.inspect ? 1.5 : 10} shadow-camera-bottom={props.inspect ? -1.5 : -10} shadow-normalBias={.006} shadow-bias={-.0001} />
+    <directionalLight position={[-8, 5, -6]} intensity={.8} color={COLORS.white} />
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -.16, 0]} receiveShadow><planeGeometry args={[240, 240]} /><meshStandardMaterial color="#090c1d" roughness={.85} /></mesh>
+    {props.inspect ? <CarInspector equipped={props.equipped} levels={props.levels} color={props.color} model={props.model} charge={props.charge} reducedMotion={props.reducedMotion} bodyVisible={props.bodyVisible} /> : <>
+    <Grid position={[0, -.145, 0]} args={[36, 36]} infiniteGrid cellSize={1} cellThickness={.35} cellColor="#2c2852" sectionSize={5} sectionThickness={.6} sectionColor="#463e7a" fadeDistance={60} fadeStrength={2} />
+    <Circuit circuit={props.circuit} />
+    <RacingLine playerRef={playerRef} driving={props.driving} />
+    <RacingEffects playerRef={playerRef} driving={props.driving} reducedMotion={props.reducedMotion ?? false} />
+    <CameraRig cinematic={props.cinematic} driving={props.driving} mode={props.cameraMode} follow={follow} resetKey={props.resetKey} playerRef={playerRef} active={running} reducedMotion={props.reducedMotion ?? false} />
+    </>}
+    <group visible={!props.inspect}>
+      {[0, 1, 2].map(lane => <Racer key={lane} equipped={lane === 0 ? props.equipped : undefined} lane={lane} driving={lane === 0 ? props.driving : undefined} onTelemetry={props.onTelemetry} reducedMotion={props.reducedMotion} levels={lane === 0 ? props.levels : undefined} model={lane === 0 ? props.model : 'neo-falcon'} playerRef={lane === 0 ? playerRef : undefined} color={lane === 0 ? props.color : lane === 1 ? COLORS.gold : COLORS.white} timing={timing} />)}
+    </group>
+    <ContextMonitor onLost={props.onLost} />
+  </>
+})
+
 export default function RaceScene(props: SceneProps) {
   const playerRef = useRef<THREE.Group>(null)
   const follow = props.followCamera !== false
@@ -410,36 +453,28 @@ export default function RaceScene(props: SceneProps) {
   const [lost, setLost] = useState(false)
   const [visible, setVisible] = useState(true)
   const [ready, setReady] = useState(false)
+  const timing = useRef<RaceTiming>({ progress: props.progress, seconds: props.seconds, baseSeconds: props.baseSeconds, opponentSeconds: props.opponentSeconds, boosted: props.boosted })
+  useLayoutEffect(() => {
+    timing.current.progress = props.progress
+    timing.current.seconds = props.seconds
+    timing.current.baseSeconds = props.baseSeconds
+    timing.current.opponentSeconds = props.opponentSeconds
+    timing.current.boosted = props.boosted
+  }, [props.progress, props.seconds, props.baseSeconds, props.opponentSeconds, props.boosted])
   useEffect(() => {
     const change = () => setVisible(!document.hidden)
     change()
     document.addEventListener('visibilitychange', change)
     return () => document.removeEventListener('visibilitychange', change)
   }, [])
+  const onLost = useCallback(() => setLost(true), [])
   const retry = () => { setReady(false); setLost(false); setAttempt(v => v + 1) }
   if (lost) return <SceneError onRetry={retry} />
+  const running = visible && props.active !== false
   return <SceneBoundary key={attempt} onRetry={retry}>
     {!ready && <div className="scene-loading absolute inset-0" role="status"><Flag /><strong>Menyalakan lampu sirkuit.</strong><span>Menyiapkan lintasan 3D…</span></div>}
-    <Canvas orthographic dpr={[1, 1.25]} frameloop={visible && props.active !== false ? 'always' : 'never'} shadows="percentage" camera={{ position: [9, 12.5, 12], zoom: 30, near: .1, far: 100 }} gl={{ antialias: true, alpha: false, powerPreference: 'default' }} fallback={<SceneError onRetry={retry} />} onCreated={() => setReady(true)} aria-label={props.inspect ? 'Inspeksi sasis dan dua sel baterai mobil. Geser untuk memutar, cubit untuk zoom. Balapan tetap berlangsung.' : follow ? 'Arena mini 4WD 3D. Kamera mengikuti mobilmu. Pilih Overview untuk melihat seluruh lintasan.' : 'Arena mini 4WD 3D. Kamera overview. Geser untuk memutar, cubit untuk zoom.'}>
-      <color attach="background" args={[COLORS.navy]} />
-      {!props.inspect && <fog attach="fog" args={[COLORS.navy, 30, 85]} />}
-      <CarLighting />
-      <ambientLight intensity={.3} />
-      <hemisphereLight args={[COLORS.white, COLORS.navy, .65]} />
-      <directionalLight position={[2, 10, 7]} intensity={2.2} castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={props.inspect ? -1.5 : -10} shadow-camera-right={props.inspect ? 1.5 : 10} shadow-camera-top={props.inspect ? 1.5 : 10} shadow-camera-bottom={props.inspect ? -1.5 : -10} shadow-normalBias={.006} shadow-bias={-.0001} />
-      <directionalLight position={[-8, 5, -6]} intensity={.8} color={COLORS.white} />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -.16, 0]} receiveShadow><planeGeometry args={[240, 240]} /><meshStandardMaterial color="#090c1d" roughness={.85} /></mesh>
-      {props.inspect ? <CarInspector equipped={props.equipped} levels={props.levels} color={props.color} model={props.model} charge={props.charge} reducedMotion={props.reducedMotion} bodyVisible={props.bodyVisible} /> : <>
-      <Grid position={[0, -.145, 0]} args={[36, 36]} infiniteGrid cellSize={1} cellThickness={.35} cellColor="#2c2852" sectionSize={5} sectionThickness={.6} sectionColor="#463e7a" fadeDistance={60} fadeStrength={2} />
-      <Circuit circuit={props.circuit} />
-      <RacingLine playerRef={playerRef} driving={props.driving} />
-      <RacingEffects playerRef={playerRef} driving={props.driving} reducedMotion={props.reducedMotion ?? false} />
-      <CameraRig cinematic={props.cinematic} driving={props.driving} mode={props.cameraMode} follow={follow} resetKey={props.resetKey} playerRef={playerRef} active={visible && props.active !== false} boosted={props.boosted} reducedMotion={props.reducedMotion ?? false} />
-      </>}
-      <group visible={!props.inspect}>
-        {[0, 1, 2].map(lane => <Racer key={lane} equipped={lane === 0 ? props.equipped : undefined} lane={lane} driving={lane === 0 ? props.driving : undefined} onTelemetry={props.onTelemetry} reducedMotion={props.reducedMotion} levels={lane === 0 ? props.levels : undefined} model={lane === 0 ? props.model : 'neo-falcon'} playerRef={lane === 0 ? playerRef : undefined} color={lane === 0 ? props.color : lane === 1 ? COLORS.gold : COLORS.white} progress={props.progress} seconds={lane === 0 ? props.seconds : (props.opponentSeconds[lane - 1] ?? props.seconds)} baseSeconds={props.baseSeconds} boosted={props.boosted} />)}
-      </group>
-      <ContextMonitor onLost={() => setLost(true)} />
+    <Canvas orthographic dpr={[1, 1.25]} frameloop={running ? 'always' : 'never'} shadows="percentage" camera={{ position: [9, 12.5, 12], zoom: 30, near: .1, far: 100 }} gl={{ antialias: true, alpha: false, powerPreference: 'default' }} fallback={<SceneError onRetry={retry} />} onCreated={() => setReady(true)} aria-label={props.inspect ? 'Inspeksi sasis dan dua sel baterai mobil. Geser untuk memutar, cubit untuk zoom. Balapan tetap berlangsung.' : follow ? 'Arena mini 4WD 3D. Kamera mengikuti mobilmu. Pilih Overview untuk melihat seluruh lintasan.' : 'Arena mini 4WD 3D. Kamera overview. Geser untuk memutar, cubit untuk zoom.'}>
+      <Arena equipped={props.equipped} driving={props.driving} onTelemetry={props.onTelemetry} cinematic={props.cinematic} levels={props.levels} model={props.model} color={props.color} cameraMode={props.cameraMode} resetKey={props.resetKey} circuit={props.circuit} reducedMotion={props.reducedMotion} inspect={props.inspect} charge={props.inspect ? props.charge : undefined} bodyVisible={props.bodyVisible} timing={timing} playerRef={playerRef} follow={follow} running={running} onLost={onLost} />
     </Canvas>
   </SceneBoundary>
 }
