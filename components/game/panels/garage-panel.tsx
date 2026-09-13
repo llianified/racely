@@ -181,9 +181,13 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
         <div className="upgrade-level">
           <span className="level-label">Lv. {level}</span>
           {/* Jumlah segmen mengikuti config: ceiling yang disetel jadi 5 tidak
-              boleh menyisakan lima kotak yang tidak akan pernah terisi. */}
-          <div className="level-segments" aria-label={`Level ${level} dari ${ceiling}`}>
-            {Array.from({ length: ceiling }, (_, i) => <span key={i} className={i < level ? "filled" : undefined} />)}
+              boleh menyisakan lima kotak yang tidak akan pernah terisi. Tapi
+              ceiling juga bisa DITURUNKAN di bawah level pemain yang sudah
+              jalan, dan `length: ceiling` saja lalu menampilkan "Lv. 8 dari 3"
+              beserta tiga kotak -- lebih sedikit kotak daripada level yang
+              sudah dibayar pemain. */}
+          <div className="level-segments" aria-label={`Level ${level} dari ${Math.max(ceiling, level)}`}>
+            {Array.from({ length: Math.max(ceiling, level) }, (_, i) => <span key={i} className={i < level ? "filled" : undefined} />)}
           </div>
         </div>
       </div>
