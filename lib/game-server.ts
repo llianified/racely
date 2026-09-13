@@ -20,7 +20,13 @@ import {
   racingDayKey,
 } from "@/lib/game-economy";
 import { CAR_MODEL_IDS, isCarColor } from "@/lib/car-catalog";
-import { applyPartCommand, PART_IDS, PART_SLOTS, PartRuleError } from "@/lib/car-parts";
+import {
+  applyPartCommand,
+  PART_IDS,
+  PART_SLOTS,
+  PartRuleError,
+  type PartCommand,
+} from "@/lib/car-parts";
 import {
   accountPattern,
   boostCooldownSeconds,
@@ -633,6 +639,252 @@ async function pruneActionReceipts(now: Date) {
     .catch(() => undefined);
 }
 
+type ActionContext = {
+  tx: Transaction;
+  identity: PlayerIdentity;
+  requestId: string;
+  economy: EconomyConfig;
+  now: Date;
+  dailyClaims: string[];
+};
+
+/**
+ * Baris pemain sesudah aksi, plus daftar check-in kalau aksinya menambah satu.
+ * Hanya `daily` yang pernah mengisi `dailyClaims`; sisanya membiarkan milik
+ * pemanggil apa adanya.
+ */
+type ActionOutcome = {
+  row: PlayerRow;
+  dailyClaims?: string[];
+};
+
+type ActionHandler<T extends GameCommand["type"]> = (
+  row: PlayerRow,
+  action: Extract<GameCommand, { type: T }>,
+  context: ActionContext,
+) => ActionOutcome | Promise<ActionOutcome>;
+
+/**
+ * Ketiga aksi part memakai satu aturan yang sama di `lib/car-parts.ts`.
+ * Sengaja TIDAK ditulis sebagai `ActionHandler<"buy-part" | ...>`: `Extract`
+ * membuat TypeScript memperlakukan parameter tipe alias itu sebagai invariant,
+ * jadi satu handler tidak akan diterima oleh ketiga kuncinya. Tipe fungsi biasa
+ * tetap kena pemeriksaan kontravarian yang normal.
+ */
+const applyPartAction = (row: PlayerRow, action: PartCommand): ActionOutcome => {
+  try {
+    return { row: { ...row, ...applyPartCommand(row, action) } };
+  } catch (error) {
+    if (error instanceof PartRuleError) throw new GameRuleError(error.message);
+    throw error;
+  }
+};
+
+/**
+ * Satu handler untuk setiap varian `commandSchema`. Tipe peta ini mewajibkan
+ * SELURUH kuncinya ada, jadi menambahkan aksi baru tanpa menuliskan cabangnya
+ * di sini adalah error kompilasi -- bukan aksi yang diam-diam tidak melakukan
+ * apa pun, jebakan yang sudah dicatat AGENTS.md untuk `lib/preview-game.ts`.
+ *
+ * Handler hanya menghitung baris berikutnya. Yang menyimpannya tetap
+ * `performGameAction`, di dalam transaksi dan lock yang sama.
+ */
+const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
+  sync: (row) => ({ row }),
+
+  "select-car": (row, action) => {
+    if (row.carModel !== null) {
+      if (row.carModel !== action.model) {
+        throw new GameRuleError(
+          "Model sudah dikonfirmasi dan tidak dapat diganti.",
+        );
+      }
+      // Mengulang model yang sama bukan pelanggaran, cuma tidak ada yang
+      // berubah: jaringan yang putus setelah server menyimpan membuat klien
+      // mencoba lagi dengan requestId baru, dan tanda terima tidak mengenali
+      // percobaan itu. Sengaja tidak menyentuh warna -- warna garasi yang
+      // dipilih belakangan tidak boleh tersetel ulang ke warna pendaftaran.
+      // Mode preview sudah berperilaku begini sejak awal.
+      return { row };
+    }
+    if (!isCarColor(action.model, action.color)) {
+      throw new GameRuleError("Model atau warna mobil tidak valid.", 400);
+    }
+    return { row: { ...row, carModel: action.model, color: action.color } };
+  },
+
+  "buy-part": applyPartAction,
+  "equip-part": applyPartAction,
+  "unequip-part": applyPartAction,
+
+  upgrade: (row, action, { economy }) => ({
+    row: applyUpgrade(row, action.key, economy),
+  }),
+
+  claim: (row) => {
+    // Only whole coins move into the withdrawable balance; the remainder keeps accruing.
+    const settled = Math.floor(row.pending);
+    if (settled <= 0) return { row };
+    return {
+      row: {
+        ...row,
+        balance: row.balance + settled,
+        pending: roundCoins(row.pending - settled),
+      },
+    };
+  },
+
+  withdraw: async (row, action, { tx, identity, requestId, economy }) => {
+    // Batas penarikan ditegakkan di sini, bukan di skema zod: skema dibangun
+    // saat modul dimuat, sedangkan angka ini bisa berubah dari panel admin.
+    if (action.coins < economy.minWithdrawCoins) {
+      throw new GameRuleError(
+        `Penarikan minimal ${economy.minWithdrawCoins} koin.`,
+      );
+    }
+    if (action.coins > economy.maxWithdrawCoins) {
+      throw new GameRuleError(
+        `Penarikan maksimal ${economy.maxWithdrawCoins} koin per permintaan.`,
+      );
+    }
+    if (row.balance < action.coins) {
+      throw new GameRuleError("Saldo koin tidak cukup untuk penarikan ini.");
+    }
+    if (!accountPattern(action.method).test(action.account)) {
+      throw new GameRuleError("Nomor tujuan tidak valid untuk metode ini.");
+    }
+    await tx.insert(withdrawals).values({
+      userId: identity.userId,
+      requestId,
+      coins: action.coins,
+      amountIdr: action.coins * economy.coinToIdr,
+      method: action.method,
+      account: action.account,
+      accountName: action.accountName,
+    });
+    return { row: { ...row, balance: row.balance - action.coins } };
+  },
+
+  boost: (row, _action, { now, economy }) => {
+    if ((row.cooldownEndsAt?.getTime() ?? 0) > now.getTime()) {
+      throw new GameRuleError("Boost masih mengisi ulang.");
+    }
+    return {
+      row: {
+        ...row,
+        boostEndsAt: new Date(
+          now.getTime() + economy.boostDurationSeconds * 1000,
+        ),
+        cooldownEndsAt: new Date(
+          now.getTime() + boostCooldownSeconds(economy) * 1000,
+        ),
+      },
+    };
+  },
+
+  gift: async (row, _action, { tx, identity, economy }) => {
+    if (row.rewardClaimed) return { row };
+    const inserted = await tx
+      .insert(rewardClaims)
+      .values({
+        userId: identity.userId,
+        rewardKey: "starter-gift",
+        amount: economy.starterGift,
+      })
+      .onConflictDoNothing()
+      .returning({ id: rewardClaims.id });
+    return {
+      row: {
+        ...row,
+        rewardClaimed: true,
+        balance: row.balance + (inserted.length > 0 ? economy.starterGift : 0),
+      },
+    };
+  },
+
+  daily: async (row, _action, { tx, identity, economy, now, dailyClaims }) => {
+    const status = dailyCheckIn(dailyClaims, now, economy);
+    if (status.claimedToday) return { row };
+
+    const today = racingDayKey(now);
+    // The unique (user_id, reward_key) index is the whole guard: a double
+    // tap on the same racing day inserts nothing and pays nothing.
+    const inserted = await tx
+      .insert(rewardClaims)
+      .values({
+        userId: identity.userId,
+        rewardKey: `${DAILY_CLAIM_PREFIX}${today}`,
+        amount: status.reward,
+      })
+      .onConflictDoNothing()
+      .returning({ id: rewardClaims.id });
+    if (inserted.length === 0) return { row };
+
+    return {
+      row: { ...row, balance: row.balance + status.reward },
+      dailyClaims: [today, ...dailyClaims],
+    };
+  },
+
+  mission: async (row, action, { tx, identity, economy, now }) => {
+    if (row.missionsClaimed.includes(action.id)) return { row };
+
+    const mission = missions(economy).find((item) => item.id === action.id);
+    if (
+      !mission ||
+      missionValue(stateFromRow(row, now, economy), mission.id) < mission.target
+    ) {
+      throw new GameRuleError("Target misi belum tercapai.");
+    }
+    const inserted = await tx
+      .insert(rewardClaims)
+      .values({
+        userId: identity.userId,
+        rewardKey: `mission:${mission.id}`,
+        amount: mission.reward,
+      })
+      .onConflictDoNothing()
+      .returning({ id: rewardClaims.id });
+    return {
+      row: {
+        ...row,
+        balance: row.balance + (inserted.length > 0 ? mission.reward : 0),
+        missionsClaimed: [...row.missionsClaimed, mission.id],
+      },
+    };
+  },
+
+  color: (row, action) => {
+    if (!row.carModel || !isCarColor(row.carModel, action.color)) {
+      throw new GameRuleError("Warna ini tidak tersedia untuk mobilmu.", 400);
+    }
+    return { row: { ...row, color: action.color } };
+  },
+
+  circuit: (row, action, { economy }) => {
+    if (action.circuit < row.circuit) {
+      throw new GameRuleError("Trek lama tidak bisa dipilih lagi.");
+    }
+    if (action.circuit === 1 && row.laps < economy.circuitUnlockLaps) {
+      throw new GameRuleError(
+        `Selesaikan ${economy.circuitUnlockLaps} putaran untuk membuka sirkuit ini.`,
+      );
+    }
+    return { row: { ...row, circuit: action.circuit } };
+  },
+};
+
+/**
+ * Aksi yang benar-benar punya handler di sini. Diekspor supaya test paritas
+ * bisa membandingkannya dengan varian `commandSchema` secara langsung, bukan
+ * dengan meng-grep source file ini -- pembacaan yang ikut merah setiap kali
+ * sebuah variabel diganti nama, dan ikut hijau pada cabang yang kebetulan
+ * hanya disebut di komentar.
+ */
+export const HANDLED_ACTION_TYPES = Object.keys(
+  ACTION_HANDLERS,
+) as GameCommand["type"][];
+
 export async function performGameAction(
   identity: PlayerIdentity,
   requestId: string,
@@ -726,166 +978,22 @@ export async function performGameAction(
       throw new GameRuleError("Pilih mobilmu sebelum mulai bermain.");
     }
 
-    if (action.type === "select-car") {
-      if (next.carModel !== null) {
-        if (next.carModel !== action.model) {
-          throw new GameRuleError(
-            "Model sudah dikonfirmasi dan tidak dapat diganti.",
-          );
-        }
-        // Mengulang model yang sama bukan pelanggaran, cuma tidak ada yang
-        // berubah: jaringan yang putus setelah server menyimpan membuat klien
-        // mencoba lagi dengan requestId baru, dan tanda terima tidak mengenali
-        // percobaan itu. Sengaja tidak menyentuh warna -- warna garasi yang
-        // dipilih belakangan tidak boleh tersetel ulang ke warna pendaftaran.
-        // Mode preview sudah berperilaku begini sejak awal.
-      } else {
-        if (!isCarColor(action.model, action.color)) {
-          throw new GameRuleError("Model atau warna mobil tidak valid.", 400);
-        }
-        next = { ...next, carModel: action.model, color: action.color };
-      }
-    } else if (action.type === "buy-part" || action.type === "equip-part" || action.type === "unequip-part") {
-      try {
-        next = { ...next, ...applyPartCommand(next, action) };
-      } catch (error) {
-        if (error instanceof PartRuleError) throw new GameRuleError(error.message);
-        throw error;
-      }
-    } else if (action.type === "upgrade") {
-      next = applyUpgrade(next, action.key, economy);
-    } else if (action.type === "claim") {
-      // Only whole coins move into the withdrawable balance; the remainder keeps accruing.
-      const settled = Math.floor(next.pending);
-      if (settled > 0) {
-        next = {
-          ...next,
-          balance: next.balance + settled,
-          pending: roundCoins(next.pending - settled),
-        };
-      }
-    } else if (action.type === "withdraw") {
-      // Batas penarikan ditegakkan di sini, bukan di skema zod: skema dibangun
-      // saat modul dimuat, sedangkan angka ini bisa berubah dari panel admin.
-      if (action.coins < economy.minWithdrawCoins) {
-        throw new GameRuleError(
-          `Penarikan minimal ${economy.minWithdrawCoins} koin.`,
-        );
-      }
-      if (action.coins > economy.maxWithdrawCoins) {
-        throw new GameRuleError(
-          `Penarikan maksimal ${economy.maxWithdrawCoins} koin per permintaan.`,
-        );
-      }
-      if (next.balance < action.coins) {
-        throw new GameRuleError("Saldo koin tidak cukup untuk penarikan ini.");
-      }
-      if (!accountPattern(action.method).test(action.account)) {
-        throw new GameRuleError("Nomor tujuan tidak valid untuk metode ini.");
-      }
-      await tx.insert(withdrawals).values({
-        userId: identity.userId,
-        requestId,
-        coins: action.coins,
-        amountIdr: action.coins * economy.coinToIdr,
-        method: action.method,
-        account: action.account,
-        accountName: action.accountName,
-      });
-      next = { ...next, balance: next.balance - action.coins };
-    } else if (action.type === "boost") {
-      if ((next.cooldownEndsAt?.getTime() ?? 0) > now.getTime()) {
-        throw new GameRuleError("Boost masih mengisi ulang.");
-      }
-      next = {
-        ...next,
-        boostEndsAt: new Date(
-          now.getTime() + economy.boostDurationSeconds * 1000,
-        ),
-        cooldownEndsAt: new Date(
-          now.getTime() + boostCooldownSeconds(economy) * 1000,
-        ),
-      };
-    } else if (action.type === "gift") {
-      if (!next.rewardClaimed) {
-        const inserted = await tx
-          .insert(rewardClaims)
-          .values({
-            userId: identity.userId,
-            rewardKey: "starter-gift",
-            amount: economy.starterGift,
-          })
-          .onConflictDoNothing()
-          .returning({ id: rewardClaims.id });
-        next = {
-          ...next,
-          rewardClaimed: true,
-          balance:
-            next.balance + (inserted.length > 0 ? economy.starterGift : 0),
-        };
-      }
-    } else if (action.type === "daily") {
-      const status = dailyCheckIn(dailyClaims, now, economy);
-      if (!status.claimedToday) {
-        const today = racingDayKey(now);
-        // The unique (user_id, reward_key) index is the whole guard: a double
-        // tap on the same racing day inserts nothing and pays nothing.
-        const inserted = await tx
-          .insert(rewardClaims)
-          .values({
-            userId: identity.userId,
-            rewardKey: `${DAILY_CLAIM_PREFIX}${today}`,
-            amount: status.reward,
-          })
-          .onConflictDoNothing()
-          .returning({ id: rewardClaims.id });
-        if (inserted.length > 0) {
-          next = { ...next, balance: next.balance + status.reward };
-          dailyClaims = [today, ...dailyClaims];
-        }
-      }
-    } else if (action.type === "mission") {
-      const mission = missions(economy).find((item) => item.id === action.id);
-      const alreadyClaimed = next.missionsClaimed.includes(action.id);
-      if (!alreadyClaimed) {
-        if (
-          !mission ||
-          missionValue(stateFromRow(next, now, economy), mission.id) <
-            mission.target
-        ) {
-          throw new GameRuleError("Target misi belum tercapai.");
-        }
-        const inserted = await tx
-          .insert(rewardClaims)
-          .values({
-            userId: identity.userId,
-            rewardKey: `mission:${mission.id}`,
-            amount: mission.reward,
-          })
-          .onConflictDoNothing()
-          .returning({ id: rewardClaims.id });
-        next = {
-          ...next,
-          balance: next.balance + (inserted.length > 0 ? mission.reward : 0),
-          missionsClaimed: [...next.missionsClaimed, mission.id],
-        };
-      }
-    } else if (action.type === "color") {
-      if (!next.carModel || !isCarColor(next.carModel, action.color)) {
-        throw new GameRuleError("Warna ini tidak tersedia untuk mobilmu.", 400);
-      }
-      next = { ...next, color: action.color };
-    } else if (action.type === "circuit") {
-      if (action.circuit < next.circuit) {
-        throw new GameRuleError("Trek lama tidak bisa dipilih lagi.");
-      }
-      if (action.circuit === 1 && next.laps < economy.circuitUnlockLaps) {
-        throw new GameRuleError(
-          `Selesaikan ${economy.circuitUnlockLaps} putaran untuk membuka sirkuit ini.`,
-        );
-      }
-      next = { ...next, circuit: action.circuit };
-    }
+    // Cast sekali, di sini: TypeScript tidak bisa mengorelasikan `action.type`
+    // dengan entri peta yang sepadan. Penjagaannya ada di deklarasi
+    // ACTION_HANDLERS, yang mewajibkan satu handler untuk setiap varian.
+    const handler = ACTION_HANDLERS[action.type] as ActionHandler<
+      GameCommand["type"]
+    >;
+    const outcome = await handler(next, action, {
+      tx,
+      identity,
+      requestId,
+      economy,
+      now,
+      dailyClaims,
+    });
+    next = outcome.row;
+    dailyClaims = outcome.dailyClaims ?? dailyClaims;
 
     const [saved] = await tx
       .update(players)
