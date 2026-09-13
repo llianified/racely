@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Banknote, Clock, Coins, Send, Wallet } from "lucide-react";
+import { Banknote, Clock, Send, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/sheet";
 import { InfoHint } from "./info-hint";
 import { SectionCardHeading } from "../shell/section-card-heading";
+import { StatHero } from "../shell/stat-hero";
 import { cn } from "@/lib/utils";
 import {
   accountPattern,
@@ -108,53 +109,49 @@ export function WalletPanel({
 
   return (
     <div className="wallet-layout section-enter flex flex-col gap-lg">
-      <section className="wallet-hero" aria-label="Saldo koin">
-        <div className="wallet-balance">
-          <span className="eyebrow">Saldo tersedia</span>
-          <strong>{formatCoins(balance)} <span>koin</span></strong>
-          <p>~ {idr(balance, economy)}</p>
-        </div>
-        <Button
-          variant="gold"
-          size="lg"
-          className="w-full"
-          disabled={disabled || balance < minWithdraw}
-          onClick={() => setOpen(true)}
-        >
-          <Send data-icon="inline-start" />
-          {balance < minWithdraw
-            ? `Kumpulkan ${coins(minWithdraw - balance)} lagi`
-            : "Tarik saldo"}
-        </Button>
-        <div className="wallet-hero-side">
-          <span className="wallet-pending">
-            <Coins aria-hidden="true" />
-            {coins(game.pending)} belum diklaim
-          </span>
+      <StatHero
+        ariaLabel="Saldo koin"
+        label="Koin kamu"
+        figure={formatCoins(balance)}
+        info={
           <InfoHint title="Cara kerja saldo">
             Koin dari balapan masuk ke &quot;belum diklaim&quot; dulu. Setiap 1
-            koin penuh bisa kamu klaim ke saldo, lalu ditarik ke e-wallet atau
-            rekening bank saat mencapai {coins(minWithdraw)}.
+            koin penuh bisa kamu klaim ke saldo. Saldo bisa ditarik ke e-wallet
+            atau rekening bank saat mencapai {coins(minWithdraw)}, dengan nilai
+            1 koin = {idr(1, economy)}.
           </InfoHint>
-        </div>
-      </section>
+        }
+        action={
+          <Button
+            variant="gold"
+            disabled={disabled || balance < minWithdraw}
+            onClick={() => setOpen(true)}
+          >
+            <Send data-icon="inline-start" />
+            Tarik koin
+          </Button>
+        }
+        stats={[
+          { label: "Belum diklaim", value: coins(game.pending) },
+          { label: "Min. tarik", value: coins(minWithdraw) },
+        ]}
+      />
 
       <Sheet open={open} onOpenChange={(next) => { setOpen(next); if (!next) setError(null); }}>
     <SheetContent side="bottom" className="game-sheet wallet-dialog p-md">
       <SheetHeader className="p-0">
             <SheetTitle>
               <Send aria-hidden="true" />
-              Tarik saldo
+              Tarik koin
             </SheetTitle>
             <SheetDescription>
-              Saldo {formatCoins(balance)} koin · minimal {coins(minWithdraw)} per penarikan.
+              {formatCoins(balance)} koin tersedia · 1 koin = {idr(1, economy)}
             </SheetDescription>
           </SheetHeader>
           <p className="wallet-dialog-note">
-            Penarikan diverifikasi manual oleh tim Racely dalam 1×24 jam kerja.
-            Pastikan nomor dan nama tujuan benar; dana yang salah kirim tidak
-            bisa ditarik kembali. Kalau permintaanmu ditolak, koinnya otomatis
-            kembali ke saldo.
+            Permintaan diproses manual oleh tim Racely, biasanya dalam sehari.
+            Cek lagi nomor dan nama tujuan sebelum kirim. Kalau ditolak, koinnya
+            kembali ke saldo kamu.
           </p>
         <form className="wallet-form" onSubmit={submit}>
           <div className="wallet-field">
@@ -171,7 +168,7 @@ export function WalletPanel({
               aria-describedby="withdraw-amount-note"
             />
             <p id="withdraw-amount-note">
-              Kamu terima {idr(requested, economy)} setelah diproses.
+              {formatCoins(requested)} koin = {idr(requested, economy)} · minimal {coins(minWithdraw)}
             </p>
           </div>
 
@@ -278,9 +275,7 @@ export function WalletPanel({
             disabled={disabled || balance < minWithdraw}
           >
             <Send data-icon="inline-start" />
-            {balance < minWithdraw
-              ? `Kumpulkan ${coins(minWithdraw - balance)} lagi`
-              : `Tarik ${idr(requested, economy)}`}
+            Kirim permintaan
           </Button>
         </form>
         </SheetContent>
@@ -301,7 +296,7 @@ export function WalletPanel({
             {game.withdrawals.map((item) => (
               <li key={item.id} className="wallet-history-row">
                 <div>
-                  <h3>{idr(item.coins, economy)}</h3>
+                  <h3>{coins(item.coins)}</h3>
                   <p>
                     {methodLabel(item.method)} · {item.account}
                   </p>
