@@ -5,6 +5,20 @@ import * as THREE from 'three'
 import type { CarModelId } from '@/lib/car-catalog'
 
 type Marking = 'brand' | '01' | '02'
+
+/**
+ * Cache level-modul, DISENGAJA tidak pernah di-dispose.
+ *
+ * Isinya paling banyak tiga texture dan dipakai bersama oleh race-scene dan
+ * car-preview-scene, yang bisa ter-mount bersamaan. Membuang salah satunya saat
+ * satu scene unmount akan mengosongkan marking di scene yang masih hidup, jadi
+ * "memperbaiki kebocoran" di sini justru merusak. Jumlahnya terbatas dan tidak
+ * pernah tumbuh, jadi biarkan.
+ *
+ * Aman juga menyeberangi context WebGL yang hilang lalu dibuat ulang: Three
+ * menyimpan state GPU per-renderer, jadi renderer baru mengunggah ulang texture
+ * yang sama tanpa perlu dibuat ulang.
+ */
 const TEXTURES = new Map<Marking, THREE.CanvasTexture>()
 
 function markingTexture(marking: Marking) {
