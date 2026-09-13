@@ -40,33 +40,41 @@ export function RaceOverviewHud({ seconds, baseSeconds, reward, progress, teleme
   const energyDescription = `${energyStatus}, ${energy} persen, cadangan ${reserveSeconds.toFixed(1)} detik dorongan`;
   return (
     <section className="race-overview-hud font-sans" aria-label="Telemetri balapan">
-      <div className="race-hud-main">
-        <p className="race-hud-speed" aria-label="Kecepatan">
-          <strong>{formatSpeedKmh(recovering ? 0 : displaySpeedKmh(baseSeconds) * telemetry.visualSpeed)}</strong>
-          <span className="race-hud-speed-unit">km/j</span>
-        </p>
-        <dl className="race-hud-gauges">
-          <div>
-            <dt>RPM</dt>
-            <dd>{rpm.toLocaleString("id-ID")}</dd>
-            <dd className="race-hud-meter" role="meter" aria-label="RPM motor" aria-valuemin={0} aria-valuemax={tuning.maxRpm} aria-valuenow={rpm}>
-              <span style={{ transform: `scaleX(${telemetry.rpm / tuning.maxRpm})` }} />
-            </dd>
-          </div>
-          <div title={energyDescription}>
-            <dt>Boost</dt>
-            <dd>{energy}<small>%</small></dd>
-            <dd className="race-hud-meter" role="meter" aria-label="Energi boost" aria-valuemin={0} aria-valuemax={100} aria-valuenow={energy} aria-valuetext={energyDescription}>
-              <span style={{ transform: `scaleX(${telemetry.boostEnergy})` }} />
-            </dd>
-          </div>
-        </dl>
-      </div>
-      <p className="race-hud-lap">
-        <span>Lap <strong>{lapPercent}%</strong></span>
-        <span><strong>{lapSeconds}</strong> dtk/lap</span>
-        <span className="race-hud-reward"><strong>+{formatCoins(reward)}</strong> koin/lap</span>
-      </p>
+      <dl className="race-hud-grid">
+        <div className="race-hud-cell race-hud-speed">
+          <dt>Kecepatan</dt>
+          <dd>
+            <strong>{formatSpeedKmh(recovering ? 0 : displaySpeedKmh(baseSeconds) * telemetry.visualSpeed)}</strong>
+            <small>km/j</small>
+          </dd>
+        </div>
+        <div className="race-hud-cell">
+          <dt>RPM</dt>
+          <dd>{rpm.toLocaleString("id-ID")}</dd>
+          <dd className="race-hud-meter" role="meter" aria-label="RPM motor" aria-valuemin={0} aria-valuemax={tuning.maxRpm} aria-valuenow={rpm}>
+            <span style={{ transform: `scaleX(${telemetry.rpm / tuning.maxRpm})` }} />
+          </dd>
+        </div>
+        <div className="race-hud-cell" title={energyDescription}>
+          <dt>Boost</dt>
+          <dd>{energy}<small>%</small></dd>
+          <dd className="race-hud-meter" role="meter" aria-label="Energi boost" aria-valuemin={0} aria-valuemax={100} aria-valuenow={energy} aria-valuetext={energyDescription}>
+            <span style={{ transform: `scaleX(${telemetry.boostEnergy})` }} />
+          </dd>
+        </div>
+        <div className="race-hud-cell">
+          <dt>Lap</dt>
+          <dd>{lapPercent}<small>%</small></dd>
+        </div>
+        <div className="race-hud-cell">
+          <dt>Waktu</dt>
+          <dd>{lapSeconds}<small>dtk/lap</small></dd>
+        </div>
+        <div className="race-hud-cell race-hud-reward">
+          <dt>Hadiah</dt>
+          <dd>+{formatCoins(reward)}<small>koin/lap</small></dd>
+        </div>
+      </dl>
     </section>
   );
 }
