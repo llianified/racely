@@ -107,6 +107,58 @@ describeDatabase("Neon Postgres persistence", () => {
     expect(constraint.rows).toHaveLength(1);
   });
 
+  it("ranks settled laps with ties, a private self rank beyond Top 50, and no preview racers", async () => {
+    const { pool } = await import("@/lib/db");
+    const { getLeaderboard } = await import("@/lib/leaderboard-server");
+    const client = await pool!.connect();
+    try {
+      await client.query("BEGIN");
+      // A transaction-local shadow table keeps fixture scores out of the real
+      // leaderboard, even when this suite runs alongside a development server.
+      await client.query(`CREATE TEMPORARY TABLE racely_players (
+        user_id text PRIMARY KEY, display_name text NOT NULL,
+        laps integer NOT NULL, created_at timestamptz NOT NULL
+      ) ON COMMIT DROP`);
+      expect(await getLeaderboard("999", client)).toMatchObject({ entries: [], currentPlayer: null, totalPlayers: 0, nextRival: null });
+      await client.query(`INSERT INTO racely_players VALUES
+        ('10', 'First', 1000, '2026-01-01'),
+        ('20', 'Tied', 1000, '2026-01-02'),
+        ('30', 'Chaser', 900, '2026-01-03'),
+        ('40', 'No laps', 0, '2026-01-01'),
+        ('preview:fake', 'Preview', 9999, '2026-01-01'),
+        ('test:fake', 'Test', 9999, '2026-01-01')`);
+      const tied = await getLeaderboard("20", client);
+      expect(tied.entries.map(({ rank, name, isCurrentPlayer }) => ({ rank, name, isCurrentPlayer }))).toEqual([
+        { rank: 1, name: "First", isCurrentPlayer: false },
+        { rank: 1, name: "Tied", isCurrentPlayer: true },
+        { rank: 3, name: "Chaser", isCurrentPlayer: false },
+      ]);
+      expect(tied.currentPlayer?.rank).toBe(1);
+      expect(tied.nextRival).toBeNull();
+      expect(tied.totalPlayers).toBe(3);
+      const unranked = await getLeaderboard("40", client);
+      expect(unranked.currentPlayer).toBeNull();
+      expect(unranked.nextRival).toBeNull();
+      expect((await getLeaderboard("preview:fake", client)).currentPlayer).toBeNull();
+      expect((await getLeaderboard("30", client)).nextRival).toEqual({ name: "First", laps: 1000 });
+
+      await client.query(`INSERT INTO racely_players
+        SELECT (100 + n)::text, 'Racer ' || n, 800 - n, '2026-02-01'::timestamptz
+        FROM generate_series(1, 60) n`);
+      const outside = await getLeaderboard("160", client);
+      expect(outside.entries).toHaveLength(50);
+      expect(outside.entries.some((entry) => entry.isCurrentPlayer)).toBe(false);
+      expect(outside.currentPlayer).toEqual({ rank: 63, name: "Racer 60", laps: 740, isCurrentPlayer: true });
+      expect(outside.nextRival).toEqual({ name: "Racer 59", laps: 741 });
+      expect(outside.totalPlayers).toBe(63);
+      expect(JSON.stringify(outside)).not.toMatch(/user_id|userId|created_at|balance|username|photo/);
+      expect((await getLeaderboard("'; DROP TABLE racely_players; --", client)).currentPlayer).toBeNull();
+    } finally {
+      await client.query("ROLLBACK");
+      client.release();
+    }
+  });
+
   it("persists onboarding and keeps the chosen car across requests", async () => {
     const fresh = await gameServer.getGameState(identity);
     expect(fresh.carSelection?.model).toBeNull();
