@@ -103,6 +103,7 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
   const [inspect, setInspect] = useState(false);
   const installLock = useRef(false);
   const { key, title, icon: Icon } = part;
+  const ceiling = game.economy.maxUpgradeLevel;
   const preview = modificationPreview(game, key);
   const { level, nextLevel, maxed, cost, shortfall } = preview;
   const currentGrip = gripTuning(game.levels.tires);
@@ -144,8 +145,10 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
             <p>Cadangan: {seconds(currentPowertrain.boostCapacitySeconds)} d{!maxed && ` → ${seconds(nextPowertrain.boostCapacitySeconds)} d`}</p>
             <p>Terisi penuh dalam {currentPowertrain.rechargeSeconds} d tanpa Gaspol.</p>
           </div>}
-          <div className="level-segments" aria-label={`Level ${level} dari 10`}>
-            {Array.from({ length: 10 }, (_, i) => <span key={i} className={i < level ? "filled" : undefined} />)}
+          {/* Jumlah segmen mengikuti config: ceiling yang disetel jadi 5 tidak
+              boleh menyisakan lima kotak yang tidak akan pernah terisi. */}
+          <div className="level-segments" aria-label={`Level ${level} dari ${ceiling}`}>
+            {Array.from({ length: ceiling }, (_, i) => <span key={i} className={i < level ? "filled" : undefined} />)}
           </div>
         </div>
         <div className="upgrade-action">
@@ -233,7 +236,7 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
                 </tr>)}
               </tbody>
             </table>
-            <p className="border-y border-border px-xl py-lg text-muted-foreground">Pengurasan lebih kecil, pemulihan lebih cepat. Pengurangan dihitung dari ban level 1, hingga 54% di level 10. Boost tetap berisiko selip. Efek grip hanya saat simulasi aktif; tidak mengubah koin atau lap server.</p>
+            <p className="border-y border-border px-xl py-lg text-muted-foreground">Pengurasan lebih kecil, pemulihan lebih cepat. Pengurangan dihitung dari ban level 1, hingga {gripTuning(ceiling).drainReductionPercent}% di level {ceiling}. Boost tetap berisiko selip. Efek grip hanya saat simulasi aktif; tidak mengubah koin atau lap server.</p>
           </>}
           <dl className="flex flex-col gap-sm border-b border-border px-xl py-lg">
             <div className="flex justify-between gap-md"><dt>Biaya pemasangan</dt><dd className="font-bold">{coins(cost)}</dd></div>
@@ -265,7 +268,7 @@ export function UpgradePanel({ game, onUpgrade, disabled = false }: UpgradePanel
         icon={Wrench}
         title="Bengkel"
         aside={
-          <InfoHint title="Modifikasi mobil">Pilih part, cek perubahan performa, lalu konfirmasi pemasangan. Mesin dan ban mempercepat putaran; baterai menambah hasil koin. Di simulasi arena, mesin mempercepat akselerasi, ban memperkuat grip, dan baterai memperpanjang cadangan boost tanpa mengubah timer Gaspol server. Setiap pemasangan menaikkan satu level, maksimal level 10.</InfoHint>
+          <InfoHint title="Modifikasi mobil">Pilih part, cek perubahan performa, lalu konfirmasi pemasangan. Mesin dan ban mempercepat putaran; baterai menambah hasil koin. Di simulasi arena, mesin mempercepat akselerasi, ban memperkuat grip, dan baterai memperpanjang cadangan boost tanpa mengubah timer Gaspol server. Setiap pemasangan menaikkan satu level, maksimal level {game.economy.maxUpgradeLevel}.</InfoHint>
         }
       />
       <p className="upgrade-arena-note">Info arena di bawah hanya untuk simulasi gerak. Tidak menambah koin, durasi Gaspol, atau baterai idle server.</p>

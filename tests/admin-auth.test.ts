@@ -7,6 +7,7 @@ import {
   hasSameOrigin,
   isAdminConfigured,
   isAuthenticatedAdmin,
+  trustedProxyHops,
   verifyAdminPassword,
   verifyAdminSession,
 } from "../lib/admin-auth";
@@ -155,11 +156,37 @@ describe("Cookie dan asal permintaan", () => {
     expect(hasSameOrigin(request())).toBe(true);
   });
 
-  it("membaca alamat klien dari hop pertama x-forwarded-for", () => {
-    const forwarded = new Request("https://racely.fun/api/admin/session", {
-      headers: { "x-forwarded-for": "203.0.113.7, 10.0.0.1" },
-    });
-    expect(clientAddress(forwarded)).toBe("203.0.113.7");
+  it("membaca alamat klien dari hop yang ditulis proxy sendiri, bukan dari klien", () => {
+    const forwarded = (chain: string) =>
+      new Request("https://racely.fun/api/admin/session", {
+        headers: { "x-forwarded-for": chain },
+      });
+
+    // Satu proxy (ALB) meng-APPEND alamat peer TCP-nya, jadi hop terakhir itu
+    // milik kita. Entri di depannya dikirim klien dan tidak boleh dipercaya --
+    // kalau dibaca, satu penyerang bisa mencetak ember rate limit tak terbatas.
+    expect(clientAddress(forwarded("203.0.113.7"))).toBe("203.0.113.7");
+    expect(clientAddress(forwarded("9.9.9.9, 203.0.113.7"))).toBe("203.0.113.7");
+    expect(clientAddress(forwarded("palsu, juga-palsu, 203.0.113.7"))).toBe(
+      "203.0.113.7",
+    );
+
+    // Dua proxy terpercaya (CDN -> ALB): hop kedua dari kanan yang asli.
+    expect(clientAddress(forwarded("palsu, 203.0.113.7, 10.0.0.1"), 2)).toBe(
+      "203.0.113.7",
+    );
+    // Rantai lebih pendek dari jumlah hop: pakai yang terkiri, jangan membaca
+    // indeks negatif yang justru memulangkan entri karangan klien.
+    expect(clientAddress(forwarded("203.0.113.7"), 2)).toBe("203.0.113.7");
+
     expect(clientAddress(request())).toBe("unknown");
+  });
+
+  it("memakai satu proxy sebagai bawaan dan menolak hop count yang tidak masuk akal", () => {
+    expect(trustedProxyHops(undefined)).toBe(1);
+    expect(trustedProxyHops("2")).toBe(2);
+    for (const nonsense of ["0", "-3", "9", "dua", "1.5", ""]) {
+      expect(trustedProxyHops(nonsense)).toBe(1);
+    }
   });
 });

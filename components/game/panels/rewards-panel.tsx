@@ -43,14 +43,18 @@ export function claimableTotal(game: GameState) {
   );
 }
 
-function dailyNote(daily: GameState["daily"]) {
+/** Panjang tangga hadiah ikut config, jadi kalimatnya tidak boleh menyebut 7 sendiri. */
+function dailyNote(daily: GameState["daily"], economy: GameState["economy"]) {
   if (daily.claimedToday)
     return daily.streak > 1
       ? `Streak ${daily.streak} hari. Balik besok untuk ${coins(daily.nextReward)}.`
       : `Sudah diklaim hari ini. Besok ${coins(daily.nextReward)}.`;
-  return daily.streak > 0
-    ? `Streak ${daily.streak} hari berjalan. Klaim hari ini supaya tidak putus.`
-    : "Klaim tiap hari; hadiahnya naik sampai hari ketujuh.";
+  if (daily.streak > 0)
+    return `Streak ${daily.streak} hari berjalan. Klaim hari ini supaya tidak putus.`;
+  const rungs = economy.dailyRewards.length;
+  return rungs > 1
+    ? `Klaim tiap hari; hadiahnya naik sampai hari ke-${rungs}.`
+    : "Klaim tiap hari untuk tambahan koin.";
 }
 
 function ReferralCard({
@@ -132,7 +136,7 @@ export function RewardsPanel({
       id: "daily",
       icon: CalendarCheck,
       label: "Check-in harian",
-      note: dailyNote(game.daily),
+      note: dailyNote(game.daily, game.economy),
       amount: game.daily.claimedToday ? game.daily.nextReward : game.daily.reward,
       state: game.daily.claimedToday ? "claimed" : "ready",
       onClaim: onClaimDaily,

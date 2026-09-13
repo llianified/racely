@@ -20,6 +20,7 @@ import {
   performPreviewGameAction,
   PREVIEW_GAME_COOKIE,
 } from "../lib/preview-game";
+import { gameActionSchema } from "../lib/game-server";
 
 /**
  * `lib/game-server.ts` dan `lib/preview-game.ts` ditulis manual dan tidak
@@ -65,6 +66,42 @@ function fundedCookie(balance: number) {
   decoded.state.color = "#b9a1ed";
   return Buffer.from(JSON.stringify(decoded), "utf8").toString("base64url");
 }
+
+describe("Setiap aksi server punya cabangnya di mode preview", () => {
+  /**
+   * Langkah 3 di AGENTS.md: aksi baru ditulis di `lib/game.ts`, `lib/game-server.ts`,
+   * DAN `lib/preview-game.ts`. Melewatkan yang ketiga tidak menimbulkan error apa
+   * pun -- aksinya cuma diam-diam tidak berfungsi saat `pnpm dev`, jebakan yang
+   * paling lama ketahuan. Test ini memakai `commandSchema` sebagai sumbernya,
+   * sama seperti tests/action-receipt-types.test.ts terhadap SQL.
+   */
+  const commandTypes = () => {
+    const union = (
+      gameActionSchema as never as {
+        shape: { action: { options: { shape: { type: { value: string } } }[] } };
+      }
+    ).shape.action;
+    return union.options.map((option) => option.shape.type.value).sort();
+  };
+
+  const previewBranches = () =>
+    [
+      ...new Set(
+        [...previewSource.matchAll(/action\.type === "([a-z-]+)"/g)].map(
+          ([, type]) => type,
+        ),
+      ),
+    ].sort();
+
+  it("tidak meninggalkan satu pun varian commandSchema tanpa cabang", () => {
+    expect(previewBranches()).toEqual(commandTypes());
+  });
+
+  it("tidak menangani aksi yang tidak bisa diproduksi server", () => {
+    const known = new Set(commandTypes());
+    for (const type of previewBranches()) expect(known.has(type)).toBe(true);
+  });
+});
 
 describe("Boost timing has one source of truth", () => {
   it("derives the cooldown from the duration and the recharge", () => {

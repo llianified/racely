@@ -91,6 +91,11 @@ export function consumeRateLimit(
     : rule.capacity;
 
   if (tokens < 1) {
+    // Delete lebih dulu, sama seperti jalur yang diizinkan di bawah: `set` pada
+    // kunci yang sudah ada mempertahankan posisi insertion-nya, jadi entri lama
+    // dengan updatedAt baru membuat `break` di sweep() berhenti terlalu dini dan
+    // menyisakan ember basi di belakangnya.
+    buckets.delete(key);
     buckets.set(key, { tokens, updatedAt: now });
     return {
       allowed: false,
