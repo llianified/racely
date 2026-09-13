@@ -66,13 +66,13 @@ export function MenuPanel({
           </details>
         ))}
         <Button variant="menuDirect" onClick={onWallet}>
-          <Coins aria-hidden="true" /><span>Dompet & penarikan</span><ArrowUpRight aria-hidden="true" />
+          <Coins aria-hidden="true" /><span>Dompet koin</span><ArrowUpRight aria-hidden="true" />
         </Button>
         <Button variant="menuDirect" onClick={onHelp}>
           <CircleHelp aria-hidden="true" /><span>Cara bermain</span><ArrowUpRight aria-hidden="true" />
         </Button>
       </div>
-      <p className="menu-note"><ShieldCheck aria-hidden="true" />Semua hadiah dihitung server Racely. Penarikan diverifikasi manual.</p>
+      <p className="menu-note"><ShieldCheck aria-hidden="true" />Semua hasil balapan dan hadiah dihitung di server Racely.</p>
     </section>
   );
 }

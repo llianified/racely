@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { InfoHint } from "./info-hint";
 import { SectionCardHeading } from "../shell/section-card-heading";
+import { StatHero } from "../shell/stat-hero";
 import { cn } from "@/lib/utils";
 import {
   coins,
   formatCoins,
-  idr,
   missions,
   missionValue,
   type GameState,
@@ -82,8 +82,8 @@ function ReferralCard({
       <p className="referral-note">
         Kamu dapat {coins(economy.referralRewardInviter)} dan temanmu{" "}
         {coins(economy.referralRewardInvitee)} begitu dia menyelesaikan{" "}
-        {economy.referralMilestoneLaps} putaran. Dibayar saat dia benar-benar main,
-        bukan saat daftar.
+        {economy.referralMilestoneLaps} putaran. Koinnya masuk saat dia benar-benar
+        main, bukan saat daftar.
       </p>
       <code className="referral-link">{referral.link}</code>
       <Button
@@ -169,33 +169,31 @@ export function RewardsPanel({
 
   return (
     <div className="rewards-layout section-enter flex flex-col gap-lg">
-      <section className="rewards-hero" aria-label="Total hadiah siap diklaim">
-        <div className="rewards-hero-copy">
-          <span className="eyebrow">Siap diklaim</span>
-          <strong>{formatCoins(total)} <span>koin</span></strong>
-          <p>~ {idr(total, game.economy)}</p>
-        </div>
-        <Button
-          variant="gold"
-          size="lg"
-          className="w-full"
-          disabled={disabled || total <= 0}
-          onClick={onClaimAll}
-        >
-          <Coins data-icon="inline-start" />
-          Klaim semua
-        </Button>
-        <div className="rewards-hero-side">
-          <span className="rewards-ready">
-            <Gift aria-hidden="true" />
-            {readyCount > 0 ? `${readyCount} hadiah menunggu` : "Belum ada hadiah menunggu"}
-          </span>
+      <StatHero
+        ariaLabel="Total hadiah siap diklaim"
+        label="Siap diklaim"
+        figure={formatCoins(total)}
+        info={
           <InfoHint title="Tentang hadiah">
-            Semua hadiah berupa koin Racely. 1 koin setara {idr(1, game.economy)} dan bisa
-            ditarik lewat tab Dompet setelah saldo cukup.
+            Semua hadiah berupa koin Racely. Pakai buat upgrade mesin atau
+            kosmetik mobil di garasi.
           </InfoHint>
-        </div>
-      </section>
+        }
+        action={
+          <Button
+            variant="gold"
+            disabled={disabled || total <= 0}
+            onClick={onClaimAll}
+          >
+            <Coins data-icon="inline-start" />
+            Klaim semua
+          </Button>
+        }
+        stats={[
+          { label: "Menunggu", value: `${readyCount} hadiah` },
+          { label: "Streak harian", value: `${game.daily.streak} hari` },
+        ]}
+      />
 
       <ReferralCard
         referral={game.referral}

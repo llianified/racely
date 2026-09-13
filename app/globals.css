@@ -681,16 +681,27 @@
 .mission-status { display: inline-flex; align-items: center; gap: var(--space-xs); font-size: var(--fs-micro); color: var(--muted-foreground); }
 .mission-status svg { width: var(--icon-xs); height: var(--icon-xs); }
 
-/* ── hadiah ──��─────────────────────────────────────── */
-.rewards-hero { overflow: hidden; border: var(--stroke) solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: var(--radius); background: var(--card); }
-.rewards-hero > [data-slot='button'] { width: calc(100% - var(--space-md) * 2); margin: 0 var(--space-md) var(--space-md); }
-.rewards-hero-copy { padding: var(--space-md); }
-.rewards-hero-copy > strong { display: block; margin-top: var(--space-sm); font-size: var(--fs-8xl); font-weight: var(--fw-black); line-height: var(--lh-tight); letter-spacing: var(--track-tight-sm); color: var(--accent); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.rewards-hero-copy > strong > span { font-size: var(--fs-lead); font-weight: var(--fw-medium); letter-spacing: var(--track-flat); color: var(--muted-foreground); }
-.rewards-hero-copy > p { margin-top: var(--space-sm); font-size: var(--fs-lead); font-weight: var(--fw-semibold); }
-.rewards-hero-side { display: flex; align-items: center; justify-content: space-between; padding: var(--space-md); border-top: var(--stroke) solid var(--border); background: color-mix(in srgb, var(--background) 25%, var(--card)); }
-.rewards-ready { display: inline-flex; align-items: center; gap: var(--space-sm); color: var(--muted-foreground); font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
-.rewards-ready svg { width: var(--icon-base); height: var(--icon-base); flex-shrink: 0; color: var(--accent); }
+/* ── stat hero (Hadiah & Dompet) ────────────────────────
+   Garis emas di tepi atas + bilah emas di depan eyebrow adalah tanda pengenal
+   kartu angka utama, meminjam aksen bawah .circuit-number. Tiga baris tanpa
+   ruang sisa: eyebrow/info · angka sejajar tombol · strip dua statistik. */
+.stat-hero { display: flex; flex-direction: column; min-width: 0; overflow: hidden; border: var(--stroke) solid var(--border); border-top: var(--stroke-2) solid var(--accent); border-radius: var(--radius); background: var(--card); }
+.stat-hero-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); min-height: var(--space-32); padding: var(--space-sm) var(--space-sm) 0 var(--space-md); }
+.stat-hero-head > .eyebrow { display: inline-flex; align-items: center; gap: var(--space-sm); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stat-hero-head > .eyebrow::before { content: ''; flex-shrink: 0; width: var(--space-3); height: var(--space-10); border-radius: var(--corner-pill); background: var(--accent); }
+.stat-hero-main { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-sm) var(--space-md); padding: var(--space-xs) var(--space-md) var(--space-md); }
+.stat-hero-figure { display: inline-flex; align-items: baseline; gap: var(--space-6); min-width: 0; font-size: var(--fs-8xl); font-weight: var(--fw-black); line-height: var(--lh-none); letter-spacing: var(--track-tight-sm); color: var(--accent); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stat-hero-figure > span { font-size: var(--fs-small); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps-md); text-transform: uppercase; color: var(--muted-foreground); }
+/* Kedalaman press-button ikut dihitung supaya bayangan tombol tidak menempel garis strip. */
+.stat-hero-main > [data-slot='button'] { flex-shrink: 0; margin-left: auto; margin-bottom: var(--space-3); }
+.stat-hero-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: var(--stroke) solid var(--border); background: color-mix(in srgb, var(--background) 25%, var(--card)); }
+.stat-hero-stats > div { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; padding: var(--space-sm) var(--space-md); }
+.stat-hero-stats > div + div { border-left: var(--stroke) solid var(--border); }
+.stat-hero-stats dt, .stat-hero-stats dd { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stat-hero-stats dt { font-size: var(--fs-xs); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps-lg); text-transform: uppercase; color: var(--subtle-foreground); }
+.stat-hero-stats dd { font-size: var(--fs-read); font-weight: var(--fw-bold); line-height: var(--lh-tight); font-variant-numeric: tabular-nums; color: var(--foreground); }
+
+/* ── hadiah ────────────────────────────────────────── */
 .rewards-list-panel { padding: var(--space-md) var(--gutter); }
 .reward-list { display: flex; flex-direction: column; margin: var(--space-md) calc(var(--gutter) * -1) 0; }
 .reward-row { display: grid; grid-template-columns: var(--space-32) minmax(0, 1fr); column-gap: var(--space-md); padding-inline: var(--gutter); border-bottom: var(--stroke) solid var(--border); }
