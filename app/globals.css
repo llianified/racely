@@ -548,12 +548,15 @@
 .race-hud-speed strong { font-size: var(--fs-5xl); font-weight: var(--fw-heavy); letter-spacing: var(--track-tight-sm); }
 .race-hud-speed small { font-size: var(--fs-micro); }
 .race-hud-cell .race-hud-meter { display: block; height: var(--space-3); margin-top: auto; overflow: hidden; border-radius: var(--corner-pill); background: var(--secondary); }
-.race-hud-meter > span { display: block; width: 100%; height: 100%; transform-origin: left; background: var(--accent); }
+/* Kilau diagonal yang sama dengan .gold-button, dipakai ulang di isi meter dan
+   cincin lap supaya indikator sekeluarga dengan tombol khas Racely. */
+.race-hud-grid { --hud-streak: linear-gradient(60deg, transparent 9%, color-mix(in srgb, var(--foreground) 19%, transparent) 9%, color-mix(in srgb, var(--foreground) 19%, transparent) 18%, transparent 18%); }
+.race-hud-meter > span { display: block; width: 100%; height: 100%; transform-origin: left; background: var(--hud-streak), var(--accent); }
 .race-hud-reward dd { color: var(--accent); }
 /* Sel Lap: label + angka di kiri, cincin progres di kanan mengisi ruang kosong
    di bawah angka kecepatan. Cincin = conic-gradient yang di-mask jadi donat. */
 .race-hud-lap { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; align-items: center; column-gap: var(--space-sm); }
-.race-hud-cell .race-hud-ring { grid-column: 2; grid-row: 1 / -1; display: block; width: var(--space-32); height: var(--space-32); border-radius: var(--corner-round); background: conic-gradient(var(--accent) var(--ring-fill, 0%), var(--secondary) 0); mask: radial-gradient(farthest-side, transparent calc(100% - var(--space-3) - var(--stroke)), #000 calc(100% - var(--space-3))); }
+.race-hud-cell .race-hud-ring { grid-column: 2; grid-row: 1 / -1; display: block; width: var(--space-32); height: var(--space-32); border-radius: var(--corner-round); background: var(--hud-streak), conic-gradient(var(--accent) var(--ring-fill, 0%), var(--secondary) 0); mask: radial-gradient(farthest-side, transparent calc(100% - var(--space-3) - var(--stroke)), #000 calc(100% - var(--space-3))); }
 /* Di 320px kolom kecepatan berebut ruang dengan dua gauge; turunkan satu rung
    dan rapatkan padding sel supaya semuanya tetap satu baris. */
 @media (max-width: 359px) { .race-hud-cell { padding-inline: var(--space-8); } .race-hud-speed strong { font-size: var(--fs-4xl); } }
