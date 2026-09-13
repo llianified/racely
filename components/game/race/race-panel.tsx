@@ -182,7 +182,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
 export function RaceReward({ pending, onClaim, disabled = false, claiming = false }: { pending: number; onClaim: () => void; disabled?: boolean; claiming?: boolean }) {
   const readyToClaim = pending >= 1;
   const rewardStatus = readyToClaim
-    ? "Siap masuk ke saldo"
+    ? "Siap diklaim"
     : pending > 0
       ? `${formatCoins(1 - pending)} koin lagi untuk klaim`
       : "Selesaikan putaran untuk mulai mengumpulkan";
@@ -194,7 +194,7 @@ export function RaceReward({ pending, onClaim, disabled = false, claiming = fals
         <strong>{coins(pending)}</strong>
         <small>{rewardStatus}</small>
       </div>
-      <Button variant={readyToClaim ? "gold" : "secondary"} disabled={disabled || !readyToClaim} onClick={onClaim} aria-busy={claiming} aria-label={readyToClaim ? "Klaim hasil balapan ke saldo" : `Belum bisa diklaim. ${rewardStatus}`}>
+      <Button variant={readyToClaim ? "gold" : "secondary"} disabled={disabled || !readyToClaim} onClick={onClaim} aria-busy={claiming} aria-label={readyToClaim ? "Klaim koin hasil balapan" : `Belum bisa diklaim. ${rewardStatus}`}>
         {claiming ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <Coins data-icon="inline-start" />}
         {claiming ? "Mengklaim…" : "Klaim"}
       </Button>
