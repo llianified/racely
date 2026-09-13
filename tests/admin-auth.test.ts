@@ -14,13 +14,17 @@ import {
 
 const PASSWORD = "rahasia-operator-yang-panjang";
 const previous = process.env.RACELY_ADMIN_PASSWORD;
+const previousPublicAppUrl = process.env.PUBLIC_APP_URL;
 
 beforeEach(() => {
   process.env.RACELY_ADMIN_PASSWORD = PASSWORD;
+  process.env.PUBLIC_APP_URL = "https://racely.fun";
 });
 afterEach(() => {
   if (previous === undefined) delete process.env.RACELY_ADMIN_PASSWORD;
   else process.env.RACELY_ADMIN_PASSWORD = previous;
+  if (previousPublicAppUrl === undefined) delete process.env.PUBLIC_APP_URL;
+  else process.env.PUBLIC_APP_URL = previousPublicAppUrl;
 });
 
 const request = (init?: { cookie?: string; origin?: string; url?: string }) =>
@@ -146,12 +150,35 @@ describe("Cookie dan asal permintaan", () => {
     expect(options.secure).toBe(false);
   });
 
-  it("menolak Origin lintas situs, membiarkan yang tidak mengirimnya", () => {
+  it("menerima Origin publik saat URL request memakai alamat internal proxy", () => {
+    expect(
+      hasSameOrigin(
+        request({
+          origin: "https://racely.fun",
+          url: "http://localhost:3000/api/admin/session",
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("menolak Origin lintas situs, protokol berbeda, dan konfigurasi rusak", () => {
     expect(hasSameOrigin(request({ origin: "https://racely.fun" }))).toBe(true);
+    expect(hasSameOrigin(request({ origin: "http://racely.fun" }))).toBe(false);
     expect(hasSameOrigin(request({ origin: "https://penyerang.test" }))).toBe(
       false,
     );
     expect(hasSameOrigin(request({ origin: "bukan-url" }))).toBe(false);
+
+    process.env.PUBLIC_APP_URL = "bukan-url";
+    expect(
+      hasSameOrigin(
+        request({
+          origin: "https://racely.fun",
+          url: "http://localhost:3000/api/admin/session",
+        }),
+      ),
+    ).toBe(false);
+
     // Tanpa header Origin sama sekali (curl, klien lama) tetap diterima.
     expect(hasSameOrigin(request())).toBe(true);
   });
