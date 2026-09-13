@@ -34,7 +34,7 @@ export function GameGate({
           <h1 id="gate-title" className="text-3xl text-balance">
             {onRetry ? "Progres belum bisa dimuat" : "Buka Racely lewat Telegram"}
           </h1>
-          <p role="status" className="text-read leading-relaxed text-muted-foreground">
+          <p role="status" className="text-sm leading-relaxed text-muted-foreground">
             {retrying ? "Sedang menyinkronkan progresmu…" : error.message}
           </p>
         </div>
