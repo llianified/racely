@@ -30,10 +30,17 @@ const contentSecurityPolicy = [
 /**
  * Racely dibuka di dalam iframe Telegram, jadi app pemain TIDAK boleh memasang
  * frame-ancestors — itu akan memutus Telegram Web. Panel admin justru sebaliknya:
- * ia tidak pernah di-iframe siapa pun, jadi ia menolak dijadikan frame. Dikirim
- * sebagai header CSP kedua khusus /admin; browser menegakkan irisan keduanya.
+ * ia tidak pernah di-iframe siapa pun, jadi ia menolak dijadikan frame.
+ *
+ * Direktifnya DIGABUNG ke dalam satu header, bukan dikirim sebagai header CSP
+ * kedua. Next menerapkan header custom dengan `resHeaders[key] = value` — kunci
+ * yang sama DITIMPA, bukan ditumpuk (lihat
+ * `next/dist/server/lib/router-utils/resolve-routes.js`). Header kedua yang
+ * hanya berisi frame-ancestors karena itu membuang seluruh sisa policy di
+ * /admin: default-src, object-src, base-uri, form-action, semuanya hilang —
+ * persis di satu-satunya halaman yang menyetujui pembayaran rupiah.
  */
-const adminFrameGuard = "frame-ancestors 'none'"
+const adminContentSecurityPolicy = `${contentSecurityPolicy}; frame-ancestors 'none'`
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -48,10 +55,10 @@ const nextConfig = {
         { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
       ] },
       { source: '/admin/:path*', headers: [
-        { key: 'Content-Security-Policy', value: adminFrameGuard },
+        { key: 'Content-Security-Policy', value: adminContentSecurityPolicy },
       ] },
       { source: '/admin', headers: [
-        { key: 'Content-Security-Policy', value: adminFrameGuard },
+        { key: 'Content-Security-Policy', value: adminContentSecurityPolicy },
       ] },
     ]
   },
