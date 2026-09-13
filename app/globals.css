@@ -550,6 +550,10 @@
 .race-hud-cell .race-hud-meter { display: block; height: var(--space-3); margin-top: auto; overflow: hidden; border-radius: var(--corner-pill); background: var(--secondary); }
 .race-hud-meter > span { display: block; width: 100%; height: 100%; transform-origin: left; background: var(--accent); }
 .race-hud-reward dd { color: var(--accent); }
+/* Sel Lap: label + angka di kiri, cincin progres di kanan mengisi ruang kosong
+   di bawah angka kecepatan. Cincin = conic-gradient yang di-mask jadi donat. */
+.race-hud-lap { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; align-items: center; column-gap: var(--space-sm); }
+.race-hud-cell .race-hud-ring { grid-column: 2; grid-row: 1 / -1; display: block; width: var(--space-32); height: var(--space-32); border-radius: var(--corner-round); background: conic-gradient(var(--accent) var(--ring-fill, 0%), var(--secondary) 0); mask: radial-gradient(farthest-side, transparent calc(100% - var(--space-4) - var(--stroke)), #000 calc(100% - var(--space-4))); }
 /* Di 320px kolom kecepatan berebut ruang dengan dua gauge; turunkan satu rung
    dan rapatkan padding sel supaya semuanya tetap satu baris. */
 @media (max-width: 359px) { .race-hud-cell { padding-inline: var(--space-8); } .race-hud-speed strong { font-size: var(--fs-4xl); } }
@@ -582,7 +586,7 @@
 /* varian kecil: bevel lebih tipis biar proporsional */
 .gold-button[data-size='sm']:not(:disabled), .gold-button[data-size='xs']:not(:disabled) { --press-depth: var(--space-2); --press-shift: var(--stroke); }
 
-/* ── hasil balapan ──────────────────────────────�����──── */
+/* ── hasil balapan ────────────��─────────────────�����──── */
 .race-reward { position: relative; display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md); border: var(--stroke) solid var(--border); border-radius: var(--corner-xl); background: var(--card); transition: border-color var(--dur-base); }
 .race-reward::before { content: ''; position: absolute; left: 0; top: var(--space-14); bottom: var(--space-14); width: var(--space-3); background: var(--secondary); transition: background var(--dur-base); }
 .reward-ready { border-color: color-mix(in srgb, var(--accent) 32%, transparent); }
