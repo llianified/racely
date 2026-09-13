@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Link2, ListChecks, UserPlus } from "lucide-react";
+import { Link2, ListChecks, Send, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InfoHint } from "./info-hint";
 import { SectionCardHeading } from "../shell/section-card-heading";
@@ -18,7 +18,7 @@ export function ReferralPanel({
 }) {
   const { referral, economy } = game;
   const steps = [
-    { title: "Bagikan link", note: "Salin link ajakanmu, kirim ke teman lewat Telegram." },
+    { title: "Bagikan link", note: "Kirim ajakanmu langsung ke teman lewat Telegram." },
     { title: "Teman mulai balapan", note: `Dia membuka Racely dari link itu dan menyelesaikan ${economy.referralMilestoneLaps} putaran.` },
     { title: "Koin masuk", note: `Kamu ${coins(economy.referralRewardInviter)}, temanmu ${coins(economy.referralRewardInvitee)}. Langsung ke saldo, tanpa klaim.` },
   ];
@@ -37,8 +37,8 @@ export function ReferralPanel({
         }
         action={
           <Button variant="gold" disabled={disabled || !referral.link} onClick={onInvite}>
-            <Copy data-icon="inline-start" />
-            Salin link
+            <Send data-icon="inline-start" />
+            Bagikan ajakan
           </Button>
         }
         stats={[
@@ -57,7 +57,7 @@ export function ReferralPanel({
           onClick={onInvite}
         >
           <UserPlus data-icon="inline-start" />
-          Salin dan ajak teman
+          Bagikan ke teman
         </Button>
       </section>
 
