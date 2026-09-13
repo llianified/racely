@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  ArrowUpRight, ChevronDown, ChevronRight, CircleHelp, ClipboardList,
+  ChevronDown, ChevronRight, CircleHelp, ClipboardList,
   Coins, Flag, Gift, Gauge, MapPinned, Paintbrush, ShieldCheck,
   Trophy, UserPlus, Warehouse, Wind, Wrench, Zap,
 } from "lucide-react";
@@ -50,7 +50,7 @@ export function MenuPanel({
     <section className="menu-panel panel section-enter" aria-label="Menu Racely">
       <div className="menu-groups">
         <Button variant="menuDirect" onClick={() => onNavigate("leaderboard")}>
-          <Trophy aria-hidden="true" /><span>Leaderboard</span><ArrowUpRight aria-hidden="true" />
+          <Trophy aria-hidden="true" /><span>Leaderboard</span><ChevronRight aria-hidden="true" />
         </Button>
         {groups.map(({ title, icon: Icon, items }, index) => (
           <details className="menu-group" key={title} open={index === 0}>
@@ -71,13 +71,13 @@ export function MenuPanel({
           </details>
         ))}
         <Button variant="menuDirect" onClick={() => onNavigate("referral")}>
-          <UserPlus aria-hidden="true" /><span>Ajak teman</span><ArrowUpRight aria-hidden="true" />
+          <UserPlus aria-hidden="true" /><span>Ajak teman</span><ChevronRight aria-hidden="true" />
         </Button>
         <Button variant="menuDirect" onClick={onWallet}>
-          <Coins aria-hidden="true" /><span>Dompet koin</span><ArrowUpRight aria-hidden="true" />
+          <Coins aria-hidden="true" /><span>Dompet koin</span><ChevronRight aria-hidden="true" />
         </Button>
         <Button variant="menuDirect" onClick={onHelp}>
-          <CircleHelp aria-hidden="true" /><span>Cara bermain</span><ArrowUpRight aria-hidden="true" />
+          <CircleHelp aria-hidden="true" /><span>Cara bermain</span><ChevronRight aria-hidden="true" />
         </Button>
       </div>
       <p className="menu-note"><ShieldCheck aria-hidden="true" />Semua hasil balapan dan hadiah dihitung di server Racely.</p>
