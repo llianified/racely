@@ -189,17 +189,17 @@ export function RaceReward({ pending, onClaim, disabled = false, claiming = fals
 
   return (
     <section className={cn("race-reward", readyToClaim && "reward-ready")} aria-label="Hasil balapan">
-      <header className="reward-heading">
-        <h2>Hasil balapan</h2>
-        <span className="reward-status">{rewardStatus}</span>
-      </header>
-      <div className="reward-main">
+      <div className="reward-copy">
+        <header className="reward-heading">
+          <h2>Hasil balapan</h2>
+          <span className="reward-status">{rewardStatus}</span>
+        </header>
         <strong>{coins(pending)}</strong>
-        <Button size="sm" variant={readyToClaim ? "gold" : "secondary"} disabled={disabled || !readyToClaim} onClick={onClaim} aria-busy={claiming} aria-label={readyToClaim ? "Klaim koin hasil balapan" : `Belum bisa diklaim. ${rewardStatus}`}>
-          {claiming ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <Coins data-icon="inline-start" />}
-          {claiming ? "Mengklaim…" : "Klaim"}
-        </Button>
       </div>
+      <Button size="sm" variant={readyToClaim ? "gold" : "secondary"} disabled={disabled || !readyToClaim} onClick={onClaim} aria-busy={claiming} aria-label={readyToClaim ? "Klaim koin hasil balapan" : `Belum bisa diklaim. ${rewardStatus}`}>
+        {claiming ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <Coins data-icon="inline-start" />}
+        {claiming ? "Mengklaim…" : "Klaim"}
+      </Button>
     </section>
   );
 }
