@@ -91,8 +91,12 @@ export async function readWithdrawalQueue(options: {
   offset?: number;
 }): Promise<QueuePage> {
   const database = getDatabase();
-  const limit = Math.min(Math.max(1, options.limit ?? 25), MAX_LIMIT);
-  const offset = Math.max(0, options.offset ?? 0);
+  // `Math.min`/`Math.max` meneruskan NaN apa adanya, jadi clamp saja tidak cukup
+  // untuk menahan angka cacat sampai ke LIMIT/OFFSET.
+  const whole = (value: number | undefined, fallback: number) =>
+    Number.isFinite(value) ? Math.floor(value as number) : fallback;
+  const limit = Math.min(Math.max(1, whole(options.limit, 25)), MAX_LIMIT);
+  const offset = Math.max(0, whole(options.offset, 0));
   const status = options.status ?? "pending";
   const filter =
     status === "all" ? undefined : eq(withdrawals.status, status);

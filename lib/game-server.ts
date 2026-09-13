@@ -156,13 +156,19 @@ function withdrawalRecord(row: WithdrawalRow): WithdrawalRecord {
   };
 }
 
-function hasExistingProgress(
-  row: PlayerRow,
-  history: WithdrawalRow[],
-  economy: EconomyConfig,
-) {
+/**
+ * Apakah baris ini milik pemain yang sudah berjalan sebelum pemilihan mobil ada.
+ *
+ * Dulu pertanyaannya dijawab dengan `row.balance !== economy.startingBalance`.
+ * Itu ikut berubah ketika `startingBalance` disetel dari panel: menaikkannya
+ * membuat SETIAP pemain baru -- yang saldonya masih nilai lama -- ditandai
+ * sebagai pemain lama. `version` tidak punya masalah itu: ia mulai dari 1 dan
+ * naik pada setiap aksi non-sync, jadi `> 1` berarti pemain ini pernah benar-
+ * benar melakukan sesuatu, berapa pun saldo awal yang berlaku hari ini.
+ */
+function hasExistingProgress(row: PlayerRow, history: WithdrawalRow[]) {
   return (
-    row.balance !== economy.startingBalance ||
+    row.version > 1 ||
     row.pending > 0 ||
     row.earned > 0 ||
     row.laps > 0 ||
@@ -198,7 +204,7 @@ function stateFromRow(
     carSelection: {
       model: row.carModel,
       returningPlayer:
-        row.carModel === null && hasExistingProgress(row, history, economy),
+        row.carModel === null && hasExistingProgress(row, history),
     },
     withdrawals: history.map(withdrawalRecord),
     daily,

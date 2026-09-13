@@ -15,6 +15,12 @@ import {
  * Modul ini menerjemahkan satu set config jadi angka rupiah yang bisa dibaca,
  * dipakai panel admin untuk memperlihatkan dampak sebuah perubahan SEBELUM
  * disimpan. Murni, jadi ikut jalan di client sambil form diisi.
+ *
+ * Dua field bisa bernilai `Infinity` ketika ekonomi disetel jadi tidak berbayar
+ * (`hoursToMinWithdraw`, `maxOutHoursAtBase`) -- itu jawaban yang benar, bukan
+ * bug. Lewat JSON `Infinity` berubah jadi `null`, dan `decimal()`/`rupiah()` di
+ * `app/admin/admin-client.ts` menampilkan "—" untuk keduanya. Jangan menambah
+ * pemakai baru yang berhitung langsung di atas angka ini tanpa `Number.isFinite`.
  */
 export type PayoutRow = {
   label: string;
