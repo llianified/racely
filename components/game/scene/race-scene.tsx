@@ -393,6 +393,11 @@ function CarInspector({ color, model, charge, reducedMotion, bodyVisible, levels
   </>
 }
 
+/** Penahan tata letak selama arena dilepas; lihat `standby` di SceneStage. */
+function SceneStandby() {
+  return <div className="scene-loading absolute inset-0" role="status"><Flag /><strong>Arena dijeda.</strong><span>Buka tab Balapan untuk menyalakannya lagi.</span></div>
+}
+
 function SceneError({ onRetry }: { onRetry: () => void }) {
   return <div className="scene-loading absolute inset-0" role="alert"><Flag /><strong>Arena 3D perlu dinyalakan ulang.</strong><span>Progres sesi tetap aman. Coba lagi atau buka di browser yang mendukung WebGL.</span><button onClick={onRetry} className="flex items-center gap-sm"><RotateCcw className="size-(--icon-sm)" />Muat ulang arena</button></div>
 }
@@ -473,8 +478,29 @@ export default function RaceScene(props: SceneProps) {
   }, [])
   const onLost = useCallback(() => setLost(true), [])
   const retry = () => { setReady(false); setLost(false); setAttempt(v => v + 1) }
+  /**
+   * Arena DILEPAS saat tab lain yang aktif, bukan sekadar dijeda.
+   * `frameloop: 'never'` menghentikan rendering tapi tidak melepaskan WebGL
+   * context-nya, dan tab Garasi membangun context keduanya sendiri. Dua context
+   * hidup bersamaan cukup untuk membunuh renderer WebView di perangkat kelas
+   * bawah: halaman kosong "This page couldn't load", bukan context loss yang
+   * bisa ditangkap ContextMonitor.
+   *
+   * Yang ditukar: kembali ke Balapan membangun ulang arena, jadi jeda
+   * "Menyalakan lampu sirkuit" muncul lagi. `document.hidden` sengaja TIDAK
+   * ikut melepas -- itu akan membongkar arena setiap kali notifikasi lewat.
+   */
+  const standby = props.active === false
+  useEffect(() => {
+    // Mount berikutnya membangun context baru, jadi penanda kesiapannya ikut
+    // mundur; tanpa ini arena berikutnya tampil kosong tanpa kabar apa pun.
+    if (!standby) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setReady(false)
+  }, [standby])
   if (lost) return <SceneError onRetry={retry} />
-  const running = visible && props.active !== false
+  if (standby) return <SceneStandby />
+  const running = visible
   return <SceneBoundary key={attempt} onRetry={retry}>
     {!ready && <div className="scene-loading absolute inset-0" role="status"><Flag /><strong>Menyalakan lampu sirkuit.</strong><span>Menyiapkan lintasan 3D…</span></div>}
     <Canvas orthographic dpr={[1, 1.25]} frameloop={running ? 'always' : 'never'} shadows="percentage" camera={{ position: [9, 12.5, 12], zoom: 30, near: .1, far: 100 }} gl={{ antialias: true, alpha: false, powerPreference: 'default' }} fallback={<SceneError onRetry={retry} />} onCreated={() => setReady(true)} aria-label={props.inspect ? 'Inspeksi sasis dan dua sel baterai mobil. Geser untuk memutar, cubit untuk zoom. Balapan tetap berlangsung.' : follow ? 'Arena mini 4WD 3D. Kamera mengikuti mobilmu. Pilih Overview untuk melihat seluruh lintasan.' : 'Arena mini 4WD 3D. Kamera overview. Geser untuk memutar, cubit untuk zoom.'}>
