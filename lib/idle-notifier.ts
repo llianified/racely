@@ -1,18 +1,24 @@
 import "server-only";
 
-import { and, asc, eq, isNotNull, lt, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { botChats, players } from "@/lib/db/schema";
 import {
   idleNotifyAfterSeconds,
   idleNotificationText,
   idleSecondsOf,
+  shouldNotifyIdle,
 } from "@/lib/idle-notify";
 import { readEconomyConfig } from "@/lib/economy-store";
 import { parsePublicAppUrl, sendTelegramReply } from "@/lib/telegram-bot";
 
 /** Sesapuan dibatasi supaya satu tick tidak pernah membanjiri Bot API. */
 const BATCH = 50;
+/**
+ * Berapa pesan yang boleh terbang bersamaan. Cukup untuk menjaga satu sapuan
+ * jauh di bawah INTERVAL_MS, masih jauh di bawah batas laju Bot API.
+ */
+const SEND_CONCURRENCY = 8;
 const INTERVAL_MS = 5 * 60 * 1000;
 
 const globalForNotifier = globalThis as unknown as {
@@ -65,36 +71,72 @@ export async function runIdleNotifierPass(now = new Date()) {
 
   let sent = 0;
   let skipped = 0;
-  for (const candidate of candidates) {
+  // Klausa WHERE di atas ada supaya indeks parsialnya terpakai, bukan supaya ia
+  // jadi aturannya. Aturannya tetap `shouldNotifyIdle` -- fungsi murni yang
+  // dites di `tests/idle-notify.test.ts`. Sebelum ini SQL di atas adalah
+  // salinan kedua dari logika itu dan fungsinya tidak dipanggil siapa pun, jadi
+  // testnya menjaga cabang yang tidak pernah dijalankan produksi.
+  const due = candidates.filter((candidate) =>
+    shouldNotifyIdle(candidate, now, economy),
+  );
+
+  const targets: { userId: string; chatId: number; idleSeconds: number }[] = [];
+  for (const candidate of due) {
     const chatId = Number(candidate.userId);
     if (!Number.isSafeInteger(chatId) || chatId <= 0) {
       skipped += 1;
       continue;
     }
+    targets.push({
+      userId: candidate.userId,
+      chatId,
+      idleSeconds: idleSecondsOf(candidate, now),
+    });
+  }
 
-    try {
-      await sendTelegramReply({
-        chat_id: chatId,
-        text: idleNotificationText(idleSecondsOf(candidate, now), economy),
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: "Buka Racely", web_app: { url: appUrl } }],
-          ],
-        },
-      });
-      sent += 1;
-    } catch {
-      skipped += 1;
-    }
+  // Dikirim paralel berbatas, bukan satu per satu. Berurutan, satu sapuan penuh
+  // berarti BATCH x timeout Bot API (50 x 10 detik = 500 detik) -- lebih panjang
+  // dari INTERVAL_MS-nya sendiri, jadi satu Telegram yang lambat membuat sapuan
+  // berikutnya terus dilewati penjaga `inFlight`.
+  const queue = [...targets];
+  const workers = Array.from(
+    { length: Math.min(SEND_CONCURRENCY, queue.length) },
+    async () => {
+      for (let item = queue.shift(); item; item = queue.shift()) {
+        try {
+          await sendTelegramReply({
+            chat_id: item.chatId,
+            text: idleNotificationText(item.idleSeconds, economy),
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "Buka Racely", web_app: { url: appUrl } }],
+              ],
+            },
+          });
+          sent += 1;
+        } catch {
+          skipped += 1;
+        }
+      }
+    },
+  );
+  await Promise.all(workers);
 
-    // Ditandai baik berhasil maupun gagal. Pemain yang memblokir bot akan
-    // selalu menolak, dan tanpa tanda ini mereka akan dicoba ulang setiap lima
-    // menit selamanya. Harganya: satu pengingat hilang saat Telegram sedang
-    // bermasalah -- jauh lebih murah daripada sapuan yang macet.
+  // Ditandai baik berhasil maupun gagal. Pemain yang memblokir bot akan selalu
+  // menolak, dan tanpa tanda ini mereka akan dicoba ulang setiap lima menit
+  // selamanya. Harganya: satu pengingat hilang saat Telegram sedang bermasalah
+  // -- jauh lebih murah daripada sapuan yang macet. Satu UPDATE untuk seluruh
+  // batch, bukan satu per pemain.
+  if (targets.length > 0) {
     await db
       .update(players)
       .set({ idleNotifiedAt: now })
-      .where(eq(players.userId, candidate.userId))
+      .where(
+        inArray(
+          players.userId,
+          targets.map((target) => target.userId),
+        ),
+      )
       .catch(() => undefined);
   }
 
