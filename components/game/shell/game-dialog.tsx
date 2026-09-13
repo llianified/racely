@@ -183,7 +183,10 @@ export function GameDialog({
               <p>
                 <strong>Ditinggal pun tetap ngumpulin koin.</strong>
                 <span>
-                  Saat kamu tutup aplikasi, mobilmu jalan setengah kecepatan
+                  {/* Lajunya `offlineRate`, bukan selalu setengah: nilainya bisa
+                      disetel dari panel admin. */}
+                  Saat kamu tutup aplikasi, mobilmu jalan{" "}
+                  {Math.round(game.economy.offlineRate * 100)}% kecepatan
                   sampai {formatDuration(game.economy.offlineCapSeconds)}. Hasilnya
                   langsung masuk koin pending.
                 </span>

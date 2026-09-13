@@ -4,7 +4,13 @@ import { Gauge } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { gripTuning, type DrivingState } from '@/lib/race-dynamics'
 
-export function GripChallenge({ state, tires, onToggle }: { state: DrivingState; tires: number; onToggle: () => void }) {
+/**
+ * `ceiling` datang dari `economy.maxUpgradeLevel`, bukan dari batas internal
+ * gripTuning: skala grip arena memang berhenti di 10, tapi level yang BISA
+ * dicapai pemain adalah yang disetel di panel admin. Menulis "/10" saat
+ * ceiling-nya 5 menjanjikan dua level yang tidak akan pernah ada.
+ */
+export function GripChallenge({ state, tires, ceiling, onToggle }: { state: DrivingState; tires: number; ceiling: number; onToggle: () => void }) {
   const tuning = gripTuning(tires)
   const recovering = state.recovery > 0
   const danger = state.grip < 40 && !recovering
@@ -23,7 +29,7 @@ export function GripChallenge({ state, tires, onToggle }: { state: DrivingState;
     </div>
     <div className="grip-footer"><span><strong>{state.cleanCorners}×</strong> tikungan bersih</span><span>{state.courseOuts} course out</span></div>
     </>}
-    <div className="grip-footer"><span>Grip ban <strong>Lv. {tuning.level}/10</strong></span><span>Pengurasan <strong>−{tuning.drainReductionPercent}%</strong></span></div>
-    <p className="grip-help">Pulih {tuning.straightRecovery} poin/detik di lintasan lurus. {tuning.level < 10 ? 'Upgrade Ban & roller di bengkel untuk grip lebih kuat.' : 'Grip maksimal; boost di tikungan tetap berisiko selip.'} {state.enabled ? '' : 'Aktifkan simulasi untuk merasakan efek grip.'} Simulasi tidak memengaruhi koin &amp; lap server.</p>
+    <div className="grip-footer"><span>Grip ban <strong>Lv. {tuning.level}/{ceiling}</strong></span><span>Pengurasan <strong>−{tuning.drainReductionPercent}%</strong></span></div>
+    <p className="grip-help">Pulih {tuning.straightRecovery} poin/detik di lintasan lurus. {tuning.level < ceiling ? 'Upgrade Ban & roller di bengkel untuk grip lebih kuat.' : 'Grip maksimal; boost di tikungan tetap berisiko selip.'} {state.enabled ? '' : 'Aktifkan simulasi untuk merasakan efek grip.'} Simulasi tidak memengaruhi koin &amp; lap server.</p>
   </div>
 }

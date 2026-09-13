@@ -26,6 +26,17 @@ const transitionSchema = z
   })
   .strict();
 
+/**
+ * `Number("abc")` itu NaN, dan NaN lolos setiap clamp `Math.min`/`Math.max` --
+ * dulu ia menyelinap sampai ke klausa LIMIT dan membalas 500. Query yang cacat
+ * harus dijawab 400.
+ */
+function wholeNumberParam(value: string | null, fallback: number) {
+  if (value === null || value.trim() === "") return fallback;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
+}
+
 export async function GET(request: Request) {
   const denied = guardAdmin(request);
   if (denied) return denied;
@@ -40,12 +51,14 @@ export async function GET(request: Request) {
     return adminJson({ error: "Status tidak dikenal." }, 400);
   }
 
+  const limit = wholeNumberParam(url.searchParams.get("limit"), 25);
+  const offset = wholeNumberParam(url.searchParams.get("offset"), 0);
+  if (limit === null || offset === null) {
+    return adminJson({ error: "Batas atau offset tidak valid." }, 400);
+  }
+
   try {
-    const page = await readWithdrawalQueue({
-      status,
-      limit: Number(url.searchParams.get("limit") ?? 25),
-      offset: Number(url.searchParams.get("offset") ?? 0),
-    });
+    const page = await readWithdrawalQueue({ status, limit, offset });
     return adminJson(page);
   } catch (error) {
     if (error instanceof AdminOpsError) {
