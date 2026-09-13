@@ -16,6 +16,11 @@ import {
   performPreviewGameAction,
   PREVIEW_GAME_COOKIE,
 } from "../lib/preview-game";
+import {
+  withdrawAmountIdr,
+  withdrawBlocker,
+  withdrawBlockerMessage,
+} from "../lib/game-economy";
 
 const gameServerSource = readFileSync("lib/game-server.ts", "utf8");
 const identity = {
@@ -30,7 +35,27 @@ const request = (cookie?: string) =>
     headers: cookie ? { cookie: `${PREVIEW_GAME_COOKIE}=${cookie}` } : {},
   });
 
-function fundedCookie(balance: number) {
+/**
+ * Akun yang sudah memenuhi pagar Fase 0: cukup putaran dan cukup tua. Blok di
+ * bawah menguji mekanika antreannya, bukan pagarnya -- pagar punya blok sendiri
+ * di "Pagar penarikan", dan di sana justru akun mentah yang dipakai.
+ */
+function fundedCookie(balance: number, overrides: Record<string, unknown> = {}) {
+  const fresh = getPreviewGameState(request(), identity, E);
+  const decoded = JSON.parse(
+    Buffer.from(fresh.cookieValue, "base64url").toString("utf8"),
+  );
+  decoded.state.balance = balance;
+  decoded.state.laps = E.withdrawMinLaps;
+  decoded.state.carSelection = { model: "luna-gt", returningPlayer: false };
+  decoded.state.color = "#b9a1ed";
+  decoded.createdAt =
+    Date.now() - (E.withdrawMinAccountAgeDays + 1) * 24 * 60 * 60 * 1000;
+  Object.assign(decoded, overrides);
+  return Buffer.from(JSON.stringify(decoded), "utf8").toString("base64url");
+}
+
+const rawCookie = (balance: number) => {
   const fresh = getPreviewGameState(request(), identity, E);
   const decoded = JSON.parse(
     Buffer.from(fresh.cookieValue, "base64url").toString("utf8"),
@@ -38,8 +63,9 @@ function fundedCookie(balance: number) {
   decoded.state.balance = balance;
   decoded.state.carSelection = { model: "luna-gt", returningPlayer: false };
   decoded.state.color = "#b9a1ed";
+  decoded.createdAt = Date.now();
   return Buffer.from(JSON.stringify(decoded), "utf8").toString("base64url");
-}
+};
 
 const withdraw = {
   type: "withdraw",
@@ -48,6 +74,76 @@ const withdraw = {
   accountName: "Rizky Pratama",
   coins: 150,
 } as const;
+
+/**
+ * Pagar Fase 0. Keluar-masuk antreannya tidak berubah sedikit pun: yang dijaga
+ * di sini hanya siapa yang boleh ikut antre, dan berapa rupiah yang tercatat.
+ */
+describe("Pagar penarikan", () => {
+  const ask = (cookie: string, economy = E) =>
+    performPreviewGameAction(request(cookie), identity, randomUUID(), withdraw, economy);
+
+  it("menahan akun yang belum cukup putaran", () => {
+    expect(() => ask(rawCookie(500))).toThrow(/putaran/i);
+  });
+
+  it("menahan akun yang belum cukup umur", () => {
+    // Putarannya sudah cukup, jadi yang tersisa hanya umur akun.
+    const muda = fundedCookie(500, { createdAt: Date.now() });
+    expect(() => ask(muda)).toThrow(/umur|hari/i);
+  });
+
+  it("menahan permintaan kedua selama jeda belum lewat", () => {
+    const first = ask(fundedCookie(1000));
+    expect(first.state.withdrawals).toHaveLength(1);
+    expect(() => ask(first.cookieValue)).toThrow(/berikutnya/i);
+  });
+
+  it("melepas permintaan setelah jeda lewat", () => {
+    const lewat = { ...E, withdrawCooldownDays: 0 };
+    const first = ask(fundedCookie(1000), lewat);
+    expect(() => ask(first.cookieValue, lewat)).not.toThrow();
+  });
+
+  it("memotong biaya dari rupiah yang dicatat, bukan dari koin", () => {
+    const coins = 1000;
+    expect(withdrawAmountIdr(E, coins)).toBe(
+      Math.floor(coins * E.coinToIdr * (1 - E.withdrawFeePct / 100)),
+    );
+    // Tanpa biaya, angkanya kembali persis ke nilai koin apa adanya.
+    expect(withdrawAmountIdr({ ...E, withdrawFeePct: 0 }, coins)).toBe(
+      coins * E.coinToIdr,
+    );
+    // Saldo tetap dipotong sebesar koin yang diminta, bukan dikurangi biaya.
+    const after = ask(fundedCookie(1000));
+    expect(after.state.balance).toBe(1000 - withdraw.coins);
+  });
+
+  it("menyebut penghalang dengan kalimat yang sama seperti yang dibaca pemain", () => {
+    const now = new Date("2026-09-13T00:00:00.000Z");
+    const blocker = withdrawBlocker(
+      E,
+      { laps: 0, createdAt: now, lastWithdrawalAt: null },
+      now,
+    );
+    expect(blocker).toMatchObject({ kind: "laps", need: E.withdrawMinLaps });
+    expect(withdrawBlockerMessage(blocker!)).toContain("putaran");
+  });
+
+  it("melepas akun yang sudah memenuhi semuanya", () => {
+    expect(
+      withdrawBlocker(
+        E,
+        {
+          laps: E.withdrawMinLaps,
+          createdAt: new Date(Date.now() - (E.withdrawMinAccountAgeDays + 1) * 86_400_000),
+          lastWithdrawalAt: null,
+        },
+        new Date(),
+      ),
+    ).toBeNull();
+  });
+});
 
 describe("Withdrawals stay a manual, pending-only queue", () => {
   it("records a request as pending and debits the balance immediately", () => {
@@ -70,6 +166,10 @@ describe("Withdrawals stay a manual, pending-only queue", () => {
   });
 
   it("never auto-advances a withdrawal past pending", () => {
+    // Jeda antar penarikan dimatikan di sini: yang diuji adalah apakah status
+    // pernah bergerak sendiri dari `pending`, dan itu butuh permintaan berulang.
+    // Jeda itu diuji tersendiri di blok "Pagar penarikan".
+    const noCooldown = { ...E, withdrawCooldownDays: 0 };
     let cookie = fundedCookie(1000);
     for (let index = 0; index < 3; index += 1) {
       const step = performPreviewGameAction(
@@ -77,14 +177,14 @@ describe("Withdrawals stay a manual, pending-only queue", () => {
         identity,
         randomUUID(),
         withdraw,
-        E,
+        noCooldown,
       );
       cookie = step.cookieValue;
       expect(step.state.withdrawals.every((row) => row.status === "pending")).toBe(
         true,
       );
     }
-    const later = getPreviewGameState(request(cookie), identity, E);
+    const later = getPreviewGameState(request(cookie), identity, noCooldown);
     expect(later.state.withdrawals.every((row) => row.status === "pending")).toBe(
       true,
     );

@@ -117,6 +117,32 @@ const GROUPS: Group[] = [
       { key: "circuitUnlockLaps", label: "Putaran buka sirkuit 2", step: "1" },
     ],
   },
+  {
+    legend: "Sparepart",
+    fields: [
+      { key: "lapScrapBase", label: "Sparepart per putaran", hint: "di level 1", step: "0.05" },
+      { key: "lapScrapPerLevel", label: "Tambahan per level upgrade", step: "0.01" },
+      { key: "lapScrapPerCircuit", label: "Pengali sirkuit", hint: "x (1 + circuit x nilai)", step: "0.05" },
+      { key: "startingScrap", label: "Bekal pemain lama", hint: "sekali saat migrasi", step: "1" },
+      { key: "coinToScrapRate", label: "Tukar 1 koin jadi", hint: "Sparepart; satu arah", step: "0.5" },
+    ],
+  },
+  {
+    legend: "Pagar emisi koin",
+    fields: [
+      { key: "dailyCoinCapPerPlayer", label: "Batas koin per pemain per hari", hint: "putaran tetap bayar Sparepart", step: "1" },
+      { key: "dailyEmissionBudgetIdr", label: "Anggaran emisi harian", hint: "rupiah; 0 = tanpa anggaran & tanpa rem", step: "1000" },
+    ],
+  },
+  {
+    legend: "Pagar penarikan",
+    fields: [
+      { key: "withdrawFeePct", label: "Biaya penarikan", hint: "persen", step: "0.5" },
+      { key: "withdrawCooldownDays", label: "Jeda antar penarikan", hint: "hari", step: "1" },
+      { key: "withdrawMinLaps", label: "Putaran minimum", hint: "seumur akun", step: "1" },
+      { key: "withdrawMinAccountAgeDays", label: "Umur akun minimum", hint: "hari", step: "1" },
+    ],
+  },
 ];
 
 type FormState = Record<NumericKey, string> & { dailyRewards: string };

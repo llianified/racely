@@ -24,6 +24,18 @@ export const players = pgTable("racely_players", {
   balance: bigint("balance", { mode: "number" }).notNull().default(10),
   pending: doublePrecision("pending").notNull().default(0),
   earned: doublePrecision("earned").notNull().default(0),
+  /**
+   * Sparepart: mata uang progres, tidak pernah bisa ditukar rupiah. Kolomnya
+   * numeric supaya pecahan per putaran tidak hilang seperti pada `balance`
+   * yang memang sengaja bulat.
+   */
+  scrap: doublePrecision("scrap").notNull().default(0),
+  scrapEarned: doublePrecision("scrap_earned").notNull().default(0),
+  /** Null berarti bekal Sparepart awal belum dibayarkan; lihat migrasi 0011. */
+  starterScrapAt: timestamp("starter_scrap_at", { withTimezone: true }),
+  /** Hari balapan (WIB) yang sedang dihitung untuk batas koin harian. */
+  dayKey: text("day_key"),
+  dayCoins: doublePrecision("day_coins").notNull().default(0),
   laps: integer("laps").notNull().default(0),
   progress: doublePrecision("progress").notNull().default(0),
   engineLevel: integer("engine_level").notNull().default(1),
@@ -153,6 +165,20 @@ export const withdrawals = pgTable(
   ],
 );
 
+/**
+ * Ringkasan koin yang dicetak per hari balapan. Di-upsert dari settlement, jadi
+ * tidak perlu memindai seluruh riwayat untuk menjawab "berapa kewajiban yang
+ * lahir hari ini".
+ */
+export const emissionDaily = pgTable("racely_emission_daily", {
+  day: text("day").primaryKey(),
+  coins: doublePrecision("coins").notNull().default(0),
+  amountIdr: bigint("amount_idr", { mode: "number" }).notNull().default(0),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export const telegramUpdates = pgTable(
   "racely_telegram_updates",
   {
@@ -168,6 +194,7 @@ export const telegramUpdates = pgTable(
 
 export type PlayerRow = typeof players.$inferSelect;
 export type WithdrawalRow = typeof withdrawals.$inferSelect;
+export type EmissionDailyRow = typeof emissionDaily.$inferSelect;
 
 /**
  * Satu baris (`id = 'default'`) berisi seluruh `EconomyConfig` sebagai jsonb.

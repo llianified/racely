@@ -13,6 +13,22 @@ import type { CarModelId } from "./car-catalog";
  *
  * Murni, tanpa I/O -- persis seperti `lib/game-economy.ts`. Pembacaan dari
  * database ada di `lib/economy-store.ts`.
+ *
+ * ── ATURAN EMAS: koin adalah kewajiban rupiah, Sparepart tidak ─────────────
+ *
+ * Tidak ada sumber pendapatan di kode ini. Setiap koin yang dicetak adalah
+ * utang rupiah yang suatu saat ditagih lewat antrean penarikan, sementara
+ * Sparepart tidak pernah bisa ditukar uang. Karena itu keran koin dikunci
+ * pada daftar yang sudah ada dan tidak boleh bertambah:
+ *
+ *   lap reward · dailyRewards rung 1-7 · referral · bonus starter & saldo awal
+ *   · hadiah tiga misi lama (kompatibilitas pemain yang sudah mengklaimnya)
+ *
+ * Seluruh hadiah BARU -- misi harian/mingguan, streak rung 8 ke atas, kotak
+ * bonus, duel, leaderboard -- dibayar Sparepart. Daftarnya hidup di
+ * `COIN_FAUCET_FIELDS` di bawah dan dijaga `tests/economy-config.test.ts`:
+ * knob baru apa pun memerahkan test sampai ia digolongkan, dan menggolongkannya
+ * sebagai keran koin memerahkan test kedua sampai keputusan itu disengaja.
  */
 export type EconomyConfig = {
   /** Rupiah per koin saat penarikan. */
@@ -71,6 +87,38 @@ export type EconomyConfig = {
   carPriceBebek: number;
   carPriceBurger: number;
   carPriceUfo: number;
+
+  /**
+   * Sparepart: mata uang progres. Tidak bisa ditarik, jadi tidak menambah
+   * kewajiban rupiah sepeser pun. Jatuh per putaran bersama koin.
+   */
+  lapScrapBase: number;
+  lapScrapPerLevel: number;
+  /** Pengali sirkuit: hasil = dasar x (1 + circuit * nilai ini). */
+  lapScrapPerCircuit: number;
+  /** Bekal Sparepart pemain lama saat migrasi, supaya tidak terasa dirugikan. */
+  startingScrap: number;
+  /** Penyerap koin sukarela. Satu arah; tidak ada jalur Sparepart -> koin. */
+  coinToScrapRate: number;
+
+  /**
+   * Batas koin yang bisa dicetak seorang pemain dalam satu hari balapan.
+   * Setelah tercapai, putaran tetap membayar Sparepart penuh tapi koin = 0.
+   */
+  dailyCoinCapPerPlayer: number;
+
+  /** Pagar penarikan. Semuanya ditegakkan server saat baris `pending` dibuat. */
+  withdrawFeePct: number;
+  withdrawCooldownDays: number;
+  withdrawMinLaps: number;
+  withdrawMinAccountAgeDays: number;
+
+  /**
+   * Anggaran emisi harian dalam rupiah. 0 berarti tanpa anggaran dan tanpa
+   * rem -- itu sebabnya tidak ada knob boolean terpisah: satu angka sudah
+   * menyatakan "mati" maupun "sebesar ini".
+   */
+  dailyEmissionBudgetIdr: number;
 };
 
 /**
@@ -125,6 +173,21 @@ export const DEFAULT_ECONOMY: EconomyConfig = {
   carPriceBebek: 35,
   carPriceBurger: 60,
   carPriceUfo: 90,
+
+  lapScrapBase: 0.5,
+  lapScrapPerLevel: 0.05,
+  lapScrapPerCircuit: 0.25,
+  startingScrap: 150,
+  coinToScrapRate: 3,
+
+  dailyCoinCapPerPlayer: 30,
+
+  withdrawFeePct: 5,
+  withdrawCooldownDays: 7,
+  withdrawMinLaps: 1000,
+  withdrawMinAccountAgeDays: 7,
+
+  dailyEmissionBudgetIdr: 500_000,
 };
 
 /** Batas maksimum level upgrade yang boleh dipilih tanpa migrasi baru. */
@@ -139,6 +202,10 @@ const coin = z.number().finite().min(0).max(1_000_000);
 const rate = z.number().finite().min(0).max(1);
 const positive = z.number().finite().gt(0).max(1_000_000);
 const lapCount = z.number().int().min(0).max(10_000_000);
+/** Sparepart tidak bernilai rupiah, jadi batasnya soal kewarasan angka saja. */
+const scrap = z.number().finite().min(0).max(1_000_000);
+const percent = z.number().finite().min(0).max(100);
+const days = z.number().int().min(0).max(365);
 
 export const economyConfigSchema = z
   .object({
@@ -188,6 +255,21 @@ export const economyConfigSchema = z
     carPriceBebek: z.number().int().min(1).max(1_000_000),
     carPriceBurger: z.number().int().min(1).max(1_000_000),
     carPriceUfo: z.number().int().min(1).max(1_000_000),
+
+    lapScrapBase: scrap,
+    lapScrapPerLevel: scrap,
+    lapScrapPerCircuit: z.number().finite().min(0).max(100),
+    startingScrap: scrap,
+    coinToScrapRate: z.number().finite().gt(0).max(1_000),
+
+    dailyCoinCapPerPlayer: coin,
+
+    withdrawFeePct: percent,
+    withdrawCooldownDays: days,
+    withdrawMinLaps: lapCount,
+    withdrawMinAccountAgeDays: days,
+
+    dailyEmissionBudgetIdr: z.number().int().min(0).max(1_000_000_000_000),
   })
   .strict()
   .refine((value) => value.maxWithdrawCoins >= value.minWithdrawCoins, {
@@ -230,6 +312,53 @@ export const boostCooldownSeconds = (e: EconomyConfig) =>
 export const economyFieldKeys = Object.keys(
   DEFAULT_ECONOMY,
 ) as (keyof EconomyConfig)[];
+
+/**
+ * Knob yang mencetak koin, dan karena itu menambah kewajiban rupiah. Daftar ini
+ * disengaja pendek dan disengaja sulit bertambah: lihat aturan emas di atas
+ * `EconomyConfig`. `tests/economy-config.test.ts` menggolongkan setiap knob dan
+ * akan merah untuk knob baru mana pun sampai keputusannya dibuat sadar.
+ *
+ * `dailyRewards` masuk di sini apa adanya; membatasi rung 8 ke atas supaya
+ * dibayar Sparepart adalah pekerjaan Fase 1, bukan janji yang ditulis di sini.
+ */
+export const COIN_FAUCET_FIELDS = [
+  "startingBalance",
+  "starterGift",
+  "lapRewardBase",
+  "lapRewardPerBattery",
+  "lapRewardPerCircuit",
+  "racePositionRewardStep",
+  "dailyRewards",
+  "referralRewardInviter",
+  "referralRewardInvitee",
+  "missionLapsReward",
+  "missionUpgradeReward",
+  "missionEarnReward",
+] as const satisfies readonly (keyof EconomyConfig)[];
+
+/**
+ * Sparepart per putaran. Sengaja tidak mengenal posisi balapan maupun boost:
+ * yang dipercepat boost adalah jumlah putaran, bukan hasil tiap putaran.
+ */
+export const lapScrapAt = (
+  e: EconomyConfig,
+  levels: Record<UpgradeKey, number>,
+  circuit: number,
+) => {
+  const upgrades = levels.engine + levels.tires + levels.battery - 3;
+  return (
+    Math.round(
+      (e.lapScrapBase + upgrades * e.lapScrapPerLevel) *
+        (1 + circuit * e.lapScrapPerCircuit) *
+        100,
+    ) / 100
+  );
+};
+
+/** Koin yang masih boleh dicetak untuk pemain ini hari ini. */
+export const coinCapRemaining = (e: EconomyConfig, coinsToday: number) =>
+  Math.max(0, e.dailyCoinCapPerPlayer - Math.max(0, coinsToday));
 
 /**
  * Kunci upgrade didefinisikan di sini, bukan di `lib/game.ts`, supaya formula

@@ -124,6 +124,14 @@ export type GameState = {
   balance: number;
   pending: number;
   earned: number;
+  /**
+   * Sparepart: mata uang progres. Tidak pernah bisa ditarik, jadi ia tidak ikut
+   * menghitung kewajiban rupiah -- lihat aturan emas di `lib/economy-config.ts`.
+   */
+  scrap: number;
+  scrapEarned: number;
+  /** Koin yang sudah dicetak untuk pemain ini pada hari balapan berjalan. */
+  dayCoins: number;
   laps: number;
   progress: number;
   levels: Record<Upgrade, number>;
@@ -145,6 +153,9 @@ export const INITIAL_GAME: GameState = {
   balance: 10,
   pending: 0,
   earned: 0,
+  scrap: 0,
+  scrapEarned: 0,
+  dayCoins: 0,
   laps: 0,
   progress: 0,
   levels: { engine: 1, tires: 1, battery: 1 },
@@ -384,6 +395,12 @@ export type GameCommand =
   | { type: "upgrade"; key: Upgrade }
   | { type: "claim" | "boost" | "gift" | "daily" }
   | { type: "mission"; id: MissionId }
+  /**
+   * Penyerap koin sukarela. Satu arah: tidak ada perintah sebaliknya, dan tidak
+   * boleh pernah ada -- Sparepart yang bisa kembali jadi koin akan membuat
+   * setiap hadiah Sparepart berubah jadi kewajiban rupiah.
+   */
+  | { type: "convert-scrap"; coins: number }
   | { type: "select-car"; model: CarModelId; color: CarColor }
   | { type: "color"; color: CarColor }
   | { type: "circuit"; circuit: 0 | 1 }

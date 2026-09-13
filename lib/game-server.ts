@@ -13,6 +13,9 @@ import {
 } from "@/lib/db/schema";
 import {
   calculateRaceSettlement,
+  withdrawBlocker,
+  withdrawBlockerMessage,
+  withdrawAmountIdr,
   DAILY_CLAIM_END,
   DAILY_CLAIM_PREFIX,
   DAILY_HISTORY_DAYS,
@@ -83,6 +86,12 @@ const commandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("boost") }).strict(),
   z.object({ type: z.literal("gift") }).strict(),
   z.object({ type: z.literal("daily") }).strict(),
+  z
+    .object({
+      type: z.literal("convert-scrap"),
+      coins: z.number().int().min(1).max(1_000_000),
+    })
+    .strict(),
   z
     .object({
       type: z.literal("mission"),
@@ -216,6 +225,11 @@ function stateFromRow(
     balance: row.balance,
     pending: row.pending,
     earned: row.earned,
+    scrap: row.scrap,
+    scrapEarned: row.scrapEarned,
+    // Hanya berarti untuk hari yang sedang berjalan; hari lama dilaporkan nol
+    // supaya HUD tidak menampilkan jatah kemarin sebagai jatah hari ini.
+    dayCoins: row.dayKey === racingDayKey(now) ? row.dayCoins : 0,
     laps: row.laps,
     progress: row.progress,
     levels: {
@@ -434,47 +448,80 @@ async function readReferralSummary(
 export type SettledPlayer = {
   row: PlayerRow;
   offline: OfflineEarnings | null;
+  /** Koin yang benar-benar dicetak, untuk diringkas ke racely_emission_daily. */
+  minted: number;
+  /** Hari balapan (WIB) tempat koin itu dicetak. */
+  day: string;
 };
+
+/**
+ * Bekal Sparepart awal dibayar di sini, bukan di-backfill migrasi: besarnya
+ * knob yang hidup di config, jadi SQL tidak boleh memutuskannya.
+ * `starterScrapAt` adalah penjaga sekali-jalan-nya.
+ */
+function grantStarterScrap(row: PlayerRow, now: Date, economy: EconomyConfig) {
+  if (row.starterScrapAt) return row;
+  return {
+    ...row,
+    scrap: roundCoins(row.scrap + economy.startingScrap),
+    scrapEarned: roundCoins(row.scrapEarned + economy.startingScrap),
+    starterScrapAt: now,
+  };
+}
 
 export function settlePlayerRow(
   row: PlayerRow,
   now: Date,
   economy: EconomyConfig,
+  /** Rem emisi global; 1 berarti tidak direm. */
+  rewardMultiplier = 1,
 ): SettledPlayer {
   if (row.carModel === null) {
     return {
       row: { ...row, lastSettledAt: now, updatedAt: now },
       offline: null,
+      minted: 0,
+      day: racingDayKey(now),
     };
   }
+  const base = grantStarterScrap(row, now, economy);
 
   const settlement = calculateRaceSettlement(
     {
-      progress: row.progress,
+      progress: base.progress,
       levels: {
-        engine: row.engineLevel,
-        tires: row.tiresLevel,
-        battery: row.batteryLevel,
+        engine: base.engineLevel,
+        tires: base.tiresLevel,
+        battery: base.batteryLevel,
       },
-      circuit: row.circuit,
+      circuit: base.circuit,
       economy,
-      lastSettledAt: row.lastSettledAt,
-      boostEndsAt: row.boostEndsAt,
+      lastSettledAt: base.lastSettledAt,
+      boostEndsAt: base.boostEndsAt,
+      dayKey: base.dayKey,
+      dayCoins: base.dayCoins,
+      rewardMultiplier,
     },
     now,
   );
 
   return {
     row: {
-      ...row,
-      pending: roundCoins(row.pending + settlement.income),
-      earned: roundCoins(row.earned + settlement.income),
-      laps: row.laps + settlement.completedLaps,
+      ...base,
+      pending: roundCoins(base.pending + settlement.income),
+      earned: roundCoins(base.earned + settlement.income),
+      scrap: roundCoins(base.scrap + settlement.scrap),
+      scrapEarned: roundCoins(base.scrapEarned + settlement.scrap),
+      dayKey: settlement.dayKey,
+      dayCoins: settlement.dayCoins,
+      laps: base.laps + settlement.completedLaps,
       progress: settlement.progress,
       lastSettledAt: now,
       updatedAt: now,
     },
     offline: settlement.offline,
+    minted: settlement.income,
+    day: settlement.dayKey,
   };
 }
 
@@ -775,11 +822,30 @@ export async function performGameAction(
       if (!accountPattern(action.method).test(action.account)) {
         throw new GameRuleError("Nomor tujuan tidak valid untuk metode ini.");
       }
+      // Pagar Fase 0. Dibaca dari baris yang sudah disettle, jadi putaran yang
+      // baru saja selesai ikut dihitung. Antrean manual dan transisi statusnya
+      // tidak tersentuh -- yang dijaga di sini hanya siapa yang boleh antre.
+      const [latest] = await tx
+        .select({ createdAt: withdrawals.createdAt })
+        .from(withdrawals)
+        .where(eq(withdrawals.userId, identity.userId))
+        .orderBy(desc(withdrawals.createdAt))
+        .limit(1);
+      const blocker = withdrawBlocker(
+        economy,
+        {
+          laps: next.laps,
+          createdAt: next.createdAt,
+          lastWithdrawalAt: latest?.createdAt ?? null,
+        },
+        now,
+      );
+      if (blocker) throw new GameRuleError(withdrawBlockerMessage(blocker));
       await tx.insert(withdrawals).values({
         userId: identity.userId,
         requestId,
         coins: action.coins,
-        amountIdr: action.coins * economy.coinToIdr,
+        amountIdr: withdrawAmountIdr(economy, action.coins),
         method: action.method,
         account: action.account,
         accountName: action.accountName,
@@ -815,6 +881,22 @@ export async function performGameAction(
           balance:
             next.balance + (inserted.length > 0 ? economy.starterGift : 0),
         };
+      }
+    } else if (action.type === "convert-scrap") {
+      // Koin bulat saja: `balance` memang disimpan bulat, dan menukar pecahan
+      // akan menyisakan sisa yang tidak bisa diwakili kolomnya.
+      const coins = Math.floor(action.coins);
+      if (coins > 0 && next.balance >= coins) {
+        next = {
+          ...next,
+          balance: next.balance - coins,
+          scrap: roundCoins(next.scrap + coins * economy.coinToScrapRate),
+          scrapEarned: roundCoins(
+            next.scrapEarned + coins * economy.coinToScrapRate,
+          ),
+        };
+      } else if (coins > 0) {
+        throw new GameRuleError("Koin belum cukup untuk ditukar.");
       }
     } else if (action.type === "daily") {
       const status = dailyCheckIn(dailyClaims, now, economy);

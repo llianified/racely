@@ -7,7 +7,11 @@ import {
   type GameState,
   type OfflineEarnings,
 } from "./game";
-import type { EconomyConfig } from "./economy-config";
+import {
+  coinCapRemaining,
+  lapScrapAt,
+  type EconomyConfig,
+} from "./economy-config";
 
 /**
  * Tiga batas yang dulu jadi konstanta di sini -- jendela heartbeat, jendela
@@ -27,13 +31,29 @@ export type RaceSettlementInput = Pick<
 > & {
   lastSettledAt: Date;
   boostEndsAt: Date | null;
+  /** Hari balapan yang sedang dihitung untuk batas koin; null berarti belum ada. */
+  dayKey?: string | null;
+  dayCoins?: number;
+  /**
+   * Rem emisi global: 1 berarti tidak direm. Dihitung di luar sini karena
+   * butuh membaca ringkasan emisi hari ini -- fungsi ini tetap murni.
+   */
+  rewardMultiplier?: number;
 };
 
 export type RaceSettlement = {
   completedLaps: number;
+  /** Koin yang benar-benar dicetak, sudah lewat batas harian dan rem emisi. */
   income: number;
+  /** Koin yang tertahan batas harian. Untuk HUD dan telemetri, bukan utang. */
+  withheld: number;
+  /** Sparepart tidak pernah dibatasi: ia tidak bernilai rupiah. */
+  scrap: number;
   progress: number;
   creditedSeconds: number;
+  /** Hari balapan milik `now`, dan koin yang sudah tercetak untuk hari itu. */
+  dayKey: string;
+  dayCoins: number;
   /** Only set when part of the interval fell outside the heartbeat window. */
   offline: OfflineEarnings | null;
 };
@@ -54,12 +74,21 @@ export function calculateRaceSettlement(
     economy.offlineCapSeconds * 1000,
   );
 
+  // Batas koin berlaku per hari balapan: hari yang berganti mengosongkan
+  // hitungannya, jadi tidak ada sisa jatah yang menyeberang tengah malam.
+  const dayKey = racingDayKey(now);
+  const coinsToday = state.dayKey === dayKey ? (state.dayCoins ?? 0) : 0;
+
   if (onlineMs + offlineMs === 0) {
     return {
       completedLaps: 0,
       income: 0,
+      withheld: 0,
+      scrap: 0,
       progress: state.progress,
       creditedSeconds: 0,
+      dayKey,
+      dayCoins: coinsToday,
       offline: null,
     };
   }
@@ -101,11 +130,28 @@ export function calculateRaceSettlement(
   );
   const offlineIncome = roundCoins(offlineLaps * lapReward(normalState));
 
+  // Rem emisi menekan bayaran koin sebelum batas harian dihitung, supaya
+  // keduanya bertumpuk, bukan saling menutupi.
+  const brake = state.rewardMultiplier ?? 1;
+  const rawIncome = roundCoins(
+    (boostedIncome + normalIncome + offlineIncome) * brake,
+  );
+  const income = Math.min(rawIncome, coinCapRemaining(economy, coinsToday));
+  // Ringkasan offline harus menyebut koin yang benar-benar masuk, bukan yang
+  // seharusnya: pemain membaca angka itu sebagai isi saldonya.
+  const credited = rawIncome > 0 ? income / rawIncome : 0;
+
   return {
     completedLaps,
-    income: roundCoins(boostedIncome + normalIncome + offlineIncome),
+    income,
+    withheld: roundCoins(rawIncome - income),
+    scrap: roundCoins(
+      completedLaps * lapScrapAt(economy, state.levels, state.circuit),
+    ),
     progress: offline.progress,
     creditedSeconds: (onlineMs + offlineMs) / 1000,
+    dayKey,
+    dayCoins: roundCoins(coinsToday + income),
     offline:
       offlineMs > 0
         ? {
@@ -113,10 +159,88 @@ export function calculateRaceSettlement(
             creditedSeconds: offlineMs / 1000,
             capped: awayMs - onlineMs > economy.offlineCapSeconds * 1000,
             laps: offlineLaps,
-            coins: offlineIncome,
+            coins: roundCoins(offlineIncome * brake * credited),
           }
         : null,
   };
+}
+
+/**
+ * ── Pagar penarikan ────────────────────────────────────────────────────────
+ *
+ * Koin adalah satu-satunya hal di Racely yang bernilai rupiah, jadi jalur
+ * keluarnya diberi syarat. Semuanya murni di sini supaya server dan UI membaca
+ * aturan yang sama persis: pemain harus bisa melihat apa yang menghalanginya
+ * sebelum menekan tombol, bukan setelah ditolak.
+ */
+export type WithdrawBlocker =
+  | { kind: "laps"; need: number; have: number }
+  | { kind: "accountAge"; needDays: number; haveDays: number }
+  | { kind: "cooldown"; readyAt: Date };
+
+export type WithdrawContext = {
+  laps: number;
+  createdAt: Date;
+  /** Penarikan terakhir kapan pun statusnya; jeda dihitung sejak diminta. */
+  lastWithdrawalAt: Date | null;
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const wholeDaysBetween = (from: Date, to: Date) =>
+  Math.floor((to.getTime() - from.getTime()) / DAY_MS);
+
+/**
+ * Nilai untuk kolom `amount_idr`: rupiah yang tercatat setelah biaya. Koin yang
+ * dipotong dari saldo tetap utuh -- biayanya mengurangi rupiah yang dicatat,
+ * bukan menambah koin yang hangus, supaya panel Kewajiban tidak perlu
+ * membedakan keduanya.
+ *
+ * Namanya sengaja menjauhi kosakata pembayaran: `tests/withdrawal-policy.test.ts`
+ * melarang kata itu muncul di jalur server justru supaya tidak ada yang pernah
+ * menulis jalur pembayaran otomatis di sana.
+ */
+export const withdrawAmountIdr = (e: EconomyConfig, coins: number) =>
+  Math.floor(coins * e.coinToIdr * (1 - e.withdrawFeePct / 100));
+
+/**
+ * Satu kalimat untuk setiap penghalang, dipakai server saat menolak DAN panel
+ * dompet saat menjelaskan -- jadi pemain membaca alasan yang sama persis di
+ * kedua tempat, bukan dua versi yang bisa menyimpang.
+ */
+export function withdrawBlockerMessage(blocker: WithdrawBlocker) {
+  if (blocker.kind === "laps") {
+    return `Butuh ${blocker.need.toLocaleString("id-ID")} putaran sebelum bisa menarik; kamu di ${blocker.have.toLocaleString("id-ID")}.`;
+  }
+  if (blocker.kind === "accountAge") {
+    return `Akun harus berumur ${blocker.needDays} hari sebelum bisa menarik; baru ${blocker.haveDays} hari.`;
+  }
+  return `Penarikan berikutnya bisa diminta ${blocker.readyAt.toLocaleDateString("id-ID", { day: "numeric", month: "long" })}.`;
+}
+
+/** Penghalang pertama yang berlaku, atau null kalau penarikan boleh jalan. */
+export function withdrawBlocker(
+  e: EconomyConfig,
+  ctx: WithdrawContext,
+  now: Date,
+): WithdrawBlocker | null {
+  if (ctx.laps < e.withdrawMinLaps) {
+    return { kind: "laps", need: e.withdrawMinLaps, have: ctx.laps };
+  }
+  const ageDays = wholeDaysBetween(ctx.createdAt, now);
+  if (ageDays < e.withdrawMinAccountAgeDays) {
+    return {
+      kind: "accountAge",
+      needDays: e.withdrawMinAccountAgeDays,
+      haveDays: Math.max(0, ageDays),
+    };
+  }
+  if (ctx.lastWithdrawalAt && e.withdrawCooldownDays > 0) {
+    const readyAt = new Date(
+      ctx.lastWithdrawalAt.getTime() + e.withdrawCooldownDays * DAY_MS,
+    );
+    if (readyAt.getTime() > now.getTime()) return { kind: "cooldown", readyAt };
+  }
+  return null;
 }
 
 /**

@@ -17,6 +17,15 @@ const E = DEFAULT_ECONOMY;
 
 const start = new Date("2026-09-11T00:00:00.000Z");
 
+/**
+ * Batas koin harian sengaja diangkat untuk blok-blok di bawah: yang diuji di
+ * sana adalah mekanika jendela offline -- berapa putaran selesai dan berapa
+ * detik dibayar -- dan batas koin akan memangkas angkanya sehingga test tidak
+ * lagi bercerita tentang hal yang namanya ia sebut. Batas itu punya blok
+ * sendiri di "Batas koin harian", memakai DEFAULT_ECONOMY apa adanya.
+ */
+const UNCAPPED = { ...E, dailyCoinCapPerPlayer: 1_000_000 };
+
 function settlementInput(
   overrides: Partial<Parameters<typeof calculateRaceSettlement>[0]> = {},
 ) {
@@ -24,7 +33,7 @@ function settlementInput(
     progress: 0,
     levels: { engine: 1, tires: 1, battery: 1 },
     circuit: 0,
-    economy: E,
+    economy: UNCAPPED,
     lastSettledAt: start,
     boostEndsAt: null,
     ...overrides,
@@ -257,6 +266,76 @@ describe("Offline earnings", () => {
     expect(formatDuration(E.offlineCapSeconds)).toBe("4 jam");
     expect(formatDuration(4 * 60 * 60 + 25 * 60)).toBe("4 jam 25 menit");
     expect(formatDuration(-1)).toBe("0 detik");
+  });
+});
+
+/**
+ * Pagar Fase 0. Koin adalah kewajiban rupiah; Sparepart tidak. Karena itu batas
+ * harian memangkas koin dan tidak boleh menyentuh Sparepart sama sekali.
+ */
+describe("Batas koin harian", () => {
+  const capped = (overrides = {}) =>
+    calculateRaceSettlement(
+      settlementInput({ economy: E, ...overrides }),
+      new Date(start.getTime() + E.offlineCapSeconds * 1000),
+    );
+
+  it("memangkas koin di batas, dan mencatat sisanya sebagai tertahan", () => {
+    const result = capped();
+    // Tanpa batas, empat jam membayar 36,28 koin.
+    expect(result.income).toBe(E.dailyCoinCapPerPlayer);
+    expect(result.withheld).toBeCloseTo(36.28 - E.dailyCoinCapPerPlayer, 2);
+    expect(result.income + result.withheld).toBeCloseTo(36.28, 2);
+  });
+
+  it("tidak memangkas Sparepart -- itu bukan kewajiban rupiah", () => {
+    const result = capped();
+    expect(result.scrap).toBe(
+      Math.round(result.completedLaps * E.lapScrapBase * 100) / 100,
+    );
+    expect(result.scrap).toBeGreaterThan(0);
+  });
+
+  it("melaporkan koin yang benar-benar masuk pada ringkasan offline", () => {
+    const result = capped();
+    // Dialog "selamat datang kembali" membaca angka ini sebagai isi saldo,
+    // jadi ia harus ikut terpangkas, bukan menyebut jumlah sebelum batas.
+    expect(result.offline?.coins).toBeLessThanOrEqual(E.dailyCoinCapPerPlayer);
+    expect(result.offline?.coins).toBeLessThan(35.68);
+  });
+
+  it("menghitung jatah terhadap hari yang sedang berjalan", () => {
+    const half = E.dailyCoinCapPerPlayer / 2;
+    const today = racingDayKey(new Date(start.getTime() + E.offlineCapSeconds * 1000));
+    expect(capped({ dayKey: today, dayCoins: half }).income).toBe(half);
+    expect(capped({ dayKey: today, dayCoins: E.dailyCoinCapPerPlayer }).income).toBe(0);
+  });
+
+  it("mengosongkan hitungan saat hari balapan berganti", () => {
+    // Jatah kemarin tidak menyeberang, dan tidak pula menahan hari ini.
+    const result = capped({ dayKey: "2000-01-01", dayCoins: E.dailyCoinCapPerPlayer });
+    expect(result.income).toBe(E.dailyCoinCapPerPlayer);
+    expect(result.dayKey).not.toBe("2000-01-01");
+    expect(result.dayCoins).toBe(E.dailyCoinCapPerPlayer);
+  });
+
+  it("tetap membayar Sparepart penuh setelah jatah koin habis", () => {
+    const spent = capped({ dayKey: racingDayKey(new Date(start.getTime() + E.offlineCapSeconds * 1000)), dayCoins: E.dailyCoinCapPerPlayer });
+    expect(spent.income).toBe(0);
+    expect(spent.scrap).toBeGreaterThan(0);
+  });
+
+  it("menurunkan bayaran koin saat rem emisi menyala, tanpa menyentuh Sparepart", () => {
+    const full = calculateRaceSettlement(
+      settlementInput({ economy: UNCAPPED }),
+      new Date(start.getTime() + 10 * 60 * 1000),
+    );
+    const braked = calculateRaceSettlement(
+      settlementInput({ economy: UNCAPPED, rewardMultiplier: 0.5 }),
+      new Date(start.getTime() + 10 * 60 * 1000),
+    );
+    expect(braked.income).toBeCloseTo(full.income * 0.5, 2);
+    expect(braked.scrap).toBe(full.scrap);
   });
 });
 

@@ -1,12 +1,15 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  COIN_FAUCET_FIELDS,
   DEFAULT_ECONOMY,
   UPGRADE_LEVEL_CEILING,
   boostCooldownSeconds,
+  coinCapRemaining,
   economyConfigSchema,
   economyFieldKeys,
   lapRewardAt,
+  lapScrapAt,
   lapSecondsAt,
   resolveEconomyConfig,
   upgradeCostAt,
@@ -129,6 +132,83 @@ describe("Config ekonomi", () => {
  * Yang dijaga di sini adalah arahnya, bukan angka persisnya: menaikkan nilai
  * koin harus menaikkan rupiah, dan memperlambat putaran harus menurunkannya.
  */
+/**
+ * Aturan emas: koin adalah kewajiban rupiah, Sparepart tidak. Keran koin dikunci
+ * pada daftar yang sudah ada. Dua test di bawah bekerja berpasangan:
+ *
+ *  - yang pertama memaksa setiap knob digolongkan, jadi knob BARU apa pun
+ *    memerahkan suite sampai seseorang memutuskan ia mencetak koin atau tidak;
+ *  - yang kedua membekukan daftar keran koin, jadi menggolongkan knob baru
+ *    sebagai keran koin tidak bisa terjadi diam-diam.
+ *
+ * Keduanya sengaja menuntut suntingan manual. Itu memang gunanya.
+ */
+const NON_COIN_FIELDS = [
+  // Nilai tukar dan pagar penarikan: mengatur koin yang sudah ada, tidak mencetak.
+  "coinToIdr", "minWithdrawCoins", "maxWithdrawCoins",
+  "withdrawFeePct", "withdrawCooldownDays", "withdrawMinLaps",
+  "withdrawMinAccountAgeDays",
+  // Laju dan waktu: mengubah berapa cepat putaran selesai, bukan bayarannya.
+  "lapBaseSeconds", "lapEnginePerLevel", "lapTiresPerLevel",
+  "boostDurationSeconds", "batteryRechargeSeconds", "boostMultiplier",
+  "heartbeatCapSeconds", "offlineCapSeconds", "offlineRate",
+  // Penyerap koin.
+  "upgradeCostEngine", "upgradeCostTires", "upgradeCostBattery",
+  "upgradeCostGrowth", "maxUpgradeLevel",
+  "carPriceBebek", "carPriceBurger", "carPriceUfo",
+  "coinToScrapRate",
+  // Syarat, bukan hadiah.
+  "referralMilestoneLaps", "missionLapsTarget", "missionUpgradeTarget",
+  "missionEarnTarget", "circuitUnlockLaps",
+  // Sparepart: tidak bisa ditarik, jadi bukan kewajiban rupiah.
+  "lapScrapBase", "lapScrapPerLevel", "lapScrapPerCircuit", "startingScrap",
+  // Pagar emisi.
+  "dailyCoinCapPerPlayer", "dailyEmissionBudgetIdr",
+] as const satisfies readonly (keyof typeof DEFAULT_ECONOMY)[];
+
+describe("Aturan emas: keran koin tidak boleh bertambah diam-diam", () => {
+  it("menggolongkan setiap knob ekonomi sebagai keran koin atau bukan", () => {
+    const classified = [...COIN_FAUCET_FIELDS, ...NON_COIN_FIELDS];
+    expect(new Set(classified).size, "ada knob yang digolongkan dua kali").toBe(
+      classified.length,
+    );
+    expect([...classified].sort()).toEqual([...economyFieldKeys].sort());
+  });
+
+  it("membekukan daftar keran koin", () => {
+    expect([...COIN_FAUCET_FIELDS].sort()).toEqual([
+      "dailyRewards",
+      "lapRewardBase",
+      "lapRewardPerBattery",
+      "lapRewardPerCircuit",
+      "missionEarnReward",
+      "missionLapsReward",
+      "missionUpgradeReward",
+      "racePositionRewardStep",
+      "referralRewardInvitee",
+      "referralRewardInviter",
+      "starterGift",
+      "startingBalance",
+    ]);
+  });
+
+  it("membayar Sparepart tanpa menyentuh koin", () => {
+    const levels = { engine: 1, tires: 1, battery: 1 };
+    expect(lapScrapAt(E, levels, 0)).toBeGreaterThan(0);
+    // Sirkuit kedua menambah Sparepart, bukan lewat jalur koin mana pun.
+    expect(lapScrapAt(E, levels, 1)).toBeGreaterThan(lapScrapAt(E, levels, 0));
+    expect(lapScrapAt(E, { engine: 5, tires: 5, battery: 5 }, 0)).toBeGreaterThan(
+      lapScrapAt(E, levels, 0),
+    );
+  });
+
+  it("menghitung sisa jatah koin harian dan tidak pernah negatif", () => {
+    expect(coinCapRemaining(E, 0)).toBe(E.dailyCoinCapPerPlayer);
+    expect(coinCapRemaining(E, E.dailyCoinCapPerPlayer)).toBe(0);
+    expect(coinCapRemaining(E, E.dailyCoinCapPerPlayer + 99)).toBe(0);
+  });
+});
+
 describe("Proyeksi ekonomi", () => {
   it("menerjemahkan config bawaan jadi rupiah per jam", () => {
     const { rows } = projectEconomy(E);

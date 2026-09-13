@@ -22,6 +22,8 @@ import {
   DAILY_HISTORY_DAYS,
   dailyCheckIn,
   racingDayKey,
+  withdrawBlocker,
+  withdrawBlockerMessage,
 } from "./game-economy";
 import { CAR_MODEL_IDS, isCarColor, isPremiumCar } from "./car-catalog";
 import { applyCarCommand, CarRuleError, ownedCarIds } from "./car-collection";
@@ -47,6 +49,13 @@ const previewGameSchema = z.object({
   version: z.literal(1),
   userId: z.string(),
   updatedAt: z.number().int().nonnegative(),
+  /**
+   * Umur akun untuk pagar penarikan. Cookie preview lama tidak punya ini dan
+   * jatuh ke 0 -- terbaca sebagai akun tua, jadi pagarnya melewatkannya. Sesi
+   * preview baru mendapat waktu sebenarnya, jadi pagar itu tetap bisa dicoba
+   * di `pnpm dev` sebelum menyentuh produksi.
+   */
+  createdAt: z.number().int().nonnegative().default(0),
   receipts: z.array(z.string().uuid()).max(MAX_RECEIPTS),
   dailyClaims: z
     .array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
@@ -63,6 +72,10 @@ const previewGameSchema = z.object({
     balance: z.number().nonnegative(),
     pending: z.number().nonnegative(),
     earned: z.number().nonnegative(),
+    scrap: z.number().nonnegative().default(0),
+    scrapEarned: z.number().nonnegative().default(0),
+    dayKey: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null),
+    dayCoins: z.number().nonnegative().default(0),
     laps: z.number().int().nonnegative(),
     progress: z.number().min(0).max(1),
     levels: z.object({
@@ -127,11 +140,15 @@ function initialPreviewGame(identity: PlayerIdentity, now: number): PreviewGame 
     version: 1,
     userId: identity.userId,
     updatedAt: now,
+    createdAt: now,
     receipts: [],
     dailyClaims: [],
     state: {
       ...INITIAL_PREVIEW_STATE,
       developmentPreview: true,
+      // Hari balapan hanya dikenal mode preview; GameState cukup membawa
+      // `dayCoins` karena HUD tidak perlu tahu kunci harinya.
+      dayKey: null,
       carSelection: { model: null, returningPlayer: false },
       levels: { ...INITIAL_GAME.levels },
       missionsClaimed: [],
@@ -213,6 +230,8 @@ function settlePreviewGame(
         game.state.boostLeft > 0
           ? new Date(game.updatedAt + game.state.boostLeft * 1000)
           : null,
+      dayKey: game.state.dayKey,
+      dayCoins: game.state.dayCoins,
     },
     new Date(now),
   );
@@ -227,6 +246,10 @@ function settlePreviewGame(
         laps: game.state.laps + settlement.completedLaps,
         pending: roundCoins(game.state.pending + settlement.income),
         earned: roundCoins(game.state.earned + settlement.income),
+        scrap: roundCoins(game.state.scrap + settlement.scrap),
+        scrapEarned: roundCoins(game.state.scrapEarned + settlement.scrap),
+        dayKey: settlement.dayKey,
+        dayCoins: settlement.dayCoins,
         // Boost and cooldown are wall clocks, so they drain over real time even
         // where the payout is capped.
         boostLeft: Math.max(0, game.state.boostLeft - elapsed),
@@ -248,8 +271,13 @@ function previewResult(
   now: number,
   economy: EconomyConfig,
 ): { state: GameState; cookieValue: string } {
+  // `dayKey` hidup di cookie saja: ia pembukuan batas koin harian, bukan bagian
+  // GameState. Membiarkannya ikut membuat payload preview punya satu field yang
+  // tidak pernah dikirim server -- persis jenis penyimpangan yang dijaga
+  // tests/server-preview-parity.test.ts.
+  const { dayKey: _dayKey, ...carried } = game.state;
   const state: GameState = {
-    ...game.state,
+    ...carried,
     ownedCars: ownedCarIds(game.state.ownedCars, game.state.carSelection?.model ?? null),
     economy,
     daily: dailyCheckIn(game.dailyClaims, new Date(now), economy),
@@ -382,6 +410,20 @@ export function performPreviewGameAction(
       balance: state.balance + settled,
       pending: roundCoins(state.pending - settled),
     };
+  } else if (action.type === "convert-scrap") {
+    // Cermin dari cabang yang sama di lib/game-server.ts. Melewatkannya di sini
+    // tidak menimbulkan error apa pun -- tombolnya hanya diam saat `pnpm dev`.
+    const coins = Math.floor(action.coins);
+    if (coins > 0 && state.balance >= coins) {
+      state = {
+        ...state,
+        balance: state.balance - coins,
+        scrap: roundCoins(state.scrap + coins * economy.coinToScrapRate),
+        scrapEarned: roundCoins(
+          state.scrapEarned + coins * economy.coinToScrapRate,
+        ),
+      };
+    }
   } else if (action.type === "withdraw") {
     // Sama seperti server: batas config ditegakkan di sini, bukan di skema.
     if (action.coins < economy.minWithdrawCoins) {
@@ -404,6 +446,21 @@ export function performPreviewGameAction(
         "Nomor tujuan tidak valid untuk metode ini.",
       );
     }
+    // Pagar yang sama dengan server. Umur akun di mode preview dihitung dari
+    // cookie-nya sendiri, jadi sesi preview yang baru dibuat memang tertahan --
+    // itu justru yang membuat pagarnya bisa dicoba sebelum menyentuh produksi.
+    const blocker = withdrawBlocker(
+      economy,
+      {
+        laps: state.laps,
+        createdAt: new Date(game.createdAt ?? now),
+        lastWithdrawalAt: state.withdrawals[0]
+          ? new Date(state.withdrawals[0].createdAt)
+          : null,
+      },
+      new Date(now),
+    );
+    if (blocker) throw new PreviewGameRuleError(withdrawBlockerMessage(blocker));
     state = {
       ...state,
       balance: state.balance - action.coins,

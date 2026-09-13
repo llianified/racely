@@ -173,14 +173,22 @@ describe("Preview offline earnings", () => {
     vi.advanceTimersByTime(10 * 60 * 60 * 1000);
     const back = action(cookie, { type: "sync" });
 
+    // Putarannya tetap 900 -- yang dibatasi jendela offline adalah waktu, bukan
+    // bayaran. Koinnya kini juga kena batas harian Fase 0, jadi yang dikunci di
+    // sini adalah batas itu, bukan angka yang berubah setiap knob disetel.
     expect(back.state.offlineEarnings).toMatchObject({
       awaySeconds: 36000,
       creditedSeconds: 4 * 60 * 60,
       capped: true,
       laps: 900,
-      coins: 36,
     });
-    expect(back.state.pending).toBe(36.6);
+    expect(back.state.pending).toBe(E.dailyCoinCapPerPlayer);
+    expect(back.state.offlineEarnings?.coins).toBeLessThanOrEqual(
+      E.dailyCoinCapPerPlayer,
+    );
+    expect(back.state.dayCoins).toBe(E.dailyCoinCapPerPlayer);
+    // Sparepart tidak ikut dibatasi: ia tidak bernilai rupiah.
+    expect(back.state.scrap).toBeGreaterThan(0);
   });
 
   it("says nothing about an absence a heartbeat could have covered", () => {
