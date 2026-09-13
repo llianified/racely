@@ -75,7 +75,7 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
         </div>
         <ol className="selection-steps" aria-label="Langkah onboarding">
           <li aria-current={step === 1 ? "step" : undefined} data-complete={step === 2 || undefined}>
-            <span><span className="selection-step-number">{step === 2 ? <Check className="size-4" aria-label="Selesai" /> : "01"}</span> Pilih mobil</span>
+            <span><span className="selection-step-number">{step === 2 ? <Check className="size-(--icon-base)" aria-label="Selesai" /> : "01"}</span> Pilih mobil</span>
           </li>
           <li aria-current={step === 2 ? "step" : undefined}>
             <span><span className="selection-step-number">02</span> Sentuhanmu</span>
@@ -125,7 +125,7 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
             {CAR_MODEL_IDS.map((id) => (
               <Toggle key={id} value={id} className="car-model-option">
                 <span>{CAR_CATALOG[id].name}</span>
-                <Check className="selection-check size-4" aria-hidden="true" />
+                <Check className="selection-check size-(--icon-base)" aria-hidden="true" />
               </Toggle>
             ))}
           </ToggleGroup>

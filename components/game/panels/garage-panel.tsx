@@ -13,7 +13,7 @@ import { InfoHint } from "./info-hint";
 import { BodyPartsShop } from "./body-parts-shop";
 import type { PartCommand } from "@/lib/car-parts";
 import { gripTuning, powertrainTuning } from "@/lib/race-dynamics";
-import { coins, displaySpeedKmh, formatCoins, lapReward, lapSeconds, modificationPreview, totalLevel, type GameState, type Upgrade } from "@/lib/game";
+import { coins, displaySpeedKmh, formatCoins, formatSpeedKmh, lapReward, lapSeconds, modificationPreview, totalLevel, type GameState, type Upgrade } from "@/lib/game";
 
 const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
   ssr: false,
@@ -76,7 +76,7 @@ export const GaragePanel = memo(function GaragePanel({
         </div>
         <CarColorPicker model={model} color={game.color} disabled={disabled} onChoose={onChooseColor} />
         <dl className="garage-stats">
-          <div><dt>Kecepatan dasar</dt><dd><strong>{displaySpeedKmh(lapSeconds({ ...game, boostLeft: 0 })).toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</strong> km/j</dd></div>
+          <div><dt>Kecepatan dasar</dt><dd><strong>{formatSpeedKmh(displaySpeedKmh(lapSeconds({ ...game, boostLeft: 0 })))}</strong> km/j</dd></div>
           <div><dt>Hasil per putaran</dt><dd><strong>{formatCoins(lapReward(game))}</strong> koin</dd></div>
         </dl>
       </section>
@@ -156,19 +156,19 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
         </div>
       </div>
       <SheetContent side="bottom" className="game-sheet gap-0 p-0 font-sans" showCloseButton={!installing}>
-        <SheetHeader className="border-b border-border px-xl py-(--space-20) pr-(--space-56)">
+        <SheetHeader className="border-b border-border px-md py-md pr-(--space-56)">
           <SheetTitle>Modifikasi {title.toLowerCase()}</SheetTitle>
           <SheetDescription>Pilih peningkatan permanen untuk mobilmu. Koin hanya dipotong setelah pemasangan berhasil.</SheetDescription>
         </SheetHeader>
-        <div className="flex flex-col text-read leading-relaxed">
-          <div className="flex items-center gap-md border-b border-border bg-background px-xl py-lg text-foreground">
+        <div className="flex flex-col text-base leading-relaxed">
+          <div className="flex items-center gap-md border-b border-border bg-background px-md py-md text-foreground">
             <Icon className="size-(--icon-xl) shrink-0 text-accent" aria-hidden="true" />
             <div className="min-w-0">
               <p className="font-bold">{preview.nextPart}</p>
               <p className="text-muted-foreground">Level {level} → {nextLevel} · {part.subtitle}</p>
             </div>
           </div>
-          <div className="border-b border-border bg-background px-xl py-lg text-foreground">
+          <div className="border-b border-border bg-background px-md py-md text-foreground">
             <div className="overflow-hidden rounded-xl border border-border">
               <div className="h-(--stage-inspect-h)" role="img" aria-label={`${showAfter ? "Setelah" : "Sebelum"} modifikasi ${title}, level ${showAfter ? nextLevel : level}${inspect ? ", bodi dilepas" : ""}. Geser untuk memutar.`}>
                 {open && <CarPreviewScene color={game.color} equipped={game.bodyParts?.equipped} model={game.carSelection?.model ?? "neo-falcon"} levels={showAfter ? { ...game.levels, [key]: nextLevel } : game.levels} inspect={inspect} />}
@@ -182,44 +182,44 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
               </div>
             </div>
           </div>
-          <p className="border-b border-border px-xl py-lg text-muted-foreground">{key === "engine"
+          <p className="border-b border-border px-md py-md text-muted-foreground">{key === "engine"
             ? "Visual: sirip heatsink bertambah setiap level. Di arena, mesin mempercepat akselerasi setelah tikungan atau kecelakaan; bodi mendongak ringan dan putaran roda serta RPM mengikuti tenaga aktual."
             : key === "tires"
               ? "Visual: ban lebih lebar, cincin velg emas, dan roller bertingkat."
               : "Visual: strip emas dudukan baterai bertambah setiap level. Di arena, cadangan boost bertahan lebih lama dan lampu indikator meredup ketika energi menipis. Lepas bodi untuk melihat detail sel."}</p>
           <table className="w-full text-left tabular-nums">
-            <caption className="px-xl pt-lg pb-sm text-left font-semibold">Simulasi performa tanpa boost</caption>
+            <caption className="px-md pt-md pb-sm text-left font-semibold">Simulasi performa tanpa boost</caption>
             <thead className="text-muted-foreground">
-              <tr><th scope="col" className="px-xl pb-sm font-normal">Performa</th><th scope="col" className="pb-sm text-right font-normal">Saat ini</th><th scope="col" className="px-xl pb-sm text-right font-normal">Setelah</th></tr>
+              <tr><th scope="col" className="px-md pb-sm font-normal">Performa</th><th scope="col" className="pb-sm text-right font-normal">Saat ini</th><th scope="col" className="px-md pb-sm text-right font-normal">Setelah</th></tr>
             </thead>
             <tbody>
-              <tr className="border-t border-border"><th scope="row" className="px-xl py-sm font-normal">Detik / putaran</th><td className="text-right">{seconds(preview.beforeSeconds)}</td><td className="px-xl text-right font-bold text-accent">{seconds(preview.afterSeconds)}</td></tr>
-              <tr className="border-y border-border"><th scope="row" className="px-xl py-sm font-normal">Koin / putaran</th><td className="text-right">{formatCoins(preview.beforeReward)}</td><td className="px-xl text-right font-bold text-accent">{formatCoins(preview.afterReward)}</td></tr>
+              <tr className="border-t border-border"><th scope="row" className="px-md py-sm font-normal">Detik / putaran</th><td className="text-right">{seconds(preview.beforeSeconds)}</td><td className="px-md text-right font-bold text-accent">{seconds(preview.afterSeconds)}</td></tr>
+              <tr className="border-y border-border"><th scope="row" className="px-md py-sm font-normal">Koin / putaran</th><td className="text-right">{formatCoins(preview.beforeReward)}</td><td className="px-md text-right font-bold text-accent">{formatCoins(preview.afterReward)}</td></tr>
             </tbody>
           </table>
           {key !== "tires" && <>
             <table className="w-full text-left tabular-nums">
-              <caption className="px-xl pt-lg pb-sm text-left font-semibold">Simulasi arena · {key === "engine" ? "akselerasi" : "energi boost"}</caption>
+              <caption className="px-md pt-md pb-sm text-left font-semibold">Simulasi arena · {key === "engine" ? "akselerasi" : "energi boost"}</caption>
               <thead className="text-muted-foreground">
-                <tr><th scope="col" className="px-xl pb-sm font-normal">Performa</th><th scope="col" className="pb-sm text-right font-normal">Saat ini</th><th scope="col" className="px-xl pb-sm text-right font-normal">Setelah</th></tr>
+                <tr><th scope="col" className="px-md pb-sm font-normal">Performa</th><th scope="col" className="pb-sm text-right font-normal">Saat ini</th><th scope="col" className="px-md pb-sm text-right font-normal">Setelah</th></tr>
               </thead>
               <tbody>
                 <tr className="border-t border-border">
-                  <th scope="row" className="px-xl py-sm font-normal">{key === "engine" ? "Respons 90% · detik" : "Cadangan boost · detik"}</th>
+                  <th scope="row" className="px-md py-sm font-normal">{key === "engine" ? "Respons 90% · detik" : "Cadangan boost · detik"}</th>
                   <td className="text-right">{seconds(key === "engine" ? Math.log(10) / currentPowertrain.accelerationRate : currentPowertrain.boostCapacitySeconds)}</td>
-                  <td className="px-xl text-right font-bold text-accent">{seconds(key === "engine" ? Math.log(10) / nextPowertrain.accelerationRate : nextPowertrain.boostCapacitySeconds)}</td>
+                  <td className="px-md text-right font-bold text-accent">{seconds(key === "engine" ? Math.log(10) / nextPowertrain.accelerationRate : nextPowertrain.boostCapacitySeconds)}</td>
                 </tr>
               </tbody>
             </table>
-            <p className="border-y border-border px-xl py-lg text-muted-foreground">{key === "engine"
+            <p className="border-y border-border px-md py-md text-muted-foreground">{key === "engine"
               ? "Waktu mencapai 90% kecepatan target di lintasan lurus; lebih kecil berarti lebih responsif. RPM dan gerak bodi mengikuti akselerasi, bukan sekadar level."
               : `Cadangan dari energi penuh, bukan tambahan durasi Gaspol. Dorongan melemah menjelang habis, tertahan saat keluar lintasan, dan terisi penuh dalam ${currentPowertrain.rechargeSeconds} detik tanpa Gaspol.`} Efek arena tidak mengubah lap, koin, baterai idle, atau timer Gaspol server.</p>
           </>}
           {key === "tires" && <>
             <table className="w-full text-left tabular-nums">
-              <caption className="px-xl pt-lg pb-sm text-left font-semibold">Grip tikungan · poin/detik</caption>
+              <caption className="px-md pt-md pb-sm text-left font-semibold">Grip tikungan · poin/detik</caption>
               <thead className="text-muted-foreground">
-                <tr><th scope="col" className="px-xl pb-sm font-normal">Kondisi</th><th scope="col" className="pb-sm text-right font-normal">Saat ini</th><th scope="col" className="px-xl pb-sm text-right font-normal">Setelah</th></tr>
+                <tr><th scope="col" className="px-md pb-sm font-normal">Kondisi</th><th scope="col" className="pb-sm text-right font-normal">Saat ini</th><th scope="col" className="px-md pb-sm text-right font-normal">Setelah</th></tr>
               </thead>
               <tbody>
                 {[
@@ -227,26 +227,26 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
                   { label: "Terkuras · boost", before: currentGrip.boostedCornerDrain, after: nextGrip.boostedCornerDrain },
                   { label: "Pulih · lurus", before: currentGrip.straightRecovery, after: nextGrip.straightRecovery },
                 ].map(row => <tr key={row.label} className="border-t border-border">
-                  <th scope="row" className="px-xl py-sm font-normal">{row.label}</th>
+                  <th scope="row" className="px-md py-sm font-normal">{row.label}</th>
                   <td className="text-right">{formatCoins(row.before)}</td>
-                  <td className="px-xl text-right font-bold text-accent">{formatCoins(row.after)}</td>
+                  <td className="px-md text-right font-bold text-accent">{formatCoins(row.after)}</td>
                 </tr>)}
               </tbody>
             </table>
-            <p className="border-y border-border px-xl py-lg text-muted-foreground">Pengurasan lebih kecil, pemulihan lebih cepat. Pengurangan dihitung dari ban level 1, hingga 54% di level 10. Boost tetap berisiko selip. Efek grip hanya saat simulasi aktif; tidak mengubah koin atau lap server.</p>
+            <p className="border-y border-border px-md py-md text-muted-foreground">Pengurasan lebih kecil, pemulihan lebih cepat. Pengurangan dihitung dari ban level 1, hingga 54% di level 10. Boost tetap berisiko selip. Efek grip hanya saat simulasi aktif; tidak mengubah koin atau lap server.</p>
           </>}
-          <dl className="flex flex-col gap-sm border-b border-border px-xl py-lg">
+          <dl className="flex flex-col gap-sm border-b border-border px-md py-md">
             <div className="flex justify-between gap-md"><dt>Biaya pemasangan</dt><dd className="font-bold">{coins(cost)}</dd></div>
             <div className="flex justify-between gap-md text-muted-foreground"><dt>Saldo saat ini</dt><dd>{coins(game.balance)}</dd></div>
             {shortfall === 0 && <div className="flex justify-between gap-md text-muted-foreground"><dt>Sisa saldo</dt><dd>{coins(game.balance - cost)}</dd></div>}
           </dl>
-          <p role="status" className="px-xl py-lg text-muted-foreground">
+          <p role="status" className="px-md py-md text-muted-foreground">
             {shortfall > 0
               ? `Kurang ${coins(shortfall)}. Klaim hasil balapan atau hadiah terlebih dahulu.`
               : "Part dan tampilan 3D berubah otomatis setelah pemasangan berhasil, di garasi maupun lintasan. Part tidak bisa dijual kembali."}
           </p>
         </div>
-        <SheetFooter className="border-t border-border px-xl py-(--space-20)">
+        <SheetFooter className="border-t border-border px-md py-md">
           <SheetClose render={<Button variant="outline" disabled={installing} />}>Batal</SheetClose>
           <Button variant="gold" disabled={blocked || maxed || shortfall > 0} onClick={() => void install()} aria-busy={installing}>
             {installing ? <LoaderCircle className="animate-spin" data-icon="inline-start" /> : <ArrowUp data-icon="inline-start" />}
