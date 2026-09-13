@@ -562,7 +562,17 @@
 .race-hud-server small { font-size: inherit; color: var(--muted-foreground); font-weight: var(--fw-normal); }
 .race-hud-reward { color: var(--accent); }
 .race-powertrain-note { padding: var(--space-md); color: var(--muted-foreground); font-size: var(--fs-read); line-height: var(--lh-normal); text-wrap: pretty; }
-@media (max-width: 359px) { .race-hud-telemetry > div { padding-inline: var(--space-sm); } }
+@media (max-width: 359px) {
+  .race-hud-telemetry > div { padding-inline: var(--space-sm); }
+  /* Di 320px kolomnya tinggal ~78px dan "ENERGI BOOST" pecah jadi dua baris,
+     sementara dua label lain tetap satu baris -- angkanya ikut turun sendiri
+     dan ketiga kolom berhenti sebaris. Turunkan label ke rung yang sudah
+     dipakai HUD lain (.race-director-bar, .lane-hud) supaya tetap satu baris
+     tanpa menaikkan tinggi HUD. */
+  .race-hud-telemetry dt { font-size: var(--fs-2xs); letter-spacing: var(--track-caps-sm); white-space: nowrap; }
+  /* "19.7" + "km/j" melewati kolomnya 3px dan menempel garis pemisah. */
+  .race-hud-telemetry > div:first-child dd { font-size: var(--fs-6xl); }
+}
 .reward-value { color: var(--accent); }
 .race-actions { padding: var(--space-md) var(--gutter); border-top: var(--stroke) solid var(--border); }
 .scene-wrap.is-inspecting { height: var(--scene-h-inspect); }
