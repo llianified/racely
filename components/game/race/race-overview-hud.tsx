@@ -62,9 +62,18 @@ export function RaceOverviewHud({ seconds, baseSeconds, reward, progress, teleme
             <span style={{ transform: `scaleX(${telemetry.boostEnergy})` }} />
           </dd>
         </div>
-        <div className="race-hud-cell">
+        <div className="race-hud-cell race-hud-lap">
           <dt>Lap</dt>
           <dd>{lapPercent}<small>%</small></dd>
+          <dd
+            className="race-hud-ring"
+            role="meter"
+            aria-label="Progres lap"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={lapPercent}
+            style={{ "--ring-fill": `${lapPercent}%` } as React.CSSProperties}
+          />
         </div>
         <div className="race-hud-cell">
           <dt>Waktu</dt>
