@@ -1,8 +1,7 @@
 'use client'
 
-import { Gauge } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { gripTuning, type DrivingState } from '@/lib/race-dynamics'
+import { RaceSwitch, SettingRow } from './setting-row'
 
 /**
  * `ceiling` datang dari `economy.maxUpgradeLevel`, bukan dari batas internal
@@ -14,22 +13,25 @@ export function GripChallenge({ state, tires, ceiling, onToggle }: { state: Driv
   const tuning = gripTuning(tires)
   const recovering = state.recovery > 0
   const danger = state.grip < 40 && !recovering
-  const status = !state.enabled ? 'Autopilot aman' : recovering ? state.offRoad ? 'Off-road · grip rendah' : 'Kembali ke racing line' : state.shield > 0 ? 'Grip terlindungi' : danger ? 'Grip rendah' : state.corner ? 'Tikungan' : 'Lurus · grip pulih'
-  return <div className="grip-challenge" data-danger={danger || recovering}>
-    <div className="grip-heading">
-      <span><Gauge aria-hidden="true" /> GRIP MOBIL</span>
-      <Button variant="ghost" size="xs" aria-pressed={state.enabled} aria-label="Aktifkan simulasi grip" onClick={onToggle}>{state.enabled ? 'Aktif' : 'Nonaktif'}</Button>
-    </div>
-    {state.enabled && <>
-    <div className="grip-controls">
-      <div className="grip-telemetry">
-        <div className="grip-reading"><span role="status">{status}</span><strong>{Math.ceil(state.grip)}%</strong></div>
-        <div className="grip-meter" role="meter" aria-label="Grip mobil" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.ceil(state.grip)}><i style={{ transform: `scaleX(${state.grip / 100})` }} /></div>
-      </div>
-    </div>
-    <div className="grip-footer"><span><strong>{state.cleanCorners}×</strong> tikungan bersih</span><span>{state.courseOuts} course out</span></div>
-    </>}
-    <div className="grip-footer"><span>Grip ban <strong>Lv. {tuning.level}/{ceiling}</strong></span><span>Pengurasan <strong>−{tuning.drainReductionPercent}%</strong></span></div>
-    <p className="grip-help">Pulih {tuning.straightRecovery} poin/detik di lintasan lurus. {tuning.level < ceiling ? 'Upgrade Ban & roller di bengkel untuk grip lebih kuat.' : 'Grip maksimal; boost di tikungan tetap berisiko selip.'} {state.enabled ? '' : 'Aktifkan simulasi untuk merasakan efek grip.'} Simulasi tidak memengaruhi koin &amp; lap server.</p>
+  const status = recovering
+    ? state.offRoad ? 'Off-road · grip rendah' : 'Kembali ke racing line'
+    : state.shield > 0 ? 'Grip terlindungi'
+    : danger ? 'Grip rendah'
+    : state.corner ? 'Tikungan · grip turun'
+    : 'Lurus · grip pulih'
+  return <div className="grip-challenge" data-danger={state.enabled && (danger || recovering)}>
+    <SettingRow label="Grip mobil" hint={state.enabled ? status : 'Grip turun di tikungan, pulih di lurus'}>
+      <RaceSwitch checked={state.enabled} onChange={onToggle} label="Simulasi grip mobil" />
+    </SettingRow>
+    {state.enabled && <div className="grip-detail">
+      <div className="grip-meter" role="meter" aria-label="Grip mobil" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.ceil(state.grip)}><i style={{ transform: `scaleX(${state.grip / 100})` }} /></div>
+      <dl className="grip-stats">
+        <div><dt>Grip</dt><dd>{Math.ceil(state.grip)}%</dd></div>
+        <div><dt>Tikungan bersih</dt><dd>{state.cleanCorners}×</dd></div>
+        <div><dt>Course out</dt><dd>{state.courseOuts}×</dd></div>
+        <div><dt>Grip ban</dt><dd>Lv. {tuning.level}/{ceiling}</dd></div>
+      </dl>
+      <small className="grip-tip">Pulih {tuning.straightRecovery} poin/detik · pengurasan −{tuning.drainReductionPercent}%. {tuning.level < ceiling ? 'Upgrade Ban di bengkel untuk grip lebih kuat.' : 'Grip sudah maksimal.'}</small>
+    </div>}
   </div>
 }
