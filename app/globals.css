@@ -868,7 +868,7 @@
 .reward-row-copy h3 { font-size: var(--fs-body); font-weight: var(--fw-heavy); line-height: var(--lh-normal); }
 .reward-row-copy p { margin-top: var(--space-xs); font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); }
 /* Strip aksi memakai lebar penuh baris supaya tidak ada ruang kosong di bawah ikon. */
-.reward-row-action { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); min-width: 0; margin: var(--space-md) 0; padding: var(--space-9) var(--space-10); border-radius: var(--corner-box); background: var(--secondary); }
+.reward-row-action { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); min-width: 0; margin: var(--space-md) calc(var(--gutter) * -1); padding: var(--space-9) var(--gutter); border-radius: 0; background: var(--secondary); }
 .reward-row-action > strong { font-size: var(--fs-lead); font-weight: var(--fw-heavy); color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .reward-row-action > strong > span { font-size: var(--fs-micro); font-weight: var(--fw-medium); color: var(--muted-foreground); }
 .reward-row-action > button { min-width: var(--withdraw-action-w); min-height: var(--claim-action-h); height: var(--claim-action-h); }
