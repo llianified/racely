@@ -256,6 +256,21 @@ dulu.
 Yang tetap literal dan memang boleh: nilai struktural (`0`, `1`, `auto`,
 `100%`, rasio flex, track grid), keyframe, dan persentase `color-mix`.
 
+**Permukaan kotak** memakai satu resep, jangan meracik campuran baru:
+
+| Kotak | Garis | Latar | Sudut |
+|---|---|---|---|
+| Kartu halaman (`.panel`) | `var(--border)` | `var(--card)` | `--corner-box` |
+| Kotak yang bisa disentuh / catatan | `var(--border)` | `var(--secondary)` | `--corner-box` |
+| Strip, sel angka, kaki di dalam kartu | `var(--border)` | `var(--surface-inset)` | `--corner-box` |
+| Disorot (kartu diri, hadiah siap) | `color-mix(X 30%, var(--border))` | `color-mix(X 8%, latar)` | `--corner-box` |
+| Aktif / terpilih | `color-mix(X 60%, var(--border))` | `color-mix(X 12%, latar)` | `--corner-box` |
+
+`X` adalah `--accent` atau `--primary`; garis tint selalu dicampur ke
+`var(--border)`, bukan `transparent`. Hanya pill dan lingkaran yang memakai
+`--corner-pill`/`--corner-round`; `--press-radius` dan `--radius` khusus
+keluarga tombol dan shadcn, bukan untuk kotak.
+
 Token tinggi baris dan spasi huruf sengaja bernama `--lh-*` dan `--track-*`,
 **bukan** `--leading-*`/`--tracking-*`: keduanya namespace tema Tailwind v4.
 Tailwind meng-emit defaultnya ke `:root`, jadi menimpanya diam-diam mengubah
