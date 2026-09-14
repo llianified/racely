@@ -26,7 +26,7 @@ const radii = [...new Set([
 ])]
 
 describe('arena oval regression fence', () => {
-  it.each([0, 1])('matches the old capsule across every lane, ribbon and curb in circuit %i', circuit => {
+  it.each([0])('matches the old capsule across every lane, ribbon and curb in circuit %i', circuit => {
     const track = raceTrackAt(circuit)
     let maxError = 0
     for (const radius of radii) {
@@ -49,7 +49,7 @@ describe('arena oval regression fence', () => {
   })
 
   it('keeps grid, gantry, stands, buildings, brand and framing at the old poses', () => {
-    for (const circuit of [0, 1]) {
+    for (const circuit of [0]) {
       const track = raceTrackAt(circuit)
       expect(track.gantry.x).toBeCloseTo(-1.55, 12)
       expect(track.gantry.z).toBeCloseTo(-2.95, 12)
@@ -75,8 +75,8 @@ describe('arena oval regression fence', () => {
 })
 
 describe('data-driven visual paths', () => {
-  it('follows every Apex primitive including the reverse S and hairpin', () => {
-    const layout = TRACK_LAYOUTS[2], track = raceTrackAt(2)
+  it.each([1, 2])('follows every gameplay primitive in circuit %i', circuit => {
+    const layout = TRACK_LAYOUTS[circuit], track = raceTrackAt(circuit)
     let expected = { x: -TRACK_HALF, z: -PLAYER_RADIUS, heading: 0 }
     let distance = 0
     for (const section of layout.sections) for (const primitive of section.geometry) {
@@ -135,8 +135,8 @@ describe('data-driven visual paths', () => {
     expect(track.grid.heading).toBeCloseTo(.8 / 3, 12)
   })
 
-  it('keeps Apex decorations off the track and bounds every sampled apron point', () => {
-    const track = raceTrackAt(2)
+  it.each([1, 2])('keeps decorations off circuit %i and bounds every sampled apron point', circuit => {
+    const track = raceTrackAt(circuit)
     const decorations = [
       ...track.buildings.map(p => ({ ...p, width: .64, depth: 1.32 })),
       ...track.stands.map(p => ({ ...p, width: 1.65, depth: .4 })),
