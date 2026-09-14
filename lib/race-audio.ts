@@ -22,15 +22,14 @@ export function raceAudioMix(frame: RaceAudioFrame) {
   const slip = state.enabled ? clamp((65 - state.grip) / 65) : 0;
   const load = state.corner ? clamp(Math.sin(Math.PI * state.cornerProgress)) : 0;
   return {
-    motorHz: Math.max(25, rpm / 60),
-    motor: clamp(rpm / 2200) * (state.recovery > 0 ? .025 : .075 + clamp(state.acceleration, 0, 2) * .015),
-    gearHz: 420 + rpm / 60 * 5.7,
-    gear: clamp(rpm / 7200) * .025,
-    roadHz: frame.offRoad ? 700 : 1600 + speed * 650,
-    road: contact * (frame.offRoad ? .12 : .045),
-    scrubHz: 1800 + slip * 1200,
-    scrub: contact * (frame.offRoad ? .025 : slip * .13 + load * .012),
-    roller: !frame.offRoad ? contact * load * .04 : 0,
+    motorHz: 26 + rpm / 14000 * 36,
+    motorCutoff: 220 + rpm / 14000 * 280,
+    motor: clamp(rpm / 2200) * (state.recovery > 0 ? .04 : .22 + clamp(state.acceleration, 0, 2) * .025),
+    roadHz: frame.offRoad ? 500 : 850 + speed * 250,
+    road: contact * (frame.offRoad ? .10 : .04),
+    scrubHz: 850 + slip * 550,
+    scrub: contact * (frame.offRoad ? .02 : slip * .08 + load * .01),
+    roller: !frame.offRoad ? contact * load * .025 : 0,
     air: frame.grounded ? speed * .012 : 0,
     pan: clamp(frame.pan, -.85, .85),
     attenuation: 1 / (1 + Math.max(0, clamp(frame.distance, 0, 100) - 3) * .065),
@@ -54,10 +53,8 @@ type NoiseLayer = { source: AudioBufferSourceNode; filter: BiquadFilterNode; gai
 export class RaceAudioEngine {
   private readonly master: GainNode;
   private readonly spatial: StereoPannerNode;
-  private readonly motor: OscillatorNode;
-  private readonly motorGain: GainNode;
-  private readonly gear: OscillatorNode;
-  private readonly gearGain: GainNode;
+  private readonly motor: NoiseLayer;
+  private readonly motorPulse: OscillatorNode;
   private readonly road: NoiseLayer;
   private readonly scrub: NoiseLayer;
   private readonly roller: NoiseLayer;
@@ -87,28 +84,28 @@ export class RaceAudioEngine {
     this.spatial.connect(this.master).connect(limiter).connect(context.destination);
     this.nodes.push(this.master, limiter, this.spatial);
 
-    // Mini 4WD: rotor harmonics + commutator/gear whine, not a combustion-engine loop.
-    this.motor = context.createOscillator();
-    this.motor.setPeriodicWave(context.createPeriodicWave(
-      new Float32Array(9), new Float32Array([0, 1, .38, .22, .12, .08, .05, .03, .02]),
-    ));
-    this.motorGain = context.createGain();
-    this.motorGain.gain.value = 0;
-    this.motor.connect(this.motorGain).connect(this.spatial);
-    this.gear = context.createOscillator();
-    this.gear.type = 'triangle';
-    this.gearGain = context.createGain();
-    this.gearGain.gain.value = 0;
-    this.gear.connect(this.gearGain).connect(this.spatial);
-    this.nodes.push(this.motor, this.motorGain, this.gear, this.gearGain);
-    this.sources.push(this.motor, this.gear);
-
     const noise = context.createBuffer(1, context.sampleRate * 2, context.sampleRate);
     const samples = noise.getChannelData(0);
     for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
-    this.road = this.noiseLayer(noise, 'bandpass', 1800, .65);
-    this.scrub = this.noiseLayer(noise, 'bandpass', 2300, 2.5);
-    this.roller = this.noiseLayer(noise, 'bandpass', 3800, 3);
+
+    // Modulate filtered noise, not the audible output: no sustained oscillator whistle.
+    this.motor = this.noiseLayer(noise, 'lowpass', 360, .5);
+    const motorEnvelope = context.createGain();
+    motorEnvelope.gain.value = .8;
+    this.motor.filter.disconnect();
+    this.motor.filter.connect(motorEnvelope).connect(this.motor.gain);
+    this.motorPulse = context.createOscillator();
+    this.motorPulse.type = 'sine';
+    this.motorPulse.frequency.value = 26;
+    const pulseDepth = context.createGain();
+    pulseDepth.gain.value = .18;
+    this.motorPulse.connect(pulseDepth).connect(motorEnvelope.gain);
+    this.nodes.push(motorEnvelope, this.motorPulse, pulseDepth);
+    this.sources.push(this.motorPulse);
+
+    this.road = this.noiseLayer(noise, 'bandpass', 1000, .65);
+    this.scrub = this.noiseLayer(noise, 'bandpass', 1100, .7);
+    this.roller = this.noiseLayer(noise, 'bandpass', 950, .6);
     this.air = this.noiseLayer(noise, 'lowpass', 850, .5);
     this.impactBuffer = context.createBuffer(1, Math.ceil(context.sampleRate * .22), context.sampleRate);
     const impact = this.impactBuffer.getChannelData(0);
@@ -174,10 +171,9 @@ export class RaceAudioEngine {
     const target = (param: AudioParam, value: number, smoothing = .045) => param.setTargetAtTime(value, now, smoothing);
     target(this.master.gain, this.volume * mix.attenuation);
     target(this.spatial.pan, mix.pan, .08);
-    target(this.motor.frequency, mix.motorHz);
-    target(this.motorGain.gain, mix.motor);
-    target(this.gear.frequency, mix.gearHz);
-    target(this.gearGain.gain, mix.gear);
+    target(this.motorPulse.frequency, mix.motorHz);
+    target(this.motor.filter.frequency, mix.motorCutoff);
+    target(this.motor.gain.gain, mix.motor);
     target(this.road.filter.frequency, mix.roadHz);
     target(this.road.gain.gain, mix.road);
     target(this.road.source.playbackRate, .7 + clamp(frame.movement, 0, 2) * .4);
