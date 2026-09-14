@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentRef, type RefObject } from 'react'
+import { createContext, memo, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentRef, type RefObject } from 'react'
 import { Flag, RotateCcw } from 'lucide-react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid, OrbitControls, OrthographicCamera, PerspectiveCamera } from '@react-three/drei'
@@ -10,34 +10,24 @@ import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js'
 import { COLORS, MiniCar } from './mini-car'
 import type { CarModelId } from '@/lib/car-catalog'
 import type { GameState } from '@/lib/game'
-import { PLAYER_RADIUS, TRACK_HALF, RECOVERY_SECONDS, courseOutPose, resetGripChallenge, stepDriving, stepPowertrain, type DrivingState } from '@/lib/race-dynamics'
+import { RECOVERY_SECONDS, courseOutPose, resetGripChallenge, stepDriving, stepPowertrain, type DrivingState } from '@/lib/race-dynamics'
+import { PLAYER_RADIUS } from '@/lib/track-layout'
+import { RACE_TRACK_OFFSETS, raceTrackAt } from '@/lib/race-track'
 import { setupPerformance, type CarSetup } from '@/lib/car-setup'
 import { createSetupFeedback, stepSetupFeedback } from './setup-feedback'
 import { RacingEffects } from './racing-effects'
 import { ContextMonitor, SceneBoundary } from './scene-recovery'
 
-const HALF = TRACK_HALF
 export type SceneProps = { setup?: CarSetup; equipped?: NonNullable<GameState['bodyParts']>['equipped']; driving?: RefObject<DrivingState>; onTelemetry?: (state: DrivingState) => void; cinematic?: boolean; levels?: GameState['levels']; model?: CarModelId; progress: number; seconds: number; baseSeconds: number; opponentSeconds: readonly [number, number]; color: string; boosted: boolean; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean }
 
 // The 10Hz game tick changes these every 100ms. They are consumed inside useFrame,
 // so they travel through a ref instead of props: a tick must not reconcile the 3D tree.
 type RaceTiming = Pick<SceneProps, 'progress' | 'seconds' | 'baseSeconds' | 'opponentSeconds' | 'boosted'>
 
-function trackPoint(t: number, radius: number) {
-  const straight = HALF * 2
-  const arc = Math.PI * radius
-  let d = (((t % 1) + 1) % 1) * (straight * 2 + arc * 2)
-  if (d < straight) return { x: -HALF + d, z: -radius, angle: Math.PI / 2 }
-  d -= straight
-  if (d < arc) { const a = d / radius; return { x: HALF + radius * Math.sin(a), z: -radius * Math.cos(a), angle: Math.PI / 2 - a } }
-  d -= arc
-  if (d < straight) return { x: HALF - d, z: radius, angle: -Math.PI / 2 }
-  d -= straight
-  const a = d / radius
-  return { x: -HALF - radius * Math.sin(a), z: radius * Math.cos(a), angle: -Math.PI / 2 - a }
-}
+const TrackContext = createContext(raceTrackAt(0))
 
 function Ribbon({ inner, outer, height = .12, color, y = 0, glow = false }: { inner: number; outer: number; height?: number; color: string; y?: number; glow?: boolean }) {
+  const { point: trackPoint } = useContext(TrackContext)
   const geometry = useMemo(() => {
     const shape = new THREE.Shape()
     const hole = new THREE.Path()
@@ -54,7 +44,7 @@ function Ribbon({ inner, outer, height = .12, color, y = 0, glow = false }: { in
     extruded.dispose()
     indexed.computeBoundingSphere()
     return indexed
-  }, [inner, outer, height])
+  }, [inner, outer, height, trackPoint])
   useEffect(() => () => geometry.dispose(), [geometry])
   return <mesh geometry={geometry} rotation={[-Math.PI / 2, 0, 0]} position={[0, y, 0]} receiveShadow castShadow>
     <meshStandardMaterial color={color} roughness={.72} metalness={.14} emissive={glow ? color : '#000000'} emissiveIntensity={glow ? .75 : 0} toneMapped={!glow} />
@@ -62,6 +52,9 @@ function Ribbon({ inner, outer, height = .12, color, y = 0, glow = false }: { in
 }
 
 const Racer = memo(function Racer({ lane, color, model, timing, playerRef, levels, driving, onTelemetry, reducedMotion, equipped, setup, circuit }: { levels?: GameState['levels']; model?: CarModelId; lane: number; color: string; timing: RefObject<RaceTiming>; playerRef?: RefObject<THREE.Group | null> } & Pick<SceneProps, 'driving' | 'onTelemetry' | 'reducedMotion' | 'equipped' | 'setup' | 'circuit'>) {
+  const track = useContext(TrackContext)
+  const laneOffset = lane * .68
+  const laneLength = track.laneLength(laneOffset)
   const ownRef = useRef<THREE.Group>(null)
   const group = playerRef ?? ownRef
   const phase = useRef(lane * .32)
@@ -98,7 +91,7 @@ const Racer = memo(function Racer({ lane, color, model, timing, playerRef, level
     const recovering = !!state && state.recovery > 0
     const lapsPerSecond = state ? state.visualSpeed / baseSeconds : 1 / seconds
     if (!recovering) phase.current = (phase.current + dt * lapsPerSecond) % 1
-    wheelSpeed.current = recovering ? 0 : (HALF * 4 + Math.PI * 2 * (PLAYER_RADIUS + lane * .68)) / .85 * lapsPerSecond
+    wheelSpeed.current = recovering ? 0 : laneLength / .85 * lapsPerSecond
     if (lane === 0 && !recovering) {
       // Transient acceleration is visual; reconcile gradually to paid server laps.
       // Bound correction so recovery never looks like an instant extra boost.
@@ -106,7 +99,7 @@ const Racer = memo(function Racer({ lane, color, model, timing, playerRef, level
       const correction = THREE.MathUtils.clamp(drift * (1 - Math.exp(-2 * dt)), -dt / seconds * .15, dt / seconds * .15)
       phase.current = (phase.current + correction + 1) % 1
     }
-    const p = trackPoint(phase.current, PLAYER_RADIUS + lane * .68)
+    const p = track.point(phase.current, laneOffset)
     const offset = state?.offset ?? 0
     const slip = state ? Math.max(0, (65 - state.grip) / 65) : 0
     const load = state?.corner && performance ? Math.min(1, performance.cornerLoad / performance.grip) * Math.sin(Math.PI * state.cornerProgress) : 0
@@ -167,6 +160,7 @@ const Racer = memo(function Racer({ lane, color, model, timing, playerRef, level
 })
 
 function TrackBrand() {
+  const { brand } = useContext(TrackContext)
   const texture = useMemo(() => {
     const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 256
     const ctx = canvas.getContext('2d')!
@@ -180,10 +174,11 @@ function TrackBrand() {
     return texture
   }, [])
   useEffect(() => () => texture.dispose(), [texture])
-  return <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, .023, 0]}><planeGeometry args={[5.6, 1.4]} /><meshBasicMaterial map={texture} transparent depthWrite={false} /></mesh>
+  return <mesh rotation={[-Math.PI / 2, 0, 0]} position={[brand.x, .023, brand.z]}><planeGeometry args={[5.6, 1.4]} /><meshBasicMaterial map={texture} transparent depthWrite={false} /></mesh>
 }
 
 const TrackMarkings = memo(function TrackMarkings() {
+  const track = useContext(TrackContext)
   const curbs = useRef<THREE.InstancedMesh>(null)
   const texture = useMemo(() => {
     const canvas = document.createElement('canvas')
@@ -209,7 +204,7 @@ const TrackMarkings = memo(function TrackMarkings() {
     const transform = new THREE.Object3D()
     const color = new THREE.Color()
     for (let i = 0; i < 128; i++) {
-      const p = trackPoint((i % 64) / 64, i < 64 ? 4.035 : 1.765)
+      const p = track.point((i % 64) / 64, i < 64 ? RACE_TRACK_OFFSETS.outerCurb : RACE_TRACK_OFFSETS.innerCurb)
       transform.position.set(p.x, .035, p.z)
       transform.rotation.y = p.angle
       transform.updateMatrix()
@@ -219,41 +214,44 @@ const TrackMarkings = memo(function TrackMarkings() {
     curbs.current.instanceMatrix.needsUpdate = true
     if (curbs.current.instanceColor) curbs.current.instanceColor.needsUpdate = true
     curbs.current.computeBoundingSphere()
-  }, [])
+  }, [track])
   return <>
     <instancedMesh ref={curbs} args={[undefined, undefined, 128]} receiveShadow>
       <boxGeometry args={[.16, .045, .32]} />
       <meshStandardMaterial roughness={.85} />
     </instancedMesh>
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-2.55, .132, -2.92]}>
-      <planeGeometry args={[1.2, 2.04]} />
-      <meshBasicMaterial map={texture} transparent depthWrite={false} polygonOffset polygonOffsetFactor={-1} />
-    </mesh>
+    <group position={[track.grid.x, .132, track.grid.z]} rotation={[0, -track.grid.heading, 0]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[1.2, 2.04]} />
+        <meshBasicMaterial map={texture} transparent depthWrite={false} polygonOffset polygonOffsetFactor={-1} />
+      </mesh>
+    </group>
   </>
 })
 
 const Circuit = memo(function Circuit({ circuit }: { circuit: number }) {
+  const track = useContext(TrackContext)
   return <group>
-    <Ribbon inner={1.7} outer={4.1} height={.12} y={-.14} color="#090c1d" />
-    <Ribbon inner={1.85} outer={3.96} height={.10} color="#2c2852" />
-    {[0, 1, 2].map(i => <Ribbon key={i} inner={1.9 + i * .68} outer={2.57 + i * .68} height={.11} color={i === 1 ? '#463e7a' : '#2c2852'} />)}
-    <Ribbon inner={4.12} outer={5.25} height={.015} y={-.14} color="#393044" />
-    {[1.88, 2.56, 3.24, 3.92].map((r, i) => <Ribbon key={r} inner={r} outer={r + .035} height={.012} y={.115} color={i === 0 || i === 3 ? '#5027a7' : '#9789cd'} />)}
-    {[1.88, 3.92].map(r => <Ribbon key={r} inner={r} outer={r + .045} height={.008} y={.13} glow color={circuit ? COLORS.gold : '#a37ef2'} />)}
+    <Ribbon inner={RACE_TRACK_OFFSETS.inner} outer={4.1 - PLAYER_RADIUS} height={.12} y={-.14} color="#090c1d" />
+    <Ribbon inner={1.85 - PLAYER_RADIUS} outer={3.96 - PLAYER_RADIUS} height={.10} color="#2c2852" />
+    {[0, 1, 2].map(i => <Ribbon key={i} inner={1.9 - PLAYER_RADIUS + i * .68} outer={2.57 - PLAYER_RADIUS + i * .68} height={.11} color={i === 1 ? '#463e7a' : '#2c2852'} />)}
+    <Ribbon inner={4.12 - PLAYER_RADIUS} outer={RACE_TRACK_OFFSETS.apron} height={.015} y={-.14} color="#393044" />
+    {[1.88, 2.56, 3.24, 3.92].map((r, i) => <Ribbon key={r} inner={r - PLAYER_RADIUS} outer={r + .035 - PLAYER_RADIUS} height={.012} y={.115} color={i === 0 || i === 3 ? '#5027a7' : '#9789cd'} />)}
+    {[1.88, 3.92].map(r => <Ribbon key={r} inner={r - PLAYER_RADIUS} outer={r + .045 - PLAYER_RADIUS} height={.008} y={.13} glow color={circuit ? COLORS.gold : '#a37ef2'} />)}
     <TrackBrand />
     <TrackMarkings />
 
-    <group position={[-1.55, 0, -2.95]}>
+    <group position={[track.gantry.x, 0, track.gantry.z]} rotation={[0, -track.gantry.heading, 0]}>
       {[-1.12, 1.12].map(z => <mesh key={z} position={[0, .85, z]} castShadow><boxGeometry args={[.16, 1.7, .16]} /><meshStandardMaterial color={COLORS.blue} /></mesh>)}
       <mesh position={[0, 1.75, 0]} castShadow><boxGeometry args={[.22, .32, 2.48]} /><meshStandardMaterial color={COLORS.navy} /></mesh>
       {Array.from({ length: 12 }, (_, i) => <mesh key={i} position={[.12, 1.75, -1.1 + i * .2]}><boxGeometry args={[.025, .24, .16]} /><meshStandardMaterial color={i % 2 === 0 ? COLORS.white : COLORS.blue} /></mesh>)}
       {Array.from({ length: 22 }, (_, i) => <mesh key={i} position={[(i % 2) * .15 - .08, .128, -1 + Math.floor(i / 2) * .19]}><boxGeometry args={[.15, .012, .19]} /><meshStandardMaterial color={(Math.floor(i / 2) + i % 2) % 2 === 0 ? COLORS.navy : COLORS.white} /></mesh>)}
     </group>
-    {[-5, -3, -1, 1, 3, 5].map((x, i) => <group key={x} position={[x, 0, 5.5]}>
+    {track.stands.map(({ x, z }, i) => <group key={i} position={[x, 0, z]}>
       <mesh position={[0, .19, 0]} castShadow><boxGeometry args={[1.65, .38, .13]} /><meshStandardMaterial color={i % 2 ? COLORS.white : COLORS.blue} /></mesh>
       {[-.65, .65].map(dx => <mesh key={dx} position={[dx, .045, 0]}><boxGeometry args={[.16, .09, .4]} /><meshStandardMaterial color={COLORS.navy} /></mesh>)}
     </group>)}
-    {[-2.7, 2.7].map(x => <group key={x} position={[x, 0, 0]}>
+    {track.buildings.map(({ x, z }, i) => <group key={i} position={[x, 0, z]}>
       <mesh position={[0, .16, 0]} castShadow><boxGeometry args={[.58, .32, 1.25]} /><meshStandardMaterial color={COLORS.navy} /></mesh>
       <mesh position={[0, .35, 0]}><boxGeometry args={[.64, .06, 1.32]} /><meshStandardMaterial color={COLORS.blue} /></mesh>
     </group>)}
@@ -261,6 +259,7 @@ const Circuit = memo(function Circuit({ circuit }: { circuit: number }) {
 })
 
 function RacingLine({ playerRef, driving }: { playerRef: RefObject<THREE.Group | null>; driving?: RefObject<DrivingState> }) {
+  const track = useContext(TrackContext)
   const line = useRef<THREE.InstancedMesh>(null)
   const transform = useMemo(() => new THREE.Object3D(), [])
   useFrame(() => {
@@ -272,7 +271,7 @@ function RacingLine({ playerRef, driving }: { playerRef: RefObject<THREE.Group |
     material.color.set(state && state.grip < 40 ? COLORS.gold : COLORS.sky)
     for (let i = 0; i < 32; i++) {
       const progress = (playerRef.current.userData.phase ?? 0) + .018 + i * .004
-      const p = trackPoint(progress, PLAYER_RADIUS)
+      const p = track.point(progress)
       const offset = (state?.offset ?? 0) * (1 - i / 32)
       transform.position.set(p.x + Math.cos(p.angle) * offset, .142, p.z - Math.sin(p.angle) * offset)
       transform.rotation.set(0, p.angle, 0)
@@ -288,6 +287,7 @@ function RacingLine({ playerRef, driving }: { playerRef: RefObject<THREE.Group |
 }
 
 function CameraRig({ mode, follow, resetKey, playerRef, active, reducedMotion, cinematic, driving }: { mode: number; follow: boolean; resetKey: number; playerRef: RefObject<THREE.Group | null>; active: boolean; reducedMotion: boolean } & Pick<SceneProps, 'cinematic' | 'driving'>) {
+  const track = useContext(TrackContext)
   const { camera, size } = useThree()
   const [overviewCamera] = useState(() => camera)
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null)
@@ -318,21 +318,21 @@ function CameraRig({ mode, follow, resetKey, playerRef, active, reducedMotion, c
   useLayoutEffect(() => {
     if (follow) return
     const [x, y, z] = mode === 1 ? [0, 20, .01] : mode === 2 ? [12, 6.5, 10] : [9, 12.5, 12]
-    overviewTarget.set(x, y, z)
-    overviewZoom.current = Math.min(size.width / 18.5, size.height / 11.5)
+    overviewTarget.set(x + track.center.x, y, z + track.center.z)
+    overviewZoom.current = Math.min(size.width / (track.bounds.maxX - track.bounds.minX + 1.3), size.height / (track.bounds.maxZ - track.bounds.minZ + 1))
     transitioning.current = overviewReady.current && !reducedMotion
     if (!transitioning.current) {
       overviewCamera.position.copy(overviewTarget)
-      overviewCamera.lookAt(0, 0, 0)
+      overviewCamera.lookAt(track.center.x, 0, track.center.z)
       if (overviewCamera instanceof THREE.OrthographicCamera) {
         overviewCamera.zoom = overviewZoom.current
         overviewCamera.updateProjectionMatrix()
       }
     }
     overviewReady.current = true
-    controls.current?.target.set(0, 0, 0)
+    controls.current?.target.set(track.center.x, 0, track.center.z)
     controls.current?.update()
-  }, [overviewCamera, overviewTarget, follow, mode, resetKey, size.width, size.height, reducedMotion])
+  }, [overviewCamera, overviewTarget, follow, mode, resetKey, size.width, size.height, reducedMotion, track])
 
   // Racer runs at -2; negative priorities preserve Fiber's automatic render.
   useFrame(({ clock }, delta) => {
@@ -345,7 +345,7 @@ function CameraRig({ mode, follow, resetKey, playerRef, active, reducedMotion, c
     }
     if (!follow && transitioning.current) {
       overviewCamera.position.lerp(overviewTarget, damping)
-      overviewCamera.lookAt(0, 0, 0)
+      overviewCamera.lookAt(track.center.x, 0, track.center.z)
       if (overviewCamera instanceof THREE.OrthographicCamera) {
         overviewCamera.zoom = THREE.MathUtils.lerp(overviewCamera.zoom, overviewZoom.current, damping)
         overviewCamera.updateProjectionMatrix()
@@ -425,7 +425,7 @@ type ArenaProps = Omit<SceneProps, keyof RaceTiming | 'followCamera' | 'active'>
 // game tick bail out here instead of reconciling every mesh in the arena.
 const Arena = memo(function Arena(props: ArenaProps) {
   const { playerRef, timing, follow, running } = props
-  return <>
+  return <TrackContext value={raceTrackAt(props.circuit)}>
     <color attach="background" args={[COLORS.navy]} />
     {!props.inspect && <fog attach="fog" args={[COLORS.navy, 30, 85]} />}
     <CarLighting />
@@ -445,7 +445,7 @@ const Arena = memo(function Arena(props: ArenaProps) {
       {[0, 1, 2].map(lane => <Racer key={lane} setup={lane === 0 ? props.setup : undefined} circuit={props.circuit} equipped={lane === 0 ? props.equipped : undefined} lane={lane} driving={lane === 0 ? props.driving : undefined} onTelemetry={props.onTelemetry} reducedMotion={props.reducedMotion} levels={lane === 0 ? props.levels : undefined} model={lane === 0 ? props.model : 'neo-falcon'} playerRef={lane === 0 ? playerRef : undefined} color={lane === 0 ? props.color : lane === 1 ? COLORS.gold : COLORS.white} timing={timing} />)}
     </group>
     <ContextMonitor onLost={props.onLost} />
-  </>
+  </TrackContext>
 })
 
 export default function RaceScene(props: SceneProps) {
