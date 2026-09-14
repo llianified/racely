@@ -384,6 +384,9 @@ describe("Teks UI tidak menulis ulang angka ekonomi", () => {
   const FORBIDDEN: { pattern: RegExp; field: string }[] = [
     { pattern: /Gaspol \d/, field: "boostMultiplier" },
     { pattern: /setengah kecepatan/, field: "offlineRate" },
+    // Pola yang sama, ditulis sebagai simbol -- persis bentuk yang lolos pagar
+    // di atas dan berbohong di dialog "selamat datang kembali".
+    { pattern: /½\s*kecepatan/, field: "offlineRate (simbol pecahan)" },
     { pattern: /maksimal level \d/, field: "maxUpgradeLevel" },
     { pattern: /dari 10`/, field: "maxUpgradeLevel (aria-label segmen)" },
     { pattern: /length: 10 \}/, field: "maxUpgradeLevel (jumlah segmen)" },

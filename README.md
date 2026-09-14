@@ -189,7 +189,7 @@ Setiap perubahan status dan penyimpanan config dicatat di `racely_admin_audit`.
 ## Ekonomi
 
 Seluruh angka ekonomi — konversi koin ke rupiah, batas penarikan, saldo awal,
-durasi lap, reward, biaya upgrade, boost, idle — hidup di `EconomyConfig`
+durasi lap, reward, biaya upgrade, idle — hidup di `EconomyConfig`
 (`lib/economy-config.ts`) dan disimpan di tabel `racely_economy_config`.
 Operator menyetelnya dari `/admin` → tab Ekonomi tanpa deploy;
 `DEFAULT_ECONOMY` hanya berlaku selama tabel itu masih kosong.
@@ -212,26 +212,27 @@ untuk persistensi.
 Test: `tests/economy-config.test.ts` (batas + proyeksi) dan
 `tests/game-economy.test.ts` (mengunci nilai bawaan).
 
-### Gaspol: satu-satunya keputusan berwaktu
+### Gaspol sudah pensiun
 
-`lib/race-dynamics.ts` mensimulasikan grip, tikungan, dan selip, tapi seluruh
-isinya hanya sesi — tidak pernah menyentuh lap, koin, atau timer yang tersimpan.
-Satu-satunya pengecualian adalah `isCleanBoostLaunch`, yang dipanggil server
-untuk menilai posisi lintasan saat tombol Gaspol ditekan:
+Gaspol dihapus dari permainan. `POST /api/game/action` dengan `{"type":"boost"}`
+dijawab **410** oleh `lib/game-server.ts` maupun `lib/preview-game.ts` — cabangnya
+sengaja dipertahankan supaya klien lama mendapat penjelasan, bukan 400 yang
+membingungkan. Tidak ada lagi jendela boost yang dihitung settlement:
+`boost_ends_at` dan `cooldown_ends_at` dikosongkan migrasi 0014 dan tidak
+pernah ditulis lagi, dan `GameState.boostLeft`/`cooldown` selalu 0.
 
-- Ditekan di trek lurus → durasi penuh `boostDurationSeconds`.
-- Ditekan di tikungan → durasi dipotong `boostCornerPenalty`, cooldown tetap
-  penuh. Itu biayanya: waktu tunggu yang sama untuk hasil yang lebih sedikit.
+Knob `boostDurationSeconds`, `batteryRechargeSeconds`, `boostMultiplier`,
+`boostCornerPenalty`, dan `boostLaunchGraceLap` masih ada di `EconomyConfig` —
+`economyConfigSchema` itu `.strict()`, jadi menghapusnya akan membuat baris
+config yang sudah tersimpan berhenti ter-parse. Panel admin tidak lagi
+mendaftarkannya, dan `tests/economy-config.test.ts` mengunci daftar itu.
 
-Penilaiannya memakai `progress` milik server yang baru saja disetel ke `now`,
-jadi tidak ada angka client yang ikut menentukan. `boostLaunchGraceLap`
-memaafkan tekanan yang tiba sepersekian putaran terlambat — toleransi latensi,
-diukur dalam posisi lintasan dan bukan detik, supaya mobil cepat tidak
-menghapus mekaniknya sendiri.
-
-Mekanik ini sengaja tidak menambah satu koin pun ke ekonomi: ia menambah
-variansi dan sebuah keputusan, bukan faucet. Operator bisa mematikannya dengan
-menyetel `boostCornerPenalty` ke 0.
+Satu-satunya keputusan berwaktu yang tersisa adalah **setup** — lihat
+`lib/car-setup.ts`. `lib/race-dynamics.ts` masih mensimulasikan grip, tikungan,
+dan selip, tapi seluruh isinya hanya sesi: ia tidak pernah menyentuh lap, koin,
+atau kolom yang tersimpan. `isCleanBoostLaunch` tinggal sebagai pembanding
+geometri untuk test; `tests/server-preview-parity.test.ts` menegaskan kedua
+penulis state tidak memanggilnya.
 
 ---
 

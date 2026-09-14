@@ -34,7 +34,12 @@ export type EconomyConfig = {
   lapRewardBase: number;
   lapRewardPerBattery: number;
   lapRewardPerCircuit: number;
-  /** Selisih pengali hadiah: P1 +nilai, P2 netral, P3 -nilai. */
+  /**
+   * Knob PENSIUN. Hadiah per putaran tidak pernah lagi bergantung posisi --
+   * `raceRewardAt` mengabaikannya sepenuhnya. Tetap di tipe untuk alasan yang
+   * sama dengan knob Gaspol di bawah: baris config lama harus tetap lolos
+   * skema yang `.strict()`.
+   */
   racePositionRewardStep: number;
 
   upgradeCostEngine: number;
@@ -48,28 +53,21 @@ export type EconomyConfig = {
    */
   maxUpgradeLevel: number;
 
+  /**
+   * Lima knob berikut -- termasuk `boostCornerPenalty` dan
+   * `boostLaunchGraceLap` -- adalah knob PENSIUN. Gaspol sudah dihapus dari
+   * permainan, panel admin tidak mendaftarkannya lagi
+   * (`tests/economy-config.test.ts` mengunci daftar itu), dan tidak ada
+   * settlement yang membacanya. Semuanya tetap di tipe supaya baris config lama
+   * yang sudah tersimpan sebagai jsonb tetap lolos `economyConfigSchema` yang
+   * `.strict()`.
+   */
   boostDurationSeconds: number;
   batteryRechargeSeconds: number;
-  /** Pengali laju saat boost menyala. Dulu literal `2` di tiga tempat. */
   boostMultiplier: number;
-  /**
-   * Bagian durasi Gaspol yang hangus kalau tombolnya ditekan saat mobil sedang
-   * di tikungan. 0 mematikan mekaniknya -- Gaspol kembali selalu penuh.
-   *
-   * Cooldown-nya TIDAK ikut dipotong: itu yang membuat salah tekan berbiaya.
-   * Lihat `boostDurationFor`.
-   */
+  /** Pensiun bersama Gaspol; lihat catatan di `boostDurationSeconds`. */
   boostCornerPenalty: number;
-  /**
-   * Panjang lintasan -- dalam pecahan satu putaran -- sesudah mulut tikungan
-   * yang masih dihitung sebagai tekan bersih. Ini toleransi latensi: pemain
-   * menekan di trek lurus, permintaannya tiba saat mobil sudah masuk tikungan.
-   *
-   * Sengaja diukur dalam posisi lintasan, bukan detik. Mobil cepat memang
-   * mendapat jendela waktu nyata yang lebih sempit -- itu kurva kesulitannya --
-   * sedangkan toleransi berbasis detik akan melahap sebagian besar tikungan
-   * begitu level upgrade naik dan mekaniknya jadi tidak ada artinya.
-   */
+  /** Pensiun bersama Gaspol; lihat catatan di `boostDurationSeconds`. */
   boostLaunchGraceLap: number;
 
   heartbeatCapSeconds: number;
@@ -92,6 +90,10 @@ export type EconomyConfig = {
 
   dailyMissionLapsTarget: number;
   dailyMissionEarnTarget: number;
+  /**
+   * Knob PENSIUN bersama Gaspol: `dailyMissionsFor` hanya membuat misi `laps`
+   * dan `earn`. Tetap di tipe supaya baris config lama tetap lolos skema.
+   */
   dailyMissionBoostTarget: number;
   dailyMissionCleanTarget: number;
   /** Budget is snapshotted when today's missions are created; edits apply next day. */
@@ -271,16 +273,11 @@ export const economyConfigSchema = z
     },
   )
   /**
-   * `calculateRaceSettlement` membagi waktu jadi dua: jendela heartbeat dibayar
-   * penuh, sisanya dibayar `offlineRate`. Boost hanya dihitung di dalam jendela
-   * heartbeat -- itu asumsi yang tertulis di `lib/game-economy.ts`, dan selama
-   * dua angka ini bisa disetel terpisah dari panel, asumsi itu tidak dijaga apa
-   * pun.
-   *
-   * Boost yang lebih panjang dari jendela heartbeat membuat ekornya dibayar
-   * dengan tarif normal kali `offlineRate`: pemain menekan Gaspol, tidak
-   * mendapat Gaspol, dan tidak ada satu pun error yang memberitahukannya. Tolak
-   * di sini, tempat operator masih bisa membacanya.
+   * Sisa dari masa Gaspol. Knob boost sudah pensiun -- tidak ada lagi jendela
+   * boost yang dihitung settlement -- tapi batas ini tetap ditegakkan supaya
+   * baris config lama yang masih menyimpan `boostDurationSeconds` tidak bisa
+   * dihidupkan kembali dalam bentuk yang tidak masuk akal. Ia tidak
+   * memengaruhi satu koin pun hari ini.
    */
   .refine(
     (value) => value.boostDurationSeconds <= value.heartbeatCapSeconds,
@@ -312,21 +309,14 @@ export function cosmeticPriceAt(e: EconomyConfig, tier: number) {
   return Math.max(1, Math.min(1_000_000_000, Math.ceil(hourly * e.cosmeticBaseHours * 2 ** (tier - 1))));
 }
 
-/** Jeda sampai Gaspol berikutnya, diukur dari saat tombol ditekan. Turunan. */
+/**
+ * Turunan dari knob Gaspol yang sudah pensiun. Tidak ada pemanggil di jalur
+ * permainan; keduanya tinggal untuk menjaga bentuk knob lama tetap teruji.
+ */
 export const boostCooldownSeconds = (e: EconomyConfig) =>
   e.boostDurationSeconds + e.batteryRechargeSeconds;
 
-/**
- * Durasi Gaspol yang benar-benar diberikan, tergantung tekanannya bersih atau
- * tidak. Menekan di tikungan memotong durasinya sebesar `boostCornerPenalty`.
- *
- * Cooldown-nya sengaja tetap `boostCooldownSeconds` yang penuh. Kalau
- * keduanya ikut memendek, salah tekan justru mempercepat Gaspol berikutnya dan
- * tidak ada yang perlu dipikirkan pemain; dengan cooldown tetap, tekanan yang
- * meleset membayar dengan waktu tunggu yang sama untuk hasil yang lebih
- * sedikit. Itu biayanya, dan tidak ada satu koin pun yang ditambahkan ke
- * ekonomi untuk membayarnya.
- */
+/** Sama pensiunnya dengan `boostCooldownSeconds`: hanya dipanggil test. */
 export const boostDurationFor = (e: EconomyConfig, clean: boolean) =>
   clean
     ? e.boostDurationSeconds

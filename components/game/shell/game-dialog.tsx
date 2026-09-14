@@ -116,10 +116,12 @@ function faqItems(game: GameState): { icon: typeof Flag; question: string; answe
 function WelcomeBack({
   offline,
   offlineCapSeconds,
+  offlineRate,
 }: {
   offline: OfflineEarnings;
-  /** Dari config ekonomi, bukan konstanta build -- lihat lib/economy-config.ts. */
+  /** Keduanya dari config ekonomi, bukan konstanta build -- lihat lib/economy-config.ts. */
   offlineCapSeconds: number;
+  offlineRate: number;
 }) {
   return (
     <div className="welcome-back">
@@ -147,7 +149,8 @@ function WelcomeBack({
       <p className="welcome-note">
         <Gauge aria-hidden="true" />
         <span>
-          Offline: ½ kecepatan, maksimal {formatDuration(offlineCapSeconds)}.
+          Offline: {Math.round(offlineRate * 100)}% kecepatan, maksimal{" "}
+          {formatDuration(offlineCapSeconds)}.
           {offline.capped
             ? ` Kamu pergi ${formatDuration(offline.awaySeconds)}; sisanya tidak dihitung.`
             : ""}
@@ -248,6 +251,7 @@ export function GameDialog({
               <WelcomeBack
                 offline={offline}
                 offlineCapSeconds={game.economy.offlineCapSeconds}
+                offlineRate={game.economy.offlineRate}
               />
             </div>
             <SheetFooter>
