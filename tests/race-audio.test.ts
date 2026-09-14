@@ -12,9 +12,21 @@ describe('race audio mix', () => {
     const fast = frame({ driving: { ...slow.driving, rpm: 12000, acceleration: 1 } });
     const before = structuredClone(fast);
     expect(raceAudioMix(fast).motorHz).toBeGreaterThan(raceAudioMix(slow).motorHz);
-    expect(raceAudioMix(fast).gearHz).toBeGreaterThan(raceAudioMix(slow).gearHz);
+    expect(raceAudioMix(fast).motorCutoff).toBeGreaterThan(raceAudioMix(slow).motorCutoff);
     expect(raceAudioMix(fast).motor).toBeGreaterThan(raceAudioMix(slow).motor);
     expect(fast).toEqual(before);
+  });
+
+  it('keeps motor texture low and removes the sustained gear whistle at every RPM', () => {
+    for (const rpm of [0, 900, 7200, 12000, 14000, 30000]) {
+      const mix = raceAudioMix(frame({ driving: { ...createDrivingState(), rpm, grip: 0 } }));
+      expect(mix.motorHz).toBeGreaterThanOrEqual(26);
+      expect(mix.motorHz).toBeLessThanOrEqual(62);
+      expect(mix.motorCutoff).toBeLessThanOrEqual(500);
+      expect(mix.scrubHz).toBeLessThanOrEqual(1400);
+      expect(mix).not.toHaveProperty('gearHz');
+      expect(mix).not.toHaveProperty('gear');
+    }
   });
 
   it('adds rubber scrub and roller contact only with visible ground movement', () => {
