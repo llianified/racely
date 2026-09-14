@@ -314,11 +314,24 @@ function applyUpgrade(
   };
 }
 
+/**
+ * Preview hanya hidup saat `pnpm dev`, dan progresnya cuma cookie sekali pakai.
+ * Menunggu ratusan putaran cuma untuk melihat trek berikutnya tidak menguji apa
+ * pun, jadi semua sirkuit dibuka di sini. Ambang aslinya tetap utuh di
+ * `lib/game-server.ts` — itu jalur produksi, dan test yang menjaganya.
+ */
+const unlockAllCircuits = (economy: EconomyConfig): EconomyConfig => ({
+  ...economy,
+  circuitUnlockLaps: 0,
+  technicalUnlockLaps: 0,
+});
+
 export function getPreviewGameState(
   request: Request,
   identity: PlayerIdentity,
-  economy: EconomyConfig,
+  config: EconomyConfig,
 ) {
+  const economy = unlockAllCircuits(config);
   const now = Date.now();
   const { game, offline } = settlePreviewGame(
     readPreviewGame(request, identity, economy),
@@ -333,8 +346,9 @@ export function performPreviewGameAction(
   identity: PlayerIdentity,
   requestId: string,
   action: GameCommand | z.infer<typeof previewCarActionSchema>["action"],
-  economy: EconomyConfig,
+  config: EconomyConfig,
 ) {
+  const economy = unlockAllCircuits(config);
   const now = Date.now();
   const settled = settlePreviewGame(
     readPreviewGame(request, identity, economy),
