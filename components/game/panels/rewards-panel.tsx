@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { InfoHint } from "./info-hint";
+import { DailyMissionsPanel } from "./daily-missions-panel";
+import { dailyMissionClaimable, type DailyMissionKind } from "@/lib/daily-missions";
 import { SectionCardHeading } from "../shell/section-card-heading";
 import { StatHero } from "../shell/stat-hero";
 import { cn } from "@/lib/utils";
@@ -58,7 +60,8 @@ export function claimableTotal(game: GameState) {
     Math.floor(game.pending) +
     (game.rewardClaimed ? 0 : game.economy.starterGift) +
     game.daily.reward +
-    missionTotal
+    missionTotal +
+    dailyMissionClaimable(game.dailyMissions)
   );
 }
 
@@ -96,6 +99,7 @@ export function RewardsPanel({
   onClaimDaily,
   onClaimGift,
   onClaimMission,
+  onClaimDailyMission,
   onClaimAll,
   disabled = false,
 }: {
@@ -104,6 +108,7 @@ export function RewardsPanel({
   onClaimDaily: () => void;
   onClaimGift: () => void;
   onClaimMission: (id: MissionId) => void;
+  onClaimDailyMission: (day: string, kind: DailyMissionKind) => void;
   onClaimAll: () => void;
   disabled?: boolean;
 }) {
@@ -159,7 +164,8 @@ export function RewardsPanel({
   });
   const readyCount =
     rewards.filter((row) => row.state === "ready").length +
-    missionRows.filter((row) => row.state === "ready").length;
+    missionRows.filter((row) => row.state === "ready").length +
+    (game.dailyMissions?.items.filter(item => !item.claimed && game.dailyMissions!.values[item.kind] >= item.target).length ?? 0);
   const missionsDone = missionRows.filter((row) => row.state === "claimed").length;
 
   return (
@@ -239,6 +245,8 @@ export function RewardsPanel({
         </ul>
       </section>
 
+      <DailyMissionsPanel daily={game.dailyMissions} disabled={disabled} onClaim={onClaimDailyMission} />
+
       <section
         id="missions"
         tabIndex={-1}
@@ -247,7 +255,7 @@ export function RewardsPanel({
       >
         <SectionCardHeading
           icon={Trophy}
-          title="Misi"
+          title="Misi awal · sekali klaim"
           aside={
             <Badge variant="secondary">
               {missionsDone}/{missionRows.length} selesai

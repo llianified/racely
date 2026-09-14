@@ -85,6 +85,13 @@ export type EconomyConfig = {
   missionEarnTarget: number;
   missionEarnReward: number;
 
+  dailyMissionLapsTarget: number;
+  dailyMissionEarnTarget: number;
+  dailyMissionBoostTarget: number;
+  dailyMissionCleanTarget: number;
+  /** Budget is snapshotted when today's missions are created; edits apply next day. */
+  dailyMissionRewardCap: number;
+  cosmeticBaseHours: number;
   circuitUnlockLaps: number;
 };
 
@@ -138,6 +145,12 @@ export const DEFAULT_ECONOMY: EconomyConfig = {
   missionEarnTarget: 25,
   missionEarnReward: 15,
 
+  dailyMissionLapsTarget: 60,
+  dailyMissionEarnTarget: 5,
+  dailyMissionBoostTarget: 3,
+  dailyMissionCleanTarget: 2,
+  dailyMissionRewardCap: 6,
+  cosmeticBaseHours: 6,
   circuitUnlockLaps: 25,
 };
 
@@ -213,6 +226,12 @@ export const economyConfigSchema = z
     missionEarnTarget: coin,
     missionEarnReward: rewardCoin,
 
+    dailyMissionLapsTarget: z.number().int().min(1).max(10_000_000),
+    dailyMissionEarnTarget: positive,
+    dailyMissionBoostTarget: z.number().int().min(1).max(10_000),
+    dailyMissionCleanTarget: z.number().int().min(1).max(10_000),
+    dailyMissionRewardCap: z.number().int().min(0).max(1_000_000),
+    cosmeticBaseHours: z.number().finite().min(1).max(1_000),
     circuitUnlockLaps: lapCount,
   })
   .strict()
@@ -267,6 +286,13 @@ export function resolveEconomyConfig(stored: unknown): EconomyConfig {
   const merged = { ...DEFAULT_ECONOMY, ...(stored as Record<string, unknown>) };
   const parsed = economyConfigSchema.safeParse(merged);
   return parsed.success ? parsed.data : DEFAULT_ECONOMY;
+}
+
+/** Baseline level-one racing income, without boost; identical prices for all players. */
+export function cosmeticPriceAt(e: EconomyConfig, tier: number) {
+  const levels = { engine: 1, tires: 1, battery: 1 };
+  const hourly = 3600 / lapSecondsAt(e, levels, false) * raceRewardAt(e, levels, 0, false);
+  return Math.max(1, Math.min(1_000_000_000, Math.ceil(hourly * e.cosmeticBaseHours * 2 ** (tier - 1))));
 }
 
 /** Jeda sampai Gaspol berikutnya, diukur dari saat tombol ditekan. Turunan. */

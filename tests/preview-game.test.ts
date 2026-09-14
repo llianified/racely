@@ -221,6 +221,7 @@ describe("Preview car selection", () => {
       ...state,
       carSelection: { model: null, returningPlayer: true },
       referral: offered.state.referral,
+      dailyMissions: offered.state.dailyMissions,
     });
     // Mode preview cuma punya satu pemain, jadi tidak ada ajakan yang terhitung.
     expect(offered.state.referral).toMatchObject({ invited: 0, earned: 0 });
@@ -232,6 +233,7 @@ describe("Preview car selection", () => {
       color: selectLuna.color,
       carSelection: { model: "luna-gt", returningPlayer: true },
       referral: selected.state.referral,
+      dailyMissions: offered.state.dailyMissions,
     });
   });
 

@@ -11,6 +11,8 @@ import { CarColorPicker } from "../car/car-color-picker";
 import { SectionCardHeading } from "../shell/section-card-heading";
 import { InfoHint } from "./info-hint";
 import { BodyPartsShop } from "./body-parts-shop";
+import { PaintCollection } from "./paint-collection";
+import { PAINT_CATALOG, PAINT_IDS, type PaintCommand } from "@/lib/car-paints";
 import type { PartCommand } from "@/lib/car-parts";
 import { gripTuning, powertrainTuning } from "@/lib/race-dynamics";
 import { coins, displaySpeedKmh, formatCoins, formatSpeedKmh, lapReward, lapSeconds, modificationPreview, totalLevel, type GameState, type Upgrade } from "@/lib/game";
@@ -64,6 +66,7 @@ export const GaragePanel = memo(function GaragePanel({
   onPreviewSheet,
   onChooseColor,
   onPartAction,
+  onPaintAction,
   disabled = false,
 }: {
   game: GameState;
@@ -73,11 +76,12 @@ export const GaragePanel = memo(function GaragePanel({
   onPreviewSheet: (open: boolean) => void;
   onChooseColor: (color: CarColor, name: string) => void;
   onPartAction: (action: PartCommand) => Promise<boolean>;
+  onPaintAction: (action: PaintCommand) => Promise<boolean>;
   disabled?: boolean;
 }) {
   const model = game.carSelection?.model ?? "neo-falcon";
   const car = CAR_CATALOG[model];
-  const colorName = car.colors.find((choice) => choice.color === game.color)?.name ?? "pilihan";
+  const colorName = car.colors.find((choice) => choice.color === game.color)?.name ?? PAINT_IDS.map(id => PAINT_CATALOG[id]).find(paint => paint.color === game.color)?.name ?? "pilihan";
   return (
     <>
       <section id="body-colors" tabIndex={-1} className="panel garage-panel" aria-label="Mobil kamu">
@@ -106,6 +110,7 @@ export const GaragePanel = memo(function GaragePanel({
         </dl>
       </section>
       <BodyPartsShop game={game} active={active} disabled={disabled} onAction={onPartAction} onPreviewSheet={onPreviewSheet} />
+      <PaintCollection game={game} disabled={disabled} onAction={onPaintAction} />
     </>
   );
 });
