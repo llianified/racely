@@ -20,6 +20,7 @@ import { RacePanel, RaceReward } from "./race/race-panel";
 import { CarSelection } from "./car/car-selection";
 import {
   GameRequestError,
+  createGameActionSender,
   isSessionExpired,
   readGameResponse,
   requestHeaders,
@@ -64,6 +65,7 @@ export function GameDashboard() {
   const [dialog, setDialog] = useState<DialogKind | null>(null);
   const [welcomeBack, setWelcomeBack] = useState<OfflineEarnings | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [sendAction] = useState(createGameActionSender);
   const [raceMounted, setRaceMounted] = useState(false);
   const [garageMounted, setGarageMounted] = useState(false);
   // Lembar modifikasi dan toko aero masing-masing membawa panggung 3D sendiri.
@@ -219,17 +221,7 @@ export function GameDashboard() {
     mutationLocked.current = true;
     setBusyAction(actionKey);
     try {
-      const response = await fetch("/api/game/action", {
-        method: "POST",
-        signal: AbortSignal.timeout(15000),
-        headers: {
-          "Content-Type": "application/json",
-          ...requestHeaders(initData),
-        },
-        body: JSON.stringify({ requestId: crypto.randomUUID(), action }),
-        credentials: "same-origin",
-      });
-      const next = await readGameResponse(response);
+      const next = await sendAction(action, initData);
       dispatch({ type: "hydrate", state: next });
       await mutate(next, { revalidate: false });
       telegramHaptic();
@@ -239,7 +231,7 @@ export function GameDashboard() {
       // 429 "Terlalu banyak aksi…"). Menampilkan "Aksi gagal" untuk semuanya
       // membuang satu-satunya keterangan yang dimiliki pemain.
       toast.error(
-        cause instanceof GameRequestError ? cause.message : "Aksi gagal",
+        cause instanceof GameRequestError ? cause.message : "Hasil aksi belum terkonfirmasi. Coba lagi dengan aksi yang sama.",
       );
       return null;
     } finally {

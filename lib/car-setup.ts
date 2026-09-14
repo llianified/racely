@@ -324,13 +324,16 @@ export function setupLapSeconds(
   // setup netral.
   const cornerSeconds = baseSeconds - straightSeconds;
   // Suku keluar-tikungan: negatif untuk gear pendek (lebih galak menarik lagi),
-  // positif untuk gear panjang, dan tepat nol untuk gear bawaan. Diskalakan
-  // dengan banyaknya tikungan -- trek berisi empat tikungan menuntut dua kali
-  // lebih banyak akselerasi keluar daripada oval berisi dua.
+  // positif untuk gear panjang, dan tepat nol untuk gear bawaan. Sudut belok
+  // dibobot ketajamannya: membagi satu tikungan menjadi beberapa section tidak
+  // boleh melipatgandakan bonus Torque. Oval menjadi patokan satu putaran penuh.
+  const cornerExitDemand = layout.sections.reduce((sum, section) =>
+    sum + section.severity * section.geometry.reduce((turn, primitive) =>
+      turn + (primitive.kind === "arc" ? Math.abs(primitive.turn) : 0), 0), 0) / (2 * Math.PI);
   const cornerExitSeconds =
     baseSeconds *
     CORNER_EXIT_SHARE *
-    (layout.cornerCount / 2) *
+    cornerExitDemand *
     (1 / performance.accel - 1);
   return (
     straightSeconds / performance.speed +

@@ -9,23 +9,26 @@ export function createSetupFeedback() {
 export type SetupFeedback = ReturnType<typeof createSetupFeedback>
 
 // The server exposes an expected rate, not timestamped crash events. Distribute
-// that SAME rate over its two corners for presentation only; never settle laps.
-export function stepSetupFeedback(state: DrivingState, feedback: SetupFeedback, delta: number, progress: number, performance: SetupPerformance) {
+// that SAME rate over the active layout's corners for presentation only; never settle laps.
+export function stepSetupFeedback(state: DrivingState, feedback: SetupFeedback, delta: number, progress: number, performance: SetupPerformance, layout: TrackLayout = trackLayoutAt(0)) {
   const dt = Number.isFinite(delta) ? Math.max(0, Math.min(delta, .1)) : 0
   if (!dt) return
-  const cornerProgress = trackCornerProgress(progress)
-  const corner = cornerProgress >= 0
-  const entered = corner && !state.corner
-  const exited = !corner && state.corner
-  if (entered) {
-    feedback.courseOutBudget += performance.courseOutsPerLap / 2
-    feedback.scheduled = feedback.courseOutBudget >= 1 - 1e-9
-    state.cornerFailed = false
-  }
+  const { section, sectionProgress } = trackPositionAt(progress, layout)
+  const corner = section.severity > 0
+  const cornerProgress = corner ? sectionProgress : -1
+  const changedSection = feedback.sectionId !== section.id
+  const entered = corner && (!state.corner || changedSection)
+  const exited = state.corner && (!corner || changedSection)
   if (exited) {
     if (!state.cornerFailed) state.cleanCorners += 1
     feedback.scheduled = false
   }
+  if (entered) {
+    feedback.courseOutBudget += performance.courseOutsPerLap / layout.cornerCount
+    feedback.scheduled = feedback.courseOutBudget >= 1 - 1e-9
+    state.cornerFailed = false
+  }
+  feedback.sectionId = section.id
   state.corner = corner
   state.cornerProgress = cornerProgress
   state.shield = 0
