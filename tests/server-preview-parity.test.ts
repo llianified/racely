@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { batteryTelemetry, boostCooldownSeconds } from "../lib/game";
-import { DEFAULT_ECONOMY } from "../lib/economy-config";
+import { boostDurationFor, DEFAULT_ECONOMY } from "../lib/economy-config";
+import { isCleanBoostLaunch } from "../lib/race-dynamics";
 
 /**
  * Timing boost sekarang datang dari config ekonomi, bukan konstanta modul.
@@ -11,6 +12,14 @@ import { DEFAULT_ECONOMY } from "../lib/economy-config";
  */
 const E = DEFAULT_ECONOMY;
 const BOOST_DURATION_SECONDS = E.boostDurationSeconds;
+/**
+ * Dua posisi lintasan yang dipilih dari geometri trek, bukan ditebak: separuh
+ * awal tiap setengah putaran adalah trek lurus dan sisanya tikungan. 0,45
+ * jatuh jauh di dalam tikungan pertama -- di luar jangkauan toleransi telat --
+ * dan 0,1 jatuh di tengah trek lurus.
+ */
+const CORNER_PROGRESS = 0.45;
+const STRAIGHT_PROGRESS = 0.1;
 const BATTERY_RECHARGE_SECONDS = E.batteryRechargeSeconds;
 const BOOST_COOLDOWN_SECONDS = boostCooldownSeconds(E);
 
@@ -64,6 +73,21 @@ function fundedCookie(balance: number) {
   decoded.state.balance = balance;
   decoded.state.carSelection = { model: "luna-gt", returningPlayer: false };
   decoded.state.color = "#b9a1ed";
+  return Buffer.from(JSON.stringify(decoded), "utf8").toString("base64url");
+}
+
+/**
+ * Pola yang sama, untuk posisi lintasan: menempatkan mobil di tikungan dengan
+ * benar-benar membalap ke sana butuh detik sungguhan, sedangkan yang diuji di
+ * sini adalah keputusannya, bukan cara sampai ke posisi itu. `updatedAt`
+ * disetel ke sekarang supaya penyelesaian tidak sempat menggeser posisinya.
+ */
+function cookieAtProgress(progress: number) {
+  const decoded = JSON.parse(
+    Buffer.from(fundedCookie(0), "base64url").toString("utf8"),
+  );
+  decoded.state.progress = progress;
+  decoded.updatedAt = Date.now();
   return Buffer.from(JSON.stringify(decoded), "utf8").toString("base64url");
 }
 
@@ -150,9 +174,11 @@ describe("Boost timing has one source of truth", () => {
     // konstanta di lib/game.ts hanya dibaca UI -- mengubah konstanta itu tidak
     // mengubah permainan sama sekali, hanya membuat meterannya berbohong.
     for (const source of [gameServerSource, previewSource]) {
-      // Nama berubah saat timing boost pindah ke config; yang dijaga tetap
-      // sama: keduanya membaca satu sumber, bukan angka yang ditulis lepas.
-      expect(source).toContain("economy.boostDurationSeconds");
+      // Namanya sudah dua kali berubah -- konstanta modul, lalu
+      // `economy.boostDurationSeconds`, sekarang `boostDurationFor` yang ikut
+      // menimbang tekanan bersih. Yang dijaga tetap sama: keduanya membaca satu
+      // sumber, bukan angka yang ditulis lepas.
+      expect(source).toContain("boostDurationFor(economy,");
       expect(source).toContain("boostCooldownSeconds(");
     }
     expect(gameServerSource).not.toContain("35_000");
@@ -165,6 +191,72 @@ describe("Boost timing has one source of truth", () => {
     expect(() => act(boosted.cookieValue, { type: "boost" })).toThrow(
       "Boost masih mengisi ulang",
     );
+  });
+
+  /**
+   * Potongan tikungan ditulis manual di kedua penulis, persis seperti sisa
+   * `performGameAction` / `performPreviewGameAction`. Yang bisa menyimpang
+   * bukan rumusnya -- itu satu fungsi bersama -- melainkan APA yang disodorkan
+   * ke rumus itu: server memberi `row.progress`, preview memberi
+   * `state.progress`, dan keduanya harus posisi lintasan yang sudah disetel ke
+   * `now`, bukan posisi permintaan sebelumnya.
+   */
+  it("judges the launch from the freshly settled track position", () => {
+    for (const source of [gameServerSource, previewSource]) {
+      expect(source).toContain("isCleanBoostLaunch(");
+      expect(source).toContain("economy.boostLaunchGraceLap");
+    }
+    // Cooldown tidak boleh ikut dipotong: kalau ia dihitung dari durasi yang
+    // sudah dipangkas, salah tekan justru mempercepat Gaspol berikutnya.
+    expect(gameServerSource).toContain("boostCooldownSeconds(economy)");
+    expect(previewSource).toContain("boostCooldownSeconds(economy)");
+  });
+
+  it("picks its sample positions from the real track geometry", () => {
+    expect(isCleanBoostLaunch(CORNER_PROGRESS, E.boostLaunchGraceLap)).toBe(
+      false,
+    );
+    expect(isCleanBoostLaunch(STRAIGHT_PROGRESS, E.boostLaunchGraceLap)).toBe(
+      true,
+    );
+  });
+
+  it("shortens the preview boost for a launch taken in a corner", () => {
+    const corner = cookieAtProgress(CORNER_PROGRESS);
+    const boosted = act(corner, { type: "boost" });
+    expect(boosted.state.boostLaunch).toEqual({
+      clean: false,
+      seconds: boostDurationFor(E, false),
+    });
+    expect(boosted.state.boostLeft).toBe(boostDurationFor(E, false));
+    // Tekanan yang meleset membayar waktu tunggu yang sama untuk hasil yang
+    // lebih sedikit -- itu seluruh biayanya.
+    expect(boosted.state.cooldown).toBe(BOOST_COOLDOWN_SECONDS);
+  });
+
+  it("pays the full window for a launch taken on the straight", () => {
+    const straight = cookieAtProgress(STRAIGHT_PROGRESS);
+    const boosted = act(straight, { type: "boost" });
+    expect(boosted.state.boostLaunch).toEqual({
+      clean: true,
+      seconds: BOOST_DURATION_SECONDS,
+    });
+    expect(boosted.state.boostLeft).toBe(BOOST_DURATION_SECONDS);
+  });
+
+  /**
+   * Transien seperti `offlineEarnings`: satu absensi yang dilaporkan ulang di
+   * tiap respons berikutnya akan memunculkan toast "tikungan" berkali-kali
+   * untuk satu tekanan yang sudah lama berlalu.
+   */
+  it("reports the launch once and keeps it out of the cookie", () => {
+    const boosted = act(cookieAtProgress(CORNER_PROGRESS), { type: "boost" });
+    expect(boosted.state.boostLaunch).toBeDefined();
+    expect(boosted.cookieValue).not.toContain("boostLaunch");
+    expect(
+      getPreviewGameState(request(boosted.cookieValue), identity, E).state
+        .boostLaunch,
+    ).toBeUndefined();
   });
 });
 

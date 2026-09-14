@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { batteryTelemetry, coins, formatCoins, lapReward, lapSeconds, raceOpponentLapSeconds, racePosition, type GameState } from "@/lib/game";
 import { RaceOverviewHud, RacePositionHud } from "./race-overview-hud";
 import { cn } from "@/lib/utils";
-import { createDrivingState } from "@/lib/race-dynamics";
+import { createDrivingState, isCleanBoostLaunch } from "@/lib/race-dynamics";
 import { RaceSwitch, SettingRow } from "./setting-row";
 
 const RaceScene = dynamic(() => import("../scene/race-scene"), {
@@ -66,20 +66,31 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
   const opponents = raceOpponentLapSeconds(game);
   const position = racePosition(game);
   const boosted = game.boostLeft > 0;
+  // Prediksi yang memakai fungsi dan posisi lintasan yang sama persis dengan
+  // penilaian server, supaya tombol tidak pernah menjanjikan durasi penuh untuk
+  // tekanan yang akan dipotong. Tombolnya TIDAK dinonaktifkan: menekan di
+  // tikungan tetap boleh -- itu pilihannya, lengkap dengan biayanya.
+  const cornerLaunch =
+    game.economy.boostCornerPenalty > 0 &&
+    !isCleanBoostLaunch(game.progress, game.economy.boostLaunchGraceLap);
   const boostLabel = boosting
     ? "Memulai…"
     : boosted
       ? "Gaspol aktif"
       : game.cooldown > 0
         ? "Mengisi ulang"
-        : `Gaspol ${game.economy.boostMultiplier}×`;
+        : cornerLaunch
+          ? "Tunggu lurus"
+          : `Gaspol ${game.economy.boostMultiplier}×`;
   const boostLabelForAssistiveTechnology = boosting
     ? "Memulai Gaspol"
     : boosted
       ? `Gaspol aktif, ${Math.ceil(game.boostLeft)} detik tersisa`
       : game.cooldown > 0
         ? `Baterai mengisi ulang, siap dalam ${battery.readyIn} detik`
-        : `Aktifkan Gaspol, kecepatan ${game.economy.boostMultiplier} kali selama ${game.economy.boostDurationSeconds} detik`;
+        : cornerLaunch
+          ? "Mobil sedang di tikungan; menekan sekarang memperpendek Gaspol, tunggu trek lurus untuk durasi penuh"
+          : `Aktifkan Gaspol, kecepatan ${game.economy.boostMultiplier} kali selama ${game.economy.boostDurationSeconds} detik`;
   const fullscreen = async () => {
     try {
       if (document.fullscreenElement) {
