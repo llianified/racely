@@ -235,13 +235,20 @@ describeDatabase("Neon Postgres persistence", () => {
       // Nol lap, mobil kosong, dan sesi preview tidak pernah ikut turun balap.
       expect(JSON.stringify(rivals)).not.toMatch(/Belum balapan|Tanpa mobil|Preview/);
 
-      // Pemuncak klasemen hanya punya tetangga di bawahnya -- tidak ada bot
-      // yang dipasang untuk menggenapi arena.
+      // Pemuncak klasemen tidak punya tetangga di atas, jadi KEDUA lawannya
+      // diambil dari bawah -- terdekat lebih dulu. Itu yang dijanjikan FAQ
+      // ("di ujung klasemen, keduanya bisa berada di sisi yang sama") dan yang
+      // membuat `below` mengambil LIMIT 2: sisi yang kosong dipenuhi pemain
+      // ASLI berikutnya, bukan bot. Assertion ini sempat menuntut satu lawan
+      // saja, dan query-nya memang tidak pernah bisa memenuhinya.
       const leader = await getRaceOpponents("10", E, client);
       expect(leader.rank).toBe(1);
       expect(leader.opponents.map(({ name, side }) => ({ name, side }))).toEqual([
         { name: "Tepat di atas", side: "below" },
+        { name: "Aku", side: "below" },
       ]);
+      // Yang menggenapi arena tetap harus pemain sungguhan.
+      expect(JSON.stringify(leader)).not.toMatch(/Belum balapan|Tanpa mobil|Preview/);
 
       // Lap yang seri diputus created_at, bukan dibiarkan memilih dirinya sendiri.
       await client.query(`UPDATE racely_players SET laps = 100 WHERE user_id IN ('20', '40')`);
