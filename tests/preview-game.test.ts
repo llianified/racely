@@ -8,8 +8,9 @@ import type { GameState } from "../lib/game";
 vi.mock("server-only", () => ({}));
 import { getPreviewGameState, performPreviewGameAction, PREVIEW_GAME_COOKIE, previewCarActionSchema } from "../lib/preview-game";
 
-/** Mode preview memakai config yang sama dengan server; di sini yang bawaan. */
+/** Preview preserves the economy except for its intentionally unlocked circuits. */
 const E = DEFAULT_ECONOMY;
+const previewEconomy = { ...E, circuitUnlockLaps: 0, technicalUnlockLaps: 0 };
 const now = new Date("2026-09-12T00:00:00Z");
 const identity = { userId: `preview:${randomUUID()}`, displayName: "Preview Racer", username: "preview", photoUrl: null, startParam: null };
 const request = (cookie?: string) => new Request("http://localhost/api/game", { headers: cookie ? { cookie: `${PREVIEW_GAME_COOKIE}=${cookie}` } : {} });
@@ -66,6 +67,22 @@ describe("Preview body parts", () => {
 });
 
 describe("Preview check-in harian", () => {
+  it("keeps responses and actions on the settled day when the clock rolls back", () => {
+    const fresh = getPreviewGameState(request(), identity, E);
+    const selected = action(fresh.cookieValue, selectLuna);
+    const midnight = new Date("2026-09-12T17:00:00Z");
+    vi.setSystemTime(midnight);
+    const claimed = action(selected.cookieValue, { type: "daily" });
+    vi.setSystemTime(new Date(midnight.getTime() - 1000));
+    const reloaded = getPreviewGameState(request(claimed.cookieValue), identity, E);
+    expect(reloaded.state.daily).toEqual(claimed.state.daily);
+    expect(reloaded.state.dailyMissions).toEqual(claimed.state.dailyMissions);
+    const retry = action(reloaded.cookieValue, { type: "daily" });
+    expect(retry.state.balance).toBe(claimed.state.balance);
+    expect(retry.state.daily).toEqual(claimed.state.daily);
+    expect(JSON.parse(Buffer.from(retry.cookieValue, "base64url").toString()).updatedAt).toBe(midnight.getTime());
+  });
+
   const racing = () => {
     const fresh = getPreviewGameState(request(), identity, E);
     return action(fresh.cookieValue, selectLuna).cookieValue;
@@ -105,6 +122,21 @@ describe("Preview check-in harian", () => {
 });
 
 describe("Preview offline earnings", () => {
+  it("does not pay a settled interval twice after the clock moves backwards", () => {
+    const fresh = getPreviewGameState(request(), identity, E);
+    const selected = action(fresh.cookieValue, selectLuna);
+    vi.setSystemTime(new Date(now.getTime() + 16000));
+    const paid = action(selected.cookieValue, { type: "sync" });
+    vi.setSystemTime(new Date(now.getTime() + 8000));
+    const stale = action(paid.cookieValue, { type: "sync" });
+    expect(stale.state).toEqual(paid.state);
+    expect(JSON.parse(Buffer.from(stale.cookieValue, "base64url").toString()).updatedAt).toBe(now.getTime() + 16000);
+    vi.setSystemTime(new Date(now.getTime() + 24000));
+    const next = action(stale.cookieValue, { type: "sync" });
+    expect(next.state.laps).toBe(3);
+    expect(next.state.pending).toBe(.12);
+  });
+
   const racing = () => {
     const fresh = getPreviewGameState(request(), identity, E);
     return action(fresh.cookieValue, selectLuna).cookieValue;
@@ -219,6 +251,7 @@ describe("Preview car selection", () => {
     const offered = getPreviewGameState(request(cookie), identity, E);
     expect(offered.state).toEqual({
       ...state,
+      economy: previewEconomy,
       carSelection: { model: null, returningPlayer: true },
       referral: offered.state.referral,
       dailyMissions: offered.state.dailyMissions,
@@ -230,6 +263,7 @@ describe("Preview car selection", () => {
     const selected = action(offered.cookieValue, selectLuna);
     expect(selected.state).toEqual({
       ...state,
+      economy: previewEconomy,
       color: selectLuna.color,
       carSelection: { model: "luna-gt", returningPlayer: true },
       referral: selected.state.referral,
