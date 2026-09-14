@@ -1,8 +1,14 @@
 import Image from "next/image";
 
-export function BootScreen() {
+/**
+ * `overlay` menahan layar boot DI ATAS layar lain yang sedang dirender diam-diam
+ * di belakangnya (onboarding menunggu panggung 3D-nya siap), jadi elemennya
+ * bukan <main>: halaman di belakangnya sudah punya satu.
+ */
+export function BootScreen({ overlay = false }: { overlay?: boolean } = {}) {
+  const Root = overlay ? "div" : "main";
   return (
-    <main className="boot-screen font-sans">
+    <Root className={overlay ? "boot-screen boot-overlay font-sans" : "boot-screen font-sans"}>
       <p className="boot-eyebrow">YOUR NEXT LAP STARTS HERE</p>
 
       <div className="boot-content">
@@ -46,6 +52,6 @@ export function BootScreen() {
         <span>UPGRADE</span><span aria-hidden="true">/</span>
         <span>BALAPAN</span>
       </p>
-    </main>
+    </Root>
   );
 }

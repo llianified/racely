@@ -4,7 +4,6 @@ import { CalendarCheck, Check, Coins, Flag, Gift, LockKeyhole, Trophy, Wrench } 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { InfoHint } from "./info-hint";
 import { DailyMissionsPanel } from "./daily-missions-panel";
 import { dailyMissionClaimable, type DailyMissionKind } from "@/lib/daily-missions";
 import { SectionCardHeading } from "../shell/section-card-heading";
@@ -174,12 +173,6 @@ export function RewardsPanel({
         ariaLabel="Total hadiah siap diklaim"
         label="Siap diklaim"
         figure={formatCoins(total)}
-        info={
-          <InfoHint title="Tentang hadiah">
-            Semua hadiah berupa koin Racely. Pakai buat upgrade mesin atau
-            kosmetik mobil di garasi.
-          </InfoHint>
-        }
         action={
           <Button
             variant="gold"

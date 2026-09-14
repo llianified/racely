@@ -12,7 +12,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { InfoHint } from "./info-hint";
 import { SectionCardHeading } from "../shell/section-card-heading";
 import { StatHero } from "../shell/stat-hero";
 import { cn } from "@/lib/utils";
@@ -134,14 +133,6 @@ export function WalletPanel({
         ariaLabel="Saldo koin"
         label="Koin kamu"
         figure={formatCoins(balance)}
-        info={
-          <InfoHint title="Cara kerja saldo">
-            Koin dari balapan masuk ke &quot;belum diklaim&quot; dulu. Setiap 1
-            koin penuh bisa kamu klaim ke saldo. Saldo bisa ditarik ke e-wallet
-            atau rekening bank saat mencapai {coins(minWithdraw)}, dengan nilai
-            1 koin = {idr(1, economy)}.
-          </InfoHint>
-        }
         action={
           <Button
             variant="gold"

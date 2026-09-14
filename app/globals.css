@@ -347,7 +347,7 @@
 .garage-parts-slots dd svg { width: var(--icon-xs); height: var(--icon-xs); color: var(--accent); flex-shrink: 0; }
 /* Kaki menempel ke tepi kartu (margin negatif menelan padding .garage-parts)
    supaya garis pemisahnya penuh dari sisi ke sisi, seperti kaki .game-sheet. */
-.garage-parts-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); margin: var(--space-md) calc(var(--space-md) * -1) calc(var(--space-md) * -1); padding: var(--space-sm) var(--space-md); border-top: var(--stroke) solid var(--border); border-radius: 0 0 var(--corner-box) var(--corner-box); background: color-mix(in srgb, var(--background) 34%, var(--card)); }
+.garage-parts-foot { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-md); margin: var(--space-md) calc(var(--space-md) * -1) calc(var(--space-md) * -1); padding: var(--space-sm) var(--space-md); border-top: var(--stroke) solid var(--border); border-radius: 0 0 var(--corner-box) var(--corner-box); background: color-mix(in srgb, var(--background) 34%, var(--card)); }
 .garage-parts-foot > p { min-width: 0; font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); text-wrap: pretty; }
 .garage-parts-foot > p > strong { color: var(--foreground); font-variant-numeric: tabular-nums; }
 .garage-parts-foot > [data-slot='button'] { flex-shrink: 0; }
@@ -494,14 +494,18 @@
   button:not(:disabled), [role='button']:not(:disabled), summary { cursor: pointer; }
   button, a, summary { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
   button:focus-visible, a:focus-visible, summary:focus-visible, [tabindex='-1']:focus-visible { outline: var(--focus-w) solid var(--ring); outline-offset: var(--focus-offset); }
-  button { transition: background var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast), transform var(--dur-fast); }
-  button:active:not(:disabled) { transform: translateY(1px); }
+  button { transition: background var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast); }
   ::selection { background: var(--primary); color: var(--foreground); }
   [id] { scroll-margin-top: var(--scroll-offset-top); }
   html { scroll-padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + var(--space-md)); }
 }
 
 .car-selection { width: 100%; max-width: var(--app-width); min-height: 100dvh; margin-inline: auto; padding: calc(var(--space-20) + var(--safe-top)) calc(var(--space-20) + var(--safe-right)) calc(var(--space-20) + var(--safe-bottom)) calc(var(--space-20) + var(--safe-left)); display: flex; flex-direction: column; gap: var(--space-20); background: var(--background); color: var(--foreground); font-size: var(--fs-body); line-height: var(--lh-normal); animation: boot-enter var(--anim-select-enter) ease-out both; }
+/* Panggung 3D butuh ukuran nyata supaya canvas-nya bisa dibuat, jadi layar
+   onboarding tetap dirender di belakang boot screen -- disembunyikan, bukan
+   dilepas -- sampai mobilnya benar-benar siap. */
+.car-selection[data-booting='true'] { visibility: hidden; animation: none; }
+.boot-overlay { position: fixed; inset: 0; z-index: 60; overflow: hidden; background: var(--background); }
 .selection-header { display: flex; flex-direction: column; gap: var(--space-20); }
 .selection-topline { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); }
 .selection-brand { display: flex; align-items: center; gap: var(--space-sm); font-size: var(--fs-2xl); font-weight: var(--fw-ultra); letter-spacing: var(--track-tight-xl); line-height: var(--lh-none); }
@@ -716,7 +720,7 @@
 
 /* ── keluarga tombol tekan: muka turun, alas tetap di tempat ─────────────── */
 .press-button { --press-depth: var(--space-3); --press-shift: var(--space-2); --press-shadow-color: var(--border); border-radius: var(--press-radius); box-shadow: 0 var(--press-depth) 0 var(--press-shadow-color), var(--press-inset-shadow, 0 0 transparent); }
-.press-button:active:not(:disabled) { translate: none; transform: translateY(var(--press-shift)); box-shadow: 0 calc(var(--press-depth) - var(--press-shift)) 0 var(--press-shadow-color), var(--press-inset-shadow, 0 0 transparent); }
+.press-button:active:not(:disabled) { translate: none; transform: none; }
 
 /* ── tombol emas: warna khusus dalam keluarga tombol tekan ─────────────── */
 .gold-button { --press-shadow-color: var(--gold-shadow); --press-inset-shadow: inset 0 var(--stroke) 0 var(--gold-highlight); background: linear-gradient(60deg, transparent 9%, color-mix(in srgb, var(--foreground) 19%, transparent) 9%, color-mix(in srgb, var(--foreground) 19%, transparent) 18%, transparent 18%), linear-gradient(110deg, var(--accent), var(--warning)); color: var(--accent-foreground); border: var(--stroke) solid var(--accent); border-top: var(--stroke-2) solid var(--gold-highlight); font-weight: var(--fw-heavier); letter-spacing: var(--track-snug-xs); }
@@ -993,13 +997,19 @@
 .menu-direct > svg:last-child { color: var(--muted-foreground); }
 .menu-note { display: flex; align-items: flex-start; gap: var(--space-7); color: var(--muted-foreground); font-size: var(--fs-micro); margin-top: var(--space-sm); }
 .menu-note svg { width: var(--icon-sm); height: var(--icon-sm); flex-shrink: 0; margin-top: var(--space-1); color: var(--accent); }
-/* ── sheet cara bermain ─────────────────────────────── */
-.help-steps { display: flex; flex-direction: column; gap: var(--space-lg); }
-.help-step { display: flex; align-items: flex-start; gap: var(--space-md); }
-.help-step > svg { width: var(--icon-base); height: var(--icon-base); flex-shrink: 0; margin-top: var(--space-2); color: var(--accent); }
-.help-step p { min-width: 0; }
-.help-step p strong { display: block; font-size: var(--fs-read); font-weight: var(--fw-bold); line-height: var(--lh-title); }
-.help-step p span { display: block; margin-top: var(--space-2); font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); text-wrap: pretty; }
+/* ── sheet cara bermain ─ satu dropdown per pertanyaan ── */
+.faq-list { display: flex; flex-direction: column; gap: var(--space-sm); }
+.faq-item { background: var(--secondary); border-radius: var(--corner-box); overflow: hidden; }
+.faq-item summary { display: flex; align-items: center; gap: var(--space-sm); min-height: var(--space-38); list-style: none; padding: var(--space-8) var(--space-10); background: var(--menu-header); color: var(--foreground); font-size: var(--fs-read); font-weight: var(--fw-bold); line-height: var(--lh-title); }
+.faq-item summary:focus-visible { outline-offset: calc(var(--space-4) * -1); }
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary > svg:first-child { width: var(--icon-base); height: var(--icon-base); flex-shrink: 0; color: var(--accent); }
+.faq-item summary > span { min-width: 0; text-wrap: pretty; }
+.faq-chevron { display: grid; place-items: center; width: var(--space-22); height: var(--space-22); margin-left: auto; flex-shrink: 0; }
+.faq-chevron svg { width: var(--icon-md); height: var(--icon-md); transition: transform var(--dur-fast); }
+.faq-item[open] .faq-chevron svg { transform: rotate(180deg); }
+.faq-item[open] summary { border-bottom: var(--stroke) solid var(--border); }
+.faq-answer { padding: var(--space-10); font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); text-wrap: pretty; }
 
 /* ── sheet progres trek ─ satu baris per trek: nama + hasil · status ── */
 .circuit-list { display: flex; flex-direction: column; gap: var(--space-sm); margin: 0; padding: 0; list-style: none; }
