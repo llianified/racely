@@ -188,6 +188,79 @@ describeDatabase("Neon Postgres persistence", () => {
     }
   });
 
+  it("picks the nearest real racer on each side and never a bot", async () => {
+    // Satu-satunya test yang benar-benar MENJALANKAN query tetangga. Unit test
+    // di tests/race-opponents.test.ts memalsukan barisnya, jadi CTE, tuple
+    // comparison, dan filter kelayakannya hanya terbukti di sini.
+    const { pool } = await import("@/lib/db");
+    const { DEFAULT_ECONOMY: E } = await import("@/lib/economy-config");
+    const { getRaceOpponents } = await import("@/lib/race-opponents-server");
+    const client = await pool!.connect();
+    try {
+      await client.query("BEGIN");
+      // Pola yang sama dengan test leaderboard: tabel bayangan yang hidup di
+      // dalam transaksi supaya fixture tidak pernah menyentuh arena sungguhan.
+      await client.query(`CREATE TEMPORARY TABLE racely_players (
+        user_id text PRIMARY KEY, display_name text NOT NULL,
+        laps integer NOT NULL, progress double precision NOT NULL DEFAULT 0,
+        created_at timestamptz NOT NULL, car_model text, color text NOT NULL DEFAULT '#4275ff',
+        engine_level integer NOT NULL DEFAULT 1, tires_level integer NOT NULL DEFAULT 1,
+        battery_level integer NOT NULL DEFAULT 1, setup jsonb, body_parts jsonb,
+        circuit integer NOT NULL DEFAULT 0, last_settled_at timestamptz NOT NULL
+      ) ON COMMIT DROP`);
+      const insert = `INSERT INTO racely_players
+        (user_id, display_name, laps, created_at, car_model, last_settled_at) VALUES
+        ('10', 'Jauh di atas', 120, '2026-01-01', 'luna-gt', now()),
+        ('20', 'Tepat di atas', 110, '2026-01-02', 'luna-gt', now()),
+        ('30', 'Aku',          100, '2026-01-03', 'luna-gt', now()),
+        ('40', 'Tepat di bawah', 90, '2026-01-04', 'luna-gt', now()),
+        ('50', 'Jauh di bawah', 80, '2026-01-05', 'luna-gt', now()),
+        ('60', 'Belum balapan',  0, '2026-01-06', 'luna-gt', now()),
+        ('70', 'Tanpa mobil',   95, '2026-01-07', NULL,      now()),
+        ('preview:fake', 'Preview', 105, '2026-01-08', 'luna-gt', now())`;
+      await client.query(insert);
+
+      const rivals = await getRaceOpponents("30", E, client);
+      expect(rivals.status).toBe("ready");
+      // 120 dan 110 ada di atas, jadi pemain berada di peringkat 3.
+      expect(rivals.rank).toBe(3);
+      // Peringkat memakai definisi yang sama dengan papan peringkat -- SEMUA
+      // pemain ber-lap ikut dihitung, termasuk yang belum punya mobil (95 lap).
+      // Yang disaring katalog mobil hanyalah siapa yang boleh muncul di arena,
+      // jadi 'Tepat di bawah' ada di peringkat 5 meski lawan di layar cuma dua.
+      expect(rivals.opponents.map(({ name, side, rank }) => ({ name, side, rank }))).toEqual([
+        { name: "Tepat di atas", side: "above", rank: 2 },
+        { name: "Tepat di bawah", side: "below", rank: 5 },
+      ]);
+      // Nol lap, mobil kosong, dan sesi preview tidak pernah ikut turun balap.
+      expect(JSON.stringify(rivals)).not.toMatch(/Belum balapan|Tanpa mobil|Preview/);
+
+      // Pemuncak klasemen hanya punya tetangga di bawahnya -- tidak ada bot
+      // yang dipasang untuk menggenapi arena.
+      const leader = await getRaceOpponents("10", E, client);
+      expect(leader.rank).toBe(1);
+      expect(leader.opponents.map(({ name, side }) => ({ name, side }))).toEqual([
+        { name: "Tepat di atas", side: "below" },
+      ]);
+
+      // Lap yang seri diputus created_at, bukan dibiarkan memilih dirinya sendiri.
+      await client.query(`UPDATE racely_players SET laps = 100 WHERE user_id IN ('20', '40')`);
+      const tied = await getRaceOpponents("30", E, client);
+      expect(tied.opponents.map(({ name, side }) => ({ name, side }))).toEqual([
+        { name: "Tepat di atas", side: "above" },
+        { name: "Tepat di bawah", side: "below" },
+      ]);
+      expect(tied.opponents.some((opponent) => opponent.name === "Aku")).toBe(false);
+
+      const injected = await getRaceOpponents("'; DROP TABLE racely_players; --", E, client);
+      expect(injected.rank).toBeNull();
+      expect(injected.opponents).toEqual([]);
+    } finally {
+      await client.query("ROLLBACK");
+      client.release();
+    }
+  });
+
   it("persists onboarding and keeps the chosen car across requests", async () => {
     const fresh = await gameServer.getGameState(identity);
     expect(fresh.carSelection?.model).toBeNull();
