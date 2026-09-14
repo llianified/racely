@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { memo, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { ArrowUp, BatteryMedium, CarFront, Check, Cog, CircleDot, LoaderCircle, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,12 +60,17 @@ export const BODY_COLORS = CAR_CATALOG["neo-falcon"].colors;
 export const GaragePanel = memo(function GaragePanel({
   game,
   active = true,
+  previewSheetOpen = false,
+  onPreviewSheet,
   onChooseColor,
   onPartAction,
   disabled = false,
 }: {
   game: GameState;
   active?: boolean;
+  /** Sebuah sheet dengan panggung 3D-nya sendiri sedang menutupi panggung ini. */
+  previewSheetOpen?: boolean;
+  onPreviewSheet: (open: boolean) => void;
   onChooseColor: (color: CarColor, name: string) => void;
   onPartAction: (action: PartCommand) => Promise<boolean>;
   disabled?: boolean;
@@ -77,7 +82,7 @@ export const GaragePanel = memo(function GaragePanel({
     <>
       <section id="body-colors" tabIndex={-1} className="panel garage-panel" aria-label="Mobil kamu">
         <div className="car-stage" role="img" aria-label={`${car.name} warna ${colorName}, model 3D yang sama dengan di lintasan. Geser untuk memutar.`}>
-          <CarPreviewScene color={game.color} model={model} levels={game.levels} equipped={game.bodyParts?.equipped} active={active} />
+          <CarPreviewScene color={game.color} model={model} levels={game.levels} equipped={game.bodyParts?.equipped} active={active && !previewSheetOpen} standbyHint={previewSheetOpen ? "Tutup lembar yang terbuka untuk menyalakannya lagi." : undefined} />
         </div>
         <div className="car-identity">
           <div className="car-identity-head">
@@ -100,7 +105,7 @@ export const GaragePanel = memo(function GaragePanel({
           <div><dt>Hasil per putaran</dt><dd><strong>{formatCoins(lapReward(game))}</strong> koin</dd></div>
         </dl>
       </section>
-      <BodyPartsShop game={game} active={active} disabled={disabled} onAction={onPartAction} />
+      <BodyPartsShop game={game} active={active} disabled={disabled} onAction={onPartAction} onPreviewSheet={onPreviewSheet} />
     </>
   );
 });
@@ -108,6 +113,7 @@ export const GaragePanel = memo(function GaragePanel({
 type UpgradePanelProps = {
   game: GameState;
   onUpgrade: (key: Upgrade) => Promise<boolean>;
+  onPreviewSheet: (open: boolean) => void;
   disabled?: boolean;
 };
 
@@ -116,12 +122,20 @@ const seconds = (value: number) => value.toLocaleString("id-ID", {
   maximumFractionDigits: 2,
 });
 
-function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps & { part: (typeof PARTS)[number] }) {
+function ModificationSlot({ game, onUpgrade, onPreviewSheet, disabled, part }: UpgradePanelProps & { part: (typeof PARTS)[number] }) {
   const [open, setOpen] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [showAfter, setShowAfter] = useState(true);
   const [inspect, setInspect] = useState(false);
   const installLock = useRef(false);
+  // Lembar ini membawa panggung 3D-nya sendiri. Selama terbuka, panggung garasi
+  // di belakangnya harus melepas context-nya -- ia tertutup penuh dan dua
+  // context hidup bersamaan adalah kondisi yang membunuh renderer WebView.
+  useEffect(() => {
+    if (!open) return;
+    onPreviewSheet(true);
+    return () => onPreviewSheet(false);
+  }, [open, onPreviewSheet]);
   const { key, title, icon: Icon } = part;
   const ceiling = game.economy.maxUpgradeLevel;
   const preview = modificationPreview(game, key);
@@ -294,7 +308,7 @@ function ModificationSlot({ game, onUpgrade, disabled, part }: UpgradePanelProps
   );
 }
 
-export function UpgradePanel({ game, onUpgrade, disabled = false }: UpgradePanelProps) {
+export function UpgradePanel({ game, onUpgrade, onPreviewSheet, disabled = false }: UpgradePanelProps) {
   return (
     <section id="upgrades" tabIndex={-1} className="panel upgrade-panel" aria-label="Bengkel modifikasi">
       <SectionCardHeading
@@ -305,7 +319,7 @@ export function UpgradePanel({ game, onUpgrade, disabled = false }: UpgradePanel
         }
       />
       <div className="upgrade-list">
-        {PARTS.map((part) => <ModificationSlot key={part.key} part={part} game={game} onUpgrade={onUpgrade} disabled={disabled} />)}
+        {PARTS.map((part) => <ModificationSlot key={part.key} part={part} game={game} onUpgrade={onUpgrade} onPreviewSheet={onPreviewSheet} disabled={disabled} />)}
       </div>
     </section>
   );
