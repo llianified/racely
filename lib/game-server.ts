@@ -1,5 +1,5 @@
 import "server-only";
-import { DAILY_MISSION_KINDS, dailyMissionsFor, settleDailyMissions, recordDailyBoost, claimDailyMission } from "./daily-missions";
+import { DAILY_MISSION_KINDS, dailyMissionsFor, settleDailyMissions, claimDailyMission } from "./daily-missions";
 import { GEAR_IDS, ROLLER_IDS, knownCarSetup } from "./car-setup";
 import { PAINT_IDS, applyPaintCommand, ownedPaintsSchema, type PaintCommand } from "./car-paints";
 
@@ -34,8 +34,6 @@ import {
 } from "@/lib/car-parts";
 import {
   accountPattern,
-  boostCooldownSeconds,
-  boostDurationFor,
   MISSION_IDS,
   missions,
   missionValue,
@@ -58,8 +56,7 @@ import {
   upgradeCostAt,
   type EconomyConfig,
 } from "@/lib/economy-config";
-import { isCleanBoostLaunch } from "@/lib/race-dynamics";
-import { LAST_CIRCUIT, trackLayoutAt } from "@/lib/track-layout";
+import { LAST_CIRCUIT } from "@/lib/track-layout";
 import { readEconomyConfig } from "@/lib/economy-store";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
 import { referralLink } from "@/lib/telegram-bot";
@@ -279,14 +276,8 @@ function stateFromRow(
       tires: row.tiresLevel,
       battery: row.batteryLevel,
     },
-    boostLeft: Math.max(
-      0,
-      ((row.boostEndsAt?.getTime() ?? 0) - now.getTime()) / 1000,
-    ),
-    cooldown: Math.max(
-      0,
-      ((row.cooldownEndsAt?.getTime() ?? 0) - now.getTime()) / 1000,
-    ),
+    boostLeft: 0,
+    cooldown: 0,
     rewardClaimed: row.rewardClaimed,
     missionsClaimed: row.missionsClaimed,
     color: row.color,

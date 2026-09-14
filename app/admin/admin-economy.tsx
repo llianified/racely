@@ -36,10 +36,8 @@ const GROUPS: Group[] = [
     fields: [
       { key: "dailyMissionLapsTarget", label: "Target putaran harian", step: "1" },
       { key: "dailyMissionEarnTarget", label: "Target koin balapan harian", step: "0.01" },
-      { key: "dailyMissionBoostTarget", label: "Target Gaspol harian", step: "1" },
-      { key: "dailyMissionCleanTarget", label: "Target Gaspol bersih", step: "1" },
       { key: "dailyMissionRewardCap", label: "Batas hadiah misi per hari", hint: "koin/pemain; 0 tanpa hadiah. Target & budget berlaku saat set harian berikutnya dibuat", step: "1" },
-      { key: "cosmeticBaseHours", label: "Harga cat dasar", hint: "jam income level 1 tanpa boost; tingkatan ×1, ×2, ×4", step: "1" },
+      { key: "cosmeticBaseHours", label: "Harga cat dasar", hint: "jam income level 1; tingkatan ×1, ×2, ×4", step: "1" },
     ],
   },
   {
@@ -66,7 +64,6 @@ const GROUPS: Group[] = [
       { key: "lapTiresPerLevel", label: "Laju per level ban", step: "0.01" },
       { key: "lapRewardPerBattery", label: "Koin per level baterai", step: "0.01" },
       { key: "lapRewardPerCircuit", label: "Koin per tingkat sirkuit", step: "0.01" },
-      { key: "racePositionRewardStep", label: "Selisih hadiah per posisi", hint: "P1 +nilai, P3 −nilai", step: "0.05" },
     ],
   },
   {
@@ -82,16 +79,6 @@ const GROUPS: Group[] = [
         hint: `maks ${UPGRADE_LEVEL_CEILING}`,
         step: "1",
       },
-    ],
-  },
-  {
-    legend: "Boost",
-    fields: [
-      { key: "boostDurationSeconds", label: "Durasi boost", hint: "detik", step: "1" },
-      { key: "batteryRechargeSeconds", label: "Isi ulang baterai", hint: "detik", step: "1" },
-      { key: "boostMultiplier", label: "Pengali laju boost", step: "0.1" },
-      { key: "boostCornerPenalty", label: "Potongan tekan di tikungan", hint: "0 mematikan", step: "0.05" },
-      { key: "boostLaunchGraceLap", label: "Toleransi tekan telat", hint: "pecahan putaran", step: "0.01" },
     ],
   },
   {
@@ -129,8 +116,8 @@ type FormState = Record<NumericKey, string> & { dailyRewards: string };
 
 function toForm(config: EconomyConfig): FormState {
   const draft = {} as FormState;
-  for (const group of GROUPS) {
-    for (const field of group.fields) draft[field.key] = String(config[field.key]);
+  for (const key of Object.keys(DEFAULT_ECONOMY) as (keyof EconomyConfig)[]) {
+    if (key !== 'dailyRewards') draft[key] = String(config[key]);
   }
   draft.dailyRewards = config.dailyRewards.join(", ");
   return draft;
@@ -139,9 +126,9 @@ function toForm(config: EconomyConfig): FormState {
 /** Null berarti ada isian yang belum berupa angka -- proyeksi ikut kosong. */
 function toConfig(form: FormState): EconomyConfig | null {
   const draft = {} as Record<string, unknown>;
-  for (const group of GROUPS) {
-    for (const field of group.fields) {
-      const raw = form[field.key].trim();
+  for (const key of Object.keys(DEFAULT_ECONOMY) as (keyof EconomyConfig)[]) {
+    if (key !== 'dailyRewards') {
+      const raw = form[key].trim();
       // `Number("")` itu 0, dan 0 lolos Number.isFinite -- jadi cek finite saja
       // memperlakukan kolom yang dikosongkan sebagai nol yang disengaja.
       // Operator yang menghapus isian untuk mengetik ulang lalu menyimpan tidak
@@ -149,7 +136,7 @@ function toConfig(form: FormState): EconomyConfig | null {
       if (raw === "") return null;
       const value = Number(raw);
       if (!Number.isFinite(value)) return null;
-      draft[field.key] = value;
+      draft[key] = value;
     }
   }
   // Segmen kosong ("1, , 3" atau koma menggantung) dulu ikut jadi 0 lewat

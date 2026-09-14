@@ -20,11 +20,11 @@ import { RacingEffects } from './racing-effects'
 import { TamiyaLanes } from './tamiya-lanes'
 import { ContextMonitor, SceneBoundary } from './scene-recovery'
 
-export type SceneProps = { setup?: CarSetup; equipped?: NonNullable<GameState['bodyParts']>['equipped']; driving?: RefObject<DrivingState>; onTelemetry?: (state: DrivingState) => void; cinematic?: boolean; levels?: GameState['levels']; model?: CarModelId; progress: number; seconds: number; baseSeconds: number; opponents: readonly RaceOpponent[]; opponentProgress: readonly number[]; color: string; boosted: boolean; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean }
+export type SceneProps = { setup?: CarSetup; equipped?: NonNullable<GameState['bodyParts']>['equipped']; driving?: RefObject<DrivingState>; onTelemetry?: (state: DrivingState) => void; cinematic?: boolean; levels?: GameState['levels']; model?: CarModelId; progress: number; seconds: number; baseSeconds: number; opponents: readonly RaceOpponent[]; opponentProgress: readonly number[]; color: string; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean }
 
 // The 10Hz game tick changes these every 100ms. They are consumed inside useFrame,
 // so they travel through a ref instead of props: a tick must not reconcile the 3D tree.
-type RaceTiming = Pick<SceneProps, 'progress' | 'seconds' | 'baseSeconds' | 'opponentProgress' | 'boosted'>
+type RaceTiming = Pick<SceneProps, 'progress' | 'seconds' | 'baseSeconds' | 'opponentProgress'>
 
 const TrackContext = createContext(raceTrackAt(0))
 
@@ -53,10 +53,8 @@ function Ribbon({ inner, outer, height = .12, color, y = 0, glow = false }: { in
   </mesh>
 }
 
-const Racer = memo(function Racer({ lane, color, model, timing, playerRef, levels, driving, onTelemetry, reducedMotion, equipped, setup, circuit }: { levels?: GameState['levels']; model?: CarModelId; lane: number; color: string; timing: RefObject<RaceTiming>; playerRef?: RefObject<THREE.Group | null> } & Pick<SceneProps, 'driving' | 'onTelemetry' | 'reducedMotion' | 'equipped' | 'setup' | 'circuit'>) {
+const Racer = memo(function Racer({ lane: startingLane, color, model, timing, playerRef, levels, driving, onTelemetry, reducedMotion, equipped, setup, circuit }: { levels?: GameState['levels']; model?: CarModelId; lane: number; color: string; timing: RefObject<RaceTiming>; playerRef?: RefObject<THREE.Group | null> } & Pick<SceneProps, 'driving' | 'onTelemetry' | 'reducedMotion' | 'equipped' | 'setup' | 'circuit'>) {
   const track = useContext(TrackContext)
-  const laneOffset = lane * .68
-  const laneLength = track.laneLength(laneOffset)
   const ownRef = useRef<THREE.Group>(null)
   const group = playerRef ?? ownRef
   const phase = useRef(0)
@@ -81,22 +79,22 @@ const Racer = memo(function Racer({ lane, color, model, timing, playerRef, level
   useFrame((_, delta) => {
     if (!group.current || document.hidden) return
     const dt = Math.min(delta, .1)
-    const { progress, boosted } = timing.current
-    const target = lane === 0 ? progress : timing.current.opponentProgress[lane - 1]
+    const { progress } = timing.current
+    const target = startingLane === 0 ? progress : timing.current.opponentProgress[startingLane - 1]
     if (target === undefined) return
     if (!seeded.current) { phase.current = target; seeded.current = true }
     const previous = phase.current
     phase.current = reconcileRaceDistance(previous, target, dt)
-    const state = lane === 0 ? driving?.current : undefined
+    const state = startingLane === 0 ? driving?.current : undefined
     if (state) {
       if (performance) stepSetupFeedback(state, feedback.current, dt, phase.current, performance, trackLayoutAt(circuit))
-      else stepDriving(state, dt, phase.current, boosted && state.boostEnergy > 0 && !state.boostExhausted, levels?.tires)
-      stepPowertrain(state, dt, boosted, levels?.engine, levels?.battery, powertrainVisual)
+      else stepDriving(state, dt, phase.current, false, levels?.tires)
+      stepPowertrain(state, dt, false, levels?.engine, levels?.battery, powertrainVisual)
     }
     const recovering = !!state && state.recovery > 0
     const lapsPerSecond = dt > 0 ? Math.max(0, (phase.current - previous) / dt) : 0
-    wheelSpeed.current = recovering ? 0 : laneLength / .85 * Math.min(lapsPerSecond, 2)
-    const p = track.route.point(phase.current, lane)
+    const p = track.route.point(phase.current, startingLane)
+    wheelSpeed.current = recovering ? 0 : track.laneLength(p.offset) / .85 * Math.min(lapsPerSecond, 2)
     const offset = state?.offset ?? 0
     const slip = state ? Math.max(0, (65 - state.grip) / 65) : 0
     const load = state?.corner && performance ? Math.min(1, performance.cornerLoad / performance.grip) * Math.sin(Math.PI * state.cornerProgress) : 0
@@ -147,7 +145,7 @@ const Racer = memo(function Racer({ lane, color, model, timing, playerRef, level
     <group ref={tumble} position={[0, .17, 0]}>
       <group position={[0, -.17, 0]}>
         <MiniCar roller={roller} color={color} model={model} levels={levels} equipped={equipped} scale={.85} speedRef={wheelSpeed} />
-        {lane === 0 && <mesh position={[0, .255, -.30]}>
+        {startingLane === 0 && <mesh position={[0, .255, -.30]}>
           <boxGeometry args={[.14, .018, .025]} />
           <meshStandardMaterial ref={energyLamp} color={COLORS.navy} emissive={COLORS.gold} emissiveIntensity={1} toneMapped={false} />
         </mesh>}
@@ -452,14 +450,13 @@ export default function RaceScene(props: SceneProps) {
   const [lost, setLost] = useState(false)
   const [visible, setVisible] = useState(true)
   const [ready, setReady] = useState(false)
-  const timing = useRef<RaceTiming>({ progress: props.progress, seconds: props.seconds, baseSeconds: props.baseSeconds, opponentProgress: props.opponentProgress, boosted: props.boosted })
+  const timing = useRef<RaceTiming>({ progress: props.progress, seconds: props.seconds, baseSeconds: props.baseSeconds, opponentProgress: props.opponentProgress })
   useLayoutEffect(() => {
     timing.current.progress = props.progress
     timing.current.seconds = props.seconds
     timing.current.baseSeconds = props.baseSeconds
     timing.current.opponentProgress = props.opponentProgress
-    timing.current.boosted = props.boosted
-  }, [props.progress, props.seconds, props.baseSeconds, props.opponentProgress, props.boosted])
+  }, [props.progress, props.seconds, props.baseSeconds, props.opponentProgress])
   useEffect(() => {
     const change = () => setVisible(!document.hidden)
     change()

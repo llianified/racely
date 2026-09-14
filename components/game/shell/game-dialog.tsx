@@ -1,6 +1,6 @@
 import {
   ArrowRight, CalendarCheck, Camera, Check, ChevronDown, Coins, Flag, Gauge,
-  Gift, Lock, Palette, Timer, UserPlus, Wallet, Wind, Wrench, Zap,
+  Gift, Lock, Palette, Timer, UserPlus, Wallet, Wind, Wrench,
 } from "lucide-react";
 import { useRef, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -53,12 +53,12 @@ function faqItems(game: GameState): { icon: typeof Flag; question: string; answe
     {
       icon: Flag,
       question: "Bagaimana balapannya berjalan?",
-      answer: "Balapan berjalan otomatis. Koin terkumpul setiap putaran dan tersimpan di server. Dua mobil lain adalah bot latihan.",
+      answer: "Balapan berjalan otomatis. Dua lawan diambil dari pemain asli di sekitar peringkat lapmu, utamanya satu di atas dan satu di bawah. Di ujung klasemen, keduanya bisa berada di sisi yang sama. Kalau pemain belum cukup, arena tidak diisi bot. Gerakan lawan diproyeksikan dari progres server, bukan multiplayer langsung.",
     },
     {
-      icon: Zap,
-      question: "Bagaimana cara pakai Gaspol?",
-      answer: `Gaspol ${economy.boostMultiplier}× selama ${economy.boostDurationSeconds} detik, lalu isi ulang ${economy.batteryRechargeSeconds} detik. Balapan normal tetap jalan selama baterai terisi.`,
+      icon: Flag,
+      question: "Bagaimana posisi saat berganti lane dihitung?",
+      answer: "Posisi arena membandingkan total lap dan progres seluruh peserta, bukan nomor lane. Lane changer hanya memindahkan jalur mobil. Peringkat global tetap mengikuti total lap yang tersimpan di leaderboard.",
     },
     {
       icon: Timer,
@@ -83,12 +83,12 @@ function faqItems(game: GameState): { icon: typeof Flag; question: string; answe
     {
       icon: Gift,
       question: "Apa itu mobil kamu di garasi?",
-      answer: "Kecepatan dasar tanpa boost. Model 3D-nya sama dengan mobil di lintasan. Ganti warna bodi gratis dan langsung aktif.",
+      answer: "Kecepatan otomatis sesuai setup mobil. Model 3D-nya sama dengan mobil di lintasan. Ganti warna bodi gratis dan langsung aktif.",
     },
     {
       icon: Wrench,
       question: "Apa efek modifikasi di bengkel?",
-      answer: `Pilih part, cek perubahan performa, lalu konfirmasi pemasangan. Mesin dan ban mempercepat putaran; baterai menambah hasil koin. Baris "Arena" hanya untuk simulasi gerak: mesin mempercepat akselerasi, ban memperkuat grip, baterai memperpanjang cadangan boost. Tidak menambah koin, durasi Gaspol, atau baterai idle server. Setiap pemasangan menaikkan satu level, maksimal level ${economy.maxUpgradeLevel}.`,
+      answer: `Pilih part, cek perubahan performa, lalu konfirmasi pemasangan. Mesin dan ban mempercepat putaran; baterai menambah hasil koin. Baris "Arena" hanya untuk simulasi gerak: mesin mempercepat akselerasi dan ban memperkuat grip. Efek visual tidak memberi tambahan koin di luar hasil per putaran. Setiap pemasangan menaikkan satu level, maksimal level ${economy.maxUpgradeLevel}.`,
     },
     {
       icon: Wind,

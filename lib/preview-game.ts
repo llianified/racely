@@ -1,5 +1,5 @@
 import "server-only";
-import { dailyMissionsSchema, dailyMissionsFor, settleDailyMissions, recordDailyBoost, claimDailyMission } from "./daily-missions";
+import { dailyMissionsSchema, dailyMissionsFor, settleDailyMissions, claimDailyMission } from "./daily-missions";
 import { ownedPaintsSchema, applyPaintCommand } from "./car-paints";
 import { carSetupSchema, knownCarSetup } from "./car-setup";
 
@@ -7,8 +7,6 @@ import { Buffer } from "node:buffer";
 import { z } from "zod";
 import {
   accountPattern,
-  boostCooldownSeconds,
-  boostDurationFor,
   INITIAL_GAME,
   missions,
   missionValue,
@@ -28,8 +26,7 @@ import {
   dailyCheckIn,
   racingDayKey,
 } from "./game-economy";
-import { isCleanBoostLaunch } from "./race-dynamics";
-import { LAST_CIRCUIT, trackLayoutAt } from "./track-layout";
+import { LAST_CIRCUIT } from "./track-layout";
 import { CAR_MODEL_IDS, isCarColor } from "./car-catalog";
 import { applyPartCommand, bodyPartsSchema, PartRuleError } from "./car-parts";
 import { referralLink } from "./telegram-bot";
@@ -247,10 +244,9 @@ function settlePreviewGame(
         laps: game.state.laps + settlement.completedLaps,
         pending: roundCoins(game.state.pending + settlement.income),
         earned: roundCoins(game.state.earned + settlement.income),
-        // Boost and cooldown are wall clocks, so they drain over real time even
-        // where the payout is capped.
-        boostLeft: Math.max(0, game.state.boostLeft - elapsed),
-        cooldown: Math.max(0, game.state.cooldown - elapsed),
+        // Legacy cookie timers no longer affect automatic racing.
+        boostLeft: 0,
+        cooldown: 0,
       },
     },
     offline: settlement.offline,
@@ -353,7 +349,7 @@ export function performPreviewGameAction(
   const settled = settlePreviewGame(stored, now, economy);
   const { offline } = settled;
   let game = settled.game;
-  let boostLaunch: BoostLaunch | null = null;
+  const boostLaunch: BoostLaunch | null = null;
   const selection = game.state.carSelection;
 
   if (action.type === "select-car") {

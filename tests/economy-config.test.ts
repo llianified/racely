@@ -238,7 +238,7 @@ describe("Config ekonomi", () => {
   it("memakai satu rumus untuk laju, hadiah, dan biaya", () => {
     const levels = { engine: 1, tires: 1, battery: 1 };
     expect(lapSecondsAt(E, levels, false)).toBe(8);
-    expect(lapSecondsAt(E, levels, true)).toBe(8 / E.boostMultiplier);
+    expect(lapSecondsAt(E, levels, true)).toBe(8);
     expect(lapRewardAt(E, 1, 0)).toBe(0.05);
     expect(lapRewardAt(E, 10, 1)).toBe(0.16);
     expect(upgradeCostAt(E, "engine", 1)).toBe(25);
@@ -254,9 +254,9 @@ describe("Proyeksi ekonomi", () => {
   it("menerjemahkan config bawaan jadi rupiah per jam", () => {
     const { rows } = projectEconomy(E);
     expect(rows).toHaveLength(2);
-    // Level 1 finishes P3: 0,04 koin tiap 8 detik = 18 koin/jam = Rp1.800.
-    expect(rows[0].coinsPerHour).toBeCloseTo(18);
-    expect(rows[0].idrPerHour).toBeCloseTo(1800);
+    // No synthetic position multiplier: 0.05 coins per 8 seconds.
+    expect(rows[0].coinsPerHour).toBeCloseTo(22.5);
+    expect(rows[0].idrPerHour).toBeCloseTo(2250);
     // Upgrade maksimum jauh lebih cepat DAN lebih mahal per putaran.
     expect(rows[1].coinsPerHour).toBeGreaterThan(rows[0].coinsPerHour);
   });
@@ -270,7 +270,7 @@ describe("Proyeksi ekonomi", () => {
 
   it("turun saat putaran diperlambat", () => {
     const lambat = projectEconomy({ ...E, lapBaseSeconds: E.lapBaseSeconds * 4 });
-    expect(lambat.rows[0].coinsPerHour).toBeCloseTo(18 / 4);
+    expect(lambat.rows[0].coinsPerHour).toBeCloseTo(22.5 / 4);
   });
 
   it("menghitung nilai akun baru dan biaya max-out", () => {
@@ -318,9 +318,13 @@ describe("Panel admin mencakup seluruh knob ekonomi", () => {
   /** Bukan angka tunggal, jadi ia punya field teksnya sendiri di luar GROUPS. */
   const OUTSIDE_GROUPS = new Set(["dailyRewards"]);
 
-  it("mendaftarkan setiap field EconomyConfig", () => {
+  const retired = new Set(['dailyMissionBoostTarget', 'dailyMissionCleanTarget', 'racePositionRewardStep', 'boostDurationSeconds', 'batteryRechargeSeconds', 'boostMultiplier', 'boostCornerPenalty', 'boostLaunchGraceLap']);
+
+  it("mendaftarkan hanya field aktif dan tetap menyerialisasikan legacy config", () => {
+    expect(panelSource).toContain('Object.keys(DEFAULT_ECONOMY)');
+    expect(panelSource).toContain('draft[key] = value');
     const expected = economyFieldKeys
-      .filter((key) => !OUTSIDE_GROUPS.has(key))
+      .filter((key) => !OUTSIDE_GROUPS.has(key) && !retired.has(key))
       .sort();
     expect([...groupKeys].sort()).toEqual(expected);
   });
