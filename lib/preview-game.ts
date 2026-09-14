@@ -21,7 +21,7 @@ import {
   type Upgrade,
   type WithdrawMethod,
 } from "./game";
-import { upgradeCostAt, type EconomyConfig } from "./economy-config";
+import { circuitUnlockLaps, upgradeCostAt, type EconomyConfig } from "./economy-config";
 import {
   calculateRaceSettlement,
   DAILY_HISTORY_DAYS,
@@ -29,7 +29,7 @@ import {
   racingDayKey,
 } from "./game-economy";
 import { isCleanBoostLaunch } from "./race-dynamics";
-import { trackLayoutAt } from "./track-layout";
+import { LAST_CIRCUIT, trackLayoutAt } from "./track-layout";
 import { CAR_MODEL_IDS, isCarColor } from "./car-catalog";
 import { applyPartCommand, bodyPartsSchema, PartRuleError } from "./car-parts";
 import { referralLink } from "./telegram-bot";
@@ -84,7 +84,7 @@ const previewGameSchema = z.object({
     rewardClaimed: z.boolean(),
     missionsClaimed: z.array(z.string()),
     color: z.string(),
-    circuit: z.number().int().min(0).max(1),
+    circuit: z.number().int().min(0).max(LAST_CIRCUIT),
     player: z.object({
       name: z.string(),
       username: z.string().nullable(),
@@ -505,9 +505,10 @@ export function performPreviewGameAction(
     if (action.circuit < state.circuit) {
       throw new PreviewGameRuleError("Trek lama tidak bisa dipilih lagi.");
     }
-    if (action.circuit === 1 && state.laps < economy.circuitUnlockLaps) {
+    const needed = circuitUnlockLaps(economy, action.circuit);
+    if (state.laps < needed) {
       throw new PreviewGameRuleError(
-        `Selesaikan ${economy.circuitUnlockLaps} putaran untuk membuka sirkuit ini.`,
+        `Selesaikan ${needed} putaran untuk membuka sirkuit ini.`,
       );
     }
     state = { ...state, circuit: action.circuit };

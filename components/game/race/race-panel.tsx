@@ -10,7 +10,7 @@ import { batteryTelemetry, carSetup, coins, formatCoins, lapReward, lapSeconds, 
 import { RaceOverviewHud, RacePositionHud } from "./race-overview-hud";
 import { cn } from "@/lib/utils";
 import { createDrivingState, isCleanBoostLaunch } from "@/lib/race-dynamics";
-import { trackLayoutAt } from "@/lib/track-layout";
+import { circuitName, trackLayoutAt } from "@/lib/track-layout";
 import { RaceSwitch, SettingRow } from "./setting-row";
 import { NEUTRAL_SETUP } from "@/lib/car-setup";
 
@@ -133,8 +133,8 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
       <div className="track-top">
         <span className="circuit-number" aria-label={`Sirkuit ${game.circuit + 1}`}>{String(game.circuit + 1).padStart(2, "0")}</span>
         <h2 className="track-title">
-          <Button variant="ghost" size="sm" className="circuit-trigger" onClick={openCircuits} aria-label={`Pilih sirkuit: ${game.circuit ? "Midnight Speedway" : "Jakarta Raceway"}`} aria-haspopup="dialog">
-            {game.circuit ? "Midnight Speedway" : "Jakarta Raceway"}
+          <Button variant="ghost" size="sm" className="circuit-trigger" onClick={openCircuits} aria-label={`Pilih sirkuit: ${circuitName(game.circuit)}`} aria-haspopup="dialog">
+            {circuitName(game.circuit)}
             <ChevronDown data-icon="inline-end" />
           </Button>
         </h2>

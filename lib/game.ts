@@ -424,7 +424,7 @@ export type GameCommand =
   | { type: "mission"; id: MissionId }
   | { type: "select-car"; model: CarModelId; color: CarColor }
   | { type: "color"; color: CarColor }
-  | { type: "circuit"; circuit: 0 | 1 }
+  | { type: "circuit"; circuit: number }
   | {
       type: "withdraw";
       method: WithdrawMethod;
