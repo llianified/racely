@@ -97,7 +97,8 @@ describe("bentuk layout", () => {
   });
 
   it("jatuh ke sirkuit pertama untuk indeks yang tidak dikenal", () => {
-    for (const circuit of [-1, 2, 99, Number.NaN]) {
+    // 2 kini sirkuit yang sah (Apex), jadi yang diuji indeks di luar daftar.
+    for (const circuit of [-1, TRACK_LAYOUTS.length, 99, Number.NaN]) {
       expect(trackLayoutAt(circuit)).toBe(TRACK_LAYOUTS[0]);
     }
   });
@@ -210,5 +211,37 @@ describe("penilaian Gaspol mengikuti layout", () => {
     const mouth = STRAIGHT_LAP_FRACTION / 2 + 1e-6;
     expect(isCleanBoostLaunch(mouth, 0, layout)).toBe(false);
     expect(isCleanBoostLaunch(mouth, 0.05, layout)).toBe(true);
+  });
+});
+
+/**
+ * Sirkuit ketiga: trek yang benar-benar berbentuk lain, bukan oval berwarna beda.
+ */
+describe("sirkuit teknikal (Apex)", () => {
+  const apex = trackLayoutAt(2);
+
+  it("tertutup dan berbeda bentuk dari oval", () => {
+    expect(isClosedLoop(apex)).toBe(true);
+    expect(apex.straightFraction).not.toBe(STRAIGHT_LAP_FRACTION);
+    expect(apex.sections.map((section) => section.kind)).toContain("s-curve");
+    expect(apex.sections.map((section) => section.kind)).toContain("hairpin");
+  });
+
+  it("memberi hairpin severity di atas 1, tempat stabilitas akhirnya bernilai", () => {
+    const hairpin = apex.sections.find((section) => section.kind === "hairpin");
+    expect(hairpin).toBeDefined();
+    // Radius 1,4 -> 2,24/1,4 = 1,6. Di atas 1 berarti setup NETRAL pun kelebihan
+    // beban -- terlarang di Jakarta/Midnight, sah di sirkuit yang belum dihuni.
+    expect(hairpin!.severity).toBeCloseTo(2.24 / 1.4, 12);
+    expect(hairpin!.severity).toBeGreaterThan(1);
+  });
+
+  it("tidak menyentuh Jakarta dan Midnight", () => {
+    for (const circuit of CIRCUITS) {
+      expect(trackLayoutAt(circuit).straightFraction).toBe(STRAIGHT_LAP_FRACTION);
+      for (const section of trackLayoutAt(circuit).sections) {
+        expect(section.severity).toBeLessThanOrEqual(1);
+      }
+    }
   });
 });

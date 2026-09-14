@@ -120,6 +120,7 @@ const GROUPS: Group[] = [
       { key: "missionEarnTarget", label: "Target misi koin", step: "1" },
       { key: "missionEarnReward", label: "Hadiah misi koin", hint: "koin", step: "1" },
       { key: "circuitUnlockLaps", label: "Putaran buka sirkuit 2", step: "1" },
+      { key: "technicalUnlockLaps", label: "Putaran buka sirkuit 3", hint: "Apex Circuit", step: "1" },
     ],
   },
 ];

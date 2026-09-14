@@ -131,10 +131,47 @@ const OVAL_SECTIONS: readonly TrackSectionInput[] = [
  * Bentuk yang berbeda akan datang lewat layout baru, bukan lewat perubahan di
  * kedua layout ini: mengubahnya menggeser penghasilan pemain yang sudah ada.
  */
+/**
+ * Sirkuit ketiga: trek teknikal yang benar-benar berbentuk lain.
+ *
+ * Geometrinya diambil dari prototipe visual di `lib/technical-track.ts` supaya
+ * arena dan model server menggambarkan lintasan yang sama. Jumlah beloknya
+ * 180 + 60 - 60 + 180 = 360 derajat, dan trek lurus terakhir menutup posisinya
+ * -- `isClosedLoop` menguji keduanya.
+ *
+ * Di sinilah hairpin beradius 1,4 memberi severity 1,60. Di atas 1 berarti
+ * setup NETRAL pun kelebihan beban: hal yang terlarang di Jakarta dan Midnight
+ * karena akan memotong penghasilan pemain yang sudah berjalan, tapi sah di
+ * sirkuit baru yang belum dihuni siapa pun. Justru itu gunanya -- di trek ini
+ * stabilitas akhirnya bernilai dengan sendirinya, bukan sekadar pemungkin gear
+ * panjang.
+ */
+const TECHNICAL_SECTIONS: readonly TrackSectionInput[] = [
+  { id: "launch", kind: "straight", geometry: [{ kind: "line", length: 5 }] },
+  { id: "technical", kind: "corner", geometry: [{ kind: "arc", radius: 3.4, turn: Math.PI }] },
+  {
+    id: "s-curve",
+    kind: "s-curve",
+    geometry: [
+      { kind: "arc", radius: 4, turn: Math.PI / 3 },
+      { kind: "arc", radius: 4, turn: -Math.PI / 3 },
+    ],
+  },
+  { id: "hairpin", kind: "hairpin", geometry: [{ kind: "arc", radius: 1.4, turn: Math.PI }] },
+  // S-curve menggeser X sebesar 8 sin(60 derajat); lurus ini menutup posisi DAN arah.
+  { id: "return", kind: "straight", geometry: [{ kind: "line", length: 8 * Math.sin(Math.PI / 3) - 5 }] },
+];
+
 export const TRACK_LAYOUTS: readonly TrackLayout[] = [
   buildTrackLayout("jakarta", OVAL_SECTIONS, 1),
   buildTrackLayout("midnight", OVAL_SECTIONS, 0.7),
+  buildTrackLayout("apex", TECHNICAL_SECTIONS, 1),
 ];
+
+/** Nama tampilan per sirkuit. Bukan angka ekonomi, jadi tetap di kode. */
+export const CIRCUIT_NAMES = ["Jakarta Raceway", "Midnight Speedway", "Apex Circuit"] as const;
+export const LAST_CIRCUIT = TRACK_LAYOUTS.length - 1;
+export const circuitName = (circuit: number) => CIRCUIT_NAMES[circuit] ?? CIRCUIT_NAMES[0];
 
 export const trackLayoutAt = (circuit: number) =>
   TRACK_LAYOUTS[circuit] ?? TRACK_LAYOUTS[0];
