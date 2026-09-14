@@ -72,14 +72,17 @@ describe("Content-Security-Policy", () => {
   });
 
   /**
-   * Avatar pemain pernah mati diam-diam di produksi: `photo_url` menunjuk ke
-   * t.me, t.me membalas 302 ke CDN-nya, dan CSP ikut memeriksa host target
-   * redirect -- jadi policy yang hanya menyebut t.me memblokir gambarnya.
+   * Avatar pemain pernah mati dua kali di produksi karena hal yang sama:
+   * `photo_url` menunjuk ke t.me, t.me membalas 302 ke CDN-nya, dan CSP ikut
+   * memeriksa host target redirect itu. Tebakan pertama (t.me saja) gagal;
+   * tebakan kedua (+ *.cdn-telegram.org) juga gagal.
    *
-   * Tidak terlihat di luar produksi: identitas preview selalu punya photoUrl
-   * null, jadi <img> itu tidak pernah dirender saat `pnpm dev`.
+   * Karena itu daftar host Telegram DIBUANG dari img-src dan avatar disajikan
+   * ulang lewat /api/game/avatar di origin sendiri. Test ini menjaga arah itu:
+   * host pihak ketiga yang kembali ke img-src berarti seseorang sedang menebak
+   * lagi alih-alih memakai proxy-nya.
    */
-  it("mengizinkan foto profil Telegram beserta CDN tujuan redirectnya", async () => {
+  it("menyajikan foto profil dari origin sendiri, bukan dari host Telegram", async () => {
     const policy = await cspFor("/");
     const imgSrc = policy
       ?.split(";")
@@ -87,7 +90,8 @@ describe("Content-Security-Policy", () => {
       .find((directive) => directive.startsWith("img-src "));
 
     expect(imgSrc).toBeDefined();
-    expect(imgSrc).toContain("https://t.me");
-    expect(imgSrc).toContain("https://*.cdn-telegram.org");
+    expect(imgSrc).toContain("'self'");
+    expect(imgSrc).not.toContain("t.me");
+    expect(imgSrc).not.toContain("telegram");
   });
 });

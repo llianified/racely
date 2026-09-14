@@ -53,6 +53,7 @@ import {
 import { readEconomyConfig } from "@/lib/economy-store";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
 import { referralLink } from "@/lib/telegram-bot";
+import { proxiedAvatarPath } from "@/lib/telegram-avatar";
 
 const carColorSchema = z.string().regex(/^#[0-9a-f]{6}$/i);
 const METHOD_IDS = WITHDRAW_METHODS.map((method) => method.id) as [
@@ -240,7 +241,10 @@ function stateFromRow(
     player: {
       name: row.displayName,
       username: row.telegramUsername,
-      photoUrl: row.photoUrl,
+      // Disajikan ulang dari origin sendiri: menautkan t.me langsung membuat
+      // CSP ikut memeriksa host CDN tujuan redirectnya. Lihat
+      // `lib/telegram-avatar.ts`.
+      photoUrl: proxiedAvatarPath(row.photoUrl),
     },
   };
 }
