@@ -1,5 +1,6 @@
 import "server-only";
 import { DAILY_MISSION_KINDS, dailyMissionsFor, settleDailyMissions, recordDailyBoost, claimDailyMission } from "./daily-missions";
+import { GEAR_IDS, ROLLER_IDS, knownCarSetup } from "./car-setup";
 import { PAINT_IDS, applyPaintCommand, ownedPaintsSchema, type PaintCommand } from "./car-paints";
 
 import { and, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
@@ -87,6 +88,13 @@ const commandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("equip-part"), partId: z.enum(PART_IDS) }).strict(),
   z.object({ type: z.literal("unequip-part"), slot: z.enum(PART_SLOTS) }).strict(),
   z.object({ type: z.literal("sync") }).strict(),
+  z
+    .object({
+      type: z.literal("set-setup"),
+      gear: z.enum(GEAR_IDS),
+      roller: z.enum(ROLLER_IDS),
+    })
+    .strict(),
   z
     .object({
       type: z.literal("upgrade"),
@@ -246,6 +254,7 @@ function stateFromRow(
     developmentPreview: false,
     economy,
     bodyParts: knownBodyParts(row.bodyParts),
+    setup: knownCarSetup(row.setup),
     dailyMissions: dailyMissionsFor(row.dailyMissions, now, economy),
     ownedPaints: ownedPaintsSchema.safeParse(row.ownedPaints).data ?? [],
     // Left off the payload entirely when there is nothing to report, so the
@@ -522,7 +531,8 @@ export function settlePlayerRow(
     : settleDailyMissions(row.dailyMissions, {
         progress: row.progress,
         levels: { engine: row.engineLevel, tires: row.tiresLevel, battery: row.batteryLevel },
-        circuit: row.circuit, economy, lastSettledAt: row.lastSettledAt, boostEndsAt: row.boostEndsAt,
+        circuit: row.circuit, economy, setup: knownCarSetup(row.setup),
+        lastSettledAt: row.lastSettledAt, boostEndsAt: row.boostEndsAt,
       }, now);
   row = { ...row, dailyMissions };
   if (row.carModel === null) {
@@ -542,6 +552,7 @@ export function settlePlayerRow(
       },
       circuit: row.circuit,
       economy,
+      setup: knownCarSetup(row.setup),
       lastSettledAt: row.lastSettledAt,
       boostEndsAt: row.boostEndsAt,
     },
@@ -965,6 +976,18 @@ const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
     return { row: { ...row, color: action.color } };
   },
 
+  "set-setup": (row, action) => {
+    if (row.carModel === null) {
+      throw new GameRuleError("Pilih mobil dulu sebelum menyetel setup.");
+    }
+    // `settlePlayerRow` sudah berjalan lebih dulu di `performGameAction`, jadi
+    // waktu yang sudah terlanjur dibalapkan dibayar dengan setup LAMA dan setup
+    // baru hanya berlaku ke depan. Tanpa urutan itu pemain bisa mengumpulkan
+    // empat jam offline dengan setup pelan lalu menukarnya ke setup cepat tepat
+    // sebelum sync.
+    return { row: { ...row, setup: { gear: action.gear, roller: action.roller } } };
+  },
+
   circuit: (row, action, { economy }) => {
     if (action.circuit < row.circuit) {
       throw new GameRuleError("Trek lama tidak bisa dipilih lagi.");
@@ -1118,6 +1141,7 @@ export async function performGameAction(
         dailyMissions: next.dailyMissions,
         ownedPaints: next.ownedPaints,
         bodyParts: next.bodyParts,
+        setup: next.setup,
         carModel: next.carModel,
         color: next.color,
         circuit: next.circuit,
