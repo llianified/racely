@@ -1,5 +1,11 @@
-export const TRACK_HALF = 3.35;
-export const PLAYER_RADIUS = 2.24;
+import { PLAYER_RADIUS, TRACK_HALF, layoutCornerProgress, type TrackLayout } from "./track-layout";
+
+/**
+ * Geometri trek kini hidup di `lib/track-layout.ts` sebagai data. Diekspor ulang
+ * dari sini supaya scene 3D yang sudah mengimpornya tidak perlu diubah, dan
+ * supaya tidak ada salinan kedua yang bisa menyimpang.
+ */
+export { PLAYER_RADIUS, TRACK_HALF };
 export const RECOVERY_SECONDS = 2.2;
 const ROAD_EDGE = 3.96 - PLAYER_RADIUS;
 
@@ -156,10 +162,20 @@ export function isTrackCorner(progress: number) {
  * jaringan, bukan kesalahan pemain -- dengan ikut memeriksa posisi sejauh itu
  * di belakang. Tekanan yang memang di tengah tikungan tetap kotor.
  */
-export function isCleanBoostLaunch(progress: number, graceLap = 0) {
+export function isCleanBoostLaunch(
+  progress: number,
+  graceLap = 0,
+  layout?: TrackLayout,
+) {
   if (!Number.isFinite(progress)) return true;
   const grace = Number.isFinite(graceLap) ? Math.max(0, graceLap) : 0;
-  return !isTrackCorner(progress) || !isTrackCorner(progress - grace);
+  // Tanpa layout, rumus oval lama dipakai apa adanya -- bukan jalur baru yang
+  // kebetulan menghasilkan angka mirip. Itu yang menjaga ~34 test yang mengunci
+  // fungsi ini tetap menguji hal yang sama.
+  const corner = layout
+    ? (value: number) => layoutCornerProgress(value, layout) >= 0
+    : isTrackCorner;
+  return !corner(progress) || !corner(progress - grace);
 }
 
 // Session-only driving challenge; never changes authoritative laps, rewards, or boost timers.
