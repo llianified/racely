@@ -4,6 +4,7 @@ import {
   DEFAULT_ECONOMY,
   UPGRADE_LEVEL_CEILING,
   boostCooldownSeconds,
+  boostDurationFor,
   economyConfigSchema,
   economyFieldKeys,
   lapRewardAt,
@@ -198,6 +199,40 @@ describe("Config ekonomi", () => {
     );
     const cepat = { ...E, boostDurationSeconds: 4, batteryRechargeSeconds: 6 };
     expect(boostCooldownSeconds(cepat)).toBe(10);
+  });
+
+  it("memotong durasi Gaspol yang ditekan di tikungan, bukan cooldown-nya", () => {
+    expect(boostDurationFor(E, true)).toBe(E.boostDurationSeconds);
+    expect(boostDurationFor(E, false)).toBe(
+      E.boostDurationSeconds * (1 - E.boostCornerPenalty),
+    );
+    expect(boostDurationFor(E, false)).toBeLessThan(boostDurationFor(E, true));
+    // Cooldown tidak menerima `clean` sama sekali: salah tekan membayar waktu
+    // tunggu yang sama untuk Gaspol yang lebih pendek.
+    expect(boostCooldownSeconds(E)).toBe(
+      E.boostDurationSeconds + E.batteryRechargeSeconds,
+    );
+  });
+
+  it("mengembalikan Gaspol ke durasi penuh saat potongannya dimatikan", () => {
+    // 0 adalah cara operator mematikan mekaniknya dari panel tanpa deploy.
+    const mati = { ...E, boostCornerPenalty: 0 };
+    expect(boostDurationFor(mati, false)).toBe(mati.boostDurationSeconds);
+    expect(boostDurationFor(mati, true)).toBe(mati.boostDurationSeconds);
+  });
+
+  it("menolak potongan dan toleransi di luar rentang 0..1", () => {
+    for (const key of ["boostCornerPenalty", "boostLaunchGraceLap"] as const) {
+      expect(economyConfigSchema.safeParse({ ...E, [key]: 1.5 }).success).toBe(
+        false,
+      );
+      expect(economyConfigSchema.safeParse({ ...E, [key]: -0.1 }).success).toBe(
+        false,
+      );
+      expect(economyConfigSchema.safeParse({ ...E, [key]: 0 }).success).toBe(
+        true,
+      );
+    }
   });
 
   it("memakai satu rumus untuk laju, hadiah, dan biaya", () => {

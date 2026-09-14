@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { courseOutPose, createDrivingState, gripTuning, isTrackCorner, powertrainTuning, RECOVERY_SECONDS, resetGripChallenge, stepDriving, stepPowertrain, type DrivingState } from '../lib/race-dynamics';
+import { courseOutPose, createDrivingState, gripTuning, isCleanBoostLaunch, isTrackCorner, powertrainTuning, RECOVERY_SECONDS, resetGripChallenge, stepDriving, stepPowertrain, type DrivingState } from '../lib/race-dynamics';
 
 describe('course-out choreography', () => {
   it('launches from rest, lands upside down, and bounces before recovery', () => {
@@ -363,5 +363,48 @@ describe('session grip challenge', () => {
       expect(state.courseOuts).toBe(0);
       expect(state.speedMultiplier).toBe(1);
     }
+  });
+});
+
+/**
+ * Satu-satunya bagian berkas ini yang otoritatif: server memanggilnya untuk
+ * menilai tekanan Gaspol, jadi yang diuji di sini bukan kesan visual melainkan
+ * keputusan yang benar-benar memotong durasi pemain.
+ */
+describe('boost launch judging', () => {
+  it('follows the same straights and corners the arena draws', () => {
+    for (const progress of [.1, .6]) {
+      expect(isTrackCorner(progress)).toBe(false);
+      expect(isCleanBoostLaunch(progress)).toBe(true);
+    }
+    for (const progress of [.35, .85]) {
+      expect(isTrackCorner(progress)).toBe(true);
+      expect(isCleanBoostLaunch(progress)).toBe(false);
+    }
+  });
+
+  it('forgives a press that lands just inside the corner', () => {
+    // Mulut tikungan pertama; tanpa toleransi, tekanan di trek lurus yang tiba
+    // sepersekian putaran terlambat dihukum sebagai kesalahan pemain.
+    const mouth = .25;
+    expect(isTrackCorner(mouth)).toBe(true);
+    expect(isCleanBoostLaunch(mouth, .05)).toBe(true);
+    expect(isCleanBoostLaunch(mouth, 0)).toBe(false);
+  });
+
+  it('still refuses a press taken deep in the corner', () => {
+    expect(isCleanBoostLaunch(.4, .05)).toBe(false);
+    // Toleransi yang tidak masuk akal pun tidak boleh membuat penilaiannya
+    // meloloskan apa pun karena angka negatif atau NaN.
+    expect(isCleanBoostLaunch(.4, -1)).toBe(false);
+    expect(isCleanBoostLaunch(.4, NaN)).toBe(false);
+  });
+
+  it('wraps across the start line and never throws on a broken position', () => {
+    expect(isCleanBoostLaunch(1.35, .05)).toBe(isCleanBoostLaunch(.35, .05));
+    expect(isCleanBoostLaunch(-.65, .05)).toBe(isCleanBoostLaunch(.35, .05));
+    // Posisi rusak memberi pemain keuntungan dari keraguan: tidak ada potongan
+    // untuk angka yang bukan salahnya.
+    expect(isCleanBoostLaunch(NaN, .05)).toBe(true);
   });
 });

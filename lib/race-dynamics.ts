@@ -130,6 +130,25 @@ export function isTrackCorner(progress: number) {
   return trackCornerProgress(progress) >= 0;
 }
 
+/**
+ * Apakah Gaspol yang ditekan pada posisi lintasan ini dihitung bersih.
+ *
+ * Berbeda dari sisa berkas ini, fungsi ini OTORITATIF: server memanggilnya
+ * dengan `progress` miliknya sendiri -- yang baru saja disetel ke `now` -- jadi
+ * hasilnya tidak bisa dipengaruhi telemetri client. Yang dipakai bersama hanya
+ * geometri treknya, dan justru itu yang harus sama persis: penilaian server
+ * tidak boleh menyimpang dari tikungan yang dilihat pemain di layar.
+ *
+ * `graceLap` memaafkan tekanan yang telat sepersekian lintasan -- latensi
+ * jaringan, bukan kesalahan pemain -- dengan ikut memeriksa posisi sejauh itu
+ * di belakang. Tekanan yang memang di tengah tikungan tetap kotor.
+ */
+export function isCleanBoostLaunch(progress: number, graceLap = 0) {
+  if (!Number.isFinite(progress)) return true;
+  const grace = Number.isFinite(graceLap) ? Math.max(0, graceLap) : 0;
+  return !isTrackCorner(progress) || !isTrackCorner(progress - grace);
+}
+
 // Session-only driving challenge; never changes authoritative laps, rewards, or boost timers.
 export function stepDriving(state: DrivingState, delta: number, progress: number, boosted: boolean, tires = 1) {
   const dt = Math.max(0, Math.min(delta, .1));

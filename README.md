@@ -212,6 +212,27 @@ untuk persistensi.
 Test: `tests/economy-config.test.ts` (batas + proyeksi) dan
 `tests/game-economy.test.ts` (mengunci nilai bawaan).
 
+### Gaspol: satu-satunya keputusan berwaktu
+
+`lib/race-dynamics.ts` mensimulasikan grip, tikungan, dan selip, tapi seluruh
+isinya hanya sesi — tidak pernah menyentuh lap, koin, atau timer yang tersimpan.
+Satu-satunya pengecualian adalah `isCleanBoostLaunch`, yang dipanggil server
+untuk menilai posisi lintasan saat tombol Gaspol ditekan:
+
+- Ditekan di trek lurus → durasi penuh `boostDurationSeconds`.
+- Ditekan di tikungan → durasi dipotong `boostCornerPenalty`, cooldown tetap
+  penuh. Itu biayanya: waktu tunggu yang sama untuk hasil yang lebih sedikit.
+
+Penilaiannya memakai `progress` milik server yang baru saja disetel ke `now`,
+jadi tidak ada angka client yang ikut menentukan. `boostLaunchGraceLap`
+memaafkan tekanan yang tiba sepersekian putaran terlambat — toleransi latensi,
+diukur dalam posisi lintasan dan bukan detik, supaya mobil cepat tidak
+menghapus mekaniknya sendiri.
+
+Mekanik ini sengaja tidak menambah satu koin pun ke ekonomi: ia menambah
+variansi dan sebuah keputusan, bukan faucet. Operator bisa mematikannya dengan
+menyetel `boostCornerPenalty` ke 0.
+
 ---
 
 ## Token desain
