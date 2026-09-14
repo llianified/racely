@@ -14,6 +14,7 @@ import {
   type RollerId,
 } from "@/lib/car-setup";
 import { carSetup, lapSeconds, type GameState } from "@/lib/game";
+import { circuitName } from "@/lib/track-layout";
 import { cn } from "@/lib/utils";
 import { SectionCardHeading } from "../shell/section-card-heading";
 import { InfoHint } from "./info-hint";
@@ -107,7 +108,7 @@ export function SetupPanel({
     lapSeconds({ ...game, setup: candidate, boostLeft: 0 });
   const current = secondsFor(setup);
   const performance = setupPerformance(setup, game.levels.tires, game.circuit);
-  const circuitName = game.circuit ? "Midnight Speedway" : "Jakarta Raceway";
+  const trackName = circuitName(game.circuit);
 
   return (
     <section className="panel rewards-list-panel" aria-label="Setup mobil">
@@ -122,14 +123,14 @@ export function SetupPanel({
               trek lurus tapi masuk tikungan lebih kencang; roller berat menahan
               mobil tetap di lintasan dengan menukar sedikit laju. Setiap trek
               punya jawaban berbeda — angka di bawah dihitung untuk{" "}
-              {circuitName}, memakai rumus yang sama dengan server.
+              {trackName}, memakai rumus yang sama dengan server.
             </InfoHint>
           </>
         }
       />
       {performance.courseOutsPerLap > 0 && (
         <p className="race-settings-note" role="status">
-          Setup ini kelewat agresif untuk {circuitName}: mobil keluar lintasan{" "}
+          Setup ini kelewat agresif untuk {trackName}: mobil keluar lintasan{" "}
           {performance.courseOutsPerLap.toLocaleString("id-ID", {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
