@@ -333,12 +333,9 @@ export function getPreviewGameState(
   config: EconomyConfig,
 ) {
   const economy = unlockAllCircuits(config);
-  const now = Date.now();
-  const { game, offline } = settlePreviewGame(
-    readPreviewGame(request, identity, economy),
-    now,
-    economy,
-  );
+  const stored = readPreviewGame(request, identity, economy);
+  const now = Math.max(Date.now(), stored.updatedAt);
+  const { game, offline } = settlePreviewGame(stored, now, economy);
   return previewResult(game, offline, now, economy);
 }
 
@@ -350,12 +347,10 @@ export function performPreviewGameAction(
   config: EconomyConfig,
 ) {
   const economy = unlockAllCircuits(config);
-  const now = Date.now();
-  const settled = settlePreviewGame(
-    readPreviewGame(request, identity, economy),
-    now,
-    economy,
-  );
+  const stored = readPreviewGame(request, identity, economy);
+  // Actions and response fields must use the same monotonic clock as settlement.
+  const now = Math.max(Date.now(), stored.updatedAt);
+  const settled = settlePreviewGame(stored, now, economy);
   const { offline } = settled;
   let game = settled.game;
   let boostLaunch: BoostLaunch | null = null;

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { NEUTRAL_SETUP, setupPerformance, type CarSetup } from '../lib/car-setup'
 import { createDrivingState, RECOVERY_SECONDS, stepPowertrain, STRAIGHT_LAP_FRACTION } from '../lib/race-dynamics'
 import { createSetupFeedback, stepSetupFeedback } from '../components/game/scene/setup-feedback'
+import { trackLayoutAt } from '../lib/track-layout'
 
 const aggressive: CarSetup = { gear: '3.5:1', roller: 'light' }
 const stable: CarSetup = { gear: '5:1', roller: 'heavy' }
@@ -23,6 +24,29 @@ function runCorners(setup: CarSetup, laps: number, fps: number, circuit = 0) {
 }
 
 describe('setup-driven visual feedback', () => {
+  it.each([0, 1, 2])('uses the actual sections and corner count of circuit %i', circuit => {
+    const layout = trackLayoutAt(circuit)
+    const state = createDrivingState()
+    const feedback = createSetupFeedback()
+    const performance = setupPerformance(aggressive, 1, circuit)
+    for (let lap = 0; lap < 50; lap++) {
+      let start = 0
+      for (const section of layout.sections) {
+        for (const fraction of [.1, .8]) {
+          const progress = start + section.lengthFraction * fraction
+          stepSetupFeedback(state, feedback, 1 / 60, progress, performance, layout)
+          expect(feedback.sectionId).toBe(section.id)
+          expect(state.corner).toBe(section.severity > 0)
+          expect(state.cornerProgress).toBeCloseTo(section.severity > 0 ? fraction : -1)
+          while (state.recovery > 0) stepSetupFeedback(state, feedback, 1 / 60, progress, performance, layout)
+        }
+        start += section.lengthFraction
+      }
+    }
+    expect(state.courseOuts).toBe(Math.floor(50 * performance.courseOutsPerLap))
+    expect(state.courseOuts + feedback.courseOutBudget).toBeCloseTo(50 * performance.courseOutsPerLap, 8)
+  })
+
   it.each([30, 60, 120])('illustrates the shared fractional rate without RNG at %i fps', fps => {
     const { state, feedback, performance } = runCorners(aggressive, 50, fps)
     expect(state.courseOuts).toBe(Math.floor(50 * performance.courseOutsPerLap))
