@@ -12,7 +12,6 @@ import {
   missionValue,
   roundCoins,
   WITHDRAW_METHODS,
-  type BoostLaunch,
   type GameCommand,
   type GameState,
   type OfflineEarnings,
@@ -263,7 +262,6 @@ function previewResult(
   offline: OfflineEarnings | null,
   now: number,
   economy: EconomyConfig,
-  boostLaunch: BoostLaunch | null = null,
 ): { state: GameState; cookieValue: string } {
   const state: GameState = {
     ...game.state,
@@ -277,9 +275,8 @@ function previewResult(
   return {
     state: {
       ...state,
-      // Keduanya transien dan tidak ikut cookie, sama seperti di server.
+      // Transien dan tidak ikut cookie, sama seperti di server.
       ...(offline ? { offlineEarnings: offline } : {}),
-      ...(boostLaunch ? { boostLaunch } : {}),
     },
     cookieValue: serializePreviewGame(game),
   };
@@ -349,7 +346,6 @@ export function performPreviewGameAction(
   const settled = settlePreviewGame(stored, now, economy);
   const { offline } = settled;
   let game = settled.game;
-  const boostLaunch: BoostLaunch | null = null;
   const selection = game.state.carSelection;
 
   if (action.type === "select-car") {
@@ -512,5 +508,5 @@ export function performPreviewGameAction(
         ? game.receipts
         : [...game.receipts, requestId].slice(-MAX_RECEIPTS),
   };
-  return previewResult(game, offline, now, economy, boostLaunch);
+  return previewResult(game, offline, now, economy);
 }

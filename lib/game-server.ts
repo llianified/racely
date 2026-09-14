@@ -40,7 +40,6 @@ import {
   REFERRAL_PARAM_PREFIX,
   roundCoins,
   WITHDRAW_METHODS,
-  type BoostLaunch,
   type DailyCheckIn,
   type GameState,
   type ReferralSummary,
@@ -720,14 +719,10 @@ type ActionContext = {
  * Baris pemain sesudah aksi, plus daftar check-in kalau aksinya menambah satu.
  * Hanya `daily` yang pernah mengisi `dailyClaims`; sisanya membiarkan milik
  * pemanggil apa adanya.
- *
- * `boostLaunch` sama sifatnya: hanya `boost` yang mengisinya, dan isinya tidak
- * pernah disimpan -- ia menumpang respons yang menyalakan Gaspol, lalu hilang.
  */
 type ActionOutcome = {
   row: PlayerRow;
   dailyClaims?: string[];
-  boostLaunch?: BoostLaunch;
 };
 
 type ActionHandler<T extends GameCommand["type"]> = (
@@ -866,10 +861,10 @@ const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
   },
 
   /**
-   * `row.progress` di sini sudah disetel ke `now` oleh `settlePlayerRow`, jadi
-   * ia adalah posisi lintasan pada detik tombol itu tiba -- bukan posisi saat
-   * permintaan sebelumnya. Itu yang membuat penilaian ini otoritatif tanpa
-   * satu pun angka dari client.
+   * Gaspol sudah dihapus. Cabangnya tetap ada -- `commandSchema` masih menerima
+   * `boost` supaya klien lama mendapat jawaban yang menjelaskan, bukan 400 yang
+   * membingungkan -- tapi ia tidak pernah lagi menyentuh baris pemain, dan
+   * receipt tidak ditulis karena lemparan ini mendahuluinya.
    */
   boost: () => {
     throw new GameRuleError("Gaspol sudah dihapus dari permainan.", 410);
@@ -1156,15 +1151,7 @@ export async function performGameAction(
       });
     }
 
-    // Ditempel di sini, bukan di `stateFromRow`: hasil tekanan tidak bisa
-    // dibaca ulang dari baris yang tersimpan, dan pemutaran ulang permintaan
-    // yang sama di atas memang tidak boleh melaporkannya untuk kedua kalinya.
-    return {
-      state: outcome.boostLaunch
-        ? { ...response, boostLaunch: outcome.boostLaunch }
-        : response,
-      saved,
-    };
+    return { state: response, saved };
   });
 
   // Di luar transaksi pemain: lihat payInviter untuk alasan urutan penguncian.

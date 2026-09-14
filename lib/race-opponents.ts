@@ -48,10 +48,6 @@ export function raceOrder(distance: number, rivals: RaceRivals | undefined, econ
       || (a.opponent?.id ?? '').localeCompare(b.opponent?.id ?? ''))
 }
 
-export function positionFromDistance(distance: number, opponents: readonly number[]) {
-  return 1 + opponents.filter(other => other > distance + 1e-8).length
-}
-
 export function reconcileRaceDistance(current: number, target: number, delta: number) {
   if (Math.abs(target - current) > 1) return target
   return current + (target - current) * (1 - Math.exp(-12 * Math.max(0, delta)))
