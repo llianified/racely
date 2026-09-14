@@ -5,13 +5,14 @@ export type PartSlot = (typeof PART_SLOTS)[number];
 export const PART_IDS = ["vented-hood", "ram-hood", "ducktail", "gt-wing", "front-splitter", "side-skirts"] as const;
 export type PartId = (typeof PART_IDS)[number];
 export const SLOT_LABELS: Record<PartSlot, string> = { hood: "Kap mesin", spoiler: "Spoiler", splitter: "Splitter", skirts: "Side skirt" };
+/** Harga dalam koin pada denominasi bawaan (10 koin = Rp1), lihat `DEFAULT_ECONOMY`. */
 export const PART_CATALOG: Record<PartId, { name: string; slot: PartSlot; price: number; description: string; finish: string }> = {
-  "vented-hood": { name: "Vortex Hood", slot: "hood", price: 8, description: "Kap graphite dengan dua jalur louver dan profil rendah mengikuti hidung mobil.", finish: "Graphite satin" },
-  "ram-hood": { name: "Ram Air Hood", slot: "hood", price: 16, description: "Kap dengan intake tengah, mulut udara gelap, dan tepian metalik.", finish: "Graphite / alloy" },
-  "ducktail": { name: "Aero Ducktail", slot: "spoiler", price: 12, description: "Spoiler rendah dengan ujung melengkung. Menggantikan spoiler bawaan, bukan ditumpuk.", finish: "Warna bodi" },
-  "gt-wing": { name: "GT Swan Wing", slot: "spoiler", price: 24, description: "Sayap lebar, dua dudukan swan-neck, dan endplate tegak bergaya time attack.", finish: "Graphite / gold" },
-  "front-splitter": { name: "Blade Splitter", slot: "splitter", price: 6, description: "Bibir depan menyapu ke samping dengan dua batang penyangga alloy.", finish: "Graphite satin" },
-  "side-skirts": { name: "Flow Side Skirts", slot: "skirts", price: 10, description: "Sepasang bilah bawah bodi dengan sirip belakang, dipasang di antara kedua as roda.", finish: "Graphite / gold" },
+  "vented-hood": { name: "Vortex Hood", slot: "hood", price: 8_000, description: "Kap graphite dengan dua jalur louver dan profil rendah mengikuti hidung mobil.", finish: "Graphite satin" },
+  "ram-hood": { name: "Ram Air Hood", slot: "hood", price: 16_000, description: "Kap dengan intake tengah, mulut udara gelap, dan tepian metalik.", finish: "Graphite / alloy" },
+  "ducktail": { name: "Aero Ducktail", slot: "spoiler", price: 12_000, description: "Spoiler rendah dengan ujung melengkung. Menggantikan spoiler bawaan, bukan ditumpuk.", finish: "Warna bodi" },
+  "gt-wing": { name: "GT Swan Wing", slot: "spoiler", price: 24_000, description: "Sayap lebar, dua dudukan swan-neck, dan endplate tegak bergaya time attack.", finish: "Graphite / gold" },
+  "front-splitter": { name: "Blade Splitter", slot: "splitter", price: 6_000, description: "Bibir depan menyapu ke samping dengan dua batang penyangga alloy.", finish: "Graphite satin" },
+  "side-skirts": { name: "Flow Side Skirts", slot: "skirts", price: 10_000, description: "Sepasang bilah bawah bodi dengan sirip belakang, dipasang di antara kedua as roda.", finish: "Graphite / gold" },
 };
 
 export type BodyParts = { owned: PartId[]; equipped: Partial<Record<PartSlot, PartId>> };
