@@ -70,7 +70,7 @@ function ShopContents({ game, disabled, onAction, onPending }: Omit<ShopProps, "
   return <>
     <div className="sheet-body" data-flush>
       <div className="parts-shop-stage" role="img" aria-label={`${CAR_CATALOG[model].name}: ${trying ? `pratinjau ${part.name}, belum disimpan` : "part yang terpasang"}`}>
-        <CarPreviewScene color={game.color} model={model} levels={game.levels} equipped={previewParts} />
+        <CarPreviewScene roller={game.setup?.roller} color={game.color} model={model} levels={game.levels} equipped={previewParts} />
       </div>
       <div className="parts-shop-preview-bar">
         <div className="parts-shop-preview-state">

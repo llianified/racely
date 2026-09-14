@@ -10,12 +10,14 @@ import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js'
 import { COLORS, MiniCar } from './mini-car'
 import type { CarModelId } from '@/lib/car-catalog'
 import type { GameState } from '@/lib/game'
-import { PLAYER_RADIUS, TRACK_HALF, RECOVERY_SECONDS, courseOutPose, stepDriving, stepPowertrain, type DrivingState } from '@/lib/race-dynamics'
+import { PLAYER_RADIUS, TRACK_HALF, RECOVERY_SECONDS, courseOutPose, resetGripChallenge, stepDriving, stepPowertrain, type DrivingState } from '@/lib/race-dynamics'
+import { setupPerformance, type CarSetup } from '@/lib/car-setup'
+import { createSetupFeedback, stepSetupFeedback } from './setup-feedback'
 import { RacingEffects } from './racing-effects'
 import { ContextMonitor, SceneBoundary } from './scene-recovery'
 
 const HALF = TRACK_HALF
-export type SceneProps = { equipped?: NonNullable<GameState['bodyParts']>['equipped']; driving?: RefObject<DrivingState>; onTelemetry?: (state: DrivingState) => void; cinematic?: boolean; levels?: GameState['levels']; model?: CarModelId; progress: number; seconds: number; baseSeconds: number; opponentSeconds: readonly [number, number]; color: string; boosted: boolean; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean }
+export type SceneProps = { setup?: CarSetup; equipped?: NonNullable<GameState['bodyParts']>['equipped']; driving?: RefObject<DrivingState>; onTelemetry?: (state: DrivingState) => void; cinematic?: boolean; levels?: GameState['levels']; model?: CarModelId; progress: number; seconds: number; baseSeconds: number; opponentSeconds: readonly [number, number]; color: string; boosted: boolean; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean }
 
 // The 10Hz game tick changes these every 100ms. They are consumed inside useFrame,
 // so they travel through a ref instead of props: a tick must not reconcile the 3D tree.
@@ -59,7 +61,7 @@ function Ribbon({ inner, outer, height = .12, color, y = 0, glow = false }: { in
   </mesh>
 }
 
-const Racer = memo(function Racer({ lane, color, model, timing, playerRef, levels, driving, onTelemetry, reducedMotion, equipped }: { levels?: GameState['levels']; model?: CarModelId; lane: number; color: string; timing: RefObject<RaceTiming>; playerRef?: RefObject<THREE.Group | null> } & Pick<SceneProps, 'driving' | 'onTelemetry' | 'reducedMotion' | 'equipped'>) {
+const Racer = memo(function Racer({ lane, color, model, timing, playerRef, levels, driving, onTelemetry, reducedMotion, equipped, setup, circuit }: { levels?: GameState['levels']; model?: CarModelId; lane: number; color: string; timing: RefObject<RaceTiming>; playerRef?: RefObject<THREE.Group | null> } & Pick<SceneProps, 'driving' | 'onTelemetry' | 'reducedMotion' | 'equipped' | 'setup' | 'circuit'>) {
   const ownRef = useRef<THREE.Group>(null)
   const group = playerRef ?? ownRef
   const phase = useRef(lane * .32)
@@ -70,6 +72,17 @@ const Racer = memo(function Racer({ lane, color, model, timing, playerRef, level
   const chassisPitch = useRef(0)
   const energyLamp = useRef<THREE.MeshStandardMaterial>(null)
   const crash = useRef({ active: false, x: 0, y: .14, z: 0, heading: 0, impacts: 0 })
+  const feedback = useRef(createSetupFeedback())
+  const gear = setup?.gear
+  const roller = setup?.roller
+  const tires = levels?.tires ?? 1
+  const performance = useMemo(() => gear && roller ? setupPerformance({ gear, roller }, tires, circuit) : undefined, [gear, roller, tires, circuit])
+  const powertrainVisual = useMemo(() => performance ? { cornerMultiplier: performance.cornerSpeed / performance.speed, accelerationMultiplier: performance.accel } : undefined, [performance])
+  useLayoutEffect(() => {
+    feedback.current = createSetupFeedback()
+    if (performance && driving?.current) resetGripChallenge(driving.current, driving.current.enabled)
+    crash.current.active = false
+  }, [performance, driving])
   useFrame((_, delta) => {
     if (!group.current || document.hidden) return
     const dt = Math.min(delta, .1)
@@ -78,8 +91,9 @@ const Racer = memo(function Racer({ lane, color, model, timing, playerRef, level
     if (!seeded.current) { phase.current = progress; seeded.current = true }
     const state = lane === 0 ? driving?.current : undefined
     if (state) {
-      stepDriving(state, dt, phase.current, boosted && state.boostEnergy > 0 && !state.boostExhausted, levels?.tires)
-      stepPowertrain(state, dt, boosted, levels?.engine, levels?.battery)
+      if (performance) stepSetupFeedback(state, feedback.current, dt, phase.current, performance)
+      else stepDriving(state, dt, phase.current, boosted && state.boostEnergy > 0 && !state.boostExhausted, levels?.tires)
+      stepPowertrain(state, dt, boosted, levels?.engine, levels?.battery, powertrainVisual)
     }
     const recovering = !!state && state.recovery > 0
     const lapsPerSecond = state ? state.visualSpeed / baseSeconds : 1 / seconds
@@ -95,8 +109,9 @@ const Racer = memo(function Racer({ lane, color, model, timing, playerRef, level
     const p = trackPoint(phase.current, PLAYER_RADIUS + lane * .68)
     const offset = state?.offset ?? 0
     const slip = state ? Math.max(0, (65 - state.grip) / 65) : 0
-    const yaw = state ? THREE.MathUtils.clamp(state.lateralVelocity * .09 + (state.corner ? slip * .22 : 0), -.32, .32) : 0
-    const roll = reducedMotion ? 0 : state?.corner ? -slip * .06 : 0
+    const load = state?.corner && performance ? Math.min(1, performance.cornerLoad / performance.grip) * Math.sin(Math.PI * state.cornerProgress) : 0
+    const yaw = state ? THREE.MathUtils.clamp(state.lateralVelocity * .09 + (state.corner ? slip * .16 : 0), -.24, .24) : 0
+    const roll = reducedMotion ? 0 : state?.corner ? -(load * .025 + slip * .12) : 0
     const ground = state?.offRoad ? -.08 : .14
     const targetX = p.x + Math.cos(p.angle) * offset
     const targetZ = p.z - Math.sin(p.angle) * offset
@@ -141,7 +156,7 @@ const Racer = memo(function Racer({ lane, color, model, timing, playerRef, level
   return <group ref={group}>
     <group ref={tumble} position={[0, .17, 0]}>
       <group position={[0, -.17, 0]}>
-        <MiniCar color={color} model={model} levels={levels} equipped={equipped} scale={.85} speedRef={wheelSpeed} />
+        <MiniCar roller={roller} color={color} model={model} levels={levels} equipped={equipped} scale={.85} speedRef={wheelSpeed} />
         {lane === 0 && <mesh position={[0, .255, -.30]}>
           <boxGeometry args={[.14, .018, .025]} />
           <meshStandardMaterial ref={energyLamp} color={COLORS.navy} emissive={COLORS.gold} emissiveIntensity={1} toneMapped={false} />
@@ -258,7 +273,8 @@ function RacingLine({ playerRef, driving }: { playerRef: RefObject<THREE.Group |
     for (let i = 0; i < 32; i++) {
       const progress = (playerRef.current.userData.phase ?? 0) + .018 + i * .004
       const p = trackPoint(progress, PLAYER_RADIUS)
-      transform.position.set(p.x, .142, p.z)
+      const offset = (state?.offset ?? 0) * (1 - i / 32)
+      transform.position.set(p.x + Math.cos(p.angle) * offset, .142, p.z - Math.sin(p.angle) * offset)
       transform.rotation.set(0, p.angle, 0)
       transform.scale.setScalar(1 - i / 42)
       transform.updateMatrix()
@@ -382,12 +398,12 @@ function CameraRig({ mode, follow, resetKey, playerRef, active, reducedMotion, c
   </>
 }
 
-function CarInspector({ color, model, charge, reducedMotion, bodyVisible, levels, equipped }: Pick<SceneProps, 'color' | 'model' | 'charge' | 'reducedMotion' | 'bodyVisible' | 'levels' | 'equipped'>) {
+function CarInspector({ color, model, charge, reducedMotion, bodyVisible, levels, equipped, setup }: Pick<SceneProps, 'color' | 'model' | 'charge' | 'reducedMotion' | 'bodyVisible' | 'levels' | 'equipped' | 'setup'>) {
   const { size } = useThree()
   return <>
     <OrthographicCamera makeDefault position={[1.1, 1.5, 1.7]} zoom={Math.min(size.width / 1.6, size.height / 1.25)} near={.01} far={50} />
     <OrbitControls makeDefault target={[0, .12, 0]} enablePan={false} minZoom={100} maxZoom={450} minPolarAngle={.1} maxPolarAngle={Math.PI / 2.1} enableDamping={!reducedMotion} />
-    <MiniCar equipped={equipped} color={color} model={model} inspect={!bodyVisible} charge={charge} levels={levels} />
+    <MiniCar roller={setup?.roller} equipped={equipped} color={color} model={model} inspect={!bodyVisible} charge={charge} levels={levels} />
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -.008, 0]} receiveShadow>
       <circleGeometry args={[1.4, 64]} /><meshStandardMaterial color={COLORS.surface} roughness={.8} />
     </mesh>
@@ -418,7 +434,7 @@ const Arena = memo(function Arena(props: ArenaProps) {
     <directionalLight position={[2, 10, 7]} intensity={2.2} castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={props.inspect ? -1.5 : -10} shadow-camera-right={props.inspect ? 1.5 : 10} shadow-camera-top={props.inspect ? 1.5 : 10} shadow-camera-bottom={props.inspect ? -1.5 : -10} shadow-normalBias={.006} shadow-bias={-.0001} />
     <directionalLight position={[-8, 5, -6]} intensity={.8} color={COLORS.white} />
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -.16, 0]} receiveShadow><planeGeometry args={[240, 240]} /><meshStandardMaterial color="#090c1d" roughness={.85} /></mesh>
-    {props.inspect ? <CarInspector equipped={props.equipped} levels={props.levels} color={props.color} model={props.model} charge={props.charge} reducedMotion={props.reducedMotion} bodyVisible={props.bodyVisible} /> : <>
+    {props.inspect ? <CarInspector setup={props.setup} equipped={props.equipped} levels={props.levels} color={props.color} model={props.model} charge={props.charge} reducedMotion={props.reducedMotion} bodyVisible={props.bodyVisible} /> : <>
     <Grid position={[0, -.145, 0]} args={[36, 36]} infiniteGrid cellSize={1} cellThickness={.35} cellColor="#2c2852" sectionSize={5} sectionThickness={.6} sectionColor="#463e7a" fadeDistance={60} fadeStrength={2} />
     <Circuit circuit={props.circuit} />
     <RacingLine playerRef={playerRef} driving={props.driving} />
@@ -426,7 +442,7 @@ const Arena = memo(function Arena(props: ArenaProps) {
     <CameraRig cinematic={props.cinematic} driving={props.driving} mode={props.cameraMode} follow={follow} resetKey={props.resetKey} playerRef={playerRef} active={running} reducedMotion={props.reducedMotion ?? false} />
     </>}
     <group visible={!props.inspect}>
-      {[0, 1, 2].map(lane => <Racer key={lane} equipped={lane === 0 ? props.equipped : undefined} lane={lane} driving={lane === 0 ? props.driving : undefined} onTelemetry={props.onTelemetry} reducedMotion={props.reducedMotion} levels={lane === 0 ? props.levels : undefined} model={lane === 0 ? props.model : 'neo-falcon'} playerRef={lane === 0 ? playerRef : undefined} color={lane === 0 ? props.color : lane === 1 ? COLORS.gold : COLORS.white} timing={timing} />)}
+      {[0, 1, 2].map(lane => <Racer key={lane} setup={lane === 0 ? props.setup : undefined} circuit={props.circuit} equipped={lane === 0 ? props.equipped : undefined} lane={lane} driving={lane === 0 ? props.driving : undefined} onTelemetry={props.onTelemetry} reducedMotion={props.reducedMotion} levels={lane === 0 ? props.levels : undefined} model={lane === 0 ? props.model : 'neo-falcon'} playerRef={lane === 0 ? playerRef : undefined} color={lane === 0 ? props.color : lane === 1 ? COLORS.gold : COLORS.white} timing={timing} />)}
     </group>
     <ContextMonitor onLost={props.onLost} />
   </>
@@ -481,7 +497,7 @@ export default function RaceScene(props: SceneProps) {
   return <SceneBoundary key={attempt} fallback={<SceneError onRetry={retry} />}>
     {!ready && <div className="scene-loading absolute inset-0" role="status"><Flag /><strong>Menyalakan lampu sirkuit.</strong><span>Menyiapkan lintasan 3D…</span></div>}
     <Canvas orthographic dpr={[1, 1.25]} frameloop={running ? 'always' : 'never'} shadows="percentage" camera={{ position: [9, 12.5, 12], zoom: 30, near: .1, far: 100 }} gl={{ antialias: true, alpha: false, powerPreference: 'default' }} fallback={<SceneError onRetry={retry} />} onCreated={() => setReady(true)} aria-label={props.inspect ? 'Inspeksi sasis dan dua sel baterai mobil. Geser untuk memutar, cubit untuk zoom. Balapan tetap berlangsung.' : follow ? 'Arena mini 4WD 3D. Kamera mengikuti mobilmu. Pilih Overview untuk melihat seluruh lintasan.' : 'Arena mini 4WD 3D. Kamera overview. Geser untuk memutar, cubit untuk zoom.'}>
-      <Arena equipped={props.equipped} driving={props.driving} onTelemetry={props.onTelemetry} cinematic={props.cinematic} levels={props.levels} model={props.model} color={props.color} cameraMode={props.cameraMode} resetKey={props.resetKey} circuit={props.circuit} reducedMotion={props.reducedMotion} inspect={props.inspect} charge={props.inspect ? props.charge : undefined} bodyVisible={props.bodyVisible} timing={timing} playerRef={playerRef} follow={follow} running={running} onLost={onLost} />
+      <Arena setup={props.setup} equipped={props.equipped} driving={props.driving} onTelemetry={props.onTelemetry} cinematic={props.cinematic} levels={props.levels} model={props.model} color={props.color} cameraMode={props.cameraMode} resetKey={props.resetKey} circuit={props.circuit} reducedMotion={props.reducedMotion} inspect={props.inspect} charge={props.inspect ? props.charge : undefined} bodyVisible={props.bodyVisible} timing={timing} playerRef={playerRef} follow={follow} running={running} onLost={onLost} />
     </Canvas>
   </SceneBoundary>
 }
