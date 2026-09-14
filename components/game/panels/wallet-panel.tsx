@@ -134,7 +134,7 @@ export function WalletPanel({
       <StatHero
         ariaLabel="Saldo koin"
         label="Koin kamu"
-        figure={formatCoins(balance)}
+        figure={balance}
         action={
           <Button
             variant="gold"
