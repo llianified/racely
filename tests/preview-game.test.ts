@@ -134,7 +134,7 @@ describe("Preview offline earnings", () => {
     vi.setSystemTime(new Date(now.getTime() + 24000));
     const next = action(stale.cookieValue, { type: "sync" });
     expect(next.state.laps).toBe(3);
-    expect(next.state.pending).toBe(.12);
+    expect(next.state.pending).toBe(.15);
   });
 
   const racing = () => {
@@ -154,10 +154,10 @@ describe("Preview offline earnings", () => {
       creditedSeconds: 480,
       capped: false,
       laps: 30,
-      coins: 1.2,
+      coins: 1.5,
     });
     expect(back.state.laps).toBe(45);
-    expect(back.state.pending).toBe(1.8);
+    expect(back.state.pending).toBe(2.25);
 
     // The summary rides the response, never the cookie, so it is not replayed.
     expect(
@@ -176,9 +176,9 @@ describe("Preview offline earnings", () => {
       creditedSeconds: 4 * 60 * 60,
       capped: true,
       laps: 900,
-      coins: 36,
+      coins: 45,
     });
-    expect(back.state.pending).toBe(36.6);
+    expect(back.state.pending).toBe(45.75);
   });
 
   it("says nothing about an absence a heartbeat could have covered", () => {
@@ -275,7 +275,7 @@ describe("Preview car selection", () => {
     const cookie = Buffer.from(JSON.stringify({ version: 1, userId: identity.userId, updatedAt: now.getTime() - 16000, receipts: [], state: INITIAL_GAME })).toString("base64url");
     const offered = getPreviewGameState(request(cookie), identity, E);
     expect(offered.state.laps).toBe(2);
-    expect(offered.state.pending).toBe(.08);
+    expect(offered.state.pending).toBe(.1);
     vi.advanceTimersByTime(16000);
     expect(getPreviewGameState(request(offered.cookieValue), identity, E).state).toEqual(offered.state);
   });

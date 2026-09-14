@@ -1,4 +1,4 @@
-import { opponentDistance, positionFromDistance, type RaceRivals } from './race-opponents';
+import { raceOrder, type RaceRivals } from './race-opponents';
 import type { CarColor, CarModelId } from "./car-catalog";
 import type { DailyMissions, DailyMissionKind } from "./daily-missions";
 import type { PaintId, PaintCommand } from "./car-paints";
@@ -250,7 +250,7 @@ export const lapSeconds = (
   );
 export const racePosition = (
   s: Pick<GameState, "laps" | "progress" | "rivals" | "economy">,
-) => positionFromDistance(s.laps + s.progress, (s.rivals?.opponents ?? []).map(opponent => opponentDistance(opponent, s.economy, s.rivals?.elapsedSeconds)));
+) => raceOrder(s.laps + s.progress, s.rivals, s.economy).findIndex(entry => entry.opponent === null) + 1;
 export const MODIFICATION_PARTS: Record<Upgrade, readonly string[]> = {
   engine: ["Motor standar", "Motor sport", "Motor racing", "Motor pro"],
   tires: ["Ban & roller standar", "Ban low-friction", "Roller bearing", "Ban & roller pro"],
@@ -322,22 +322,11 @@ export const formatSpeedKmh = (kmh: number) => {
   });
 };
 
-// Derive reserve from the authoritative boost timers, so reloads cannot refill it.
+// Keep the legacy payload shape for old clients; automatic racing has no boost reserve.
 export function batteryTelemetry(
-  s: Pick<GameState, "boostLeft" | "cooldown" | "economy">,
+  _s: Pick<GameState, "boostLeft" | "cooldown" | "economy">,
 ) {
-  const discharging = s.boostLeft > 0;
-  const charging = !discharging && s.cooldown > 0;
-  const charge = Math.max(0, Math.min(1, discharging
-    ? s.boostLeft / s.economy.boostDurationSeconds
-    : 1 - s.cooldown / s.economy.batteryRechargeSeconds));
-  return {
-    charge,
-    percent: Math.round(charge * 100),
-    phase: discharging ? "discharging" as const : charging ? "charging" as const : "ready" as const,
-    readyIn: Math.max(0, Math.ceil(s.cooldown)),
-    canBoost: !discharging && !charging,
-  };
+  return { charge: 1, percent: 100, phase: "ready" as const, readyIn: 0, canBoost: false };
 }
 
 export const totalLevel = (s: Pick<GameState, "levels">) =>
@@ -442,27 +431,8 @@ export function gameReducer(s: GameState, action: GameAction): GameState {
   if (action.type === "hydrate") return action.state;
   if (s.carSelection?.model === null) return s;
   const delta = Math.max(0, Math.min(action.delta, 0.5));
-  const boostedSeconds = Math.min(delta, Math.max(0, s.boostLeft));
-  const normalSeconds = delta - boostedSeconds;
-  let progress = s.progress;
-  let completed = 0;
-  let income = 0;
-
-  const advance = (elapsedSeconds: number, boosted: boolean) => {
-    if (elapsedSeconds <= 0) return;
-    const segmentState = { ...s, boostLeft: boosted ? 1 : 0 };
-    const segment = advanceRaceProgress(
-      progress,
-      elapsedSeconds,
-      lapSeconds(segmentState),
-    );
-    progress = segment.progress;
-    completed += segment.completedLaps;
-    income += segment.completedLaps * lapReward(segmentState);
-  };
-
-  advance(boostedSeconds, true);
-  advance(normalSeconds, false);
+  const { progress, completedLaps: completed } = advanceRaceProgress(s.progress, delta, lapSeconds(s));
+  const income = completed * lapReward(s);
   return {
     ...s,
     progress,

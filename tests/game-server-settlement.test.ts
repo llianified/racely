@@ -46,14 +46,14 @@ describe("monotonic player settlement", () => {
     const initial = player();
     const paid = settlePlayerRow(initial, at(16), E);
     expect(paid.row.laps).toBe(2);
-    expect(paid.row.pending).toBe(.08);
+    expect(paid.row.pending).toBe(.1);
     const stale = settlePlayerRow(paid.row, at(8), E);
     expect(stale.row).toEqual(paid.row);
     expect(stale.offline).toBeNull();
     expect(settlePlayerRow(stale.row, at(16), E).row).toEqual(paid.row);
     const next = settlePlayerRow(stale.row, at(24), E);
     expect(next.row).toEqual(settlePlayerRow(initial, at(24), E).row);
-    expect(next.row.pending).toBe(.12);
+    expect(next.row.pending).toBe(.15);
     expect(initial.lastSettledAt).toEqual(start);
     expect(initial.pending).toBe(0);
   });
@@ -84,7 +84,7 @@ describe("monotonic player settlement", () => {
     expect(stale.row).toEqual(paid.row);
     expect(stale.offline).toBeNull();
     const next = settlePlayerRow(stale.row, at(36008), E);
-    expect(next.row.pending - paid.row.pending).toBeCloseTo(.04);
+    expect(next.row.pending - paid.row.pending).toBeCloseTo(.05);
     expect(next.row.laps - paid.row.laps).toBe(1);
   });
 });

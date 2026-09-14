@@ -414,41 +414,6 @@ export const lapRewardAt = (
 
 export type RacePosition = 1 | 2 | 3;
 
-const rivalLevelsAt = (e: EconomyConfig, circuit: number) => {
-  const tier = circuit > 0 ? 1 : 0;
-  const level = (value: number) => Math.min(e.maxUpgradeLevel, value);
-  return [
-    { engine: level(3 + tier), tires: level(1 + tier), battery: 1 },
-    { engine: level(1 + tier), tires: level(2 + tier), battery: 1 },
-  ] as const;
-};
-
-/** Waktu lawan tetap server-derived; model atau input client tidak memengaruhinya. */
-export const raceOpponentLapSecondsAt = (
-  e: EconomyConfig,
-  circuit: number,
-): readonly [number, number] => {
-  const [leader, chaser] = rivalLevelsAt(e, circuit);
-  return [
-    lapSecondsAt(e, leader, false),
-    lapSecondsAt(e, chaser, false),
-  ];
-};
-
-export const racePositionAt = (
-  e: EconomyConfig,
-  levels: Record<UpgradeKey, number>,
-  circuit: number,
-  boosted: boolean,
-  setup: CarSetup = NEUTRAL_SETUP,
-): RacePosition => {
-  const playerSeconds = effectiveLapSecondsAt(e, levels, boosted, setup, circuit);
-  const losses = raceOpponentLapSecondsAt(e, circuit).filter(
-    (opponentSeconds) => opponentSeconds < playerSeconds,
-  ).length;
-  return (losses + 1) as RacePosition;
-};
-
 export const raceRewardAt = (
   e: EconomyConfig,
   levels: Record<UpgradeKey, number>,

@@ -5,7 +5,7 @@ import {
   dailyRewardFor,
   racingDayKey,
 } from "../lib/game-economy";
-import { INITIAL_GAME, batteryTelemetry, formatDuration, gameReducer, lapReward, lapSeconds, modificationPartName, modificationPreview, raceOpponentLapSeconds, racePosition } from "../lib/game";
+import { INITIAL_GAME, batteryTelemetry, formatDuration, gameReducer, lapReward, lapSeconds, modificationPartName, modificationPreview, racePosition } from "../lib/game";
 import { DEFAULT_ECONOMY, upgradeCostAt } from "../lib/economy-config";
 
 /**
@@ -31,32 +31,19 @@ function settlementInput(
   };
 }
 
-describe("Boost battery", () => {
-  it("starts full and ready", () => {
-    expect(batteryTelemetry(INITIAL_GAME)).toMatchObject({ percent: 100, phase: "ready", canBoost: true });
+describe("Automatic racing without Gaspol", () => {
+  it("never exposes an actionable boost reserve", () => {
+    for (const timers of [{ boostLeft: 0, cooldown: 0 }, { boostLeft: 5, cooldown: 30 }, { boostLeft: 20, cooldown: -1 }]) {
+      expect(batteryTelemetry({ ...timers, economy: E })).toMatchObject({ percent: 100, canBoost: false, readyIn: 0 });
+    }
   });
 
-  it("drains only during boost, then recharges from empty", () => {
-    expect(batteryTelemetry({ boostLeft: 10, cooldown: 35, economy: E }).percent).toBe(100);
-    expect(batteryTelemetry({ boostLeft: 5, cooldown: 30, economy: E })).toMatchObject({ percent: 50, phase: "discharging", canBoost: false });
-    expect(batteryTelemetry({ boostLeft: 0, cooldown: 25, economy: E })).toMatchObject({ percent: 0, phase: "charging", readyIn: 25 });
-    expect(batteryTelemetry({ boostLeft: 0, cooldown: 12.5, economy: E }).percent).toBe(50);
-    expect(batteryTelemetry({ boostLeft: 0, cooldown: 0, economy: E }).canBoost).toBe(true);
-  });
-
-  it("clamps stale timer values and never unlocks a running boost", () => {
-    expect(batteryTelemetry({ boostLeft: 20, cooldown: 0, economy: E })).toMatchObject({ percent: 100, canBoost: false });
-    expect(batteryTelemetry({ boostLeft: 0, cooldown: 35, economy: E }).percent).toBe(0);
-    expect(batteryTelemetry({ boostLeft: 0, cooldown: -1, economy: E }).percent).toBe(100);
-  });
-
-  it("splits a tick exactly when boost ends and keeps racing during recharge", () => {
+  it("ignores and clears timers from legacy state", () => {
     const next = gameReducer({ ...INITIAL_GAME, boostLeft: .1, cooldown: 25.1 }, { type: "tick", delta: .5 });
-    expect(next.progress).toBeCloseTo(.6 / 8);
+    expect(next.progress).toBeCloseTo(.5 / 8);
     expect(next.boostLeft).toBe(0);
-    const charging = gameReducer(next, { type: "tick", delta: .5 });
-    expect(charging.progress - next.progress).toBeCloseTo(.5 / 8);
-    expect(charging.cooldown).toBeCloseTo(24.1);
+    expect(next.cooldown).toBe(0);
+    expect(gameReducer(next, { type: "tick", delta: .5 }).progress).toBeCloseTo(1 / 8);
   });
 });
 
@@ -111,18 +98,12 @@ describe("Racely economy", () => {
     expect(upgradeCostAt(E, "battery", 1)).toBe(20);
   });
 
-  it("ranks three racers and scales rewards conservatively by position", () => {
-    const second = { ...INITIAL_GAME, levels: { ...INITIAL_GAME.levels, engine: 2 } };
-    const first = { ...INITIAL_GAME, levels: { ...INITIAL_GAME.levels, engine: 3 } };
-    const boosted = { ...INITIAL_GAME, boostLeft: 1 };
-
-    expect(raceOpponentLapSeconds(INITIAL_GAME)[0]).toBeLessThan(
-      raceOpponentLapSeconds(INITIAL_GAME)[1],
-    );
-    expect([racePosition(INITIAL_GAME), lapReward(INITIAL_GAME)]).toEqual([3, 0.04]);
-    expect([racePosition(second), lapReward(second)]).toEqual([2, 0.05]);
-    expect([racePosition(first), lapReward(first)]).toEqual([1, 0.06]);
-    expect([racePosition(boosted), lapReward(boosted)]).toEqual([1, 0.06]);
+  it("does not invent rivals or position multipliers", () => {
+    for (const engine of [1, 2, 3]) {
+      const state = { ...INITIAL_GAME, levels: { ...INITIAL_GAME.levels, engine }, boostLeft: 10 };
+      expect(racePosition(state)).toBe(1);
+      expect(lapReward(state)).toBe(E.lapRewardBase);
+    }
   });
 
   it("settles completed laps and carries fractional progress", () => {
@@ -132,19 +113,19 @@ describe("Racely economy", () => {
     );
 
     expect(result.completedLaps).toBe(2);
-    expect(result.income).toBe(0.08);
+    expect(result.income).toBe(0.1);
     expect(result.progress).toBeCloseTo(0);
   });
 
-  it("applies boost only to the time covered by the boost window", () => {
+  it("ignores a legacy boost window during settlement", () => {
     const result = calculateRaceSettlement(
       settlementInput({ boostEndsAt: new Date(start.getTime() + 4_000) }),
       new Date(start.getTime() + 8_000),
     );
 
     expect(result.completedLaps).toBe(1);
-    expect(result.income).toBe(0.06);
-    expect(result.progress).toBeCloseTo(0.5);
+    expect(result.income).toBe(0.05);
+    expect(result.progress).toBeCloseTo(0);
   });
 
   it("reports no offline window while the client is heartbeating", () => {
@@ -156,12 +137,12 @@ describe("Racely economy", () => {
     expect(result.offline).toBeNull();
     expect(result.creditedSeconds).toBe(E.heartbeatCapSeconds);
     expect(result.completedLaps).toBe(15);
-    expect(result.income).toBe(0.6);
+    expect(result.income).toBe(0.75);
   });
 });
 
 /**
- * Base settlement state laps every 8s and finishes P3 for 0.04 coins, so the
+ * Base settlement state laps every 8s for 0.05 coins, so the
  * whole table below is derived from those two numbers.
  */
 describe("Offline earnings", () => {
@@ -179,10 +160,10 @@ describe("Offline earnings", () => {
       creditedSeconds: 480,
       capped: false,
       laps: 30,
-      coins: 1.2,
+      coins: 1.5,
     });
     expect(result.completedLaps).toBe(45);
-    expect(result.income).toBe(1.8);
+    expect(result.income).toBe(2.25);
     expect(result.creditedSeconds).toBe(600);
   });
 
@@ -194,10 +175,10 @@ describe("Offline earnings", () => {
       creditedSeconds: E.offlineCapSeconds - E.heartbeatCapSeconds,
       capped: false,
       laps: 892,
-      coins: 35.68,
+      coins: 44.6,
     });
     expect(result.completedLaps).toBe(907);
-    expect(result.income).toBe(36.28);
+    expect(result.income).toBe(45.35);
     expect(result.creditedSeconds).toBe(E.offlineCapSeconds);
   });
 
@@ -209,13 +190,13 @@ describe("Offline earnings", () => {
       creditedSeconds: E.offlineCapSeconds,
       capped: true,
       laps: 900,
-      coins: 36,
+      coins: 45,
     });
     // A full day away pays exactly the same as the capped four hours.
     expect(settleAfter(24 * 60 * 60).offline).toMatchObject({
       creditedSeconds: E.offlineCapSeconds,
       laps: 900,
-      coins: 36,
+      coins: 45,
     });
   });
 
@@ -240,14 +221,14 @@ describe("Offline earnings", () => {
     expect(justOver.offline).toMatchObject({ laps: 0, coins: 0 });
   });
 
-  it("keeps a boost inside the heartbeat window it was spent in", () => {
+  it("does not revive legacy boost bonuses during idle settlement", () => {
     const result = calculateRaceSettlement(
       settlementInput({ boostEndsAt: new Date(start.getTime() + 10_000) }),
       new Date(start.getTime() + 10 * 60 * 1000),
     );
 
-    // 10s boosted (2.5 laps) + 110s normal (13.75) + 480s offline (30).
-    expect(result.completedLaps).toBe(46);
+    // 120s normal (15 laps) + 480s offline (30 laps), regardless of legacy timers.
+    expect(result.completedLaps).toBe(45);
     expect(result.offline).toMatchObject({ laps: 30, creditedSeconds: 480 });
   });
 
