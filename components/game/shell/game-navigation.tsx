@@ -12,6 +12,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { formatCoins } from "@/lib/game";
+import { useCountUp } from "./use-count-up";
 
 export type GameTab = "menu" | "race" | "garage" | "rewards" | "wallet" | "referral" | "leaderboard";
 /** Tab yang tidak punya tombol di nav bawah; dibuka dari Menu dan menyorot "Menu" saat aktif. */
@@ -87,7 +88,11 @@ export function Topbar({
   onHelp: () => void;
 }) {
   const initial = Array.from(racerName.trim())[0]?.toUpperCase() || "R";
-  const displayedBalance = formatCoins(Math.floor(balance));
+  const settledBalance = Math.floor(balance);
+  const displayedBalance = formatCoins(settledBalance);
+  // Saldo digulirkan supaya koin yang masuk terlihat masuk. Label tombolnya
+  // tetap memakai nilai akhir -- pembaca layar tidak perlu ikut menonton.
+  const animatedBalance = formatCoins(useCountUp(settledBalance));
   // Foto yang gagal dimuat harus JATUH KE inisial, bukan menyisakan ikon gambar
   // rusak di pojok atas -- satu-satunya potret pemain di seluruh layar. Gagalnya
   // bisa karena apa saja di luar kendali kami: foto yang sudah dihapus di
@@ -116,7 +121,7 @@ export function Topbar({
           <Coins aria-hidden="true" />
           <span aria-hidden="true">
             <small>Koin</small>
-            <strong>{displayedBalance}</strong>
+            <strong>{animatedBalance}</strong>
           </span>
         </button>
         <button
