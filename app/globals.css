@@ -292,8 +292,45 @@
 .leaderboard-updated { color: var(--muted-foreground); text-align: center; font-size: var(--fs-nano); font-variant-numeric: tabular-nums; }
 .leaderboard-rules { display: flex; align-items: flex-start; gap: var(--space-sm); padding: var(--space-sm) var(--space-md); border: var(--stroke) solid var(--border); border-radius: var(--corner-box); background: color-mix(in srgb, var(--secondary) 54%, var(--card)); color: var(--muted-foreground); font-size: var(--fs-micro); line-height: var(--lh-relaxed); }
 .leaderboard-rules > svg { flex-shrink: 0; width: var(--icon-base); height: var(--icon-base); margin-top: var(--space-2); color: var(--primary); }
-.leaderboard-shortcut > span { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
-.leaderboard-shortcut small { color: var(--muted-foreground); font-size: var(--fs-small); font-weight: var(--fw-normal); }
+.leaderboard-teaser.panel { border-color: color-mix(in srgb, var(--primary) 34%, var(--border)); font-size: var(--fs-body); line-height: var(--lh-normal); }
+.leaderboard-teaser-heading { display: flex; align-items: center; gap: var(--space-md); padding: var(--space-lg); }
+.leaderboard-teaser-emblem { display: grid; place-items: center; flex-shrink: 0; width: var(--space-40); height: var(--space-40); border: var(--stroke) solid color-mix(in srgb, var(--accent) 24%, var(--border)); border-radius: var(--corner-box); background: color-mix(in srgb, var(--accent) 8%, var(--card)); color: var(--accent); }
+.leaderboard-teaser-emblem > svg { width: var(--icon-xl); height: var(--icon-xl); }
+.leaderboard-teaser-intro { flex: 1; min-width: 0; }
+.leaderboard-teaser-intro > div { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-xs); }
+.leaderboard-teaser-intro h2 { font-size: var(--fs-display); font-weight: var(--fw-heavy); line-height: var(--lh-tight); letter-spacing: var(--track-snug-sm); }
+.leaderboard-teaser-intro p { margin-top: var(--space-xs); color: var(--muted-foreground); font-size: var(--fs-small); text-wrap: pretty; }
+.leaderboard-teaser-personal { margin-inline: var(--space-lg); padding: var(--space-md); border: var(--stroke) solid color-mix(in srgb, var(--primary) 32%, var(--border)); border-radius: var(--corner-box); background: color-mix(in srgb, var(--primary) 12%, var(--background)); }
+.leaderboard-teaser-personal dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-md); font-variant-numeric: tabular-nums; }
+.leaderboard-teaser-personal dl > div { min-width: 0; }
+.leaderboard-teaser-personal dl > div + div { padding-left: var(--space-lg); border-left: var(--stroke) solid color-mix(in srgb, var(--primary) 32%, var(--border)); }
+.leaderboard-teaser-personal dt { color: var(--muted-foreground); font-size: var(--fs-small); }
+.leaderboard-teaser-personal dd { margin-top: var(--space-xs); font-size: var(--fs-7xl); font-weight: var(--fw-black); letter-spacing: var(--track-tight-sm); line-height: var(--lh-display); overflow-wrap: anywhere; }
+.leaderboard-teaser-personal dd > span { color: var(--muted-foreground); font-size: var(--fs-xl); font-weight: var(--fw-semibold); }
+.leaderboard-teaser-personal dl > div:first-child dd { color: var(--accent); }
+.leaderboard-teaser-personal > p { margin-top: var(--space-sm); color: var(--muted-foreground); font-size: var(--fs-small); overflow-wrap: anywhere; text-wrap: pretty; }
+.leaderboard-teaser-personal > p strong { color: var(--foreground); font-weight: var(--fw-semibold); }
+.leaderboard-teaser-standings { padding: var(--space-lg); }
+.leaderboard-teaser-list-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-xs); margin-bottom: var(--space-sm); }
+.leaderboard-teaser-list-heading h3 { font-size: var(--fs-small); font-weight: var(--fw-semibold); letter-spacing: var(--track-flat); }
+.leaderboard-teaser-list-heading > span { color: var(--muted-foreground); font-size: var(--fs-micro); }
+.leaderboard-teaser-standings ol { display: flex; flex-direction: column; gap: var(--space-xs); list-style: none; margin: 0; padding: 0; }
+.leaderboard-teaser-standings li { display: flex; align-items: center; gap: var(--space-sm); min-width: 0; padding: var(--space-sm); border: var(--stroke) solid transparent; border-radius: var(--corner-box); font-variant-numeric: tabular-nums; }
+.leaderboard-teaser-standings li[data-place='1'] { border-color: color-mix(in srgb, var(--accent) 18%, var(--border)); background: color-mix(in srgb, var(--accent) 5%, var(--card)); }
+.leaderboard-teaser-position { flex-shrink: 0; min-width: var(--space-lg); text-align: center; color: var(--muted-foreground); font-size: var(--fs-small); font-weight: var(--fw-bold); }
+.leaderboard-teaser-standings li[data-place='1'] .leaderboard-teaser-position { color: var(--accent); }
+.leaderboard-teaser-standings li[data-place='1'] .leaderboard-avatar { background: color-mix(in srgb, var(--accent) 12%, var(--card)); border-color: color-mix(in srgb, var(--accent) 28%, var(--border)); color: var(--accent); }
+.leaderboard-teaser-racer { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.leaderboard-teaser-racer > strong { font-size: var(--fs-body); font-weight: var(--fw-semibold); }
+.leaderboard-teaser-racer > span { color: var(--muted-foreground); font-size: var(--fs-micro); }
+.leaderboard-teaser-score { display: flex; flex-shrink: 0; flex-direction: column; align-items: flex-end; max-width: 30%; font-size: var(--fs-title); font-weight: var(--fw-heavy); overflow-wrap: anywhere; text-align: right; }
+.leaderboard-teaser-score > svg { width: var(--icon-sm); height: var(--icon-sm); color: var(--accent); }
+.leaderboard-teaser-message { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-sm); padding: var(--space-md) var(--space-lg); color: var(--muted-foreground); font-size: var(--fs-small); }
+.leaderboard-teaser-empty { display: flex; align-items: flex-start; gap: var(--space-md); padding: var(--space-lg); }
+.leaderboard-teaser-empty > svg { flex-shrink: 0; width: var(--icon-lg); height: var(--icon-lg); margin-top: var(--space-2); color: var(--accent); }
+.leaderboard-teaser-empty strong { font-size: var(--fs-body); font-weight: var(--fw-semibold); }
+.leaderboard-teaser-empty p { margin-top: var(--space-xs); color: var(--muted-foreground); font-size: var(--fs-small); text-wrap: pretty; }
+.leaderboard-teaser-footer { padding: var(--space-xs); border-top: var(--stroke) solid var(--border); background: color-mix(in srgb, var(--secondary) 35%, var(--card)); }
 
 /* ── aero kit (garasi) ─ kepala · 4 sel slot · kaki koleksi + tombol ──────
    Sel slot meniru .upgrade-specs di Bengkel supaya kedua panel garasi terasa

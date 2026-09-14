@@ -433,7 +433,11 @@ export function GameDashboard() {
                   onClaim={claim}
                   disabled={Boolean(busyAction)}
                 />
-                <LeaderboardShortcut onOpen={() => navigate("leaderboard")} />
+                <LeaderboardShortcut
+                  initData={initData}
+                  active={tab === "race"}
+                  onOpen={() => navigate("leaderboard")}
+                />
                 <CircuitPanel
                   game={game}
                   onChoose={chooseCircuit}
