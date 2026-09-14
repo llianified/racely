@@ -179,7 +179,7 @@ export function RacePanel({ game, onCircuits, active = true }: {
         </div>
         <div className="race-settings-group" role="group" aria-labelledby={`${settingsId}-audio`}>
           <h3 className="race-settings-title" id={`${settingsId}-audio`}>Suara</h3>
-          <SettingRow label="Audio balapan" hint="Motor listrik, gesekan ban, roller & benturan mengikuti arena">
+          <SettingRow label="Audio balapan" hint="Hanya gesekan ban & roller saat kontak dengan trek, tanpa suara mesin">
             <RaceSwitch checked={sound.enabled} disabled={sound.pending} label="Audio balapan" onChange={sound.toggle} />
           </SettingRow>
           <SettingRow label="Volume" hint={`${sound.volume}% · dijeda saat meninggalkan arena`}>
