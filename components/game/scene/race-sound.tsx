@@ -24,11 +24,19 @@ export function RaceSound({ audio, enabled, running, playerRef, driving }: {
       seeded.current = false;
       engine?.setActive(!!enabled && running && !document.hidden);
     };
+    const pause = () => {
+      seeded.current = false;
+      engine?.setActive(false);
+    };
     sync();
     document.addEventListener('visibilitychange', sync);
+    window.addEventListener('pagehide', pause);
+    window.addEventListener('pageshow', sync);
     return () => {
       document.removeEventListener('visibilitychange', sync);
-      engine?.setActive(false);
+      window.removeEventListener('pagehide', pause);
+      window.removeEventListener('pageshow', sync);
+      pause();
     };
   }, [audio, enabled, running]);
 
