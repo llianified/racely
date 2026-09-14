@@ -47,7 +47,7 @@ export function RacePanel({ game, onCircuits, active = true }: {
 }) {
   const reducedMotion = useSyncExternalStore(subscribeMotionPreference, () => window.matchMedia("(prefers-reduced-motion: reduce)").matches, () => true);
   const driving = useRef(createDrivingState());
-  const sound = useRaceAudio();
+  const sound = useRaceAudio(game.laps, active);
   const [telemetry, setTelemetry] = useState(createDrivingState);
   const [cinematic, setCinematic] = useState(true);
   const [cameraMode, setCameraMode] = useState(0);
@@ -130,7 +130,7 @@ export function RacePanel({ game, onCircuits, active = true }: {
         {!inspect && <div className="race-vignette" aria-hidden="true" />}
         {!inspect && <RacePositionHud lane={lane.lane + 1} switching={lane.feature === 'lane-changer'} telemetry={telemetry} position={position} total={opponents.length + 1} followCamera={followCamera} recovering={telemetry.recovery > 0} />}
         {inspect && <div className="scene-overlay inspect-hud"><strong>{bodyVisible ? "DETAIL MOBIL" : "DI BALIK BODI"}</strong><span>{bodyVisible ? "Cat metalik · ban · aero kit" : "2 sel · motor · penggerak 4WD"}</span></div>}
-        <RaceScene audio={sound.audio} soundEnabled={sound.enabled} setup={carSetup(game)} equipped={game.bodyParts?.equipped} driving={driving} onTelemetry={setTelemetry} cinematic={cinematic && !reducedMotion} levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.laps + game.progress} seconds={seconds} baseSeconds={baseSeconds} opponents={opponents} opponentProgress={opponentProgress} color={game.color} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
+        <RaceScene setup={carSetup(game)} equipped={game.bodyParts?.equipped} driving={driving} onTelemetry={setTelemetry} cinematic={cinematic && !reducedMotion} levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.laps + game.progress} seconds={seconds} baseSeconds={baseSeconds} opponents={opponents} opponentProgress={opponentProgress} color={game.color} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
         {inspect && <div className="scene-overlay inspect-hint">Geser untuk memutar · balapan tetap jalan</div>}
       </div>
       {!inspect && <RaceOverviewHud seconds={seconds} baseSeconds={baseSeconds} reward={lapReward(game)} progress={game.progress} telemetry={telemetry} laps={game.laps} />}
@@ -179,7 +179,7 @@ export function RacePanel({ game, onCircuits, active = true }: {
         </div>
         <div className="race-settings-group" role="group" aria-labelledby={`${settingsId}-audio`}>
           <h3 className="race-settings-title" id={`${settingsId}-audio`}>Suara</h3>
-          <SettingRow label="Audio balapan" hint="Motor elektrik Mini 4WD mengikuti RPM, dengan gesekan ban & roller saat menyentuh trek">
+          <SettingRow label="Audio balapan" hint="Ding singkat saat lap bertambah, tanpa suara mobil">
             <RaceSwitch checked={sound.enabled} disabled={sound.pending} label="Audio balapan" onChange={sound.toggle} />
           </SettingRow>
           <SettingRow label="Volume" hint={`${sound.volume}% · dijeda saat meninggalkan arena`}>
