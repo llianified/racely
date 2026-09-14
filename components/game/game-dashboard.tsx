@@ -31,6 +31,7 @@ import {
 } from "./use-telegram-webapp";
 import {
   coins,
+  formatDuration,
   gameReducer,
   INITIAL_GAME,
   missions,
@@ -338,8 +339,17 @@ export function GameDashboard() {
   };
   const boost = async () => {
     if (game.cooldown > 0) return;
-    if (await runAction({ type: "boost" }))
-      toast.success(`Gaspol ${game.economy.boostMultiplier}× aktif`);
+    const next = await runAction({ type: "boost" });
+    if (!next) return;
+    // Durasinya datang dari respons, bukan dihitung ulang di sini: server yang
+    // menilai tekanannya bersih atau tidak, dan pemain berhak tahu berapa detik
+    // yang benar-benar dia dapat.
+    const launch = next.boostLaunch;
+    if (launch && !launch.clean) {
+      toast.info(`Tikungan — Gaspol ${formatDuration(launch.seconds)}`);
+      return;
+    }
+    toast.success(`Gaspol ${game.economy.boostMultiplier}× aktif`);
   };
   const chooseColor = async (
     color: CarColor,

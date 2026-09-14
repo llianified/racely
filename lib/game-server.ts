@@ -32,12 +32,14 @@ import {
 import {
   accountPattern,
   boostCooldownSeconds,
+  boostDurationFor,
   MISSION_IDS,
   missions,
   missionValue,
   REFERRAL_PARAM_PREFIX,
   roundCoins,
   WITHDRAW_METHODS,
+  type BoostLaunch,
   type DailyCheckIn,
   type GameState,
   type ReferralSummary,
@@ -52,6 +54,7 @@ import {
   upgradeCostAt,
   type EconomyConfig,
 } from "@/lib/economy-config";
+import { isCleanBoostLaunch } from "@/lib/race-dynamics";
 import { readEconomyConfig } from "@/lib/economy-store";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
 import { referralLink } from "@/lib/telegram-bot";
@@ -696,10 +699,14 @@ type ActionContext = {
  * Baris pemain sesudah aksi, plus daftar check-in kalau aksinya menambah satu.
  * Hanya `daily` yang pernah mengisi `dailyClaims`; sisanya membiarkan milik
  * pemanggil apa adanya.
+ *
+ * `boostLaunch` sama sifatnya: hanya `boost` yang mengisinya, dan isinya tidak
+ * pernah disimpan -- ia menumpang respons yang menyalakan Gaspol, lalu hilang.
  */
 type ActionOutcome = {
   row: PlayerRow;
   dailyClaims?: string[];
+  boostLaunch?: BoostLaunch;
 };
 
 type ActionHandler<T extends GameCommand["type"]> = (
@@ -809,20 +816,28 @@ const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
     return { row: { ...row, balance: row.balance - action.coins } };
   },
 
+  /**
+   * `row.progress` di sini sudah disetel ke `now` oleh `settlePlayerRow`, jadi
+   * ia adalah posisi lintasan pada detik tombol itu tiba -- bukan posisi saat
+   * permintaan sebelumnya. Itu yang membuat penilaian ini otoritatif tanpa
+   * satu pun angka dari client.
+   */
   boost: (row, _action, { now, economy }) => {
     if ((row.cooldownEndsAt?.getTime() ?? 0) > now.getTime()) {
       throw new GameRuleError("Boost masih mengisi ulang.");
     }
+    const clean = isCleanBoostLaunch(row.progress, economy.boostLaunchGraceLap);
+    const seconds = boostDurationFor(economy, clean);
     return {
       row: {
         ...row,
-        boostEndsAt: new Date(
-          now.getTime() + economy.boostDurationSeconds * 1000,
-        ),
+        boostEndsAt: new Date(now.getTime() + seconds * 1000),
+        // Cooldown penuh apa pun hasilnya: lihat `boostDurationFor`.
         cooldownEndsAt: new Date(
           now.getTime() + boostCooldownSeconds(economy) * 1000,
         ),
       },
+      boostLaunch: { clean, seconds },
     };
   },
 
@@ -1091,7 +1106,15 @@ export async function performGameAction(
       });
     }
 
-    return { state: response, saved };
+    // Ditempel di sini, bukan di `stateFromRow`: hasil tekanan tidak bisa
+    // dibaca ulang dari baris yang tersimpan, dan pemutaran ulang permintaan
+    // yang sama di atas memang tidak boleh melaporkannya untuk kedua kalinya.
+    return {
+      state: outcome.boostLaunch
+        ? { ...response, boostLaunch: outcome.boostLaunch }
+        : response,
+      saved,
+    };
   });
 
   // Di luar transaksi pemain: lihat payInviter untuk alasan urutan penguncian.

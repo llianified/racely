@@ -5,11 +5,13 @@ import { z } from "zod";
 import {
   accountPattern,
   boostCooldownSeconds,
+  boostDurationFor,
   INITIAL_GAME,
   missions,
   missionValue,
   roundCoins,
   WITHDRAW_METHODS,
+  type BoostLaunch,
   type GameCommand,
   type GameState,
   type OfflineEarnings,
@@ -23,6 +25,7 @@ import {
   dailyCheckIn,
   racingDayKey,
 } from "./game-economy";
+import { isCleanBoostLaunch } from "./race-dynamics";
 import { CAR_MODEL_IDS, isCarColor } from "./car-catalog";
 import { applyPartCommand, bodyPartsSchema, PartRuleError } from "./car-parts";
 import { referralLink } from "./telegram-bot";
@@ -246,6 +249,7 @@ function previewResult(
   offline: OfflineEarnings | null,
   now: number,
   economy: EconomyConfig,
+  boostLaunch: BoostLaunch | null = null,
 ): { state: GameState; cookieValue: string } {
   const state: GameState = {
     ...game.state,
@@ -257,7 +261,12 @@ function previewResult(
     referral: { link: referralLink(game.userId), invited: 0, earned: 0 },
   };
   return {
-    state: offline ? { ...state, offlineEarnings: offline } : state,
+    state: {
+      ...state,
+      // Keduanya transien dan tidak ikut cookie, sama seperti di server.
+      ...(offline ? { offlineEarnings: offline } : {}),
+      ...(boostLaunch ? { boostLaunch } : {}),
+    },
     cookieValue: serializePreviewGame(game),
   };
 }
@@ -317,6 +326,7 @@ export function performPreviewGameAction(
   );
   const { offline } = settled;
   let game = settled.game;
+  let boostLaunch: BoostLaunch | null = null;
   const selection = game.state.carSelection;
 
   if (action.type === "select-car") {
@@ -407,9 +417,18 @@ export function performPreviewGameAction(
     if (state.cooldown > 0) {
       throw new PreviewGameRuleError("Boost masih mengisi ulang.");
     }
+    // `state.progress` baru saja disetel ke `now` oleh `settlePreviewGame`,
+    // jadi posisinya sama otoritatifnya dengan milik server.
+    const clean = isCleanBoostLaunch(
+      state.progress,
+      economy.boostLaunchGraceLap,
+    );
+    const seconds = boostDurationFor(economy, clean);
+    boostLaunch = { clean, seconds };
     state = {
       ...state,
-      boostLeft: economy.boostDurationSeconds,
+      boostLeft: seconds,
+      // Cooldown penuh apa pun hasilnya: lihat `boostDurationFor`.
       cooldown: boostCooldownSeconds(economy),
     };
   } else if (action.type === "gift" && !state.rewardClaimed) {
@@ -467,5 +486,5 @@ export function performPreviewGameAction(
         ? game.receipts
         : [...game.receipts, requestId].slice(-MAX_RECEIPTS),
   };
-  return previewResult(game, offline, now, economy);
+  return previewResult(game, offline, now, economy, boostLaunch);
 }
