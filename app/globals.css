@@ -855,7 +855,7 @@
 .stat-hero-head > .eyebrow::before { content: ''; flex-shrink: 0; width: var(--space-3); height: var(--space-10); border-radius: var(--corner-pill); background: var(--accent); }
 .stat-hero-main { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-sm) var(--space-md); padding: var(--space-xs) var(--space-md) var(--space-md); }
 .stat-hero-figure { display: inline-flex; align-items: baseline; gap: var(--space-6); min-width: 0; font-size: var(--fs-8xl); font-weight: var(--fw-black); line-height: var(--lh-none); letter-spacing: var(--track-tight-sm); color: var(--accent); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.stat-hero-figure > span { font-size: var(--fs-small); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps-md); text-transform: uppercase; color: var(--muted-foreground); }
+.stat-hero-figure > .stat-hero-unit { font-size: var(--fs-small); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps-md); text-transform: uppercase; color: var(--muted-foreground); }
 /* Kedalaman press-button ikut dihitung supaya bayangan tombol tidak menempel garis strip. */
 .stat-hero-main > [data-slot='button'] { flex-shrink: 0; margin-left: auto; margin-bottom: var(--space-3); }
 .stat-hero-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: var(--stroke) solid var(--border); background: color-mix(in srgb, var(--background) 25%, var(--card)); }
