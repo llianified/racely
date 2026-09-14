@@ -803,8 +803,10 @@
 .upgrade-specs dt small { font-size: inherit; font-weight: var(--fw-medium); letter-spacing: inherit; opacity: .7; }
 .upgrade-specs dd { margin-top: var(--space-2); color: var(--muted-foreground); font-size: var(--fs-body); line-height: var(--lh-snug); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .upgrade-specs dd b { color: var(--foreground); font-weight: var(--fw-bold); }
-.upgrade-level { display: flex; align-items: center; gap: var(--space-sm); }
-.level-label { flex-shrink: 0; min-width: var(--space-32); font-size: var(--fs-micro); font-weight: var(--fw-bold); color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.upgrade-level { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-sm); }
+/* Label ikut ke kanan, sejajar dengan hitungan di .mission-progress, jadi
+   barisnya tidak menyisakan celah kosong di tengah. */
+.level-label { order: 2; flex-shrink: 0; min-width: var(--space-32); text-align: right; font-size: var(--fs-micro); font-weight: var(--fw-bold); color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .level-segments { display: flex; flex: 1 1 auto; gap: var(--space-3); }
 .level-segments > span { height: var(--space-xs); flex: 1; background: var(--secondary); border-radius: var(--corner-box); }
 .level-segments > span.filled { background: var(--primary); }
@@ -842,7 +844,7 @@
    kartu angka utama, meminjam aksen bawah .circuit-number. Tiga baris tanpa
    ruang sisa: eyebrow/info · angka sejajar tombol · strip dua statistik. */
 .stat-hero { display: flex; flex-direction: column; min-width: 0; overflow: hidden; border: var(--stroke) solid var(--border); border-top: var(--stroke-2) solid var(--accent); border-radius: var(--radius); background: var(--card); }
-.stat-hero-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); min-height: var(--space-32); padding: var(--space-sm) var(--space-sm) 0 var(--space-md); }
+.stat-hero-head { display: flex; align-items: center; gap: var(--space-sm); min-height: var(--space-32); padding: var(--space-sm) var(--space-sm) 0 var(--space-md); }
 .stat-hero-head > .eyebrow { display: inline-flex; align-items: center; gap: var(--space-sm); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stat-hero-head > .eyebrow::before { content: ''; flex-shrink: 0; width: var(--space-3); height: var(--space-10); border-radius: var(--corner-pill); background: var(--accent); }
 .stat-hero-main { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-sm) var(--space-md); padding: var(--space-xs) var(--space-md) var(--space-md); }
@@ -872,7 +874,7 @@
 .reward-row-copy h3 { font-size: var(--fs-body); font-weight: var(--fw-heavy); line-height: var(--lh-normal); }
 .reward-row-copy p { margin-top: var(--space-xs); font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); }
 /* Strip aksi memakai lebar penuh baris supaya tidak ada ruang kosong di bawah ikon. */
-.reward-row-action { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); min-width: 0; margin: var(--space-md) 0; padding: var(--space-9) var(--space-10); border-radius: var(--corner-box); background: var(--secondary); }
+.reward-row-action { grid-column: 1 / -1; display: flex; align-items: center; justify-content: flex-end; gap: var(--space-md); min-width: 0; margin: var(--space-md) 0; padding: var(--space-9) var(--space-10); border-radius: var(--corner-box); background: var(--secondary); }
 .reward-row-action > strong { font-size: var(--fs-lead); font-weight: var(--fw-heavy); color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .reward-row-action > strong > span { font-size: var(--fs-micro); font-weight: var(--fw-medium); color: var(--muted-foreground); }
 .reward-row-action > button { min-width: var(--withdraw-action-w); min-height: var(--claim-action-h); height: var(--claim-action-h); }
