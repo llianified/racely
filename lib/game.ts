@@ -3,6 +3,7 @@ import type { BodyParts, PartCommand } from "./car-parts";
 import {
   DEFAULT_ECONOMY,
   boostCooldownSeconds,
+  boostDurationFor,
   lapSecondsAt,
   raceOpponentLapSecondsAt,
   racePositionAt,
@@ -89,6 +90,19 @@ export type OfflineEarnings = {
   coins: number;
 };
 
+/**
+ * Hasil satu tekanan Gaspol, untuk umpan balik di UI. Transien seperti
+ * `OfflineEarnings`: server menghitungnya ulang per respons dan tidak pernah
+ * menyimpannya, jadi ia hanya muncul pada satu respons yang benar-benar
+ * menyalakan Gaspol -- bukan pada sync berikutnya.
+ */
+export type BoostLaunch = {
+  /** True kalau tombolnya ditekan di trek lurus. */
+  clean: boolean;
+  /** Detik Gaspol yang benar-benar diberikan, sesudah potongan. */
+  seconds: number;
+};
+
 /** Ringkasan check-in harian untuk UI; dihitung ulang tiap respons. */
 export type DailyCheckIn = {
   /** Hari berturut-turut, sudah termasuk hari ini kalau `claimedToday`. */
@@ -136,6 +150,7 @@ export type GameState = {
   daily: DailyCheckIn;
   referral: ReferralSummary;
   offlineEarnings?: OfflineEarnings;
+  boostLaunch?: BoostLaunch;
 };
 
 export const INITIAL_GAME: GameState = {
@@ -444,4 +459,4 @@ export function gameReducer(s: GameState, action: GameAction): GameState {
 }
 
 /** Re-export supaya konsumen `lib/game.ts` tidak perlu mengimpor dua modul. */
-export { boostCooldownSeconds };
+export { boostCooldownSeconds, boostDurationFor };

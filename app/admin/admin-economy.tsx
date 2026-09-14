@@ -79,6 +79,8 @@ const GROUPS: Group[] = [
       { key: "boostDurationSeconds", label: "Durasi boost", hint: "detik", step: "1" },
       { key: "batteryRechargeSeconds", label: "Isi ulang baterai", hint: "detik", step: "1" },
       { key: "boostMultiplier", label: "Pengali laju boost", step: "0.1" },
+      { key: "boostCornerPenalty", label: "Potongan tekan di tikungan", hint: "0 mematikan", step: "0.05" },
+      { key: "boostLaunchGraceLap", label: "Toleransi tekan telat", hint: "pecahan putaran", step: "0.01" },
     ],
   },
   {

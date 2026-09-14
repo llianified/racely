@@ -47,6 +47,25 @@ export type EconomyConfig = {
   batteryRechargeSeconds: number;
   /** Pengali laju saat boost menyala. Dulu literal `2` di tiga tempat. */
   boostMultiplier: number;
+  /**
+   * Bagian durasi Gaspol yang hangus kalau tombolnya ditekan saat mobil sedang
+   * di tikungan. 0 mematikan mekaniknya -- Gaspol kembali selalu penuh.
+   *
+   * Cooldown-nya TIDAK ikut dipotong: itu yang membuat salah tekan berbiaya.
+   * Lihat `boostDurationFor`.
+   */
+  boostCornerPenalty: number;
+  /**
+   * Panjang lintasan -- dalam pecahan satu putaran -- sesudah mulut tikungan
+   * yang masih dihitung sebagai tekan bersih. Ini toleransi latensi: pemain
+   * menekan di trek lurus, permintaannya tiba saat mobil sudah masuk tikungan.
+   *
+   * Sengaja diukur dalam posisi lintasan, bukan detik. Mobil cepat memang
+   * mendapat jendela waktu nyata yang lebih sempit -- itu kurva kesulitannya --
+   * sedangkan toleransi berbasis detik akan melahap sebagian besar tikungan
+   * begitu level upgrade naik dan mekaniknya jadi tidak ada artinya.
+   */
+  boostLaunchGraceLap: number;
 
   heartbeatCapSeconds: number;
   offlineCapSeconds: number;
@@ -99,6 +118,8 @@ export const DEFAULT_ECONOMY: EconomyConfig = {
   boostDurationSeconds: 10,
   batteryRechargeSeconds: 25,
   boostMultiplier: 2,
+  boostCornerPenalty: 0.4,
+  boostLaunchGraceLap: 0.05,
 
   heartbeatCapSeconds: 2 * 60,
   offlineCapSeconds: 4 * 60 * 60,
@@ -172,6 +193,8 @@ export const economyConfigSchema = z
     boostDurationSeconds: z.number().finite().min(0).max(86_400),
     batteryRechargeSeconds: z.number().finite().min(0).max(86_400),
     boostMultiplier: z.number().finite().min(1).max(100),
+    boostCornerPenalty: rate,
+    boostLaunchGraceLap: rate,
 
     heartbeatCapSeconds: z.number().finite().min(0).max(86_400),
     offlineCapSeconds: z.number().finite().min(0).max(30 * 86_400),
@@ -249,6 +272,22 @@ export function resolveEconomyConfig(stored: unknown): EconomyConfig {
 /** Jeda sampai Gaspol berikutnya, diukur dari saat tombol ditekan. Turunan. */
 export const boostCooldownSeconds = (e: EconomyConfig) =>
   e.boostDurationSeconds + e.batteryRechargeSeconds;
+
+/**
+ * Durasi Gaspol yang benar-benar diberikan, tergantung tekanannya bersih atau
+ * tidak. Menekan di tikungan memotong durasinya sebesar `boostCornerPenalty`.
+ *
+ * Cooldown-nya sengaja tetap `boostCooldownSeconds` yang penuh. Kalau
+ * keduanya ikut memendek, salah tekan justru mempercepat Gaspol berikutnya dan
+ * tidak ada yang perlu dipikirkan pemain; dengan cooldown tetap, tekanan yang
+ * meleset membayar dengan waktu tunggu yang sama untuk hasil yang lebih
+ * sedikit. Itu biayanya, dan tidak ada satu koin pun yang ditambahkan ke
+ * ekonomi untuk membayarnya.
+ */
+export const boostDurationFor = (e: EconomyConfig, clean: boolean) =>
+  clean
+    ? e.boostDurationSeconds
+    : e.boostDurationSeconds * (1 - e.boostCornerPenalty);
 
 export const economyFieldKeys = Object.keys(
   DEFAULT_ECONOMY,
