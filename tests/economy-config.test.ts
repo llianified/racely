@@ -5,6 +5,7 @@ import {
   UPGRADE_LEVEL_CEILING,
   boostCooldownSeconds,
   boostDurationFor,
+  coinsToIdr,
   economyConfigSchema,
   economyFieldKeys,
   lapRewardAt,
@@ -239,9 +240,49 @@ describe("Config ekonomi", () => {
     const levels = { engine: 1, tires: 1, battery: 1 };
     expect(lapSecondsAt(E, levels, false)).toBe(8);
     expect(lapSecondsAt(E, levels, true)).toBe(8);
-    expect(lapRewardAt(E, 1, 0)).toBe(0.05);
-    expect(lapRewardAt(E, 10, 1)).toBe(0.16);
-    expect(upgradeCostAt(E, "engine", 1)).toBe(25);
+    expect(lapRewardAt(E, 1, 0)).toBe(5);
+    expect(lapRewardAt(E, 10, 1)).toBe(17);
+    expect(upgradeCostAt(E, "engine", 1)).toBe(5_000);
+  });
+
+  /**
+   * Denominasi bawaan: 10 koin = Rp1. Hasil kali pecahan biner bisa meleset
+   * sepersekian triliun ke bawah, dan `Math.floor` polos akan memangkas satu
+   * rupiah penuh dari penarikan seorang pemain.
+   */
+  describe("coinsToIdr", () => {
+    it("membulatkan ke bawah tanpa termakan artefak floating point", () => {
+      expect(E.coinToIdr).toBe(0.1);
+      expect(coinsToIdr(200_000, E)).toBe(20_000);
+      expect(coinsToIdr(1_234_567, E)).toBe(123_456);
+      expect(coinsToIdr(9, E)).toBe(0);
+      expect(coinsToIdr(0, E)).toBe(0);
+    });
+
+    it("tetap bilangan bulat rupiah pada kurs berapa pun", () => {
+      for (const coinToIdr of [0.01, 0.1, 0.3, 1, 2.5, 100]) {
+        const e = { ...E, coinToIdr };
+        for (const coins of [1, 7, 199_999, 200_000, 3_333_333]) {
+          const value = coinsToIdr(coins, e);
+          expect(Number.isInteger(value)).toBe(true);
+          expect(value).toBeLessThanOrEqual(coins * coinToIdr + 1e-6);
+        }
+      }
+    });
+  });
+
+  /** `amount_idr` punya CHECK `> 0`: minimum tarik tidak boleh bernilai Rp0. */
+  it("menolak minimum tarik yang bernilai di bawah Rp1 pada kurs pecahan", () => {
+    expect(
+      economyConfigSchema.safeParse({ ...E, minWithdrawCoins: 9 }).success,
+    ).toBe(false);
+    expect(
+      economyConfigSchema.safeParse({ ...E, minWithdrawCoins: 10 }).success,
+    ).toBe(true);
+    expect(
+      economyConfigSchema.safeParse({ ...E, coinToIdr: 100, minWithdrawCoins: 1 })
+        .success,
+    ).toBe(true);
   });
 });
 
@@ -254,9 +295,9 @@ describe("Proyeksi ekonomi", () => {
   it("menerjemahkan config bawaan jadi rupiah per jam", () => {
     const { rows } = projectEconomy(E);
     expect(rows).toHaveLength(2);
-    // No synthetic position multiplier: 0.05 coins per 8 seconds.
-    expect(rows[0].coinsPerHour).toBeCloseTo(22.5);
-    expect(rows[0].idrPerHour).toBeCloseTo(2250);
+    // No synthetic position multiplier: 5 coins per 8 seconds, 10 coins = Rp1.
+    expect(rows[0].coinsPerHour).toBeCloseTo(2_250);
+    expect(rows[0].idrPerHour).toBeCloseTo(225);
     // Upgrade maksimum jauh lebih cepat DAN lebih mahal per putaran.
     expect(rows[1].coinsPerHour).toBeGreaterThan(rows[0].coinsPerHour);
   });
@@ -270,7 +311,7 @@ describe("Proyeksi ekonomi", () => {
 
   it("turun saat putaran diperlambat", () => {
     const lambat = projectEconomy({ ...E, lapBaseSeconds: E.lapBaseSeconds * 4 });
-    expect(lambat.rows[0].coinsPerHour).toBeCloseTo(22.5 / 4);
+    expect(lambat.rows[0].coinsPerHour).toBeCloseTo(2_250 / 4);
   });
 
   it("menghitung nilai akun baru dan biaya max-out", () => {

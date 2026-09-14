@@ -41,7 +41,8 @@ describe("Leaderboard", () => {
   it("derives successful preview referrals from the existing paid summary", () => {
     const result = previewLeaderboard({
       ...INITIAL_GAME,
-      referral: { ...INITIAL_GAME.referral, earned: 50 },
+      // Dua ajakan yang sudah dibayar pada hadiah pengajak bawaan.
+      referral: { ...INITIAL_GAME.referral, earned: 2 * INITIAL_GAME.economy.referralRewardInviter },
     }, "referrals");
     expect(result).toMatchObject({
       metric: "referrals",

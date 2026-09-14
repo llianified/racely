@@ -94,7 +94,7 @@ describe("Daily missions", () => {
     expect(gifted.state.dailyMissions?.values.earn).toBe(0);
     vi.advanceTimersByTime(16000);
     const settled = act(gifted.cookieValue, { type: "sync" });
-    expect(settled.state.dailyMissions?.values).toMatchObject({ laps: 2, earn: .1 });
+    expect(settled.state.dailyMissions?.values).toMatchObject({ laps: 2, earn: 10 });
     expect(getPreviewGameState(request(settled.cookieValue), identity, E).state.dailyMissions).toEqual(settled.state.dailyMissions);
   });
   it("removes retired tasks while preserving earned progress and claim flags", () => {
@@ -132,16 +132,17 @@ describe("Daily missions", () => {
 describe("Collectible paints", () => {
   it("prices tiers from configurable baseline income, not the player's upgrade level", () => {
     const base = cosmeticPriceAt(E, 1);
-    expect(base).toBe(135);
+    // 450 putaran/jam x 5 koin x 6 jam.
+    expect(base).toBe(13_500);
     expect(cosmeticPriceAt(E, 2)).toBe(base * 2);
     expect(cosmeticPriceAt({ ...E, cosmeticBaseHours: 12 }, 1)).toBe(base * 2);
   });
   it("requires funds and ownership, charges once, and does not change race performance", () => {
-    const state = { ...INITIAL_GAME, balance: 1000, ownedPaints: [] };
+    const state = { ...INITIAL_GAME, balance: 100_000, ownedPaints: [] };
     expect(() => applyPaintCommand(state, { type: "equip-paint", paintId: "jade" }, E)).toThrow("Beli cat");
     expect(() => applyPaintCommand({ ...state, balance: 0 }, { type: "buy-paint", paintId: "jade" }, E)).toThrow("Koin belum cukup");
     const bought = { ...state, ...applyPaintCommand(state, { type: "buy-paint", paintId: "jade" }, E) };
-    expect(bought.balance).toBe(1000 - cosmeticPriceAt(E, 1));
+    expect(bought.balance).toBe(100_000 - cosmeticPriceAt(E, 1));
     expect(applyPaintCommand(bought, { type: "buy-paint", paintId: "jade" }, E).balance).toBe(bought.balance);
     const equipped = { ...bought, ...applyPaintCommand(bought, { type: "equip-paint", paintId: "jade" }, E) };
     expect(equipped.color).toBe(PAINT_CATALOG.jade.color);
@@ -153,7 +154,7 @@ describe("Collectible paints", () => {
     expect(() => act(fresh.cookieValue, { type: "buy-paint", paintId: "jade" })).toThrow("Pilih mobilmu");
     const selected = racing();
     const fixture = JSON.parse(Buffer.from(selected.cookieValue, "base64url").toString());
-    fixture.state.balance = 1000;
+    fixture.state.balance = 100_000;
     const cookie = Buffer.from(JSON.stringify(fixture)).toString("base64url");
     expect(() => act(cookie, { type: "color", color: PAINT_CATALOG.jade.color })).toThrow("tidak tersedia");
     const id = randomUUID();
