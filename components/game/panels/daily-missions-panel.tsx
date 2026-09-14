@@ -5,10 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { DAILY_MISSION_COPY, type DailyMissionKind, type DailyMissions } from "@/lib/daily-missions";
-import { coins, formatCoins } from "@/lib/game";
+import { formatCoins } from "@/lib/game";
 import { cn } from "@/lib/utils";
 import { SectionCardHeading } from "../shell/section-card-heading";
-import { InfoHint } from "./info-hint";
 
 export function DailyMissionsPanel({ daily, disabled, onClaim }: {
   daily?: DailyMissions;
@@ -21,12 +20,7 @@ export function DailyMissionsPanel({ daily, disabled, onClaim }: {
     <SectionCardHeading
       icon={CalendarCheck}
       title="Misi harian"
-      aside={<>
-        <Badge variant="secondary">{done}/3 selesai</Badge>
-        <InfoHint title="Misi harian">
-          {daily.day} · Berganti pukul 00.00 WIB. Maksimal {coins(daily.items.reduce((sum, item) => sum + item.reward, 0))} hari ini. Progres mengikuti sinkronisasi server.
-        </InfoHint>
-      </>}
+      aside={<Badge variant="secondary">{done}/3 selesai</Badge>}
     />
     <ul className="reward-list">
       {daily.items.map(item => {
