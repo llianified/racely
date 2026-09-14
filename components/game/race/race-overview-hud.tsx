@@ -1,10 +1,11 @@
 import { displaySpeedKmh, formatCoins, formatSpeedKmh } from "@/lib/game";
 import { powertrainTuning, type DrivingState } from "@/lib/race-dynamics";
 
-export function RacePositionHud({ position, followCamera, recovering }: {
+export function RacePositionHud({ position, followCamera, recovering, telemetry }: {
   position: number;
   followCamera: boolean;
   recovering: boolean;
+  telemetry?: DrivingState;
 }) {
   return (
     <div className="race-hud-top font-sans">
@@ -12,7 +13,7 @@ export function RacePositionHud({ position, followCamera, recovering }: {
         <span>Pos</span><strong>{position}</strong><span>/ 3</span>
       </div>
       <span className="race-hud-mode" role="status">
-        {recovering ? "Keluar lintasan" : followCamera ? "Follow" : "Overview"}
+        {recovering ? "Course-out · kembali ke trek" : telemetry ? telemetry.corner ? telemetry.grip < 40 ? "Tikungan · grip lepas" : telemetry.grip < 70 ? "Tikungan · beban tinggi" : "Tikungan · stabil" : telemetry.acceleration > .15 ? "Lurus · akselerasi" : "Lurus · laju puncak" : followCamera ? "Follow" : "Overview"}
       </span>
     </div>
   );

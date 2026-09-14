@@ -86,7 +86,7 @@ export const GaragePanel = memo(function GaragePanel({
     <>
       <section id="body-colors" tabIndex={-1} className="panel garage-panel" aria-label="Mobil kamu">
         <div className="car-stage" role="img" aria-label={`${car.name} warna ${colorName}, model 3D yang sama dengan di lintasan. Geser untuk memutar.`}>
-          <CarPreviewScene color={game.color} model={model} levels={game.levels} equipped={game.bodyParts?.equipped} active={active && !previewSheetOpen} standbyHint={previewSheetOpen ? "Tutup lembar yang terbuka untuk menyalakannya lagi." : undefined} />
+          <CarPreviewScene roller={game.setup?.roller} color={game.color} model={model} levels={game.levels} equipped={game.bodyParts?.equipped} active={active && !previewSheetOpen} standbyHint={previewSheetOpen ? "Tutup lembar yang terbuka untuk menyalakannya lagi." : undefined} />
         </div>
         <div className="car-identity">
           <div className="car-identity-head">
@@ -226,7 +226,7 @@ function ModificationSlot({ game, onUpgrade, onPreviewSheet, disabled, part }: U
           <div className="border-b border-border bg-background px-md py-md text-foreground">
             <div className="overflow-hidden rounded-(--corner-box) border border-border">
               <div className="h-(--stage-inspect-h)" role="img" aria-label={`${showAfter ? "Setelah" : "Sebelum"} modifikasi ${title}, level ${showAfter ? nextLevel : level}${inspect ? ", bodi dilepas" : ""}. Geser untuk memutar.`}>
-                {open && <CarPreviewScene color={game.color} equipped={game.bodyParts?.equipped} model={game.carSelection?.model ?? "neo-falcon"} levels={showAfter ? { ...game.levels, [key]: nextLevel } : game.levels} inspect={inspect} />}
+                {open && <CarPreviewScene roller={game.setup?.roller} color={game.color} equipped={game.bodyParts?.equipped} model={game.carSelection?.model ?? "neo-falcon"} levels={showAfter ? { ...game.levels, [key]: nextLevel } : game.levels} inspect={inspect} />}
               </div>
               <div className="flex flex-wrap items-center justify-between gap-sm border-t border-border p-md">
                 <span aria-live="polite">{showAfter ? "Setelah" : "Sebelum"} · Lv. {showAfter ? nextLevel : level}</span>
