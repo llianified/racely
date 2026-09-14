@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Cog, Flag, TriangleAlert } from "lucide-react";
+import { Check, Cog, Disc3, Gauge, TriangleAlert, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +22,9 @@ import { InfoHint } from "./info-hint";
 const seconds = (value: number) =>
   `${value.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}s`;
 
+const times = (value: number) =>
+  `${value.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}×`;
+
 /**
  * Setiap baris menunjukkan AKIBAT pilihannya, bukan angka modifiernya. Itu
  * yang mengubah tab ini dari tabel jadi keputusan: pemain melihat "di trek ini
@@ -31,8 +34,14 @@ const seconds = (value: number) =>
  * Pratinjaunya memakai `lapSeconds` -- fungsi yang sama persis dipakai
  * settlement server -- jadi angka di layar tidak bisa menyimpang dari yang
  * dibayar.
+ *
+ * Anatominya meniru .upgrade-row di Bengkel (tile ikon + nama + tombol kecil
+ * di satu baris, isi di bawahnya) supaya dua panel garasi terasa satu alat.
+ * Deskripsi sengaja dibiarkan melipat: ia menjelaskan trade-off yang jadi
+ * dasar keputusan, bukan subjudul yang boleh dipotong.
  */
 function OptionRow({
+  icon: Icon,
   name,
   description,
   active,
@@ -42,6 +51,7 @@ function OptionRow({
   courseOuts,
   onPick,
 }: {
+  icon: LucideIcon;
   name: string;
   description: string;
   active: boolean;
@@ -54,32 +64,34 @@ function OptionRow({
   const delta = preview - current;
   const risky = courseOuts > 0;
   return (
-    <li className={cn("reward-row", active && "is-claimed", risky && "is-ready")}>
-      <span className="reward-row-icon" aria-hidden="true">
-        {risky ? <TriangleAlert /> : <Flag />}
-      </span>
-      <div className="reward-row-copy">
-        <h3>{name}</h3>
-        <p>{description}</p>
-        <p>
-          {seconds(preview)} per putaran
-          {delta !== 0 && ` (${delta > 0 ? "+" : "−"}${seconds(Math.abs(delta))})`}
-          {risky &&
-            ` · keluar lintasan ${courseOuts.toLocaleString("id-ID", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}× per putaran`}
-        </p>
-      </div>
-      <div className="reward-row-action">
+    <li className={cn("upgrade-row setup-row", active && "is-active")}>
+      <div className="upgrade-head">
+        <span className="upgrade-icon" aria-hidden="true">
+          <Icon />
+        </span>
+        <div className="upgrade-name">
+          <h3>{name}</h3>
+          <p className="setup-metric">
+            <b>{seconds(preview)}</b>/putaran
+            {delta !== 0 && (
+              <>
+                <span aria-hidden="true"> · </span>
+                {delta > 0 ? "+" : "−"}
+                {seconds(Math.abs(delta))}
+              </>
+            )}
+          </p>
+        </div>
         {active ? (
-          <span className="mission-status">
-            <Check aria-hidden="true" />
+          <Badge variant="secondary" className="upgrade-buy">
+            <Check data-icon="inline-start" aria-hidden="true" />
             Terpasang
-          </span>
+          </Badge>
         ) : (
           <Button
             variant="secondary"
+            size="sm"
+            className="upgrade-buy"
             disabled={disabled}
             onClick={onPick}
             aria-label={`Pasang ${name}, ${seconds(preview)} per putaran`}
@@ -88,6 +100,13 @@ function OptionRow({
           </Button>
         )}
       </div>
+      <p className="setup-desc">{description}</p>
+      {risky && (
+        <p className="setup-risk">
+          <TriangleAlert aria-hidden="true" />
+          Keluar lintasan {times(courseOuts)} per putaran
+        </p>
+      )}
     </li>
   );
 }
@@ -111,7 +130,7 @@ export function SetupPanel({
   const trackName = circuitName(game.circuit);
 
   return (
-    <section className="panel rewards-list-panel" aria-label="Setup mobil">
+    <section className="panel upgrade-panel" aria-label="Setup mobil">
       <SectionCardHeading
         icon={Cog}
         title="Setup"
@@ -129,56 +148,61 @@ export function SetupPanel({
         }
       />
       {performance.courseOutsPerLap > 0 && (
-        <p className="race-settings-note" role="status">
-          Setup ini kelewat agresif untuk {trackName}: mobil keluar lintasan{" "}
-          {performance.courseOutsPerLap.toLocaleString("id-ID", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
-          × per putaran. Roller lebih berat atau gear lebih pendek akan
-          menghentikannya.
+        <p className="setup-alert" role="status">
+          <TriangleAlert aria-hidden="true" />
+          <span>
+            Setup ini kelewat agresif untuk {trackName}: mobil keluar lintasan{" "}
+            {times(performance.courseOutsPerLap)} per putaran. Roller lebih berat
+            atau gear lebih pendek akan menghentikannya.
+          </span>
         </p>
       )}
 
-      <h3 className="race-settings-title">Gear ratio</h3>
-      <ul className="reward-list">
-        {GEAR_IDS.map((gear) => (
-          <OptionRow
-            key={gear}
-            name={GEAR_CATALOG[gear].name}
-            description={GEAR_CATALOG[gear].description}
-            active={setup.gear === gear}
-            disabled={disabled}
-            preview={secondsFor({ ...setup, gear })}
-            current={current}
-            courseOuts={
-              setupPerformance({ ...setup, gear }, game.levels.tires, game.circuit)
-                .courseOutsPerLap
-            }
-            onPick={() => onSetup(gear, setup.roller)}
-          />
-        ))}
-      </ul>
+      <div className="setup-group">
+        <h3 className="race-settings-title">Gear ratio</h3>
+        <ul className="upgrade-list">
+          {GEAR_IDS.map((gear) => (
+            <OptionRow
+              key={gear}
+              icon={Gauge}
+              name={GEAR_CATALOG[gear].name}
+              description={GEAR_CATALOG[gear].description}
+              active={setup.gear === gear}
+              disabled={disabled}
+              preview={secondsFor({ ...setup, gear })}
+              current={current}
+              courseOuts={
+                setupPerformance({ ...setup, gear }, game.levels.tires, game.circuit)
+                  .courseOutsPerLap
+              }
+              onPick={() => onSetup(gear, setup.roller)}
+            />
+          ))}
+        </ul>
+      </div>
 
-      <h3 className="race-settings-title">Roller</h3>
-      <ul className="reward-list">
-        {ROLLER_IDS.map((roller) => (
-          <OptionRow
-            key={roller}
-            name={ROLLER_CATALOG[roller].name}
-            description={ROLLER_CATALOG[roller].description}
-            active={setup.roller === roller}
-            disabled={disabled}
-            preview={secondsFor({ ...setup, roller })}
-            current={current}
-            courseOuts={
-              setupPerformance({ ...setup, roller }, game.levels.tires, game.circuit)
-                .courseOutsPerLap
-            }
-            onPick={() => onSetup(setup.gear, roller)}
-          />
-        ))}
-      </ul>
+      <div className="setup-group">
+        <h3 className="race-settings-title">Roller</h3>
+        <ul className="upgrade-list">
+          {ROLLER_IDS.map((roller) => (
+            <OptionRow
+              key={roller}
+              icon={Disc3}
+              name={ROLLER_CATALOG[roller].name}
+              description={ROLLER_CATALOG[roller].description}
+              active={setup.roller === roller}
+              disabled={disabled}
+              preview={secondsFor({ ...setup, roller })}
+              current={current}
+              courseOuts={
+                setupPerformance({ ...setup, roller }, game.levels.tires, game.circuit)
+                  .courseOutsPerLap
+              }
+              onPick={() => onSetup(setup.gear, roller)}
+            />
+          ))}
+        </ul>
+      </div>
     </section>
   );
 }

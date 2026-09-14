@@ -825,6 +825,19 @@
 .level-segments { display: flex; flex: 1 1 auto; gap: var(--space-3); }
 .level-segments > span { height: var(--space-xs); flex: 1; background: var(--secondary); border-radius: var(--corner-box); }
 .level-segments > span.filled { background: var(--primary); }
+/* Setup memakai .upgrade-row yang sama; yang ditambah hanya baris metrik,
+   deskripsi yang boleh melipat, dan baris risiko. Risiko diberi --warning +
+   ikon segitiga, bukan --accent: emas di garasi berarti "siap dipakai". */
+.setup-group + .setup-group { border-top: var(--stroke) solid var(--border); }
+.setup-group .upgrade-list { margin: 0; padding: 0; list-style: none; }
+.setup-row .upgrade-name p.setup-metric { font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
+.setup-metric b { color: var(--foreground); font-weight: var(--fw-bold); }
+.setup-row.is-active .upgrade-icon { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); background: color-mix(in srgb, var(--accent) 12%, var(--surface-inset)); }
+.setup-desc { margin: 0; font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); text-wrap: pretty; }
+.setup-risk { display: flex; align-items: center; gap: var(--space-xs); margin: 0; font-size: var(--fs-micro); font-weight: var(--fw-semibold); color: var(--warning); }
+.setup-risk svg { flex-shrink: 0; width: var(--icon-xs); height: var(--icon-xs); }
+.setup-alert { display: flex; align-items: flex-start; gap: var(--space-sm); margin: 0; padding: var(--space-md); border-bottom: var(--stroke) solid var(--border); background: color-mix(in srgb, var(--warning) 8%, var(--card)); font-size: var(--fs-small); line-height: var(--lh-normal); text-wrap: pretty; }
+.setup-alert svg { flex-shrink: 0; width: var(--icon-base); height: var(--icon-base); margin-top: var(--space-2); color: var(--warning); }
 .body-colors { display: flex; align-items: center; gap: var(--space-xs); }
 .color-swatch { height: var(--space-40); width: var(--space-40); border: var(--swatch-ring-w) solid var(--card); border-radius: var(--corner-round); background: var(--swatch); color: var(--background); display: grid; place-items: center; }
 .color-swatch svg { width: var(--icon-base); height: var(--icon-base); stroke-width: var(--icon-stroke-bold); }
@@ -838,8 +851,6 @@
 .circuit-panel { padding: var(--space-md); }
 .section-card-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-sm); min-height: var(--space-28); }
 .panel:not(.circuit-panel) > .section-card-heading { margin-inline: calc(var(--gutter) * -1); padding: 0 var(--gutter) var(--space-md); border-bottom: var(--stroke) solid var(--border); }
-/* Panel ini tidak punya padding sendiri -- 16px-nya ada di .upgrade-row.
-.panel:not(.circuit-panel) > .section-card-heading { margin-inline: calc(var(--section-divider-inset, var(--gutter)) * -1); padding: 0 var(--section-divider-inset, var(--gutter)) var(--space-md); border-bottom: var(--stroke) solid var(--border); }
 /* Panel ini tidak punya padding sendiri -- insetnya ada di .upgrade-row.
    Header memakai inset yang sama agar judul, tombol info, dan isi baris sejajar. */
 .panel.upgrade-panel > .section-card-heading { margin-inline: 0; padding: var(--space-md); }
