@@ -6,9 +6,10 @@
  * severity is deliberately null until server calibration; do not infer rewards,
  * grip, boost windows, or settlement from this visual contract.
  */
-export type TrackPrimitive =
-  | { readonly kind: 'line'; readonly length: number }
-  | { readonly kind: 'arc'; readonly radius: number; readonly turn: number }
+import { primitiveLength, type TrackPrimitive } from './track-layout'
+import { createTrackPath } from './track-path'
+
+export { advanceTrackPose, primitiveLength, type TrackPose, type TrackPrimitive } from './track-layout'
 
 export type TrackSection = {
   readonly id: string
@@ -18,8 +19,6 @@ export type TrackSection = {
   readonly lengthFraction: number
   readonly severity: null
 }
-
-export type TrackPose = { x: number; z: number; heading: number }
 
 const definitions = [
   { id: 'launch', kind: 'straight', label: 'Straight', geometry: [{ kind: 'line', length: 5 }] },
@@ -32,10 +31,6 @@ const definitions = [
   // The S displaces X by -8 sin(60°); this straight closes position AND tangent.
   { id: 'return', kind: 'straight', label: 'Finish straight', geometry: [{ kind: 'line', length: 8 * Math.sin(Math.PI / 3) - 5 }] },
 ] as const satisfies readonly Omit<TrackSection, 'lengthFraction' | 'severity'>[]
-
-export function primitiveLength(primitive: TrackPrimitive) {
-  return primitive.kind === 'line' ? primitive.length : primitive.radius * Math.abs(primitive.turn)
-}
 
 const sectionLengths = definitions.map(section => section.geometry.reduce((sum, primitive) => sum + primitiveLength(primitive), 0))
 const totalLength = sectionLengths.reduce((sum, length) => sum + length, 0)
@@ -53,43 +48,13 @@ export const TECHNICAL_TRACK = {
   })),
 } as const
 
-export function advanceTrackPose(start: TrackPose, primitive: TrackPrimitive, fraction: number): TrackPose {
-  const t = Math.min(1, Math.max(0, Number.isFinite(fraction) ? fraction : 0))
-  if (primitive.kind === 'line') return {
-    x: start.x + Math.cos(start.heading) * primitive.length * t,
-    z: start.z + Math.sin(start.heading) * primitive.length * t,
-    heading: start.heading,
-  }
-  const heading = start.heading + primitive.turn * t
-  const signedRadius = Math.sign(primitive.turn) * primitive.radius
-  return {
-    x: start.x + signedRadius * (Math.sin(heading) - Math.sin(start.heading)),
-    z: start.z - signedRadius * (Math.cos(heading) - Math.cos(start.heading)),
-    heading,
-  }
-}
-
-let cursor: TrackPose = TECHNICAL_TRACK.start
-let distance = 0
-const spans = TECHNICAL_TRACK.sections.flatMap(section => section.geometry.map(primitive => {
-  const length = primitiveLength(primitive)
-  const span = { primitive, sectionId: section.id, start: cursor, distance, length }
-  cursor = advanceTrackPose(cursor, primitive, 1)
-  distance += length
-  return span
-}))
+const path = createTrackPath(TECHNICAL_TRACK.sections, TECHNICAL_TRACK.start)
+const { spans } = path
 
 /** Clamped inspection progress, not a clock. Positive offset is right of travel. */
 export function technicalTrackPoint(progress: number, laneOffset = 0) {
-  const d = Math.min(1, Math.max(0, Number.isFinite(progress) ? progress : 0)) * totalLength
-  const span = spans.find(span => d < span.distance + span.length) ?? spans[spans.length - 1]
-  const pose = advanceTrackPose(span.start, span.primitive, (d - span.distance) / span.length)
-  return {
-    x: pose.x - Math.sin(pose.heading) * laneOffset,
-    z: pose.z + Math.cos(pose.heading) * laneOffset,
-    heading: pose.heading,
-    sectionId: span.sectionId,
-  }
+  const { x, z, heading, sectionId } = path.point(progress, -laneOffset, 'centerline', false)
+  return { x, z, heading, sectionId }
 }
 
 // Include every primitive boundary exactly: no spline rounding or hidden joins.
