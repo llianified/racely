@@ -13,6 +13,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
+  coinRate,
   coins,
   formatDuration,
   idr,
@@ -73,7 +74,7 @@ function faqItems(game: GameState): { icon: typeof Flag; question: string; answe
     {
       icon: Wallet,
       question: "Bagaimana saldo dan penarikan bekerja?",
-      answer: `Koin dari balapan masuk ke "belum diklaim" dulu. Setiap 1 koin penuh bisa kamu klaim ke saldo. Saldo bisa ditarik ke e-wallet atau rekening bank saat mencapai ${coins(economy.minWithdrawCoins)}, dengan nilai 1 koin = ${idr(1, economy)}. Penarikan diproses manual oleh admin.`,
+      answer: `Koin dari balapan masuk ke "belum diklaim" dulu. Setiap 1 koin penuh bisa kamu klaim ke saldo. Saldo bisa ditarik ke e-wallet atau rekening bank saat mencapai ${coins(economy.minWithdrawCoins)} (${idr(economy.minWithdrawCoins, economy)}), dengan kurs ${coinRate(economy)}. Penarikan diproses manual oleh admin.`,
     },
     {
       icon: CalendarCheck,
