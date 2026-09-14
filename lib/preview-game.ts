@@ -1,6 +1,7 @@
 import "server-only";
 import { dailyMissionsSchema, dailyMissionsFor, settleDailyMissions, recordDailyBoost, claimDailyMission } from "./daily-missions";
 import { ownedPaintsSchema, applyPaintCommand } from "./car-paints";
+import { carSetupSchema, knownCarSetup } from "./car-setup";
 
 import { Buffer } from "node:buffer";
 import { z } from "zod";
@@ -61,6 +62,7 @@ const previewGameSchema = z.object({
     developmentPreview: z.boolean().default(true),
     bodyParts: bodyPartsSchema.optional(),
     dailyMissions: dailyMissionsSchema.optional(),
+    setup: carSetupSchema.optional(),
     ownedPaints: ownedPaintsSchema.optional(),
     carSelection: z.object({
       model: z.enum(CAR_MODEL_IDS).nullable(),
@@ -206,7 +208,8 @@ function settlePreviewGame(
     ? dailyMissionsFor(game.state.dailyMissions, new Date(now), economy)
     : settleDailyMissions(game.state.dailyMissions, {
         progress: game.state.progress, levels: game.state.levels,
-        circuit: game.state.circuit, economy, lastSettledAt: new Date(game.updatedAt),
+        circuit: game.state.circuit, economy, setup: knownCarSetup(game.state.setup),
+        lastSettledAt: new Date(game.updatedAt),
         boostEndsAt: game.state.boostLeft > 0 ? new Date(game.updatedAt + game.state.boostLeft * 1000) : null,
       }, new Date(now));
   game = { ...game, state: { ...game.state, dailyMissions } };
@@ -222,6 +225,7 @@ function settlePreviewGame(
       levels: game.state.levels,
       circuit: game.state.circuit,
       economy,
+      setup: knownCarSetup(game.state.setup),
       lastSettledAt: new Date(game.updatedAt),
       boostEndsAt:
         game.state.boostLeft > 0
@@ -490,6 +494,11 @@ export function performPreviewGameAction(
     }
   } else if (action.type === "color") {
     state = { ...state, color: action.color };
+  } else if (action.type === "set-setup") {
+    if (!selection?.model) {
+      throw new PreviewGameRuleError("Pilih mobil dulu sebelum menyetel setup.");
+    }
+    state = { ...state, setup: { gear: action.gear, roller: action.roller } };
   } else if (action.type === "circuit") {
     if (action.circuit < state.circuit) {
       throw new PreviewGameRuleError("Trek lama tidak bisa dipilih lagi.");

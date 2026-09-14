@@ -15,6 +15,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { CarModelId } from "@/lib/car-catalog";
 import type { BodyParts } from "@/lib/car-parts";
+import type { CarSetup } from "@/lib/car-setup";
 import type { DailyMissions } from "@/lib/daily-missions";
 import type { PaintId } from "@/lib/car-paints";
 
@@ -41,6 +42,7 @@ export const players = pgTable("racely_players", {
   dailyMissions: jsonb("daily_missions").$type<DailyMissions>(),
   ownedPaints: jsonb("owned_paints").$type<PaintId[]>().notNull().default([]),
   bodyParts: jsonb("body_parts").$type<BodyParts>().notNull().default({ owned: [], equipped: {} }),
+  setup: jsonb("setup").$type<CarSetup>().notNull().default({ gear: "4:1", roller: "standard" }),
   carModel: text("car_model").$type<CarModelId>(),
   color: text("color").notNull().default("#4275ff"),
   circuit: integer("circuit").notNull().default(0),
