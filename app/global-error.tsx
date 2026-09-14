@@ -41,6 +41,11 @@ export default function GlobalError({
           Progresmu tersimpan di server. Tutup Racely lalu buka lagi dari
           @RacelyBot, atau coba muat ulang.
         </p>
+        {/* Alasan yang sama dengan app/error.tsx: di dalam WebView Telegram
+            tidak ada console yang bisa dibuka pemain. */}
+        <p style={{ margin: 0, maxWidth: 360, fontSize: 12, color: '#a3a8c3', wordBreak: 'break-word' }}>
+          {error.name}: {error.message}
+        </p>
         {error.digest && (
           <p style={{ margin: 0, fontSize: 12, color: '#a3a8c3' }}>Kode: {error.digest}</p>
         )}

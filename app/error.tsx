@@ -39,9 +39,22 @@ export default function GameError({
             Koin, level, dan mobilmu tersimpan di server — tidak ada yang hilang.
             Muat ulang layar ini untuk melanjutkan.
           </p>
-          {error.digest && (
-            <p className="text-xs text-muted-foreground">Kode: {error.digest}</p>
-          )}
+          {/*
+            Detail teknisnya IKUT ditampilkan, dilipat. Racely berjalan di dalam
+            WebView Telegram: tidak ada devtools, tidak ada console yang bisa
+            dibuka pemain, dan `digest` hanya terisi untuk kegagalan di server --
+            jadi kegagalan di sisi client tidak meninggalkan satu pun keterangan
+            yang bisa dibaca siapa pun. Tanpa baris ini, satu-satunya laporan yang
+            bisa dikirim pemain adalah "garasi error", dan itu tidak cukup untuk
+            memperbaiki apa pun.
+          */}
+          <details className="text-xs text-muted-foreground">
+            <summary>Detail teknis</summary>
+            <p className="mt-sm break-words text-left">
+              {error.name}: {error.message}
+            </p>
+            {error.digest && <p className="text-left">Kode: {error.digest}</p>}
+          </details>
         </div>
         <Button variant="gold" size="lg" className="w-full whitespace-normal" onClick={reset}>
           <RotateCcw data-icon="inline-start" />
