@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { RaceAudioEngine } from '@/lib/race-audio';
 
-export function useRaceAudio() {
+export function useRaceAudio(laps: number, active: boolean) {
   const audio = useRef<RaceAudioEngine | null>(null);
   const busy = useRef(false);
   const mounted = useRef(false);
@@ -20,6 +20,24 @@ export function useRaceAudio() {
       audio.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const engine = audio.current;
+    const sync = () => {
+      engine?.setActive(enabled && active && !document.hidden);
+      engine?.updateLaps(laps);
+    };
+    const pause = () => engine?.setActive(false);
+    sync();
+    document.addEventListener('visibilitychange', sync);
+    window.addEventListener('pagehide', pause);
+    window.addEventListener('pageshow', sync);
+    return () => {
+      document.removeEventListener('visibilitychange', sync);
+      window.removeEventListener('pagehide', pause);
+      window.removeEventListener('pageshow', sync);
+    };
+  }, [laps, active, enabled]);
 
   const changeVolume = (value: number) => {
     setVolume(value);
@@ -55,8 +73,6 @@ export function useRaceAudio() {
       await engine.unlock();
       if (mounted.current && audio.current === engine) {
         setEnabled(true);
-        // A muted inspector/standby scene has no RaceSound subscriber yet.
-        engine.setActive(false);
       }
     } catch {
       engine?.dispose();
@@ -72,5 +88,5 @@ export function useRaceAudio() {
     }
   };
 
-  return { audio, enabled, pending, volume, changeVolume, toggle };
+  return { enabled, pending, volume, changeVolume, toggle };
 }
