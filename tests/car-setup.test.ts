@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  CIRCUIT_CORNER_SEVERITY,
   GEAR_CATALOG,
   GEAR_IDS,
   NEUTRAL_SETUP,
@@ -15,6 +14,7 @@ import {
 } from "../lib/car-setup";
 import { DEFAULT_ECONOMY, lapSecondsAt } from "../lib/economy-config";
 import { calculateRaceSettlement } from "../lib/game-economy";
+import { trackLayoutAt } from "../lib/track-layout";
 
 const E = DEFAULT_ECONOMY;
 const CIRCUITS = [0, 1] as const;
@@ -58,8 +58,12 @@ describe("katalog setup", () => {
   it("tidak pernah menaikkan ketatan tikungan di atas ambang setup netral", () => {
     // Kalau ada sirkuit yang melewati 1, setup netral ikut kena hukuman di sana
     // dan pemain lama kehilangan penghasilan hanya karena sistem ini dipasang.
-    for (const severity of CIRCUIT_CORNER_SEVERITY) {
-      expect(severity).toBeLessThanOrEqual(1);
+    // Dibaca per section, bukan per sirkuit: satu hairpin ketat di tengah trek
+    // yang selebihnya lapang tetap harus tertangkap.
+    for (const circuit of CIRCUITS) {
+      for (const section of trackLayoutAt(circuit).sections) {
+        expect(section.severity).toBeLessThanOrEqual(1);
+      }
     }
   });
 });

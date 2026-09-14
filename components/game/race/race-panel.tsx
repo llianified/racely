@@ -10,6 +10,7 @@ import { batteryTelemetry, carSetup, coins, formatCoins, lapReward, lapSeconds, 
 import { RaceOverviewHud, RacePositionHud } from "./race-overview-hud";
 import { cn } from "@/lib/utils";
 import { createDrivingState, isCleanBoostLaunch } from "@/lib/race-dynamics";
+import { trackLayoutAt } from "@/lib/track-layout";
 import { RaceSwitch, SettingRow } from "./setting-row";
 import { NEUTRAL_SETUP } from "@/lib/car-setup";
 
@@ -74,7 +75,11 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
   // tikungan tetap boleh -- itu pilihannya, lengkap dengan biayanya.
   const cornerLaunch =
     game.economy.boostCornerPenalty > 0 &&
-    !isCleanBoostLaunch(game.progress, game.economy.boostLaunchGraceLap);
+    !isCleanBoostLaunch(
+      game.progress,
+      game.economy.boostLaunchGraceLap,
+      trackLayoutAt(game.circuit),
+    );
   const boostLabel = boosting
     ? "Memulai…"
     : boosted
