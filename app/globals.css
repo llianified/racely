@@ -584,15 +584,15 @@
 .panel { border: var(--stroke) solid var(--border); border-radius: var(--radius); background: var(--card); overflow: hidden; min-width: 0; }
 
 /* ── track ───���������─────────────────────────────────────── */
-.track-panel { position: relative; border-radius: var(--corner-box); }
-.track-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs); min-height: var(--space-48); padding: var(--space-6) var(--space-md); border-bottom: var(--stroke) solid var(--border); }
+.track-panel { position: relative; border-radius: var(--corner-box); border-color: color-mix(in srgb, var(--primary) 28%, var(--border)); }
+.track-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); min-height: var(--space-48); padding: var(--space-sm) var(--space-md); border-bottom: var(--stroke) solid var(--border); background: color-mix(in srgb, var(--background) 24%, var(--card)); }
 .track-title { flex: 1; min-width: 0; }
-.circuit-number { display: grid; place-items: center; flex-shrink: 0; width: var(--space-30); height: var(--space-30); border: var(--stroke) solid var(--border); border-bottom: var(--stroke-2) solid var(--accent); border-radius: var(--corner-box); font-size: var(--fs-title); font-weight: var(--fw-black); font-variant-numeric: tabular-nums; color: var(--foreground); background: var(--background); }
-.circuit-trigger { max-width: 100%; white-space: normal; text-align: left; padding-inline: var(--space-sm); font-size: var(--fs-body); font-weight: var(--fw-heavy); }
+.circuit-number { display: grid; place-items: center; flex-shrink: 0; width: var(--space-32); height: var(--space-32); border: var(--stroke) solid color-mix(in srgb, var(--accent) 30%, var(--border)); border-bottom: var(--stroke-2) solid var(--accent); border-radius: var(--corner-box); font-size: var(--fs-display); font-weight: var(--fw-black); font-style: italic; font-variant-numeric: tabular-nums; color: var(--accent); background: var(--background); }
+.circuit-trigger { max-width: 100%; white-space: normal; text-align: left; padding-inline: var(--space-xs); font-size: var(--fs-title); font-weight: var(--fw-heavy); letter-spacing: var(--track-snug-sm); }
 /* Baris kail progresi membungkus ke bawah judul. min-height kepala dilepas
    ketika barisnya ada supaya arena tidak ikut terdorong turun ke balik nav. */
-.track-top:has(.track-unlock) { min-height: 0; row-gap: var(--space-3); }
-.track-unlock { flex: 1 0 100%; display: flex; align-items: center; gap: var(--space-sm); min-width: 0; }
+.track-top:has(.track-unlock) { min-height: 0; row-gap: var(--space-sm); }
+.track-unlock { flex: 1 0 100%; display: flex; align-items: center; gap: var(--space-sm); min-width: 0; padding-top: var(--space-sm); border-top: var(--stroke) solid var(--border); }
 .track-unlock > span { flex-shrink: 0; color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-heavy); line-height: var(--lh-none); letter-spacing: var(--track-caps-xs); text-transform: uppercase; font-variant-numeric: tabular-nums; }
 .track-unlock [data-slot='progress-track'] { height: var(--space-xs); background: var(--background); }
 .track-unlock [data-slot='progress-indicator'] { background: var(--accent); }
@@ -645,14 +645,15 @@
    di bawah pada kolom yang sama. Garis pemisah dibuat dari gap selebar --stroke
    di atas latar --border, jadi tidak ada sel yang terlihat menganga. */
 .race-hud-grid { display: grid; grid-template-columns: auto 1fr 1fr; gap: var(--stroke); margin: 0; border-bottom: var(--stroke) solid var(--border); background: var(--border); }
-.race-hud-cell { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; padding: var(--space-8) var(--space-12); background: var(--background); }
+.race-hud-cell { display: flex; flex-direction: column; gap: var(--space-xs); min-width: 0; padding: var(--space-10) var(--space-md); background: color-mix(in srgb, var(--card) 38%, var(--background)); }
+.race-hud-cell:nth-child(n + 4) { background: var(--background); }
 .race-hud-cell:nth-child(3n + 1) { padding-left: var(--space-md); }
 .race-hud-cell:nth-child(3n) { padding-right: var(--space-md); }
 .race-hud-cell dt { color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-semibold); letter-spacing: var(--track-caps-md); text-transform: uppercase; line-height: var(--lh-tight); white-space: nowrap; }
 .race-hud-cell dd { display: flex; align-items: baseline; gap: var(--space-3); margin: 0; font-size: var(--fs-read); font-weight: var(--fw-bold); line-height: var(--lh-tight); white-space: nowrap; }
 .race-hud-cell small { color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-medium); }
 .race-hud-speed dd { margin-top: auto; line-height: var(--lh-none); }
-.race-hud-speed strong { font-size: var(--fs-5xl); font-weight: var(--fw-heavy); letter-spacing: var(--track-tight-sm); }
+.race-hud-speed strong { font-size: var(--fs-5xl); font-weight: var(--fw-black); font-style: italic; letter-spacing: var(--track-tight-sm); }
 .race-hud-speed small { font-size: var(--fs-micro); }
 .race-hud-cell .race-hud-meter { display: block; height: var(--space-3); margin-top: auto; overflow: hidden; border-radius: var(--corner-pill); background: var(--secondary); }
 /* Kilau diagonal yang sama dengan .gold-button, dipakai ulang di isi meter dan
@@ -697,17 +698,17 @@
 .gold-button[data-size='sm']:not(:disabled), .gold-button[data-size='xs']:not(:disabled) { --press-depth: var(--space-2); --press-shift: var(--stroke); }
 
 /* ── hasil balapan ───────────────────────────────────── */
-.race-reward { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-sm); padding: var(--space-sm); border: var(--stroke) solid var(--border); border-radius: var(--corner-box); background: var(--card); transition: border-color var(--dur-base); }
-.reward-ready { border-color: color-mix(in srgb, var(--accent) 32%, transparent); }
+.race-reward { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-md); padding: var(--space-md); border: var(--stroke) solid var(--border); border-left: var(--space-3) solid var(--secondary); border-radius: var(--corner-box); background: color-mix(in srgb, var(--background) 20%, var(--card)); transition: border-color var(--dur-base); }
+.reward-ready { border-color: color-mix(in srgb, var(--accent) 32%, var(--border)); border-left-color: var(--accent); background: color-mix(in srgb, var(--accent) 4%, var(--card)); }
 .reward-copy { min-width: 0; }
-.reward-heading { display: flex; align-items: center; gap: var(--space-6); min-width: 0; }
+.reward-heading { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-6); min-width: 0; }
 .reward-heading h2 { flex-shrink: 0; font-size: var(--fs-nano); font-weight: var(--fw-bold); line-height: var(--lh-snug); letter-spacing: var(--track-caps-lg); text-transform: uppercase; color: var(--muted-foreground); }
 .reward-status { min-width: 0; padding: var(--space-1) var(--space-6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: var(--stroke) solid var(--border); border-radius: var(--corner-box); background: color-mix(in srgb, var(--secondary) 60%, transparent); font-size: var(--fs-nano); font-weight: var(--fw-medium); line-height: var(--lh-snug); color: var(--muted-foreground); }
 .reward-ready .reward-status { border-color: color-mix(in srgb, var(--accent) 30%, transparent); background: color-mix(in srgb, var(--accent) 8%, transparent); color: var(--accent); }
 .reward-progress { flex: 1 1 auto; min-width: 0; }
 .reward-progress [data-slot='progress-track'] { height: var(--space-xs); background: var(--background); }
 .reward-progress [data-slot='progress-indicator'] { background: var(--accent); }
-.reward-copy > strong { display: block; margin-top: var(--space-2); font-size: var(--fs-title); font-weight: var(--fw-heavier); line-height: var(--lh-tight); letter-spacing: var(--track-tight-xs); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.reward-copy > strong { display: block; margin-top: var(--space-xs); font-size: var(--fs-4xl); font-weight: var(--fw-heavier); line-height: var(--lh-tight); letter-spacing: var(--track-tight-xs); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .race-reward > [data-slot='button'] { flex-shrink: 0; }
 
 /* ── garasi ─────────────────��──────────────────────── */
@@ -909,9 +910,10 @@
   .boot-content { min-height: var(--boot-content-h-short); gap: var(--space-xl); }
   .boot-logo { width: var(--logo-boot-w-short); }
 }
-.circuit-preview { display: flex; align-items: center; gap: var(--space-md); margin: var(--space-10) calc(var(--space-md) * -1) 0; padding: var(--space-md); border-block: var(--stroke) dashed var(--border); color: var(--foreground); }
-.circuit-ticket-label { flex-shrink: 0; align-self: stretch; display: flex; align-items: center; margin-block: calc(var(--space-md) * -1); padding: var(--space-md) var(--space-md) var(--space-md) 0; border-right: var(--stroke) solid var(--border); color: var(--subtle-foreground); font-size: var(--fs-read); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps-md); line-height: var(--lh-none); text-transform: uppercase; }
-.circuit-ticket-flag { width: var(--space-20); height: var(--space-20); flex-shrink: 0; color: var(--subtle-foreground); margin-left: auto; }
+.circuit-preview { display: flex; align-items: center; gap: var(--space-md); margin-top: var(--space-md); padding: var(--space-md); border: var(--stroke) solid color-mix(in srgb, var(--primary) 36%, var(--border)); border-radius: var(--corner-box); background: color-mix(in srgb, var(--primary) 9%, var(--background)); color: var(--foreground); }
+.circuit-preview > div { min-width: 0; }
+.circuit-ticket-label { flex-shrink: 0; align-self: stretch; display: flex; align-items: center; width: var(--space-44); padding-right: var(--space-md); border-right: var(--stroke) dashed color-mix(in srgb, var(--primary) 40%, var(--border)); color: var(--muted-foreground); font-size: var(--fs-micro); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps-md); line-height: var(--lh-normal); text-transform: uppercase; }
+.circuit-ticket-flag { width: var(--icon-lg); height: var(--icon-lg); flex-shrink: 0; color: var(--accent); margin-left: auto; }
 .circuit-panel { border-radius: var(--corner-box); }
 .circuit-panel .section-card-heading h2 { font-size: var(--fs-lead); }
 .circuit-panel .section-card-heading h2 svg { width: var(--icon-base); height: var(--icon-base); }
