@@ -29,6 +29,7 @@ import {
   racingDayKey,
 } from "./game-economy";
 import { isCleanBoostLaunch } from "./race-dynamics";
+import { trackLayoutAt } from "./track-layout";
 import { CAR_MODEL_IDS, isCarColor } from "./car-catalog";
 import { applyPartCommand, bodyPartsSchema, PartRuleError } from "./car-parts";
 import { referralLink } from "./telegram-bot";
@@ -451,6 +452,7 @@ export function performPreviewGameAction(
     const clean = isCleanBoostLaunch(
       state.progress,
       economy.boostLaunchGraceLap,
+      trackLayoutAt(state.circuit),
     );
     const seconds = boostDurationFor(economy, clean);
     boostLaunch = { clean, seconds };
