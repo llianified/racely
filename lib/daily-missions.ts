@@ -7,22 +7,22 @@ export type DailyMissionKind = (typeof DAILY_MISSION_KINDS)[number];
 export const dailyMissionsSchema = z.object({
   day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   values: z.object({ laps: z.number().nonnegative(), earn: z.number().nonnegative(), boosts: z.number().nonnegative(), clean: z.number().nonnegative() }),
-  items: z.array(z.object({ kind: z.enum(DAILY_MISSION_KINDS), target: z.number().positive(), reward: z.number().int().nonnegative(), claimed: z.boolean() })).length(3),
+  items: z.array(z.object({ kind: z.enum(DAILY_MISSION_KINDS), target: z.number().positive(), reward: z.number().int().nonnegative(), claimed: z.boolean() })).min(1).max(3),
 });
 export type DailyMissions = z.infer<typeof dailyMissionsSchema>;
 
 export function dailyMissionsFor(stored: DailyMissions | null | undefined, now: Date, e: EconomyConfig): DailyMissions {
   const day = racingDayKey(now);
-  if (stored?.day === day) return stored;
-  const rotation = Math.floor(Date.parse(`${day}T00:00:00Z`) / 86_400_000) % DAILY_MISSION_KINDS.length;
-  const targets = { laps: e.dailyMissionLapsTarget, earn: e.dailyMissionEarnTarget, boosts: e.dailyMissionBoostTarget, clean: e.dailyMissionCleanTarget };
+  if (stored?.day === day) return { ...stored, items: stored.items.filter(item => item.kind === 'laps' || item.kind === 'earn') };
+  const kinds = ['laps', 'earn'] as const;
+  const targets = { laps: e.dailyMissionLapsTarget, earn: e.dailyMissionEarnTarget };
   return {
     day,
     values: { laps: 0, earn: 0, boosts: 0, clean: 0 },
-    items: Array.from({ length: 3 }, (_, index) => ({
-      kind: DAILY_MISSION_KINDS[(rotation + index) % DAILY_MISSION_KINDS.length],
-      target: targets[DAILY_MISSION_KINDS[(rotation + index) % DAILY_MISSION_KINDS.length]],
-      reward: Math.floor(e.dailyMissionRewardCap / 3) + (index < e.dailyMissionRewardCap % 3 ? 1 : 0),
+    items: kinds.map((kind, index) => ({
+      kind,
+      target: targets[kind],
+      reward: Math.floor(e.dailyMissionRewardCap / 2) + (index < e.dailyMissionRewardCap % 2 ? 1 : 0),
       claimed: false,
     })),
   };

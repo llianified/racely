@@ -10,6 +10,7 @@ import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js'
 import { COLORS, MiniCar } from './mini-car'
 import type { CarModelId } from '@/lib/car-catalog'
 import type { GameState } from '@/lib/game'
+import { reconcileRaceDistance, type RaceOpponent } from '@/lib/race-opponents'
 import { RECOVERY_SECONDS, courseOutPose, resetGripChallenge, stepDriving, stepPowertrain, type DrivingState } from '@/lib/race-dynamics'
 import { PLAYER_RADIUS, trackLayoutAt } from '@/lib/track-layout'
 import { RACE_TRACK_OFFSETS, raceTrackAt } from '@/lib/race-track'
@@ -19,11 +20,11 @@ import { RacingEffects } from './racing-effects'
 import { TamiyaLanes } from './tamiya-lanes'
 import { ContextMonitor, SceneBoundary } from './scene-recovery'
 
-export type SceneProps = { setup?: CarSetup; equipped?: NonNullable<GameState['bodyParts']>['equipped']; driving?: RefObject<DrivingState>; onTelemetry?: (state: DrivingState) => void; cinematic?: boolean; levels?: GameState['levels']; model?: CarModelId; progress: number; seconds: number; baseSeconds: number; opponentSeconds: readonly [number, number]; color: string; boosted: boolean; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean }
+export type SceneProps = { setup?: CarSetup; equipped?: NonNullable<GameState['bodyParts']>['equipped']; driving?: RefObject<DrivingState>; onTelemetry?: (state: DrivingState) => void; cinematic?: boolean; levels?: GameState['levels']; model?: CarModelId; progress: number; seconds: number; baseSeconds: number; opponents: readonly RaceOpponent[]; opponentProgress: readonly number[]; color: string; boosted: boolean; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean }
 
 // The 10Hz game tick changes these every 100ms. They are consumed inside useFrame,
 // so they travel through a ref instead of props: a tick must not reconcile the 3D tree.
-type RaceTiming = Pick<SceneProps, 'progress' | 'seconds' | 'baseSeconds' | 'opponentSeconds' | 'boosted'>
+type RaceTiming = Pick<SceneProps, 'progress' | 'seconds' | 'baseSeconds' | 'opponentProgress' | 'boosted'>
 
 const TrackContext = createContext(raceTrackAt(0))
 
@@ -58,8 +59,8 @@ const Racer = memo(function Racer({ lane, color, model, timing, playerRef, level
   const laneLength = track.laneLength(laneOffset)
   const ownRef = useRef<THREE.Group>(null)
   const group = playerRef ?? ownRef
-  const phase = useRef(lane * .32)
-  const seeded = useRef(lane !== 0)
+  const phase = useRef(0)
+  const seeded = useRef(false)
   const publishAfter = useRef(0)
   const tumble = useRef<THREE.Group>(null)
   const wheelSpeed = useRef(0)
@@ -80,9 +81,12 @@ const Racer = memo(function Racer({ lane, color, model, timing, playerRef, level
   useFrame((_, delta) => {
     if (!group.current || document.hidden) return
     const dt = Math.min(delta, .1)
-    const { progress, baseSeconds, boosted } = timing.current
-    const seconds = lane === 0 ? timing.current.seconds : (timing.current.opponentSeconds[lane - 1] ?? timing.current.seconds)
-    if (!seeded.current) { phase.current = progress; seeded.current = true }
+    const { progress, boosted } = timing.current
+    const target = lane === 0 ? progress : timing.current.opponentProgress[lane - 1]
+    if (target === undefined) return
+    if (!seeded.current) { phase.current = target; seeded.current = true }
+    const previous = phase.current
+    phase.current = reconcileRaceDistance(previous, target, dt)
     const state = lane === 0 ? driving?.current : undefined
     if (state) {
       if (performance) stepSetupFeedback(state, feedback.current, dt, phase.current, performance, trackLayoutAt(circuit))
@@ -90,16 +94,8 @@ const Racer = memo(function Racer({ lane, color, model, timing, playerRef, level
       stepPowertrain(state, dt, boosted, levels?.engine, levels?.battery, powertrainVisual)
     }
     const recovering = !!state && state.recovery > 0
-    const lapsPerSecond = state ? state.visualSpeed / baseSeconds : 1 / seconds
-    if (!recovering) phase.current += dt * lapsPerSecond
-    wheelSpeed.current = recovering ? 0 : laneLength / .85 * lapsPerSecond
-    if (lane === 0 && !recovering) {
-      // Transient acceleration is visual; reconcile gradually to paid server laps.
-      // Bound correction so recovery never looks like an instant extra boost.
-      const drift = ((progress - (phase.current % 1) + 1.5) % 1) - .5
-      const correction = THREE.MathUtils.clamp(drift * (1 - Math.exp(-2 * dt)), -dt / seconds * .15, dt / seconds * .15)
-      phase.current += correction
-    }
+    const lapsPerSecond = dt > 0 ? Math.max(0, (phase.current - previous) / dt) : 0
+    wheelSpeed.current = recovering ? 0 : laneLength / .85 * Math.min(lapsPerSecond, 2)
     const p = track.route.point(phase.current, lane)
     const offset = state?.offset ?? 0
     const slip = state ? Math.max(0, (65 - state.grip) / 65) : 0
@@ -442,7 +438,8 @@ const Arena = memo(function Arena(props: ArenaProps) {
     <CameraRig cinematic={props.cinematic} driving={props.driving} mode={props.cameraMode} follow={follow} resetKey={props.resetKey} playerRef={playerRef} active={running} reducedMotion={props.reducedMotion ?? false} />
     </>}
     <group visible={!props.inspect}>
-      {[0, 1, 2].map(lane => <Racer key={lane} setup={lane === 0 ? props.setup : undefined} circuit={props.circuit} equipped={lane === 0 ? props.equipped : undefined} lane={lane} driving={lane === 0 ? props.driving : undefined} onTelemetry={props.onTelemetry} reducedMotion={props.reducedMotion} levels={lane === 0 ? props.levels : undefined} model={lane === 0 ? props.model : 'neo-falcon'} playerRef={lane === 0 ? playerRef : undefined} color={lane === 0 ? props.color : lane === 1 ? COLORS.gold : COLORS.white} timing={timing} />)}
+      <Racer key={`player:${props.circuit}`} setup={props.setup} circuit={props.circuit} equipped={props.equipped} lane={0} driving={props.driving} onTelemetry={props.onTelemetry} reducedMotion={props.reducedMotion} levels={props.levels} model={props.model} playerRef={playerRef} color={props.color} timing={timing} />
+      {props.opponents.map((opponent, index) => <Racer key={`${opponent.id}:${props.circuit}`} setup={opponent.setup} circuit={props.circuit} equipped={opponent.equipped} lane={index + 1} reducedMotion={props.reducedMotion} levels={opponent.levels} model={opponent.model} color={opponent.color} timing={timing} />)}
     </group>
     <ContextMonitor onLost={props.onLost} />
   </TrackContext>
@@ -455,14 +452,14 @@ export default function RaceScene(props: SceneProps) {
   const [lost, setLost] = useState(false)
   const [visible, setVisible] = useState(true)
   const [ready, setReady] = useState(false)
-  const timing = useRef<RaceTiming>({ progress: props.progress, seconds: props.seconds, baseSeconds: props.baseSeconds, opponentSeconds: props.opponentSeconds, boosted: props.boosted })
+  const timing = useRef<RaceTiming>({ progress: props.progress, seconds: props.seconds, baseSeconds: props.baseSeconds, opponentProgress: props.opponentProgress, boosted: props.boosted })
   useLayoutEffect(() => {
     timing.current.progress = props.progress
     timing.current.seconds = props.seconds
     timing.current.baseSeconds = props.baseSeconds
-    timing.current.opponentSeconds = props.opponentSeconds
+    timing.current.opponentProgress = props.opponentProgress
     timing.current.boosted = props.boosted
-  }, [props.progress, props.seconds, props.baseSeconds, props.opponentSeconds, props.boosted])
+  }, [props.progress, props.seconds, props.baseSeconds, props.opponentProgress, props.boosted])
   useEffect(() => {
     const change = () => setVisible(!document.hidden)
     change()
@@ -497,7 +494,7 @@ export default function RaceScene(props: SceneProps) {
   return <SceneBoundary key={attempt} fallback={<SceneError onRetry={retry} />}>
     {!ready && <div className="scene-loading absolute inset-0" role="status"><Flag /><strong>Menyalakan lampu sirkuit.</strong><span>Menyiapkan lintasan 3D…</span></div>}
     <Canvas orthographic dpr={[1, 1.25]} frameloop={running ? 'always' : 'never'} shadows="percentage" camera={{ position: [9, 12.5, 12], zoom: 30, near: .1, far: 100 }} gl={{ antialias: true, alpha: false, powerPreference: 'default' }} fallback={<SceneError onRetry={retry} />} onCreated={() => setReady(true)} aria-label={props.inspect ? 'Inspeksi sasis dan dua sel baterai mobil. Geser untuk memutar, cubit untuk zoom. Balapan tetap berlangsung.' : follow ? 'Arena mini 4WD 3D. Kamera mengikuti mobilmu. Pilih Overview untuk melihat seluruh lintasan.' : 'Arena mini 4WD 3D. Kamera overview. Geser untuk memutar, cubit untuk zoom.'}>
-      <Arena setup={props.setup} equipped={props.equipped} driving={props.driving} onTelemetry={props.onTelemetry} cinematic={props.cinematic} levels={props.levels} model={props.model} color={props.color} cameraMode={props.cameraMode} resetKey={props.resetKey} circuit={props.circuit} reducedMotion={props.reducedMotion} inspect={props.inspect} charge={props.inspect ? props.charge : undefined} bodyVisible={props.bodyVisible} timing={timing} playerRef={playerRef} follow={follow} running={running} onLost={onLost} />
+      <Arena opponents={props.opponents} setup={props.setup} equipped={props.equipped} driving={props.driving} onTelemetry={props.onTelemetry} cinematic={props.cinematic} levels={props.levels} model={props.model} color={props.color} cameraMode={props.cameraMode} resetKey={props.resetKey} circuit={props.circuit} reducedMotion={props.reducedMotion} inspect={props.inspect} charge={props.inspect ? props.charge : undefined} bodyVisible={props.bodyVisible} timing={timing} playerRef={playerRef} follow={follow} running={running} onLost={onLost} />
     </Canvas>
   </SceneBoundary>
 }

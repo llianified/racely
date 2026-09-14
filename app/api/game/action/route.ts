@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withRaceOpponents } from '@/lib/race-opponents-server';
 import {
   GameRuleError,
   gameActionSchema,
@@ -73,7 +74,7 @@ export async function POST(request: Request) {
         body.data.requestId,
         body.data.action,
       ));
-    const response = NextResponse.json(game, {
+    const response = NextResponse.json(await withRaceOpponents(identity.userId, game), {
       headers: { "Cache-Control": "no-store" },
     });
     if (preview?.isNew) {

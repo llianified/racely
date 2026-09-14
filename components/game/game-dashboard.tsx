@@ -351,20 +351,6 @@ export function GameDashboard() {
       toast.success(`${circuitName(circuit)} aktif`);
     }
   };
-  const boost = async () => {
-    if (game.cooldown > 0) return;
-    const next = await runAction({ type: "boost" });
-    if (!next) return;
-    // Durasinya datang dari respons, bukan dihitung ulang di sini: server yang
-    // menilai tekanannya bersih atau tidak, dan pemain berhak tahu berapa detik
-    // yang benar-benar dia dapat.
-    const launch = next.boostLaunch;
-    if (launch && !launch.clean) {
-      toast.info(`Tikungan — Gaspol ${formatDuration(launch.seconds)}`);
-      return;
-    }
-    toast.success(`Gaspol ${game.economy.boostMultiplier}× aktif`);
-  };
   const chooseSetup = async (gear: GearId, roller: RollerId) => {
     if (
       await runAction({ type: "set-setup", gear, roller }, `setup:${gear}:${roller}`)
@@ -443,10 +429,7 @@ export function GameDashboard() {
                 <RacePanel
                   game={game}
                   active={tab === "race"}
-                  onBoost={boost}
-                  boosting={busyAction === "boost"}
                   onCircuits={() => setDialog("circuits")}
-                  disabled={Boolean(busyAction)}
                 />
                 <RaceReward
                   pending={game.pending}
