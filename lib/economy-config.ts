@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  NEUTRAL_SETUP,
+  setupLapSeconds,
+  type CarSetup,
+} from "./car-setup";
 
 /**
  * Seluruh angka ekonomi Racely dalam satu objek. Dulu tersebar sebagai
@@ -358,6 +363,32 @@ export const lapSecondsAt = (
     (levels.tires - 1) * e.lapTiresPerLevel) /
   (boosted ? e.boostMultiplier : 1);
 
+/**
+ * Waktu per putaran sesudah setup ikut diperhitungkan -- inilah angka yang
+ * benar-benar menentukan penghasilan, dan satu-satunya yang boleh dipakai
+ * settlement maupun HUD.
+ *
+ * `lapSecondsAt` di atas sengaja dibiarkan "mentah": proyeksi panel admin dan
+ * harga kosmetik memakainya sebagai garis dasar yang tidak boleh bergeser
+ * hanya karena seorang pemain mengganti gearnya.
+ *
+ * `setup` opsional dan jatuh ke netral. Netral menghasilkan angka yang sama
+ * persis dengan `lapSecondsAt`, jadi pemanggil lama tidak berubah perilakunya.
+ */
+export const effectiveLapSecondsAt = (
+  e: EconomyConfig,
+  levels: Record<UpgradeKey, number>,
+  boosted: boolean,
+  setup: CarSetup = NEUTRAL_SETUP,
+  circuit = 0,
+) =>
+  setupLapSeconds(
+    lapSecondsAt(e, levels, boosted),
+    setup,
+    levels.tires,
+    circuit,
+  );
+
 export const lapRewardAt = (
   e: EconomyConfig,
   batteryLevel: number,
@@ -398,8 +429,9 @@ export const racePositionAt = (
   levels: Record<UpgradeKey, number>,
   circuit: number,
   boosted: boolean,
+  setup: CarSetup = NEUTRAL_SETUP,
 ): RacePosition => {
-  const playerSeconds = lapSecondsAt(e, levels, boosted);
+  const playerSeconds = effectiveLapSecondsAt(e, levels, boosted, setup, circuit);
   const losses = raceOpponentLapSecondsAt(e, circuit).filter(
     (opponentSeconds) => opponentSeconds < playerSeconds,
   ).length;
@@ -411,8 +443,9 @@ export const raceRewardAt = (
   levels: Record<UpgradeKey, number>,
   circuit: number,
   boosted: boolean,
+  setup: CarSetup = NEUTRAL_SETUP,
 ) => {
-  const position = racePositionAt(e, levels, circuit, boosted);
+  const position = racePositionAt(e, levels, circuit, boosted, setup);
   const multiplier = 1 + (2 - position) * e.racePositionRewardStep;
   return (
     Math.round(lapRewardAt(e, levels.battery, circuit) * multiplier * 100) /

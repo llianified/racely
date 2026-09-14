@@ -10,6 +10,7 @@ import { GameGate } from "./shell/game-gate";
 import { GameDialog, type DialogKind } from "./shell/game-dialog";
 import { MenuPanel } from "./shell/menu-panel";
 import { GaragePanel, UpgradePanel } from "./panels/garage-panel";
+import { SetupPanel } from "./panels/setup-panel";
 import { RewardsPanel, claimableTotal } from "./panels/rewards-panel";
 import { ReferralPanel } from "./panels/referral-panel";
 import { LeaderboardPanel, LeaderboardShortcut } from "./panels/leaderboard-panel";
@@ -46,6 +47,7 @@ import {
 } from "@/lib/game";
 import { cn } from "@/lib/utils";
 import type { CarColor } from "@/lib/car-catalog";
+import { GEAR_CATALOG, ROLLER_CATALOG, type GearId, type RollerId } from "@/lib/car-setup";
 import { PAINT_CATALOG, type PaintCommand } from "@/lib/car-paints";
 import type { DailyMissionKind } from "@/lib/daily-missions";
 import { PART_CATALOG, SLOT_LABELS, type PartCommand } from "@/lib/car-parts";
@@ -368,6 +370,13 @@ export function GameDashboard() {
     }
     toast.success(`Gaspol ${game.economy.boostMultiplier}× aktif`);
   };
+  const chooseSetup = async (gear: GearId, roller: RollerId) => {
+    if (
+      await runAction({ type: "set-setup", gear, roller }, `setup:${gear}:${roller}`)
+    ) {
+      toast.success(`${GEAR_CATALOG[gear].name} · ${ROLLER_CATALOG[roller].name}`);
+    }
+  };
   const chooseColor = async (
     color: CarColor,
     name: string,
@@ -482,6 +491,11 @@ export function GameDashboard() {
                 game={game}
                 onUpgrade={upgrade}
                 onPreviewSheet={trackPreviewSheet}
+                disabled={Boolean(busyAction)}
+              />
+              <SetupPanel
+                game={game}
+                onSetup={chooseSetup}
                 disabled={Boolean(busyAction)}
               />
             </div>
