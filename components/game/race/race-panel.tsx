@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useId, useRef, useState, useSyncExternalStore } from "react";
-import { Camera, ChevronDown, Coins, Flag, LoaderCircle, Maximize, Minimize, RotateCcw, SlidersHorizontal, SwitchCamera } from "lucide-react";
+import { Camera, ChevronDown, Coins, Flag, LoaderCircle, Maximize, Minimize, RotateCcw, SlidersHorizontal, SwitchCamera, Volume2, VolumeX } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -17,6 +17,7 @@ import { RaceSwitch, SettingRow } from "./setting-row";
 import { NEUTRAL_SETUP } from "@/lib/car-setup";
 import { opponentDistance } from '@/lib/race-opponents';
 import { RaceStandings } from './race-standings';
+import { useRaceAudio } from './use-race-audio';
 
 const RaceScene = dynamic(() => import("../scene/race-scene"), {
   ssr: false,
@@ -46,6 +47,7 @@ export function RacePanel({ game, onCircuits, active = true }: {
 }) {
   const reducedMotion = useSyncExternalStore(subscribeMotionPreference, () => window.matchMedia("(prefers-reduced-motion: reduce)").matches, () => true);
   const driving = useRef(createDrivingState());
+  const sound = useRaceAudio(game.laps, active);
   const [telemetry, setTelemetry] = useState(createDrivingState);
   const [cinematic, setCinematic] = useState(true);
   const [cameraMode, setCameraMode] = useState(0);
@@ -146,6 +148,9 @@ export function RacePanel({ game, onCircuits, active = true }: {
             <SwitchCamera aria-hidden="true" />
           </Button>
           </>}
+          <Button variant="outline" size="icon-sm" onClick={sound.toggle} disabled={sound.pending} aria-busy={sound.pending} aria-pressed={sound.enabled} aria-label={sound.enabled ? "Matikan suara balapan" : "Aktifkan suara balapan"} title={sound.enabled ? "Matikan suara" : "Aktifkan suara"}>
+            {sound.enabled ? <Volume2 aria-hidden="true" /> : <VolumeX aria-hidden="true" />}
+          </Button>
           <Button variant="outline" size="icon-sm" onClick={fullscreen} aria-label={isFullscreen ? "Keluar dari layar penuh" : "Buka layar penuh"} title={isFullscreen ? "Keluar layar penuh" : "Layar penuh"}>
             {isFullscreen ? <Minimize aria-hidden="true" /> : <Maximize aria-hidden="true" />}
           </Button>
@@ -170,6 +175,15 @@ export function RacePanel({ game, onCircuits, active = true }: {
               setResetKey(value => value + 1);
               setControlFeedback(reducedMotion ? "Kamera direset ke overview." : "Kamera direset untuk mengikuti mobil.");
             }}><RotateCcw data-icon="inline-start" />Reset</Button>
+          </SettingRow>
+        </div>
+        <div className="race-settings-group" role="group" aria-labelledby={`${settingsId}-audio`}>
+          <h3 className="race-settings-title" id={`${settingsId}-audio`}>Suara</h3>
+          <SettingRow label="Audio balapan" hint="Ding singkat saat lap bertambah, tanpa suara mobil">
+            <RaceSwitch checked={sound.enabled} disabled={sound.pending} label="Audio balapan" onChange={sound.toggle} />
+          </SettingRow>
+          <SettingRow label="Volume" hint={`${sound.volume}% · dijeda saat meninggalkan arena`}>
+            <input className="race-volume" type="range" min={0} max={100} step={5} value={sound.volume} onChange={event => sound.changeVolume(Number(event.target.value))} aria-label="Volume suara balapan" aria-valuetext={`${sound.volume}%`} />
           </SettingRow>
         </div>
         <div className="race-settings-group" role="group" aria-labelledby={`${settingsId}-sim`}>

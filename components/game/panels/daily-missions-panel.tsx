@@ -20,7 +20,7 @@ export function DailyMissionsPanel({ daily, disabled, onClaim }: {
     <SectionCardHeading
       icon={CalendarCheck}
       title="Misi harian"
-      aside={<Badge variant="secondary">{done}/3 selesai</Badge>}
+      aside={<Badge variant="secondary">{done}/{daily.items.length} selesai</Badge>}
     />
     <ul className="reward-list">
       {daily.items.map(item => {

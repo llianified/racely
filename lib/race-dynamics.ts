@@ -150,17 +150,16 @@ export function isTrackCorner(progress: number) {
 }
 
 /**
- * Apakah Gaspol yang ditekan pada posisi lintasan ini dihitung bersih.
+ * Apakah sebuah posisi lintasan berada di trek lurus, dengan toleransi
+ * `graceLap` di belakangnya.
  *
- * Berbeda dari sisa berkas ini, fungsi ini OTORITATIF: server memanggilnya
- * dengan `progress` miliknya sendiri -- yang baru saja disetel ke `now` -- jadi
- * hasilnya tidak bisa dipengaruhi telemetri client. Yang dipakai bersama hanya
- * geometri treknya, dan justru itu yang harus sama persis: penilaian server
- * tidak boleh menyimpang dari tikungan yang dilihat pemain di layar.
- *
- * `graceLap` memaafkan tekanan yang telat sepersekian lintasan -- latensi
- * jaringan, bukan kesalahan pemain -- dengan ikut memeriksa posisi sejauh itu
- * di belakang. Tekanan yang memang di tengah tikungan tetap kotor.
+ * PENSIUN bersama Gaspol: dulu server memanggilnya untuk menilai tekanan
+ * tombol, sekarang tidak ada satu pun pemanggil di jalur permainan --
+ * `tests/server-preview-parity.test.ts` justru menegaskan kedua penulis state
+ * TIDAK memanggilnya. Yang tersisa adalah alat pembanding geometri trek, dan
+ * test yang menguncinya (`tests/race-dynamics.test.ts`,
+ * `tests/track-layout.test.ts`) memakainya untuk membuktikan jalur layout baru
+ * sepakat dengan rumus oval lama.
  */
 export function isCleanBoostLaunch(
   progress: number,

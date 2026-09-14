@@ -101,6 +101,10 @@
 
   --scene-h: clamp(220px, 40svh, 300px);
   --race-hud-gradient: linear-gradient(0deg, #090c1de6, #090c1d00 48%, #090c1d66);
+  --race-position-w: 112px;
+  --race-mode-w: 164px;
+  --race-status-h: var(--space-48);
+  --race-speed-column: 1.45fr;
   --scene-h-inspect: 240px;
   --stage-inspect-h: 192px;
   --scene-h-alert: 220px;
@@ -678,15 +682,19 @@
 .scene-controls [data-slot='button'][aria-pressed='true'] { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--background) 88%, var(--accent)); }
 .race-overview-hud { flex-shrink: 0; border-top: var(--stroke) solid var(--border); background: var(--background); color: var(--foreground); font-variant-numeric: tabular-nums; }
 .race-hud-top { position: absolute; inset: var(--space-md) var(--space-md) auto; z-index: var(--z-overlay); display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-sm); pointer-events: none; font-variant-numeric: tabular-nums; }
-.race-hud-position { display: flex; align-items: baseline; gap: var(--space-6); padding: var(--space-5) var(--space-10); border: var(--stroke) solid var(--border); border-radius: var(--corner-box); background: color-mix(in srgb, var(--background) 88%, transparent); color: var(--foreground); }
+.race-hud-position { display: flex; align-items: baseline; justify-content: center; align-self: stretch; flex: 0 0 var(--race-position-w); height: var(--race-status-h); gap: var(--space-6); padding: var(--space-10); border: var(--stroke) solid var(--border); border-radius: var(--corner-box); background: color-mix(in srgb, var(--background) 88%, transparent); color: var(--foreground); white-space: nowrap; }
 .race-hud-position span { font-size: var(--fs-read); color: var(--muted-foreground); }
 .race-hud-position strong { color: var(--accent); font-weight: var(--fw-black); font-size: var(--fs-xl); line-height: var(--lh-tight); }
-.race-hud-mode { padding: var(--space-6) var(--space-sm); border-radius: var(--corner-box); background: color-mix(in srgb, var(--background) 88%, transparent); color: var(--muted-foreground); font-size: var(--fs-read); font-weight: var(--fw-semibold); }
+.race-hud-mode { display: flex; flex-direction: column; justify-content: center; flex: 0 1 var(--race-mode-w); min-width: 0; height: var(--race-status-h); padding: var(--space-6) var(--space-sm); border-radius: var(--corner-box); background: color-mix(in srgb, var(--background) 88%, transparent); color: var(--muted-foreground); font-size: var(--fs-read); font-weight: var(--fw-semibold); line-height: var(--lh-tight); }
+.race-hud-mode span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.race-hud-mode span + span { font-size: var(--fs-nano); font-weight: var(--fw-medium); }
+.race-volume { width: var(--space-96); min-height: var(--space-40); flex-shrink: 0; accent-color: var(--accent); }
+.race-volume:focus-visible { outline: var(--focus-w) solid var(--ring); outline-offset: var(--focus-offset); }
 .is-course-out .race-hud-mode { color: var(--accent); }
 /* Telemetri = satu grid 3×2: kolom kecepatan/RPM/boost di atas, lap/waktu/hadiah
    di bawah pada kolom yang sama. Garis pemisah dibuat dari gap selebar --stroke
    di atas latar --border, jadi tidak ada sel yang terlihat menganga. */
-.race-hud-grid { display: grid; grid-template-columns: auto 1fr 1fr; gap: var(--stroke); margin: 0; border-bottom: var(--stroke) solid var(--border); background: var(--border); }
+.race-hud-grid { display: grid; grid-template-columns: minmax(0, var(--race-speed-column)) repeat(2, minmax(0, 1fr)); gap: var(--stroke); margin: 0; border-bottom: var(--stroke) solid var(--border); background: var(--border); }
 .race-hud-cell { display: flex; flex-direction: column; gap: var(--space-xs); min-width: 0; padding: var(--space-10) var(--space-md); background: color-mix(in srgb, var(--card) 38%, var(--background)); }
 .race-hud-cell:nth-child(n + 4) { background: var(--background); }
 .race-hud-cell:nth-child(3n + 1) { padding-left: var(--space-md); }

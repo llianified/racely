@@ -5,8 +5,9 @@
  * semuanya mengasumsikan oval: `STRAIGHT_LAP_FRACTION`, `trackCornerProgress`,
  * dan satu angka ketatan tikungan per sirkuit. Selama asumsi itu berlaku,
  * sirkuit hanya bisa berbeda warna -- dan trek dengan S-curve atau hairpin akan
- * membuat server menghukum bagian lintasan yang di layar tampak lurus. Untuk
- * Gaspol itu berarti koin sungguhan.
+ * membuat server menghukum bagian lintasan yang di layar tampak lurus. Lewat
+ * `setupLapSeconds`, itu berarti detik per putaran -- dan karena itu koin --
+ * yang dibayarkan untuk tikungan yang tidak ada di layar.
  *
  * Primitifnya sengaja sama dengan `lib/technical-track.ts` milik prototipe
  * visual: `line` dan `arc` dengan `turn` bertanda. Bentuk itu bisa dikomposisi,
@@ -126,7 +127,8 @@ const OVAL_SECTIONS: readonly TrackSectionInput[] = [
 /**
  * Midnight berbentuk segitiga membulat: tiga sisi sama panjang dan tiga busur
  * 120 derajat menutup posisi sekaligus arah. Radius tetap selebar oval supaya
- * karakter tikungannya tetap ramah, tetapi jendela Gaspol mengikuti tiga lurus.
+ * karakter tikungannya tetap ramah, sedangkan porsi lurusnya lebih besar
+ * daripada oval -- itu yang menggeser nilai setup di trek ini.
  */
 const MIDNIGHT_SECTIONS: readonly TrackSectionInput[] = [
   { id: "start-straight", kind: "straight", geometry: [{ kind: "line", length: TRACK_HALF * 2 }] },
