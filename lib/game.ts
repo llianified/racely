@@ -1,3 +1,4 @@
+import { opponentDistance, positionFromDistance, type RaceRivals } from './race-opponents';
 import type { CarColor, CarModelId } from "./car-catalog";
 import type { DailyMissions, DailyMissionKind } from "./daily-missions";
 import type { PaintId, PaintCommand } from "./car-paints";
@@ -8,8 +9,6 @@ import {
   boostCooldownSeconds,
   boostDurationFor,
   effectiveLapSecondsAt,
-  raceOpponentLapSecondsAt,
-  racePositionAt,
   raceRewardAt,
   upgradeCostAt,
   type EconomyConfig,
@@ -126,6 +125,7 @@ export type ReferralSummary = {
 };
 
 export type GameState = {
+  rivals?: RaceRivals;
   dailyMissions?: DailyMissions;
   /**
    * Gear ratio dan roller. Gratis diubah, tidak pernah memberi koin, dan ikut
@@ -249,18 +249,8 @@ export const lapSeconds = (
     s.circuit,
   );
 export const racePosition = (
-  s: Pick<GameState, "levels" | "circuit" | "boostLeft" | "economy" | "setup">,
-) =>
-  racePositionAt(
-    s.economy,
-    s.levels,
-    s.circuit,
-    s.boostLeft > 0,
-    carSetup(s),
-  );
-export const raceOpponentLapSeconds = (
-  s: Pick<GameState, "circuit" | "economy">,
-) => raceOpponentLapSecondsAt(s.economy, s.circuit);
+  s: Pick<GameState, "laps" | "progress" | "rivals" | "economy">,
+) => positionFromDistance(s.laps + s.progress, (s.rivals?.opponents ?? []).map(opponent => opponentDistance(opponent, s.economy, s.rivals?.elapsedSeconds)));
 export const MODIFICATION_PARTS: Record<Upgrade, readonly string[]> = {
   engine: ["Motor standar", "Motor sport", "Motor racing", "Motor pro"],
   tires: ["Ban & roller standar", "Ban low-friction", "Roller bearing", "Ban & roller pro"],
@@ -479,8 +469,9 @@ export function gameReducer(s: GameState, action: GameAction): GameState {
     laps: s.laps + completed,
     pending: roundCoins(s.pending + income),
     earned: roundCoins(s.earned + income),
-    boostLeft: Math.max(0, s.boostLeft - delta),
-    cooldown: Math.max(0, s.cooldown - delta),
+    boostLeft: 0,
+    cooldown: 0,
+    rivals: s.rivals ? { ...s.rivals, elapsedSeconds: (s.rivals.elapsedSeconds ?? 0) + delta } : undefined,
   };
 }
 
