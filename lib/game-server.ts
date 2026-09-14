@@ -872,7 +872,7 @@ const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
    * satu pun angka dari client.
    */
   boost: () => {
-    throw new GameRuleError("Aksi ini sudah tidak tersedia.", 410);
+    throw new GameRuleError("Gaspol sudah dihapus dari permainan.", 410);
   },
 
   gift: async (row, _action, { tx, identity, economy }) => {
