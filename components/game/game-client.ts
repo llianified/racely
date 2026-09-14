@@ -1,4 +1,4 @@
-import type { GameState } from "@/lib/game";
+import type { GameCommand, GameState } from "@/lib/game";
 
 export type GameKey = readonly [url: string, initData: string];
 
@@ -27,6 +27,44 @@ export async function readGameResponse(response: Response): Promise<GameState> {
     );
   }
   return result as GameState;
+}
+
+export function createGameActionSender() {
+  const pending = new Map<string, { body: string; type: GameCommand["type"]; uncertain: boolean }>();
+
+  return async (action: GameCommand, initData: string): Promise<GameState> => {
+    const key = JSON.stringify(Object.fromEntries(Object.entries(action).sort(([a], [b]) => a.localeCompare(b))));
+    if (action.type === "withdraw" && !pending.has(key) && [...pending.values()].some((entry) => entry.type === "withdraw")) {
+      throw new GameRequestError("Penarikan sebelumnya belum terkonfirmasi. Ulangi dengan data penarikan yang sama.", 409);
+    }
+    const entry = pending.get(key) ?? {
+      body: JSON.stringify({ requestId: crypto.randomUUID(), action }),
+      type: action.type,
+      uncertain: false,
+    };
+    pending.set(key, entry);
+    try {
+      const response = await fetch("/api/game/action", {
+        method: "POST",
+        signal: AbortSignal.timeout(15000),
+        headers: { "Content-Type": "application/json", ...requestHeaders(initData) },
+        body: entry.body,
+        credentials: "same-origin",
+      });
+      const next = await readGameResponse(response);
+      pending.delete(key);
+      return next;
+    } catch (cause) {
+      // A timeout, broken response, or 5xx can follow a committed transaction.
+      // Even a later 401/429 cannot prove that the original request was rejected.
+      if (!entry.uncertain && cause instanceof GameRequestError && cause.status >= 400 && cause.status < 500 && cause.status !== 408) {
+        pending.delete(key);
+      } else {
+        entry.uncertain = true;
+      }
+      throw cause;
+    }
+  };
 }
 
 /**
