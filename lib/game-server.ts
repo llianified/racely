@@ -528,6 +528,8 @@ export function settlePlayerRow(
   now: Date,
   economy: EconomyConfig,
 ): SettledPlayer {
+  // A stale request or a clock correction must never reopen an already paid interval.
+  now = new Date(Math.max(now.getTime(), row.lastSettledAt.getTime()));
   const dailyMissions = row.carModel === null
     ? dailyMissionsFor(row.dailyMissions, now, economy)
     : settleDailyMissions(row.dailyMissions, {
@@ -620,7 +622,6 @@ function applyUpgrade(row: PlayerRow, key: Upgrade, economy: EconomyConfig) {
 export async function getGameState(
   identity: PlayerIdentity,
 ): Promise<GameState> {
-  const now = new Date();
   // Dibaca sebelum transaksi dibuka: transaksi ini menahan `FOR UPDATE` pada
   // baris pemain, dan pembacaan config tidak ada urusannya dengan lock itu.
   const economy = await readEconomyConfig();
@@ -635,7 +636,6 @@ export async function getGameState(
           telegramUsername: identity.username,
           displayName: identity.displayName,
           photoUrl: identity.photoUrl,
-          updatedAt: now,
         },
       });
 
@@ -645,6 +645,7 @@ export async function getGameState(
       .where(eq(players.userId, identity.userId))
       .for("update");
 
+    const now = new Date(Math.max(Date.now(), locked.lastSettledAt.getTime()));
     const bound = await bindReferrer(tx, locked, identity.startParam);
     const settled = settlePlayerRow(bound, now, economy);
     const rewarded = await refundRejectedWithdrawals(
@@ -1024,7 +1025,6 @@ export async function performGameAction(
   requestId: string,
   action: GameCommand,
 ): Promise<GameState> {
-  const now = new Date();
   // Sama seperti getGameState: di luar transaksi, sebelum lock diambil.
   const economy = await readEconomyConfig();
 
@@ -1038,7 +1038,6 @@ export async function performGameAction(
           telegramUsername: identity.username,
           displayName: identity.displayName,
           photoUrl: identity.photoUrl,
-          updatedAt: now,
         },
       });
 
@@ -1048,6 +1047,7 @@ export async function performGameAction(
       .where(eq(players.userId, identity.userId))
       .for("update");
 
+    const now = new Date(Math.max(Date.now(), locked.lastSettledAt.getTime()));
     const bound = await bindReferrer(tx, locked, identity.startParam);
     const settled = settlePlayerRow(bound, now, economy);
     let next = await refundRejectedWithdrawals(
@@ -1200,7 +1200,7 @@ export async function performGameAction(
   await payInviter(result.saved, economy);
 
   if (action.type !== "sync" && Math.random() < RECEIPT_PRUNE_PROBABILITY) {
-    await pruneActionReceipts(now);
+    await pruneActionReceipts(new Date());
   }
 
   return result.state;

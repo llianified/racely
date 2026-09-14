@@ -11,7 +11,7 @@ import { COLORS, MiniCar } from './mini-car'
 import type { CarModelId } from '@/lib/car-catalog'
 import type { GameState } from '@/lib/game'
 import { RECOVERY_SECONDS, courseOutPose, resetGripChallenge, stepDriving, stepPowertrain, type DrivingState } from '@/lib/race-dynamics'
-import { PLAYER_RADIUS } from '@/lib/track-layout'
+import { PLAYER_RADIUS, trackLayoutAt } from '@/lib/track-layout'
 import { RACE_TRACK_OFFSETS, raceTrackAt } from '@/lib/race-track'
 import { setupPerformance, type CarSetup } from '@/lib/car-setup'
 import { createSetupFeedback, stepSetupFeedback } from './setup-feedback'
@@ -85,7 +85,7 @@ const Racer = memo(function Racer({ lane, color, model, timing, playerRef, level
     if (!seeded.current) { phase.current = progress; seeded.current = true }
     const state = lane === 0 ? driving?.current : undefined
     if (state) {
-      if (performance) stepSetupFeedback(state, feedback.current, dt, phase.current, performance)
+      if (performance) stepSetupFeedback(state, feedback.current, dt, phase.current, performance, trackLayoutAt(circuit))
       else stepDriving(state, dt, phase.current, boosted && state.boostEnergy > 0 && !state.boostExhausted, levels?.tires)
       stepPowertrain(state, dt, boosted, levels?.engine, levels?.battery, powertrainVisual)
     }
