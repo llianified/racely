@@ -9,7 +9,6 @@ import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHe
 import { CAR_CATALOG, type CarColor } from "@/lib/car-catalog";
 import { CarColorPicker } from "../car/car-color-picker";
 import { SectionCardHeading } from "../shell/section-card-heading";
-import { InfoHint } from "./info-hint";
 import { BodyPartsShop } from "./body-parts-shop";
 import { PaintCollection } from "./paint-collection";
 import { PAINT_CATALOG, PAINT_IDS, type PaintCommand } from "@/lib/car-paints";
@@ -94,9 +93,6 @@ export const GaragePanel = memo(function GaragePanel({
               <div className="car-identity-title">
                 <h2>{car.name}</h2>
                 <Badge variant="secondary" className="car-level-chip">Lv. {totalLevel(game)}</Badge>
-              </div>
-              <div className="heading-aside">
-                <InfoHint title="Mobil kamu">Kecepatan dasar tanpa boost. Model 3D ini sama dengan mobil di lintasan. Ganti warna bodi gratis dan langsung aktif.</InfoHint>
               </div>
             </div>
             <p>{car.chassis}</p>
@@ -316,13 +312,7 @@ function ModificationSlot({ game, onUpgrade, onPreviewSheet, disabled, part }: U
 export function UpgradePanel({ game, onUpgrade, onPreviewSheet, disabled = false }: UpgradePanelProps) {
   return (
     <section id="upgrades" tabIndex={-1} className="panel upgrade-panel" aria-label="Bengkel modifikasi">
-      <SectionCardHeading
-        icon={Wrench}
-        title="Bengkel"
-        aside={
-          <InfoHint title="Modifikasi mobil">Pilih part, cek perubahan performa, lalu konfirmasi pemasangan. Mesin dan ban mempercepat putaran; baterai menambah hasil koin. Baris &quot;Arena&quot; hanya untuk simulasi gerak: mesin mempercepat akselerasi, ban memperkuat grip, baterai memperpanjang cadangan boost. Tidak menambah koin, durasi Gaspol, atau baterai idle server. Setiap pemasangan menaikkan satu level, maksimal level {game.economy.maxUpgradeLevel}.</InfoHint>
-        }
-      />
+      <SectionCardHeading icon={Wrench} title="Bengkel" />
       <div className="upgrade-list">
         {PARTS.map((part) => <ModificationSlot key={part.key} part={part} game={game} onUpgrade={onUpgrade} onPreviewSheet={onPreviewSheet} disabled={disabled} />)}
       </div>

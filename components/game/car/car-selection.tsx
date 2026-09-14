@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { ArrowLeft, ArrowRight, Check, Flag, LoaderCircle } from "lucide-react";
@@ -10,16 +10,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CAR_CATALOG, CAR_MODEL_IDS, isCarColor, type CarColor, type CarModelId } from "@/lib/car-catalog";
 import { CarColorPicker } from "./car-color-picker";
+import { BootScreen } from "../shell/boot-screen";
 
-const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
-  ssr: false,
-  loading: () => (
-    <div className="scene-loading" role="status">
-      <LoaderCircle className="animate-spin" aria-hidden="true" />
-      <strong>Menyiapkan mobil 3D…</strong>
-    </div>
-  ),
-});
+const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), { ssr: false });
+
+/**
+ * Batas aman kalau panggung 3D tidak pernah melapor siap (driver menolak
+ * context, chunk-nya tersendat). Boot screen yang menggantung selamanya jauh
+ * lebih buruk daripada satu layar onboarding yang terbuka dengan plakat error
+ * di kotak previewnya.
+ */
+const SCENE_READY_TIMEOUT = 9000;
 
 export function CarSelection({ developmentPreview, returningPlayer, initialColor, saving, onConfirm }: {
   developmentPreview: boolean;
@@ -33,10 +34,19 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
   const [failed, setFailed] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const [submitting, setSubmitting] = useState(false);
+  const [sceneReady, setSceneReady] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const previousStep = useRef(step);
   const submitLock = useRef(false);
   const busy = saving || submitting;
+
+  const revealSelection = useCallback(() => setSceneReady(true), []);
+
+  useEffect(() => {
+    if (sceneReady) return;
+    const timer = window.setTimeout(revealSelection, SCENE_READY_TIMEOUT);
+    return () => window.clearTimeout(timer);
+  }, [sceneReady, revealSelection]);
 
   useEffect(() => {
     if (previousStep.current !== step) {
@@ -64,7 +74,9 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
   const colorName = car.colors.find((choice) => choice.color === color)?.name;
 
   return (
-    <main className="car-selection font-sans" aria-busy={busy}>
+    <>
+      {!sceneReady && <BootScreen overlay />}
+      <main className="car-selection font-sans" data-booting={!sceneReady || undefined} inert={!sceneReady} aria-busy={busy || !sceneReady}>
       <header className="selection-header">
         <div className="selection-topline">
           <div className="selection-brand">
@@ -101,7 +113,7 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
           <Badge variant="outline">Gratis</Badge>
         </div>
         <div className="selection-stage" role="img" aria-label={`${car.name}, warna ${colorName}. Geser untuk memutar mobil 3D.`}>
-          <CarPreviewScene model={model} color={color} />
+          <CarPreviewScene model={model} color={color} onReady={revealSelection} />
         </div>
         <div className="selection-details" aria-live="polite" aria-atomic="true">
           <h2>{car.name}</h2>
@@ -151,6 +163,7 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
           </Button>
         </div>
       </footer>
-    </main>
+      </main>
+    </>
   );
 }

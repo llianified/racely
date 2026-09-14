@@ -2,7 +2,6 @@
 
 import { Link2, ListChecks, Send, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { InfoHint } from "./info-hint";
 import { SectionCardHeading } from "../shell/section-card-heading";
 import { StatHero } from "../shell/stat-hero";
 import { coins, formatCoins, type GameState } from "@/lib/game";
@@ -29,12 +28,6 @@ export function ReferralPanel({
         ariaLabel="Ringkasan ajak teman"
         label="Dari ajak teman"
         figure={formatCoins(referral.earned)}
-        info={
-          <InfoHint title="Tentang ajak teman">
-            Koin dihitung saat temanmu benar-benar main, bukan saat daftar.
-            Tidak ada batas jumlah teman.
-          </InfoHint>
-        }
         action={
           <Button variant="gold" disabled={disabled || !referral.link} onClick={onInvite}>
             <Send data-icon="inline-start" />
