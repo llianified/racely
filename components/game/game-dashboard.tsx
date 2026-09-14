@@ -46,6 +46,8 @@ import {
 } from "@/lib/game";
 import { cn } from "@/lib/utils";
 import type { CarColor } from "@/lib/car-catalog";
+import { PAINT_CATALOG, type PaintCommand } from "@/lib/car-paints";
+import type { DailyMissionKind } from "@/lib/daily-missions";
 import { PART_CATALOG, SLOT_LABELS, type PartCommand } from "@/lib/car-parts";
 
 const GAME_TOAST_OFFSET = {
@@ -305,6 +307,15 @@ export function GameDashboard() {
     if (await runAction({ type: "mission", id }))
       toast.success(`Misi +${coins(missionItem.reward)}`);
   };
+  const modifyPaint = async (action: PaintCommand) => {
+    const next = await runAction(action);
+    if (!next) return false;
+    toast.success(`${PAINT_CATALOG[action.paintId].name} ${action.type === "buy-paint" ? "dibeli; pasang dari koleksi" : "terpasang"}`);
+    return true;
+  };
+  const dailyMission = async (day: string, kind: DailyMissionKind) => {
+    if (await runAction({ type: "daily-mission", day, kind })) toast.success("Misi harian diklaim");
+  };
   const claimAll = async () => {
     const total = claimableTotal(game);
     if (total <= 0) return;
@@ -317,7 +328,13 @@ export function GameDashboard() {
         missionValue(game, item.id) >= item.target;
       if (ready && !(await runAction({ type: "mission", id: item.id }))) return;
     }
-    toast.success(`Hadiah +${coins(total)}`);
+    if (game.dailyMissions) {
+      for (const item of game.dailyMissions.items) {
+        if (!item.claimed && game.dailyMissions.values[item.kind] >= item.target &&
+          !(await runAction({ type: "daily-mission", day: game.dailyMissions.day, kind: item.kind }))) return;
+      }
+    }
+    toast.success("Hadiah siap berhasil diklaim");
   };
   const withdraw = async (payload: WithdrawPayload) => {
     const next = await runAction({ type: "withdraw", ...payload }, "withdraw");
@@ -454,6 +471,7 @@ export function GameDashboard() {
                 onPreviewSheet={trackPreviewSheet}
                 onChooseColor={chooseColor}
                 onPartAction={modifyBodyPart}
+              onPaintAction={modifyPaint}
                 disabled={Boolean(busyAction)}
               />
               <UpgradePanel
@@ -497,6 +515,7 @@ export function GameDashboard() {
               onClaimDaily={daily}
               onClaimGift={gift}
               onClaimMission={mission}
+              onClaimDailyMission={dailyMission}
               onClaimAll={claimAll}
               disabled={Boolean(busyAction)}
             />

@@ -1,4 +1,6 @@
 import type { CarColor, CarModelId } from "./car-catalog";
+import type { DailyMissions, DailyMissionKind } from "./daily-missions";
+import type { PaintId, PaintCommand } from "./car-paints";
 import type { BodyParts, PartCommand } from "./car-parts";
 import {
   DEFAULT_ECONOMY,
@@ -123,6 +125,8 @@ export type ReferralSummary = {
 };
 
 export type GameState = {
+  dailyMissions?: DailyMissions;
+  ownedPaints?: PaintId[];
   bodyParts?: BodyParts;
   // Optional only so legacy preview cookies can be upgraded without losing progress.
   carSelection?: { model: CarModelId | null; returningPlayer: boolean };
@@ -391,6 +395,8 @@ export const missionValue = (
   id === "laps" ? s.laps : id === "upgrade" ? totalLevel(s) - 1 : s.earned;
 
 export type GameCommand =
+  | PaintCommand
+  | { type: "daily-mission"; day: string; kind: DailyMissionKind }
   | PartCommand
   | { type: "sync" }
   | { type: "upgrade"; key: Upgrade }
