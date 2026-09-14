@@ -43,7 +43,7 @@ const GROUPS: Group[] = [
   {
     legend: "Nilai koin & penarikan",
     fields: [
-      { key: "coinToIdr", label: "Rupiah per koin", step: "1" },
+      { key: "coinToIdr", label: "Rupiah per koin", hint: "boleh pecahan; 0,1 berarti 10 koin = Rp1", step: "any" },
       { key: "minWithdrawCoins", label: "Penarikan minimum", hint: "koin", step: "1" },
       { key: "maxWithdrawCoins", label: "Penarikan maksimum", hint: "koin sekali minta", step: "1" },
     ],

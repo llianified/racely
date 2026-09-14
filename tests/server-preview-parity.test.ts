@@ -211,7 +211,8 @@ describe("Repeating a settled action is a no-op in both writers", () => {
   it("treats an already-claimed mission as nothing to do, not a failure", () => {
     // Preview dulu melempar "Target misi belum tercapai" untuk misi yang justru
     // sudah selesai -- pesan yang menuduh hal keliru, dan hanya di `pnpm dev`.
-    let game = { cookieValue: fundedCookie(500) };
+    // Tiga level ban pertama: 3.000 + 4.950 + 8.168 koin.
+    let game = { cookieValue: fundedCookie(20_000) };
     for (let index = 0; index < 3; index += 1) {
       game = act(game.cookieValue, { type: "upgrade", key: "tires" });
     }

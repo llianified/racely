@@ -4,7 +4,7 @@ import { Coins, ScrollText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { InfoHint } from "@/components/game/panels/info-hint";
 import { SectionCardHeading } from "@/components/game/shell/section-card-heading";
-import type { WithdrawStatus } from "@/lib/game";
+import { coinRate, type WithdrawStatus } from "@/lib/game";
 import { STATUS_SHORT } from "./admin-queue";
 import { count, decimal, rupiah, timestamp, type Overview } from "./admin-client";
 
@@ -40,7 +40,7 @@ export function AdminOverview({ overview }: { overview: Overview }) {
             {rupiah(queuedCoins * economy.coinToIdr)} menunggu dibayar
           </span>
           <InfoHint title="Cara baca angka ini">
-            Dihitung pada kurs {rupiah(economy.coinToIdr)} per koin. Ini yang
+            Dihitung pada kurs {coinRate(economy)}. Ini yang
             berpindah ke rekening kalau semua pemain menarik hari ini. Koin
             &quot;belum diklaim&quot; ikut dihitung karena satu klik memindahkannya
             ke saldo.
