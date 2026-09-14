@@ -54,11 +54,12 @@ import {
 } from "@/lib/game";
 import {
   UPGRADE_KEYS,
+  circuitUnlockLaps,
   upgradeCostAt,
   type EconomyConfig,
 } from "@/lib/economy-config";
 import { isCleanBoostLaunch } from "@/lib/race-dynamics";
-import { trackLayoutAt } from "@/lib/track-layout";
+import { LAST_CIRCUIT, trackLayoutAt } from "@/lib/track-layout";
 import { readEconomyConfig } from "@/lib/economy-store";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
 import { referralLink } from "@/lib/telegram-bot";
@@ -125,7 +126,7 @@ const commandSchema = z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("circuit"),
-      circuit: z.union([z.literal(0), z.literal(1)]),
+      circuit: z.number().int().min(0).max(LAST_CIRCUIT),
     })
     .strict(),
   z
@@ -997,9 +998,10 @@ const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
     if (action.circuit < row.circuit) {
       throw new GameRuleError("Trek lama tidak bisa dipilih lagi.");
     }
-    if (action.circuit === 1 && row.laps < economy.circuitUnlockLaps) {
+    const needed = circuitUnlockLaps(economy, action.circuit);
+    if (row.laps < needed) {
       throw new GameRuleError(
-        `Selesaikan ${economy.circuitUnlockLaps} putaran untuk membuka sirkuit ini.`,
+        `Selesaikan ${needed} putaran untuk membuka sirkuit ini.`,
       );
     }
     return { row: { ...row, circuit: action.circuit } };

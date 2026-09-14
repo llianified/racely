@@ -98,6 +98,8 @@ export type EconomyConfig = {
   dailyMissionRewardCap: number;
   cosmeticBaseHours: number;
   circuitUnlockLaps: number;
+  /** Putaran untuk membuka sirkuit ketiga (Apex). */
+  technicalUnlockLaps: number;
 };
 
 /**
@@ -157,7 +159,16 @@ export const DEFAULT_ECONOMY: EconomyConfig = {
   dailyMissionRewardCap: 6,
   cosmeticBaseHours: 6,
   circuitUnlockLaps: 25,
+  technicalUnlockLaps: 150,
 };
+
+/**
+ * Putaran yang dibutuhkan untuk membuka sebuah sirkuit. Sirkuit 0 selalu
+ * terbuka; ambang sirkuit lain datang dari config supaya bisa disetel dari
+ * /admin tanpa deploy, sama seperti angka ekonomi lainnya.
+ */
+export const circuitUnlockLaps = (e: EconomyConfig, circuit: number) =>
+  circuit <= 0 ? 0 : circuit === 1 ? e.circuitUnlockLaps : e.technicalUnlockLaps;
 
 /** Batas maksimum level upgrade yang boleh dipilih tanpa migrasi baru. */
 export const UPGRADE_LEVEL_CEILING = 10;
@@ -238,6 +249,7 @@ export const economyConfigSchema = z
     dailyMissionRewardCap: z.number().int().min(0).max(1_000_000),
     cosmeticBaseHours: z.number().finite().min(1).max(1_000),
     circuitUnlockLaps: lapCount,
+    technicalUnlockLaps: lapCount,
   })
   .strict()
   .refine((value) => value.maxWithdrawCoins >= value.minWithdrawCoins, {
