@@ -3,6 +3,19 @@ export const PLAYER_RADIUS = 2.24;
 export const RECOVERY_SECONDS = 2.2;
 const ROAD_EDGE = 3.96 - PLAYER_RADIUS;
 
+/**
+ * Bagian satu putaran yang berupa trek lurus, diturunkan dari geometri yang
+ * sama persis dengan `trackCornerProgress` di bawah -- bukan angka yang ditulis
+ * lepas.
+ *
+ * Dipakai `lib/car-setup.ts` untuk memecah waktu per putaran jadi bagian lurus
+ * dan bagian tikungan, supaya setup bisa berdampak berbeda di keduanya. Kalau
+ * geometri treknya berubah, pecahan ini ikut berubah sendiri dan penilaian
+ * server tetap sepakat dengan tikungan yang dilihat pemain di layar.
+ */
+export const STRAIGHT_LAP_FRACTION =
+  (TRACK_HALF * 2) / (TRACK_HALF * 2 + Math.PI * PLAYER_RADIUS);
+
 function smoothRange(value: number, start: number, end: number) {
   const t = Math.max(0, Math.min(1, (value - start) / (end - start)));
   return t * t * (3 - 2 * t);

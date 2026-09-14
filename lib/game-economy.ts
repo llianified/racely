@@ -23,7 +23,7 @@ import type { EconomyConfig } from "./economy-config";
  */
 export type RaceSettlementInput = Pick<
   GameState,
-  "progress" | "levels" | "circuit" | "economy"
+  "progress" | "levels" | "circuit" | "economy" | "setup"
 > & {
   lastSettledAt: Date;
   boostEndsAt: Date | null;

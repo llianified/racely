@@ -2,11 +2,12 @@ import type { CarColor, CarModelId } from "./car-catalog";
 import type { DailyMissions, DailyMissionKind } from "./daily-missions";
 import type { PaintId, PaintCommand } from "./car-paints";
 import type { BodyParts, PartCommand } from "./car-parts";
+import { NEUTRAL_SETUP, type CarSetup, type SetupCommand } from "./car-setup";
 import {
   DEFAULT_ECONOMY,
   boostCooldownSeconds,
   boostDurationFor,
-  lapSecondsAt,
+  effectiveLapSecondsAt,
   raceOpponentLapSecondsAt,
   racePositionAt,
   raceRewardAt,
@@ -126,6 +127,13 @@ export type ReferralSummary = {
 
 export type GameState = {
   dailyMissions?: DailyMissions;
+  /**
+   * Gear ratio dan roller. Gratis diubah, tidak pernah memberi koin, dan ikut
+   * menentukan waktu per putaran -- jadi ia state otoritatif milik server,
+   * bukan preferensi tampilan. Opsional hanya supaya cookie preview lama bisa
+   * naik versi tanpa kehilangan progres; pembacanya memakai `NEUTRAL_SETUP`.
+   */
+  setup?: CarSetup;
   ownedPaints?: PaintId[];
   bodyParts?: BodyParts;
   // Optional only so legacy preview cookies can be upgraded without losing progress.
@@ -159,6 +167,7 @@ export type GameState = {
 
 export const INITIAL_GAME: GameState = {
   developmentPreview: false,
+  setup: NEUTRAL_SETUP,
   balance: 10,
   pending: 0,
   earned: 0,
@@ -218,26 +227,36 @@ export const upgradeCost = (
   s: Pick<GameState, "economy" | "levels">,
   key: Upgrade,
 ) => upgradeCostAt(s.economy, key, s.levels[key]);
+export const carSetup = (s: Pick<GameState, "setup">) => s.setup ?? NEUTRAL_SETUP;
 export const lapReward = (
-  s: Pick<GameState, "levels" | "circuit" | "boostLeft" | "economy">,
+  s: Pick<GameState, "levels" | "circuit" | "boostLeft" | "economy" | "setup">,
 ) =>
   raceRewardAt(
     s.economy,
     s.levels,
     s.circuit,
     s.boostLeft > 0,
+    carSetup(s),
   );
 export const lapSeconds = (
-  s: Pick<GameState, "levels" | "boostLeft" | "economy">,
-) => lapSecondsAt(s.economy, s.levels, s.boostLeft > 0);
+  s: Pick<GameState, "levels" | "boostLeft" | "economy" | "setup" | "circuit">,
+) =>
+  effectiveLapSecondsAt(
+    s.economy,
+    s.levels,
+    s.boostLeft > 0,
+    carSetup(s),
+    s.circuit,
+  );
 export const racePosition = (
-  s: Pick<GameState, "levels" | "circuit" | "boostLeft" | "economy">,
+  s: Pick<GameState, "levels" | "circuit" | "boostLeft" | "economy" | "setup">,
 ) =>
   racePositionAt(
     s.economy,
     s.levels,
     s.circuit,
     s.boostLeft > 0,
+    carSetup(s),
   );
 export const raceOpponentLapSeconds = (
   s: Pick<GameState, "circuit" | "economy">,
@@ -395,6 +414,7 @@ export const missionValue = (
   id === "laps" ? s.laps : id === "upgrade" ? totalLevel(s) - 1 : s.earned;
 
 export type GameCommand =
+  | SetupCommand
   | PaintCommand
   | { type: "daily-mission"; day: string; kind: DailyMissionKind }
   | PartCommand
