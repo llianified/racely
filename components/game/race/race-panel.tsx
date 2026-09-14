@@ -10,7 +10,8 @@ import { batteryTelemetry, carSetup, coins, formatCoins, lapReward, lapSeconds, 
 import { RaceOverviewHud, RacePositionHud } from "./race-overview-hud";
 import { cn } from "@/lib/utils";
 import { createDrivingState, isCleanBoostLaunch } from "@/lib/race-dynamics";
-import { circuitName, trackLayoutAt } from "@/lib/track-layout";
+import { LAST_CIRCUIT, circuitName, trackLayoutAt } from "@/lib/track-layout";
+import { circuitUnlockLaps } from "@/lib/economy-config";
 import { RaceSwitch, SettingRow } from "./setting-row";
 import { NEUTRAL_SETUP } from "@/lib/car-setup";
 
@@ -116,11 +117,13 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
   // Kail progresi ikut di kepala panel: di layar 384x595 kartu "Trek berikutnya"
   // baru terlihat setelah menggulir, padahal itu satu-satunya alasan pemain
   // balik besok. Ambangnya tetap dibaca dari config, sama seperti CircuitPanel.
-  const unlockLaps = game.economy.circuitUnlockLaps;
-  // Hanya saat masih di trek 1: ambangnya bisa dinaikkan operator lewat /admin
-  // setelah pemain pindah, dan kail "menuju Midnight" tidak boleh muncul di
-  // kepala panel pemain yang sedang balapan di Midnight.
-  const lapsToUnlock = game.circuit === 0 ? Math.max(0, unlockLaps - game.laps) : 0;
+  const nextCircuit = Math.min(game.circuit + 1, LAST_CIRCUIT);
+  const unlockLaps = circuitUnlockLaps(game.economy, nextCircuit);
+  // Hanya selama masih ada trek berikutnya: ambangnya bisa dinaikkan operator
+  // lewat /admin setelah pemain pindah, dan kail menuju trek berikutnya tidak
+  // boleh muncul di kepala panel pemain yang sudah di trek terakhir.
+  const lapsToUnlock = game.circuit < LAST_CIRCUIT ? Math.max(0, unlockLaps - game.laps) : 0;
+  const nextCircuitShortName = circuitName(nextCircuit).split(" ")[0];
   const openCircuits = async () => {
     if (document.fullscreenElement) {
       try { await document.exitFullscreen(); }
@@ -140,10 +143,10 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
         </h2>
         {lapsToUnlock > 0 && (
           <div className="track-unlock">
-            <span>{lapsToUnlock} lap lagi → Midnight</span>
+            <span>{lapsToUnlock} lap lagi → {nextCircuitShortName}</span>
             <Progress
               value={Math.min((game.laps / unlockLaps) * 100, 100)}
-              aria-label={`Midnight Speedway terbuka setelah ${lapsToUnlock} putaran lagi`}
+              aria-label={`${circuitName(nextCircuit)} terbuka setelah ${lapsToUnlock} putaran lagi`}
               className="flex-1"
             />
           </div>
