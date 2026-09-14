@@ -46,23 +46,24 @@ const withdraw = {
   method: "dana",
   account: "081234567890",
   accountName: "Rizky Pratama",
-  coins: 150,
+  // Di atas `minWithdrawCoins` bawaan (200.000), di bawah maksimumnya.
+  coins: 300_000,
 } as const;
 
 describe("Withdrawals stay a manual, pending-only queue", () => {
   it("records a request as pending and debits the balance immediately", () => {
     const result = performPreviewGameAction(
-      request(fundedCookie(500)),
+      request(fundedCookie(500_000)),
       identity,
       randomUUID(),
       withdraw,
       E,
     );
-    expect(result.state.balance).toBe(350);
+    expect(result.state.balance).toBe(200_000);
     expect(result.state.withdrawals).toHaveLength(1);
     expect(result.state.withdrawals[0]).toMatchObject({
       status: "pending",
-      coins: 150,
+      coins: 300_000,
       method: "dana",
       account: "081234567890",
       accountName: "Rizky Pratama",
@@ -70,7 +71,7 @@ describe("Withdrawals stay a manual, pending-only queue", () => {
   });
 
   it("never auto-advances a withdrawal past pending", () => {
-    let cookie = fundedCookie(1000);
+    let cookie = fundedCookie(1_000_000);
     for (let index = 0; index < 3; index += 1) {
       const step = performPreviewGameAction(
         request(cookie),
@@ -140,7 +141,7 @@ describe("Withdrawals stay a manual, pending-only queue", () => {
   it("rejects a withdrawal that exceeds the balance", () => {
     expect(() =>
       performPreviewGameAction(
-        request(fundedCookie(100)),
+        request(fundedCookie(100_000)),
         identity,
         randomUUID(),
         withdraw,
@@ -155,7 +156,7 @@ describe("Withdrawals stay a manual, pending-only queue", () => {
     expect(accountPattern("bca").test("1234567890")).toBe(true);
     expect(() =>
       performPreviewGameAction(
-        request(fundedCookie(500)),
+        request(fundedCookie(500_000)),
         identity,
         randomUUID(),
         { ...withdraw, account: "1234567890" },
@@ -213,7 +214,7 @@ describe("Withdrawals stay a manual, pending-only queue", () => {
     ).toBe(true);
     expect(() =>
       performPreviewGameAction(
-        request(fundedCookie(500)),
+        request(fundedCookie(500_000)),
         identity,
         randomUUID(),
         belowMinimum,
@@ -243,7 +244,8 @@ describe("Withdrawals stay a manual, pending-only queue", () => {
       "paid",
       "rejected",
     ]);
-    expect(E.coinToIdr).toBe(100);
+    // 10 koin = Rp1: kurs pecahan, dibulatkan ke bawah oleh `coinsToIdr`.
+    expect(E.coinToIdr).toBe(0.1);
     expect(WITHDRAW_METHODS).toHaveLength(8);
   });
 });

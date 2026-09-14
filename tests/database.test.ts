@@ -298,7 +298,7 @@ describeDatabase("Neon Postgres persistence", () => {
   it("stores a withdrawal as pending and debits the balance", async () => {
     await db!
       .update(schema.players)
-      .set({ balance: 500 })
+      .set({ balance: 1_000_000 })
       .where(drizzle.eq(schema.players.userId, identity.userId));
 
     const result = await gameServer.performGameAction(identity, randomUUID(), {
@@ -306,13 +306,13 @@ describeDatabase("Neon Postgres persistence", () => {
       method: "dana",
       account: "081234567890",
       accountName: "Integration Racer",
-      coins: 150,
+      coins: 300_000,
     });
 
-    expect(result.balance).toBe(350);
+    expect(result.balance).toBe(700_000);
     expect(result.withdrawals[0]).toMatchObject({
       status: "pending",
-      coins: 150,
+      coins: 300_000,
       method: "dana",
     });
 
@@ -322,20 +322,20 @@ describeDatabase("Neon Postgres persistence", () => {
       .where(drizzle.eq(schema.withdrawals.userId, identity.userId));
     expect(row.status).toBe("pending");
     expect(row.processedAt).toBeNull();
-    expect(row.amountIdr).toBe(150 * 100);
+    expect(row.amountIdr).toBe(30_000);
   });
 
   it("keeps withdrawal account data out of the action receipt table", async () => {
     await db!
       .update(schema.players)
-      .set({ balance: 800 })
+      .set({ balance: 1_600_000 })
       .where(drizzle.eq(schema.players.userId, identity.userId));
     await gameServer.performGameAction(identity, randomUUID(), {
       type: "withdraw",
       method: "bca",
       account: "1234509876",
       accountName: "Integration Racer",
-      coins: 200,
+      coins: 400_000,
     });
     // Any later action used to re-copy the withdrawal history -- account number
     // and holder name included -- into a table nothing ever reads back.
@@ -446,7 +446,7 @@ describeDatabase("Neon Postgres persistence", () => {
   it("refunds a rejected withdrawal exactly once", async () => {
     await db!
       .update(schema.players)
-      .set({ balance: 500 })
+      .set({ balance: 1_000_000 })
       .where(drizzle.eq(schema.players.userId, identity.userId));
 
     await gameServer.performGameAction(identity, randomUUID(), {
@@ -454,9 +454,9 @@ describeDatabase("Neon Postgres persistence", () => {
       method: "dana",
       account: "081234567890",
       accountName: "Integration Racer",
-      coins: 120,
+      coins: 240_000,
     });
-    expect((await gameServer.getGameState(identity)).balance).toBe(380);
+    expect((await gameServer.getGameState(identity)).balance).toBe(760_000);
 
     // An operator rejecting the request is the only way this status moves.
     await db!
@@ -465,23 +465,23 @@ describeDatabase("Neon Postgres persistence", () => {
       .where(
         drizzle.and(
           drizzle.eq(schema.withdrawals.userId, identity.userId),
-          drizzle.eq(schema.withdrawals.coins, 120),
+          drizzle.eq(schema.withdrawals.coins, 240_000),
         ),
       );
 
     const refunded = await gameServer.getGameState(identity);
-    expect(refunded.balance).toBe(500);
+    expect(refunded.balance).toBe(1_000_000);
     expect(refunded.withdrawals[0]).toMatchObject({
       status: "rejected",
-      coins: 120,
+      coins: 240_000,
     });
 
     // Without the refunded_at guard every later sync would pay it again.
-    expect((await gameServer.getGameState(identity)).balance).toBe(500);
+    expect((await gameServer.getGameState(identity)).balance).toBe(1_000_000);
     const synced = await gameServer.performGameAction(identity, randomUUID(), {
       type: "sync",
     });
-    expect(synced.balance).toBe(500);
+    expect(synced.balance).toBe(1_000_000);
 
     const [row] = await db!
       .select()
@@ -489,7 +489,7 @@ describeDatabase("Neon Postgres persistence", () => {
       .where(
         drizzle.and(
           drizzle.eq(schema.withdrawals.userId, identity.userId),
-          drizzle.eq(schema.withdrawals.coins, 120),
+          drizzle.eq(schema.withdrawals.coins, 240_000),
         ),
       );
     expect(row.refundedAt).not.toBeNull();
@@ -712,14 +712,14 @@ describeDatabase("Neon Postgres persistence", () => {
     });
     await db!
       .update(schema.players)
-      .set({ balance: 400 })
+      .set({ balance: 800_000 })
       .where(drizzle.eq(schema.players.userId, userId));
     await gameServer.performGameAction(operator, randomUUID(), {
       type: "withdraw",
       method: "dana",
       account: "081234567890",
       accountName: "Ops Racer",
-      coins: 150,
+      coins: 300_000,
     });
 
     const [pending] = await db!
@@ -775,7 +775,7 @@ describeDatabase("Neon Postgres persistence", () => {
 
     // Saldo pemain tidak boleh bergerak sedikit pun karena panel: uangnya
     // berpindah di luar Racely, panel hanya mencatat keputusannya.
-    expect((await gameServer.getGameState(operator)).balance).toBe(250);
+    expect((await gameServer.getGameState(operator)).balance).toBe(500_000);
 
     const audit = await ops.readAuditTrail(10);
     expect(audit.some((row) => row.action === "withdrawal:paid")).toBe(true);
@@ -800,14 +800,14 @@ describeDatabase("Neon Postgres persistence", () => {
     });
     await db!
       .update(schema.players)
-      .set({ balance: 300 })
+      .set({ balance: 600_000 })
       .where(drizzle.eq(schema.players.userId, userId));
     await gameServer.performGameAction(player, randomUUID(), {
       type: "withdraw",
       method: "dana",
       account: "081234567890",
       accountName: "Refund Racer",
-      coins: 110,
+      coins: 220_000,
     });
 
     const [row] = await db!

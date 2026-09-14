@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CAR_CATALOG, CAR_MODEL_IDS, isCarColor } from "../lib/car-catalog";
 import { gameReducer, INITIAL_GAME, lapReward, lapSeconds } from "../lib/game";
-import { DEFAULT_ECONOMY } from "../lib/economy-config";
+import { DEFAULT_ECONOMY, upgradeCostAt } from "../lib/economy-config";
 import type { GameState } from "../lib/game";
 
 vi.mock("server-only", () => ({}));
@@ -27,22 +27,27 @@ describe("Workshop installation", () => {
     const funded = action(selected.cookieValue, { type: "gift" });
     const id = randomUUID();
     const installed = action(funded.cookieValue, { type: "upgrade", key: "engine" }, id);
-    expect(installed.state.balance).toBe(0);
+    // Saldo awal + hadiah starter (25.000) dikurangi mesin level 2 (5.000).
+    expect(installed.state.balance).toBe(E.startingBalance + E.starterGift - upgradeCostAt(E, "engine", 1));
     expect(installed.state.levels).toEqual({ engine: 2, tires: 1, battery: 1 });
     expect(installed.state.color).toBe(selectLuna.color);
     expect(action(installed.cookieValue, { type: "upgrade", key: "engine" }, id).state).toEqual(installed.state);
     expect(getPreviewGameState(request(installed.cookieValue), identity, E).state.levels).toEqual(installed.state.levels);
-    expect(() => action(installed.cookieValue, { type: "upgrade", key: "tires" })).toThrow("Koin belum cukup");
+    // Level 3 (8.250) masih terjangkau, level 4 (13.613) tidak lagi.
+    const again = action(installed.cookieValue, { type: "upgrade", key: "engine" });
+    expect(again.state.levels.engine).toBe(3);
+    expect(() => action(again.cookieValue, { type: "upgrade", key: "engine" })).toThrow("Koin belum cukup");
   });
 });
 
 describe("Preview body parts", () => {
   it("persists purchases and equipped slots across reload, without double charging retries", () => {
     const fresh = getPreviewGameState(request(), identity, E);
-    const selected = action(fresh.cookieValue, selectLuna);
+    // Saldo awal (5.000) belum cukup untuk kap 8.000; hadiah starter yang membuatnya terjangkau.
+    const selected = action(action(fresh.cookieValue, selectLuna).cookieValue, { type: "gift" });
     const requestId = randomUUID();
     const purchased = action(selected.cookieValue, { type: "buy-part", partId: "vented-hood" }, requestId);
-    expect(purchased.state.balance).toBe(selected.state.balance - 8);
+    expect(purchased.state.balance).toBe(selected.state.balance - 8_000);
     expect(purchased.state.bodyParts).toEqual({ owned: ["vented-hood"], equipped: {} });
     expect(action(purchased.cookieValue, { type: "buy-part", partId: "vented-hood" }, requestId).state).toEqual(purchased.state);
     expect(action(purchased.cookieValue, { type: "buy-part", partId: "vented-hood" }).state).toEqual(purchased.state);
@@ -91,11 +96,11 @@ describe("Preview check-in harian", () => {
   it("membayar sekali per hari dan menyambung streak besoknya", () => {
     const cookie = racing();
     const awal = getPreviewGameState(request(cookie), identity, E).state;
-    expect(awal.daily).toMatchObject({ streak: 0, claimedToday: false, reward: 1 });
+    expect(awal.daily).toMatchObject({ streak: 0, claimedToday: false, reward: 500 });
 
     const hari1 = action(cookie, { type: "daily" });
-    expect(hari1.state.balance).toBe(awal.balance + 1);
-    expect(hari1.state.daily).toMatchObject({ streak: 1, claimedToday: true, nextReward: 2 });
+    expect(hari1.state.balance).toBe(awal.balance + 500);
+    expect(hari1.state.daily).toMatchObject({ streak: 1, claimedToday: true, nextReward: 750 });
 
     // Klaim kedua di hari yang sama tidak menambah koin.
     const lagi = action(hari1.cookieValue, { type: "daily" });
@@ -104,8 +109,8 @@ describe("Preview check-in harian", () => {
 
     vi.advanceTimersByTime(24 * 60 * 60 * 1000);
     const hari2 = action(lagi.cookieValue, { type: "daily" });
-    expect(hari2.state.daily).toMatchObject({ streak: 2, claimedToday: true, nextReward: 3 });
-    expect(hari2.state.balance).toBe(hari1.state.balance + 2);
+    expect(hari2.state.daily).toMatchObject({ streak: 2, claimedToday: true, nextReward: 1_000 });
+    expect(hari2.state.balance).toBe(hari1.state.balance + 750);
   });
 
   it("mereset streak setelah satu hari terlewat", () => {
@@ -134,7 +139,7 @@ describe("Preview offline earnings", () => {
     vi.setSystemTime(new Date(now.getTime() + 24000));
     const next = action(stale.cookieValue, { type: "sync" });
     expect(next.state.laps).toBe(3);
-    expect(next.state.pending).toBe(.15);
+    expect(next.state.pending).toBe(15);
   });
 
   const racing = () => {
@@ -154,10 +159,10 @@ describe("Preview offline earnings", () => {
       creditedSeconds: 480,
       capped: false,
       laps: 30,
-      coins: 1.5,
+      coins: 150,
     });
     expect(back.state.laps).toBe(45);
-    expect(back.state.pending).toBe(2.25);
+    expect(back.state.pending).toBe(225);
 
     // The summary rides the response, never the cookie, so it is not replayed.
     expect(
@@ -176,9 +181,9 @@ describe("Preview offline earnings", () => {
       creditedSeconds: 4 * 60 * 60,
       capped: true,
       laps: 900,
-      coins: 45,
+      coins: 4_500,
     });
-    expect(back.state.pending).toBe(45.75);
+    expect(back.state.pending).toBe(4_575);
   });
 
   it("says nothing about an absence a heartbeat could have covered", () => {
@@ -275,7 +280,7 @@ describe("Preview car selection", () => {
     const cookie = Buffer.from(JSON.stringify({ version: 1, userId: identity.userId, updatedAt: now.getTime() - 16000, receipts: [], state: INITIAL_GAME })).toString("base64url");
     const offered = getPreviewGameState(request(cookie), identity, E);
     expect(offered.state.laps).toBe(2);
-    expect(offered.state.pending).toBe(.1);
+    expect(offered.state.pending).toBe(10);
     vi.advanceTimersByTime(16000);
     expect(getPreviewGameState(request(offered.cookieValue), identity, E).state).toEqual(offered.state);
   });
