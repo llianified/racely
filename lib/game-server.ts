@@ -430,26 +430,34 @@ async function refundRejectedWithdrawals(
   return { ...row, balance: row.balance + total };
 }
 
-/** Satu perjalanan: berapa yang diajak, dan berapa ajakan yang sudah dibayar. */
+/**
+ * Satu perjalanan: berapa yang diajak, dan berapa koin ajakan yang sudah masuk.
+ *
+ * `earned` DIJUMLAHKAN dari `amount` yang tercatat, bukan dihitung ulang sebagai
+ * "jumlah ajakan x tarif hari ini". Tarifnya disetel operator lewat /admin, jadi
+ * rumus itu menulis ulang sejarah: menaikkan hadiah dari 5 ke 10 koin membuat
+ * panel mengklaim pemain sudah menerima 10 koin untuk ajakan yang dibayar 5 --
+ * angka yang tidak pernah cocok dengan saldonya. Tiap pembayaran sudah mencatat
+ * nilainya sendiri di `racely_reward_claims.amount`; itu yang dijumlahkan.
+ */
 async function readReferralSummary(
   tx: Transaction,
   userId: string,
-  economy: EconomyConfig,
 ): Promise<ReferralSummary> {
-  const result = await tx.execute<{ invited: number; paid: number }>(sql`
+  const result = await tx.execute<{ invited: number; earned: string | number }>(sql`
     select
       (select count(*)::int from racely_players
          where referred_by = ${userId}) as invited,
-      (select count(*)::int from racely_reward_claims
+      (select coalesce(sum(amount), 0) from racely_reward_claims
          where user_id = ${userId}
            and reward_key >= ${INVITER_CLAIM_PREFIX}
-           and reward_key < ${INVITER_CLAIM_END}) as paid
+           and reward_key < ${INVITER_CLAIM_END}) as earned
   `);
   const row = result.rows[0];
   return {
     link: referralLink(userId),
     invited: Number(row?.invited ?? 0),
-    earned: Number(row?.paid ?? 0) * economy.referralRewardInviter,
+    earned: Number(row?.earned ?? 0),
   };
 }
 
@@ -602,7 +610,7 @@ export async function getGameState(
       now,
       economy,
     );
-    const referral = await readReferralSummary(tx, identity.userId, economy);
+    const referral = await readReferralSummary(tx, identity.userId);
 
     return {
       state: stateFromRow(
@@ -963,7 +971,7 @@ export async function performGameAction(
             replayHistory,
             settled.offline,
             dailyCheckIn(dailyClaims, now, economy),
-            await readReferralSummary(tx, identity.userId, economy),
+            await readReferralSummary(tx, identity.userId),
           ),
           saved,
         };
@@ -1034,7 +1042,7 @@ export async function performGameAction(
       history,
       settled.offline,
       dailyCheckIn(dailyClaims, now, economy),
-      await readReferralSummary(tx, identity.userId, economy),
+      await readReferralSummary(tx, identity.userId),
     );
     if (action.type !== "sync") {
       // Deliberately no response snapshot: (userId, requestId) is the whole
