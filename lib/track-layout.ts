@@ -152,7 +152,18 @@ const MIDNIGHT_SECTIONS: readonly TrackSectionInput[] = [
  * panjang.
  */
 const TECHNICAL_SECTIONS: readonly TrackSectionInput[] = [
-  { id: "launch", kind: "straight", geometry: [{ kind: "line", length: 5 }] },
+  { id: "launch", kind: "straight", geometry: [{ kind: "line", length: 8 }] },
+  {
+    id: "double-chicane",
+    kind: "s-curve",
+    geometry: [
+      { kind: "arc", radius: 4, turn: Math.PI / 6 },
+      { kind: "arc", radius: 4, turn: -Math.PI / 6 },
+      { kind: "arc", radius: 4, turn: -Math.PI / 6 },
+      { kind: "arc", radius: 4, turn: Math.PI / 6 },
+    ],
+  },
+  { id: "bridge-straight", kind: "straight", geometry: [{ kind: "line", length: 8 }] },
   { id: "technical", kind: "corner", geometry: [{ kind: "arc", radius: 3.4, turn: Math.PI }] },
   {
     id: "s-curve",
@@ -162,8 +173,10 @@ const TECHNICAL_SECTIONS: readonly TrackSectionInput[] = [
       { kind: "arc", radius: 4, turn: -Math.PI / 3 },
     ],
   },
+  { id: "obstacle-straight", kind: "straight", geometry: [{ kind: "line", length: 19 }] },
   { id: "hairpin", kind: "hairpin", geometry: [{ kind: "arc", radius: 1.4, turn: Math.PI }] },
   // S-curve menggeser X sebesar 8 sin(60 derajat); lurus ini menutup posisi DAN arah.
+  // Tambahan 19 unit di launch diimbangi obstacle-straight sebelum hairpin.
   { id: "return", kind: "straight", geometry: [{ kind: "line", length: 8 * Math.sin(Math.PI / 3) - 5 }] },
 ];
 
