@@ -33,6 +33,21 @@ export function opponentDistance(opponent: RaceOpponent, economy: EconomyConfig,
   return opponent.laps + opponent.progress + (online + offline * economy.offlineRate) / opponent.seconds
 }
 
+export function raceOrder(distance: number, rivals: RaceRivals | undefined, economy: EconomyConfig) {
+  const entries: { opponent: RaceOpponent | null; distance: number; tieOrder: number }[] = [
+    { opponent: null, distance, tieOrder: 1 },
+    ...(rivals?.opponents ?? []).map(opponent => ({
+      opponent,
+      distance: opponentDistance(opponent, economy, rivals?.elapsedSeconds),
+      tieOrder: opponent.side === 'above' ? 0 : 2,
+    })),
+  ]
+  return entries.sort((a, b) => Math.abs(b.distance - a.distance) > 1e-8
+    ? b.distance - a.distance
+    : a.tieOrder - b.tieOrder || (a.opponent?.rank ?? 0) - (b.opponent?.rank ?? 0)
+      || (a.opponent?.id ?? '').localeCompare(b.opponent?.id ?? ''))
+}
+
 export function positionFromDistance(distance: number, opponents: readonly number[]) {
   return 1 + opponents.filter(other => other > distance + 1e-8).length
 }

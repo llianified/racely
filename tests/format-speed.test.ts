@@ -23,7 +23,7 @@ describe("formatSpeedKmh", () => {
   });
 
   it("laju tercepat yang bisa dicapai pemain tetap empat karakter", () => {
-    // Level maksimum + Gaspol: batas atas yang harus muat di kolom HUD.
+    // Automatic racing at maximum upgrades must fit inside the HUD.
     const max = DEFAULT_ECONOMY.maxUpgradeLevel;
     const fastest = lapSecondsAt(
       DEFAULT_ECONOMY,
@@ -31,7 +31,7 @@ describe("formatSpeedKmh", () => {
       true,
     );
     const label = formatSpeedKmh(displaySpeedKmh(fastest));
-    expect(label).toBe("156");
+    expect(label).toBe("78,0");
     expect(label.length).toBeLessThanOrEqual(4);
   });
 

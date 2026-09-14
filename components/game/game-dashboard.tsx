@@ -33,7 +33,6 @@ import {
 } from "./use-telegram-webapp";
 import {
   coins,
-  formatDuration,
   gameReducer,
   INITIAL_GAME,
   missions,

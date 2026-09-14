@@ -17,13 +17,13 @@ const act = (cookie: string, command: Parameters<typeof performPreviewGameAction
 const racing = () => act(getPreviewGameState(request(), identity, E).cookieValue, { type: "select-car", model: "luna-gt", color: "#b9a1ed" });
 
 describe("Daily missions", () => {
-  it("rotates three unique achievable mission kinds at WIB midnight, resetting only daily progress", () => {
+  it("resets two automatic mission kinds at WIB midnight, resetting only daily progress", () => {
     const day = dailyMissionsFor(null, new Date("2026-09-12T16:59:59Z"), E);
-    expect(new Set(day.items.map(item => item.kind)).size).toBe(3);
+    expect(day.items.map(item => item.kind)).toEqual(['laps', 'earn']);
     const progressed = recordDailyBoost(day, true);
     const next = dailyMissionsFor(progressed, new Date("2026-09-12T17:00:00Z"), E);
     expect(next.day).toBe("2026-09-13");
-    expect(next.items.map(item => item.kind)).not.toEqual(day.items.map(item => item.kind));
+    expect(next.items.map(item => item.kind)).toEqual(day.items.map(item => item.kind));
     expect(next.values).toEqual({ laps: 0, earn: 0, boosts: 0, clean: 0 });
   });
   it("freezes today's targets and budget, distributing even non-divisible and zero budgets exactly", () => {
@@ -68,16 +68,20 @@ describe("Daily missions", () => {
     expect(gifted.state.dailyMissions?.values.earn).toBe(0);
     vi.advanceTimersByTime(16000);
     const settled = act(gifted.cookieValue, { type: "sync" });
-    expect(settled.state.dailyMissions?.values).toMatchObject({ laps: 2, earn: .08 });
+    expect(settled.state.dailyMissions?.values).toMatchObject({ laps: 2, earn: .1 });
     expect(getPreviewGameState(request(settled.cookieValue), identity, E).state.dailyMissions).toEqual(settled.state.dailyMissions);
   });
-  it("counts boost once per receipt and rejects a repeated launch during cooldown", () => {
+  it("removes retired tasks while preserving earned progress and claim flags", () => {
+    const daily = dailyMissionsFor(null, now, E);
+    const stored = { ...daily, items: [
+      { ...daily.items[0], claimed: true },
+      { kind: 'boosts' as const, target: 3, reward: 2, claimed: false },
+      { kind: 'clean' as const, target: 2, reward: 2, claimed: true },
+    ] };
+    expect(dailyMissionsFor(stored, now, E)).toEqual({ ...stored, items: [stored.items[0]] });
     const selected = racing();
-    const id = randomUUID();
-    const launched = act(selected.cookieValue, { type: "boost" }, id);
-    expect(launched.state.dailyMissions?.values.boosts).toBe(1);
-    expect(act(launched.cookieValue, { type: "boost" }, id).state.dailyMissions).toEqual(launched.state.dailyMissions);
-    expect(() => act(launched.cookieValue, { type: "boost" })).toThrow("mengisi ulang");
+    expect(() => act(selected.cookieValue, { type: 'boost' })).toThrow('Gaspol sudah dihapus');
+    expect(getPreviewGameState(request(selected.cookieValue), identity, E).state.dailyMissions).toEqual(selected.state.dailyMissions);
   });
   it("claims in preview once, rejecting yesterday after rollover while keeping lifetime progress", () => {
     const selected = racing();
@@ -88,7 +92,7 @@ describe("Daily missions", () => {
     const cookie = Buffer.from(JSON.stringify(fixture)).toString("base64url");
     const command = { type: "daily-mission", day: selected.state.dailyMissions!.day, kind: "laps" } as const;
     const claimed = act(cookie, command);
-    expect(claimed.state.balance).toBe(selected.state.balance + 2);
+    expect(claimed.state.balance).toBe(selected.state.balance + Math.ceil(E.dailyMissionRewardCap / 2));
     expect(act(claimed.cookieValue, command).state.balance).toBe(claimed.state.balance);
     vi.setSystemTime(new Date("2026-09-12T17:00:00Z"));
     expect(() => act(claimed.cookieValue, command)).toThrow("berganti");
@@ -102,7 +106,7 @@ describe("Daily missions", () => {
 describe("Collectible paints", () => {
   it("prices tiers from configurable baseline income, not the player's upgrade level", () => {
     const base = cosmeticPriceAt(E, 1);
-    expect(base).toBe(108);
+    expect(base).toBe(135);
     expect(cosmeticPriceAt(E, 2)).toBe(base * 2);
     expect(cosmeticPriceAt({ ...E, cosmeticBaseHours: 12 }, 1)).toBe(base * 2);
   });

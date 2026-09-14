@@ -15,23 +15,33 @@ const neighborsQuery = `
       engine_level, tires_level, battery_level, setup, body_parts, circuit, last_settled_at
     FROM racely_players WHERE laps > 0 AND user_id ~ '^[0-9]+$'
   ), mine AS (
-    SELECT *, (SELECT COUNT(*) + 1 FROM eligible e WHERE e.laps > p.laps) AS place
-    FROM eligible p WHERE user_id = $1
+    SELECT p.*, CASE WHEN p.laps > 0 THEN
+      (SELECT COUNT(*) + 1 FROM eligible e WHERE e.laps > p.laps)
+    END AS place
+    FROM racely_players p WHERE user_id = $1 AND user_id ~ '^[0-9]+$'
   ), above AS (
     SELECT e.*, 'above' AS side FROM eligible e, mine m
-    WHERE e.laps > m.laps AND e.car_model = ANY($2::text[])
-    ORDER BY e.laps ASC, e.created_at ASC, e.user_id ASC LIMIT 1
+    WHERE e.car_model = ANY($2::text[]) AND (
+      e.laps > m.laps OR (e.laps = m.laps AND (e.created_at, e.user_id) < (m.created_at, m.user_id))
+    )
+    ORDER BY e.laps ASC, e.created_at DESC, e.user_id DESC LIMIT 2
   ), below AS (
     SELECT e.*, 'below' AS side FROM eligible e, mine m
-    WHERE e.laps < m.laps AND e.car_model = ANY($2::text[])
-    ORDER BY e.laps DESC, e.created_at ASC, e.user_id ASC LIMIT 1
+    WHERE e.car_model = ANY($2::text[]) AND (
+      e.laps < m.laps OR (e.laps = m.laps AND (e.created_at, e.user_id) > (m.created_at, m.user_id))
+    )
+    ORDER BY e.laps DESC, e.created_at ASC, e.user_id ASC LIMIT 2
+  ), candidates AS (
+    SELECT *, ROW_NUMBER() OVER (ORDER BY laps ASC, created_at DESC, user_id DESC) AS proximity FROM above
+    UNION ALL
+    SELECT *, ROW_NUMBER() OVER (ORDER BY laps DESC, created_at ASC, user_id ASC) AS proximity FROM below
   ), neighbors AS (
-    SELECT * FROM above UNION ALL SELECT * FROM below
+    SELECT * FROM candidates ORDER BY proximity, side LIMIT 2
   )
   SELECT (SELECT place::integer FROM mine) AS rank,
     COALESCE((SELECT jsonb_agg(to_jsonb(n) || jsonb_build_object(
       'rank', (SELECT COUNT(*) + 1 FROM eligible e WHERE e.laps > n.laps)
-    )) FROM neighbors n), '[]'::jsonb) AS opponents,
+    ) ORDER BY n.laps DESC, n.created_at ASC, n.user_id ASC) FROM neighbors n), '[]'::jsonb) AS opponents,
     statement_timestamp() AS captured_at
 `
 
