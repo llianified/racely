@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PAINT_IDS, PAINT_CATALOG, type PaintCommand } from "@/lib/car-paints";
 import { cosmeticPriceAt } from "@/lib/economy-config";
-import { coins, type GameState } from "@/lib/game";
+import { coins, formatCoins, type GameState } from "@/lib/game";
+import { cn } from "@/lib/utils";
 import { SectionCardHeading } from "../shell/section-card-heading";
 
 export function PaintCollection({ game, disabled, onAction }: {
@@ -23,11 +24,16 @@ export function PaintCollection({ game, disabled, onAction }: {
         const owned = game.ownedPaints?.includes(id) ?? false;
         const active = game.color === paint.color;
         const shortfall = Math.max(0, price - game.balance);
-        return <li key={id} className="reward-row">
+        const affordable = shortfall === 0;
+        return <li key={id} className={cn("reward-row", !owned && affordable && "is-ready", owned && "is-claimed")}>
           <span className="reward-row-icon" style={{ backgroundColor: paint.color }} aria-hidden="true" />
-          <div className="reward-row-copy"><h3>{paint.name}</h3><p>{owned ? "Milikmu selamanya" : `${coins(price)} · ${shortfall > 0 ? `kurang ${coins(shortfall)}` : "saldo cukup"}`}</p></div>
+          <div className="reward-row-copy">
+            <h3>{paint.name}</h3>
+            <p>{owned ? "Milikmu selamanya" : affordable ? "Saldo cukup, beli sekali pasang gratis." : `Kurang ${coins(shortfall)} lagi.`}</p>
+          </div>
           <div className="reward-row-action">
-            {active ? <span className="mission-status"><Check aria-hidden="true" />Terpasang</span> : <Button variant={owned ? "secondary" : "goldSoft"} disabled={disabled || (!owned && shortfall > 0)} onClick={() => void onAction({ type: owned ? "equip-paint" : "buy-paint", paintId: id })} aria-label={`${owned ? "Pasang" : "Beli"} ${paint.name}${owned ? "" : ` seharga ${coins(price)}`}`}>{owned ? "Pasang" : "Beli"}</Button>}
+            <strong>{owned ? "Dimiliki" : <>{formatCoins(price)} <span>koin</span></>}</strong>
+            {active ? <span className="mission-status"><Check aria-hidden="true" />Terpasang</span> : <Button variant={owned ? "secondary" : "goldSoft"} disabled={disabled || (!owned && !affordable)} onClick={() => void onAction({ type: owned ? "equip-paint" : "buy-paint", paintId: id })} aria-label={`${owned ? "Pasang" : "Beli"} ${paint.name}${owned ? "" : ` seharga ${coins(price)}`}`}>{owned ? "Pasang" : "Beli"}</Button>}
           </div>
         </li>;
       })}
