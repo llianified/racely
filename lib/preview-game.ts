@@ -26,6 +26,7 @@ import {
 import { CAR_MODEL_IDS, isCarColor } from "./car-catalog";
 import { applyPartCommand, bodyPartsSchema, PartRuleError } from "./car-parts";
 import { referralLink } from "./telegram-bot";
+import { proxiedAvatarPath } from "./telegram-avatar";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
 
 export const previewCarActionSchema = z.object({
@@ -137,7 +138,7 @@ function initialPreviewGame(identity: PlayerIdentity, now: number): PreviewGame 
       player: {
         name: identity.displayName,
         username: identity.username,
-        photoUrl: identity.photoUrl,
+        photoUrl: proxiedAvatarPath(identity.photoUrl),
       },
     },
   };
