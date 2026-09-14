@@ -349,18 +349,16 @@
    Sel slot meniru .upgrade-specs di Bengkel supaya kedua panel garasi terasa
    satu alat. Status terpasang dibaca dari garis emas + centang, tanpa baris
    teks tambahan. */
-.garage-parts { padding: var(--space-md); font-size: var(--fs-body); line-height: var(--lh-normal); }
-.garage-parts-slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-sm); margin-top: var(--space-md); }
-.garage-parts-slots > div { min-width: 0; padding: var(--space-sm) var(--space-md); border: var(--stroke) solid var(--border); border-radius: var(--corner-box); background: var(--surface-inset); }
-.garage-parts-slots > div[data-fitted='true'] { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); }
-.garage-parts-slots dt { color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-semibold); letter-spacing: var(--track-caps-sm); text-transform: uppercase; white-space: nowrap; }
-.garage-parts-slots dd { display: flex; align-items: center; gap: var(--space-xs); min-width: 0; margin-top: var(--space-2); line-height: var(--lh-snug); }
-.garage-parts-slots dd > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--foreground); font-weight: var(--fw-bold); }
-.garage-parts-slots dd > span { color: var(--muted-foreground); }
-.garage-parts-slots dd svg { width: var(--icon-xs); height: var(--icon-xs); color: var(--accent); flex-shrink: 0; }
-/* Kaki menempel ke tepi kartu (margin negatif menelan padding .garage-parts)
-   supaya garis pemisahnya penuh dari sisi ke sisi, seperti kaki .game-sheet. */
-.garage-parts-foot { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-md); margin: var(--space-md) calc(var(--space-md) * -1) calc(var(--space-md) * -1); padding: var(--space-sm) var(--space-md); border-top: var(--stroke) solid var(--border); border-radius: 0 0 var(--corner-box) var(--corner-box); background: var(--surface-inset); }
+/* Aero kit memakai baris .upgrade-row yang sama dengan Setup dan Koleksi cat;
+   satu baris = satu slot, tombolnya membuka toko langsung di part slot itu. */
+.parts-row .upgrade-name p.setup-metric { display: flex; align-items: center; gap: var(--space-xs); font-size: var(--fs-small); }
+.parts-row .setup-metric > svg { flex-shrink: 0; width: var(--icon-xs); height: var(--icon-xs); color: var(--accent); }
+.parts-row .setup-metric b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.parts-row.is-active .upgrade-icon { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); }
+/* Kaki menempel ke tepi kartu supaya terbaca sebagai ambang kartu, bukan blok
+   di dalam blok. Garis atasnya sudah disediakan border-bottom baris terakhir
+   yang dihapus .upgrade-row:last-child, jadi digambar ulang di sini. */
+.garage-parts-foot { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-md); padding: var(--space-sm) var(--space-md); border-top: var(--stroke) solid var(--border); background: var(--surface-inset); }
 .garage-parts-foot > p { min-width: 0; font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); text-wrap: pretty; }
 .garage-parts-foot > p > strong { color: var(--foreground); font-variant-numeric: tabular-nums; }
 .garage-parts-foot > [data-slot='button'] { flex-shrink: 0; }
@@ -1085,7 +1083,7 @@
 .welcome-note { display: flex; align-items: flex-start; gap: var(--space-sm); font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); text-wrap: pretty; }
 .welcome-note svg { width: var(--icon-sm); height: var(--icon-sm); flex-shrink: 0; margin-top: var(--space-2); color: var(--accent); }
 
-/* ── bottom nav ────────────────────────────────────���─ */
+/* ── bottom nav ─────────────────────────────��──────���─ */
 .mobile-nav { display: flex; position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: var(--app-width); z-index: var(--z-nav); border-top: var(--stroke) solid var(--border); background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(14px); padding: var(--space-xs) var(--space-xs) calc(var(--space-xs) + var(--safe-bottom)); }
 .nav-item { position: relative; display: flex; flex: 1; min-width: 0; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3); min-height: calc(var(--nav-height) - var(--space-10)); padding-inline: var(--space-2); border-radius: var(--corner-box); color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-heavy); letter-spacing: var(--track-flat); }
 .nav-item > span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
