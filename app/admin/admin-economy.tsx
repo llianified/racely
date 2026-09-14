@@ -32,6 +32,17 @@ type Group = { legend: string; fields: Field[] };
  */
 const GROUPS: Group[] = [
   {
+    legend: "Misi harian & koleksi cat",
+    fields: [
+      { key: "dailyMissionLapsTarget", label: "Target putaran harian", step: "1" },
+      { key: "dailyMissionEarnTarget", label: "Target koin balapan harian", step: "0.01" },
+      { key: "dailyMissionBoostTarget", label: "Target Gaspol harian", step: "1" },
+      { key: "dailyMissionCleanTarget", label: "Target Gaspol bersih", step: "1" },
+      { key: "dailyMissionRewardCap", label: "Batas hadiah misi per hari", hint: "koin/pemain; 0 tanpa hadiah. Target & budget berlaku saat set harian berikutnya dibuat", step: "1" },
+      { key: "cosmeticBaseHours", label: "Harga cat dasar", hint: "jam income level 1 tanpa boost; tingkatan ×1, ×2, ×4", step: "1" },
+    ],
+  },
+  {
     legend: "Nilai koin & penarikan",
     fields: [
       { key: "coinToIdr", label: "Rupiah per koin", step: "1" },
