@@ -19,9 +19,11 @@ import {
   dailyCheckIn,
   racingDayKey,
 } from "@/lib/game-economy";
-import { CAR_MODEL_IDS, isCarColor } from "@/lib/car-catalog";
+import { CAR_MODEL_IDS, isCarColor, type CarModelId } from "@/lib/car-catalog";
 import {
   applyPartCommand,
+  bodyPartsSchema,
+  emptyBodyParts,
   PART_IDS,
   PART_SLOTS,
   PartRuleError,
@@ -188,6 +190,36 @@ function hasExistingProgress(row: PlayerRow, history: WithdrawalRow[]) {
   );
 }
 
+/**
+ * `car_model` dan `body_parts` masuk dari database sebagai CAST, bukan hasil
+ * validasi: `$type<CarModelId>()` dan `$type<BodyParts>()` hanya berjanji kepada
+ * TypeScript, tidak memeriksa apa pun saat berjalan. Satu baris yang isinya di
+ * luar dugaan karena itu mengalir utuh sampai ke komponen, dan garasi membaca
+ * `CAR_CATALOG[model].colors` tanpa jaring: model tak dikenal = `undefined.colors`
+ * = seluruh app tumbang. Persis itu yang terjadi di produksi dengan satu baris
+ * ber-`car_model` 'ufo-gabut'.
+ *
+ * CHECK constraint di `0001` memang ada, tapi ia bukan jaminan yang cukup: rute
+ * "mobil baru" di AGENTS.md punya empat langkah terpisah, dan menambah id ke
+ * daftar SQL sebelum katalognya berarti database sah-sah saja menyimpan model
+ * yang belum bisa dirender kode.
+ *
+ * Model yang tidak dikenal karena itu dinormalkan menjadi null -- bentuk yang
+ * SUDAH ditangani app sebagai "belum pilih mobil", jadi pemainnya diantar ke
+ * layar pemilihan mobil (warnanya tetap) alih-alih menatap layar error.
+ */
+export function knownCarModel(model: string | null): CarModelId | null {
+  return model !== null && (CAR_MODEL_IDS as readonly string[]).includes(model)
+    ? (model as CarModelId)
+    : null;
+}
+
+/** Alasan yang sama; `PART_CATALOG[id].name` melempar untuk part tak dikenal. */
+export function knownBodyParts(parts: unknown) {
+  const validated = bodyPartsSchema.safeParse(parts);
+  return validated.success ? validated.data : emptyBodyParts();
+}
+
 function stateFromRow(
   row: PlayerRow,
   now: Date,
@@ -201,17 +233,17 @@ function stateFromRow(
     earned: 0,
   },
 ): GameState {
+  const carModel = knownCarModel(row.carModel);
   return {
     developmentPreview: false,
     economy,
-    bodyParts: row.bodyParts,
+    bodyParts: knownBodyParts(row.bodyParts),
     // Left off the payload entirely when there is nothing to report, so the
     // client can treat its presence as "show the welcome-back dialog".
     offlineEarnings: offlineEarnings ?? undefined,
     carSelection: {
-      model: row.carModel,
-      returningPlayer:
-        row.carModel === null && hasExistingProgress(row, history),
+      model: carModel,
+      returningPlayer: carModel === null && hasExistingProgress(row, history),
     },
     withdrawals: history.map(withdrawalRecord),
     daily,
