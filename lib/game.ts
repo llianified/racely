@@ -8,6 +8,7 @@ import {
   DEFAULT_ECONOMY,
   boostCooldownSeconds,
   boostDurationFor,
+  coinsToIdr,
   effectiveLapSecondsAt,
   raceRewardAt,
   upgradeCostAt,
@@ -169,7 +170,7 @@ export type GameState = {
 export const INITIAL_GAME: GameState = {
   developmentPreview: false,
   setup: NEUTRAL_SETUP,
-  balance: 10,
+  balance: DEFAULT_ECONOMY.startingBalance,
   pending: 0,
   earned: 0,
   laps: 0,
@@ -216,8 +217,23 @@ export const formatDuration = (seconds: number) => {
   if (minutes > 0) return `${minutes} menit`;
   return `${total} detik`;
 };
+/** Rupiah yang benar-benar dicatat untuk `value` koin -- rumus yang sama dengan penarikan. */
 export const idr = (value: number, e: EconomyConfig) =>
-  `Rp${Math.round(value * e.coinToIdr).toLocaleString("id-ID")}`;
+  `Rp${coinsToIdr(value, e).toLocaleString("id-ID")}`;
+/**
+ * Kurs dalam satu kalimat pendek: "10 koin = Rp1" saat satu rupiah bernilai
+ * bilangan bulat koin, "1 koin = Rp100" saat koinnya lebih mahal dari rupiah,
+ * dan "1.000 koin = Rp250" untuk kurs pecahan yang tidak rapi. `idr(1, e)`
+ * tidak bisa dipakai di sini: pada kurs 0,1 ia membaca "Rp0".
+ */
+export const coinRate = (e: EconomyConfig) => {
+  if (e.coinToIdr >= 1) return `1 koin = ${idr(1, e)}`;
+  const perRupiah = 1 / e.coinToIdr;
+  const whole = Math.round(perRupiah);
+  return Math.abs(perRupiah - whole) < 1e-9
+    ? `${formatCoins(whole)} koin = Rp1`
+    : `${formatCoins(1_000)} koin = ${idr(1_000, e)}`;
+};
 
 /**
  * Pembungkus yang menerima state, dipakai UI. Rumusnya sendiri ada di

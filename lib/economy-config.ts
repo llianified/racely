@@ -19,7 +19,11 @@ import {
  * database ada di `lib/economy-store.ts`.
  */
 export type EconomyConfig = {
-  /** Rupiah per koin saat penarikan. */
+  /**
+   * Rupiah per koin saat penarikan. Boleh pecahan: bawaannya 0,1, yaitu
+   * 10 koin = Rp1, supaya angka koin di layar terlihat besar sementara
+   * kewajiban rupiahnya tetap kecil. Rupiahnya dihitung lewat `coinsToIdr`.
+   */
   coinToIdr: number;
   minWithdrawCoins: number;
   maxWithdrawCoins: number;
@@ -109,25 +113,41 @@ export type EconomyConfig = {
  * saat tabel config kosong atau `DATABASE_URL` tidak ada, sehingga `pnpm dev`
  * dan test berjalan tanpa database.
  */
+/**
+ * Denominasi bawaan: 10 koin = Rp1. Semua angka koin di bawah ini dibaca
+ * dengan kurs itu -- 5 koin per putaran adalah Rp0,5, hadiah starter 20.000
+ * koin adalah Rp2.000, dan ambang tarik 200.000 koin adalah Rp20.000.
+ *
+ * Kenapa bukan 1 koin = Rp1: satu putaran hanya boleh bernilai sepersekian
+ * rupiah supaya pembayaran per pemain tetap wajar, tapi koin pecahan
+ * ("+0,05") terasa murah dan tidak memotivasi. Denominasi yang lebih halus
+ * membuat setiap hadiah bulat dan berdigit banyak tanpa menaikkan kewajiban.
+ *
+ * Kewajiban pada bawaan ini (putaran 8 detik, 450 putaran/jam di level 1):
+ * aktif level 1 ~Rp225/jam; idle penuh 3x sehari ~Rp1.350/hari; pemain
+ * yang sudah maksimal (mesin/ban/baterai 10, sirkuit 3) ~Rp2.900/jam aktif.
+ */
 export const DEFAULT_ECONOMY: EconomyConfig = {
-  coinToIdr: 100,
-  minWithdrawCoins: 100,
-  maxWithdrawCoins: 1_000_000,
+  coinToIdr: 0.1,
+  minWithdrawCoins: 200_000,
+  maxWithdrawCoins: 5_000_000,
 
-  startingBalance: 10,
-  starterGift: 15,
+  startingBalance: 5_000,
+  starterGift: 20_000,
 
   lapBaseSeconds: 8,
   lapEnginePerLevel: 0.15,
   lapTiresPerLevel: 0.1,
-  lapRewardBase: 0.05,
-  lapRewardPerBattery: 0.01,
-  lapRewardPerCircuit: 0.02,
+  lapRewardBase: 5,
+  lapRewardPerBattery: 1,
+  lapRewardPerCircuit: 3,
   racePositionRewardStep: 0.2,
 
-  upgradeCostEngine: 25,
-  upgradeCostTires: 15,
-  upgradeCostBattery: 20,
+  // Saldo + hadiah starter (25.000) persis cukup untuk level 2 ketiga
+  // komponen (12.000) plus sisa yang memancing upgrade berikutnya.
+  upgradeCostEngine: 5_000,
+  upgradeCostTires: 3_000,
+  upgradeCostBattery: 4_000,
   upgradeCostGrowth: 1.65,
   maxUpgradeLevel: 10,
 
@@ -141,24 +161,24 @@ export const DEFAULT_ECONOMY: EconomyConfig = {
   offlineCapSeconds: 4 * 60 * 60,
   offlineRate: 0.5,
 
-  dailyRewards: [1, 2, 3, 4, 5, 6, 10],
+  dailyRewards: [500, 750, 1_000, 1_500, 2_000, 3_000, 5_000],
 
   referralMilestoneLaps: 100,
-  referralRewardInviter: 25,
-  referralRewardInvitee: 10,
+  referralRewardInviter: 10_000,
+  referralRewardInvitee: 5_000,
 
   missionLapsTarget: 10,
-  missionLapsReward: 5,
+  missionLapsReward: 2_500,
   missionUpgradeTarget: 3,
-  missionUpgradeReward: 10,
-  missionEarnTarget: 25,
-  missionEarnReward: 15,
+  missionUpgradeReward: 5_000,
+  missionEarnTarget: 2_500,
+  missionEarnReward: 7_500,
 
   dailyMissionLapsTarget: 60,
-  dailyMissionEarnTarget: 5,
+  dailyMissionEarnTarget: 500,
   dailyMissionBoostTarget: 3,
   dailyMissionCleanTarget: 2,
-  dailyMissionRewardCap: 6,
+  dailyMissionRewardCap: 2_000,
   cosmeticBaseHours: 6,
   circuitUnlockLaps: 25,
   technicalUnlockLaps: 150,
@@ -198,9 +218,21 @@ const lapCount = z.number().int().min(0).max(10_000_000);
  */
 const rewardCoin = z.number().int().min(1).max(1_000_000);
 
+/**
+ * Rupiah yang dicatat untuk sejumlah koin. `coinToIdr` boleh pecahan, dan
+ * hasil kali pecahan biner (200.000 x 0,1) bisa meleset sepersekian triliun
+ * ke bawah -- `Math.floor` polos akan memangkasnya satu rupiah penuh. Jadi
+ * dibulatkan dulu ke mikro-rupiah, baru dibulatkan ke bawah: pemain tidak
+ * pernah dibayar lebih dari nilai koinnya, dan tidak kehilangan rupiah
+ * karena artefak floating point.
+ */
+export function coinsToIdr(coins: number, economy: EconomyConfig) {
+  return Math.floor(Math.round(coins * economy.coinToIdr * 1_000_000) / 1_000_000);
+}
+
 export const economyConfigSchema = z
   .object({
-    coinToIdr: z.number().int().min(1).max(10_000_000),
+    coinToIdr: z.number().finite().gt(0).max(10_000_000),
     minWithdrawCoins: z.number().int().min(1).max(1_000_000),
     maxWithdrawCoins: z.number().int().min(1).max(1_000_000_000),
 
@@ -259,7 +291,16 @@ export const economyConfigSchema = z
     path: ["maxWithdrawCoins"],
   })
   /**
-   * `amount_idr` dihitung sebagai `coins * coinToIdr` dan dibawa sebagai number
+   * `amount_idr` punya CHECK `> 0`. Dengan kurs pecahan, minimum tarik yang
+   * bernilai di bawah Rp1 akan lolos skema lalu meledak sebagai 500 di
+   * transaksi penarikan -- ditolak di sini, dengan pesan yang bisa dibaca.
+   */
+  .refine((value) => coinsToIdr(value.minWithdrawCoins, value) >= 1, {
+    message: "Penarikan minimum harus bernilai setidaknya Rp1 pada kurs ini.",
+    path: ["minWithdrawCoins"],
+  })
+  /**
+   * `amount_idr` dihitung lewat `coinsToIdr` dan dibawa sebagai number
    * JavaScript sebelum masuk kolom bigint. Batas per-field saja masih
    * mengizinkan hasil kali di atas 2^53, tempat penjumlahan rupiah mulai
    * kehilangan presisi diam-diam -- pada uang sungguhan, bukan skor.

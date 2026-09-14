@@ -52,6 +52,7 @@ import {
 import {
   UPGRADE_KEYS,
   circuitUnlockLaps,
+  coinsToIdr,
   upgradeCostAt,
   type EconomyConfig,
 } from "@/lib/economy-config";
@@ -852,7 +853,7 @@ const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
       userId: identity.userId,
       requestId,
       coins: action.coins,
-      amountIdr: action.coins * economy.coinToIdr,
+      amountIdr: coinsToIdr(action.coins, economy),
       method: action.method,
       account: action.account,
       accountName: action.accountName,

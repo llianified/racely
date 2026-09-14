@@ -3,6 +3,7 @@ import { ADMIN_ACTOR, adminJson, guardAdmin } from "@/lib/admin-api";
 import { recordAudit } from "@/lib/admin-ops";
 import { db } from "@/lib/db";
 import { players, withdrawals } from "@/lib/db/schema";
+import { coinsToIdr } from "@/lib/economy-config";
 import { readEconomyConfig } from "@/lib/economy-store";
 
 export const runtime = "nodejs";
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
       userId,
       requestId: randomUUID(),
       coins,
-      amountIdr: coins * economy.coinToIdr,
+      amountIdr: coinsToIdr(coins, economy),
       method: "dana",
       account: "081234567890",
       accountName: `Seed Racer ${suffix}`,
