@@ -16,6 +16,7 @@ import { RACE_TRACK_OFFSETS, raceTrackAt } from '@/lib/race-track'
 import { setupPerformance, type CarSetup } from '@/lib/car-setup'
 import { createSetupFeedback, stepSetupFeedback } from './setup-feedback'
 import { RacingEffects } from './racing-effects'
+import { TamiyaLanes } from './tamiya-lanes'
 import { ContextMonitor, SceneBoundary } from './scene-recovery'
 
 export type SceneProps = { setup?: CarSetup; equipped?: NonNullable<GameState['bodyParts']>['equipped']; driving?: RefObject<DrivingState>; onTelemetry?: (state: DrivingState) => void; cinematic?: boolean; levels?: GameState['levels']; model?: CarModelId; progress: number; seconds: number; baseSeconds: number; opponentSeconds: readonly [number, number]; color: string; boosted: boolean; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean }
@@ -90,22 +91,22 @@ const Racer = memo(function Racer({ lane, color, model, timing, playerRef, level
     }
     const recovering = !!state && state.recovery > 0
     const lapsPerSecond = state ? state.visualSpeed / baseSeconds : 1 / seconds
-    if (!recovering) phase.current = (phase.current + dt * lapsPerSecond) % 1
+    if (!recovering) phase.current += dt * lapsPerSecond
     wheelSpeed.current = recovering ? 0 : laneLength / .85 * lapsPerSecond
     if (lane === 0 && !recovering) {
       // Transient acceleration is visual; reconcile gradually to paid server laps.
       // Bound correction so recovery never looks like an instant extra boost.
-      const drift = ((progress - phase.current + 1.5) % 1) - .5
+      const drift = ((progress - (phase.current % 1) + 1.5) % 1) - .5
       const correction = THREE.MathUtils.clamp(drift * (1 - Math.exp(-2 * dt)), -dt / seconds * .15, dt / seconds * .15)
-      phase.current = (phase.current + correction + 1) % 1
+      phase.current += correction
     }
-    const p = track.point(phase.current, laneOffset)
+    const p = track.route.point(phase.current, lane)
     const offset = state?.offset ?? 0
     const slip = state ? Math.max(0, (65 - state.grip) / 65) : 0
     const load = state?.corner && performance ? Math.min(1, performance.cornerLoad / performance.grip) * Math.sin(Math.PI * state.cornerProgress) : 0
     const yaw = state ? THREE.MathUtils.clamp(state.lateralVelocity * .09 + (state.corner ? slip * .16 : 0), -.24, .24) : 0
     const roll = reducedMotion ? 0 : state?.corner ? -(load * .025 + slip * .12) : 0
-    const ground = state?.offRoad ? -.08 : .14
+    const ground = (state?.offRoad ? -.08 : .14) + p.height
     const targetX = p.x + Math.cos(p.angle) * offset
     const targetZ = p.z - Math.sin(p.angle) * offset
     if (recovering && !crash.current.active) {
@@ -128,8 +129,8 @@ const Racer = memo(function Racer({ lane, color, model, timing, playerRef, level
       }
     } else {
       crash.current.active = false
-      group.current.position.set(targetX, THREE.MathUtils.lerp(group.current.position.y, ground, 1 - Math.exp(-14 * dt)), targetZ)
-      group.current.rotation.set(0, p.angle + yaw, 0)
+      group.current.position.set(targetX, ground, targetZ)
+      group.current.rotation.set(p.pitch, p.angle + yaw, 0, 'YXZ')
       const targetPitch = reducedMotion ? 0 : THREE.MathUtils.clamp(-(state?.acceleration ?? 0) * .035, -.065, .045)
       chassisPitch.current = THREE.MathUtils.lerp(chassisPitch.current, targetPitch, 1 - Math.exp(-10 * dt))
       tumble.current?.rotation.set(chassisPitch.current, 0, roll)
@@ -234,9 +235,8 @@ const Circuit = memo(function Circuit({ circuit }: { circuit: number }) {
   return <group>
     <Ribbon inner={RACE_TRACK_OFFSETS.inner} outer={4.1 - PLAYER_RADIUS} height={.12} y={-.14} color="#090c1d" />
     <Ribbon inner={1.85 - PLAYER_RADIUS} outer={3.96 - PLAYER_RADIUS} height={.10} color="#2c2852" />
-    {[0, 1, 2].map(i => <Ribbon key={i} inner={1.9 - PLAYER_RADIUS + i * .68} outer={2.57 - PLAYER_RADIUS + i * .68} height={.11} color={i === 1 ? '#463e7a' : '#2c2852'} />)}
+    <TamiyaLanes track={track} />
     <Ribbon inner={4.12 - PLAYER_RADIUS} outer={RACE_TRACK_OFFSETS.apron} height={.015} y={-.14} color="#393044" />
-    {[1.88, 2.56, 3.24, 3.92].map((r, i) => <Ribbon key={r} inner={r - PLAYER_RADIUS} outer={r + .035 - PLAYER_RADIUS} height={.012} y={.115} color={i === 0 || i === 3 ? '#5027a7' : '#9789cd'} />)}
     {[1.88, 3.92].map(r => <Ribbon key={r} inner={r - PLAYER_RADIUS} outer={r + .045 - PLAYER_RADIUS} height={.008} y={.13} glow color={circuit ? COLORS.gold : '#a37ef2'} />)}
     <TrackBrand />
     <TrackMarkings />
@@ -271,9 +271,9 @@ function RacingLine({ playerRef, driving }: { playerRef: RefObject<THREE.Group |
     material.color.set(state && state.grip < 40 ? COLORS.gold : COLORS.sky)
     for (let i = 0; i < 32; i++) {
       const progress = (playerRef.current.userData.phase ?? 0) + .018 + i * .004
-      const p = track.point(progress)
+      const p = track.route.point(progress, 0)
       const offset = (state?.offset ?? 0) * (1 - i / 32)
-      transform.position.set(p.x + Math.cos(p.angle) * offset, .142, p.z - Math.sin(p.angle) * offset)
+      transform.position.set(p.x + Math.cos(p.angle) * offset, .142 + p.height, p.z - Math.sin(p.angle) * offset)
       transform.rotation.set(0, p.angle, 0)
       transform.scale.setScalar(1 - i / 42)
       transform.updateMatrix()

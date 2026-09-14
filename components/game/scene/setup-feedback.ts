@@ -1,8 +1,9 @@
 import type { SetupPerformance } from '@/lib/car-setup'
-import { RECOVERY_SECONDS, trackCornerProgress, type DrivingState } from '@/lib/race-dynamics'
+import { RECOVERY_SECONDS, type DrivingState } from '@/lib/race-dynamics'
+import { trackLayoutAt, trackPositionAt, type TrackLayout } from '@/lib/track-layout'
 
 export function createSetupFeedback() {
-  return { courseOutBudget: 0, scheduled: false }
+  return { courseOutBudget: 0, scheduled: false, sectionId: '' }
 }
 
 export type SetupFeedback = ReturnType<typeof createSetupFeedback>
