@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
@@ -59,6 +59,19 @@ export function GameDashboard() {
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [raceMounted, setRaceMounted] = useState(false);
   const [garageMounted, setGarageMounted] = useState(false);
+  // Lembar modifikasi dan toko aero masing-masing membawa panggung 3D sendiri.
+  // Selama salah satunya terbuka, panggung garasi di belakangnya melepas
+  // context-nya: dua context WebGL hidup bersamaan adalah persis kondisi yang
+  // membunuh renderer WebView Telegram di perangkat kelas bawah -- "This page
+  // couldn't load", bukan context loss yang bisa ditangkap. Dihitung, bukan
+  // boolean, supaya sheet yang menutup tidak mematikan tanda milik sheet lain
+  // yang baru terbuka.
+  const [previewSheets, setPreviewSheets] = useState(0);
+  const trackPreviewSheet = useCallback(
+    (open: boolean) =>
+      setPreviewSheets((count) => Math.max(0, count + (open ? 1 : -1))),
+    [],
+  );
   const { initData, clientReady } = useTelegramWebApp();
   const synced = useRef(false);
   const bootstrapped = useRef(false);
@@ -427,6 +440,8 @@ export function GameDashboard() {
               <GaragePanel
                 game={game}
                 active={tab === "garage"}
+                previewSheetOpen={previewSheets > 0}
+                onPreviewSheet={trackPreviewSheet}
                 onChooseColor={chooseColor}
                 onPartAction={modifyBodyPart}
                 disabled={Boolean(busyAction)}
@@ -434,6 +449,7 @@ export function GameDashboard() {
               <UpgradePanel
                 game={game}
                 onUpgrade={upgrade}
+                onPreviewSheet={trackPreviewSheet}
                 disabled={Boolean(busyAction)}
               />
             </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { Check, LoaderCircle, RotateCcw, ShoppingBag, Wind, Wrench } from "lucide-react";
@@ -28,9 +28,10 @@ type ShopProps = {
   active: boolean;
   disabled: boolean;
   onAction: (action: PartCommand) => Promise<boolean>;
+  onPreviewSheet: (open: boolean) => void;
 };
 
-function ShopContents({ game, disabled, onAction, onPending }: Omit<ShopProps, "active"> & { onPending: (value: boolean) => void }) {
+function ShopContents({ game, disabled, onAction, onPending }: Omit<ShopProps, "active" | "onPreviewSheet"> & { onPending: (value: boolean) => void }) {
   const [selected, setSelected] = useState<PartId>("vented-hood");
   const [trying, setTrying] = useState(true);
   const [pending, setPending] = useState(false);
@@ -131,9 +132,19 @@ function ShopContents({ game, disabled, onAction, onPending }: Omit<ShopProps, "
   </>;
 }
 
-export function BodyPartsShop({ game, active, disabled, onAction }: ShopProps) {
+export function BodyPartsShop({ game, active, disabled, onAction, onPreviewSheet }: ShopProps) {
   const [open, setOpen] = useState(false);
   const pending = useRef(false);
+  // Panggung toko baru hidup ketika sheet-nya terbuka DI tab Garasi -- syarat
+  // yang sama dengan yang merender CarPreviewScene di bawah. Selama itu,
+  // panggung garasi di belakangnya melepas context-nya supaya tidak ada dua
+  // context WebGL hidup sekaligus.
+  const previewLive = open && active;
+  useEffect(() => {
+    if (!previewLive) return;
+    onPreviewSheet(true);
+    return () => onPreviewSheet(false);
+  }, [previewLive, onPreviewSheet]);
   const ownedCount = game.bodyParts?.owned.length ?? 0;
   const equippedCount = Object.keys(game.bodyParts?.equipped ?? {}).length;
   return <Sheet open={open && active} onOpenChange={value => { if (!pending.current) setOpen(value); }}>
@@ -162,7 +173,7 @@ export function BodyPartsShop({ game, active, disabled, onAction }: ShopProps) {
         <SheetTitle>Toko aero kit</SheetTitle>
         <SheetDescription>Coba langsung pada mobilmu, koleksi, lalu pasang ke slot yang sesuai.</SheetDescription>
       </SheetHeader>
-      {open && active && <ShopContents game={game} disabled={disabled} onAction={onAction} onPending={value => { pending.current = value; }} />}
+      {previewLive && <ShopContents game={game} disabled={disabled} onAction={onAction} onPending={value => { pending.current = value; }} />}
     </SheetContent>
   </Sheet>;
 }
