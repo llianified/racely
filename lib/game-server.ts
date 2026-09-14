@@ -880,28 +880,8 @@ const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
    * permintaan sebelumnya. Itu yang membuat penilaian ini otoritatif tanpa
    * satu pun angka dari client.
    */
-  boost: (row, _action, { now, economy }) => {
-    if ((row.cooldownEndsAt?.getTime() ?? 0) > now.getTime()) {
-      throw new GameRuleError("Boost masih mengisi ulang.");
-    }
-    const clean = isCleanBoostLaunch(
-      row.progress,
-      economy.boostLaunchGraceLap,
-      trackLayoutAt(row.circuit),
-    );
-    const seconds = boostDurationFor(economy, clean);
-    return {
-      row: {
-        ...row,
-        dailyMissions: recordDailyBoost(dailyMissionsFor(row.dailyMissions, now, economy), clean),
-        boostEndsAt: new Date(now.getTime() + seconds * 1000),
-        // Cooldown penuh apa pun hasilnya: lihat `boostDurationFor`.
-        cooldownEndsAt: new Date(
-          now.getTime() + boostCooldownSeconds(economy) * 1000,
-        ),
-      },
-      boostLaunch: { clean, seconds },
-    };
+  boost: () => {
+    throw new GameRuleError("Aksi ini sudah tidak tersedia.", 410);
   },
 
   gift: async (row, _action, { tx, identity, economy }) => {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withRaceOpponents } from '@/lib/race-opponents-server';
 import { getGameState } from "@/lib/game-server";
 import {
   getPreviewGameState,
@@ -45,7 +46,7 @@ export async function GET(request: Request) {
       ? getPreviewGameState(request, identity, await readEconomyConfig())
       : null;
     const game = previewGame?.state ?? (await getGameState(identity));
-    const response = NextResponse.json(game, {
+    const response = NextResponse.json(await withRaceOpponents(identity.userId, game), {
       headers: { "Cache-Control": "no-store" },
     });
     const cookieOptions = sessionCookieOptions(request);

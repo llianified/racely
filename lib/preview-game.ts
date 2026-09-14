@@ -454,25 +454,7 @@ export function performPreviewGameAction(
       ].slice(0, MAX_WITHDRAWALS),
     };
   } else if (action.type === "boost") {
-    if (state.cooldown > 0) {
-      throw new PreviewGameRuleError("Boost masih mengisi ulang.");
-    }
-    // `state.progress` baru saja disetel ke `now` oleh `settlePreviewGame`,
-    // jadi posisinya sama otoritatifnya dengan milik server.
-    const clean = isCleanBoostLaunch(
-      state.progress,
-      economy.boostLaunchGraceLap,
-      trackLayoutAt(state.circuit),
-    );
-    const seconds = boostDurationFor(economy, clean);
-    boostLaunch = { clean, seconds };
-    state = {
-      ...state,
-      dailyMissions: recordDailyBoost(dailyMissionsFor(state.dailyMissions, new Date(now), economy), clean),
-      boostLeft: seconds,
-      // Cooldown penuh apa pun hasilnya: lihat `boostDurationFor`.
-      cooldown: boostCooldownSeconds(economy),
-    };
+    throw new PreviewGameRuleError("Aksi ini sudah tidak tersedia.", 410);
   } else if (action.type === "gift" && !state.rewardClaimed) {
     state = {
       ...state,

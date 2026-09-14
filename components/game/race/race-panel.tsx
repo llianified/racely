@@ -6,7 +6,7 @@ import { Camera, ChevronDown, Coins, Flag, LoaderCircle, Maximize, Minimize, Rot
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { batteryTelemetry, carSetup, coins, formatCoins, lapReward, lapSeconds, raceOpponentLapSeconds, racePosition, type GameState } from "@/lib/game";
+import { batteryTelemetry, carSetup, coins, formatCoins, lapReward, lapSeconds, racePosition, type GameState } from "@/lib/game";
 import { RaceOverviewHud, RacePositionHud } from "./race-overview-hud";
 import { cn } from "@/lib/utils";
 import { createDrivingState, isCleanBoostLaunch } from "@/lib/race-dynamics";
@@ -14,6 +14,8 @@ import { LAST_CIRCUIT, circuitName, trackLayoutAt } from "@/lib/track-layout";
 import { circuitUnlockLaps } from "@/lib/economy-config";
 import { RaceSwitch, SettingRow } from "./setting-row";
 import { NEUTRAL_SETUP } from "@/lib/car-setup";
+import { opponentDistance } from '@/lib/race-opponents';
+import { RaceStandings } from './race-standings';
 
 const RaceScene = dynamic(() => import("../scene/race-scene"), {
   ssr: false,
@@ -36,13 +38,10 @@ function subscribeFullscreen(onChange: () => void) {
   return () => document.removeEventListener("fullscreenchange", onChange);
 }
 
-export function RacePanel({ game, onBoost, onCircuits, active = true, disabled = false, boosting = false }: {
+export function RacePanel({ game, onCircuits, active = true }: {
   game: GameState;
-  onBoost: () => void;
   onCircuits: () => void;
   active?: boolean;
-  disabled?: boolean;
-  boosting?: boolean;
 }) {
   const reducedMotion = useSyncExternalStore(subscribeMotionPreference, () => window.matchMedia("(prefers-reduced-motion: reduce)").matches, () => true);
   const driving = useRef(createDrivingState());
@@ -67,38 +66,9 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
   const seconds = lapSeconds(game);
   // Setup speed and recovery are animated in the scene, not applied twice.
   const baseSeconds = lapSeconds({ ...game, boostLeft: 0, setup: NEUTRAL_SETUP });
-  const opponents = raceOpponentLapSeconds(game);
+  const opponents = game.rivals?.opponents ?? [];
+  const opponentProgress = opponents.map(opponent => opponentDistance(opponent, game.economy, game.rivals?.elapsedSeconds));
   const position = racePosition(game);
-  const boosted = game.boostLeft > 0;
-  // Prediksi yang memakai fungsi dan posisi lintasan yang sama persis dengan
-  // penilaian server, supaya tombol tidak pernah menjanjikan durasi penuh untuk
-  // tekanan yang akan dipotong. Tombolnya TIDAK dinonaktifkan: menekan di
-  // tikungan tetap boleh -- itu pilihannya, lengkap dengan biayanya.
-  const cornerLaunch =
-    game.economy.boostCornerPenalty > 0 &&
-    !isCleanBoostLaunch(
-      game.progress,
-      game.economy.boostLaunchGraceLap,
-      trackLayoutAt(game.circuit),
-    );
-  const boostLabel = boosting
-    ? "Memulai…"
-    : boosted
-      ? "Gaspol aktif"
-      : game.cooldown > 0
-        ? "Mengisi ulang"
-        : cornerLaunch
-          ? "Tunggu lurus"
-          : `Gaspol ${game.economy.boostMultiplier}×`;
-  const boostLabelForAssistiveTechnology = boosting
-    ? "Memulai Gaspol"
-    : boosted
-      ? `Gaspol aktif, ${Math.ceil(game.boostLeft)} detik tersisa`
-      : game.cooldown > 0
-        ? `Baterai mengisi ulang, siap dalam ${battery.readyIn} detik`
-        : cornerLaunch
-          ? "Mobil sedang di tikungan; menekan sekarang memperpendek Gaspol, tunggu trek lurus untuk durasi penuh"
-          : `Aktifkan Gaspol, kecepatan ${game.economy.boostMultiplier} kali selama ${game.economy.boostDurationSeconds} detik`;
   const fullscreen = async () => {
     try {
       if (document.fullscreenElement) {
@@ -154,12 +124,13 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
       </div>
       <div className={cn("scene-wrap", inspect && "is-inspecting", !inspect && cinematic && "is-cinematic", !inspect && telemetry.recovery > 0 && "is-course-out", !inspect && telemetry.grip < 40 && "is-grip-critical")}>
         {!inspect && <div className="race-vignette" aria-hidden="true" />}
-        {!inspect && <RacePositionHud telemetry={telemetry} position={position} followCamera={followCamera} recovering={telemetry.recovery > 0} />}
+        {!inspect && <RacePositionHud telemetry={telemetry} position={position} total={opponents.length + 1} followCamera={followCamera} recovering={telemetry.recovery > 0} />}
         {inspect && <div className="scene-overlay inspect-hud"><strong>{bodyVisible ? "DETAIL MOBIL" : "DI BALIK BODI"}</strong><span>{bodyVisible ? "Cat metalik · ban · aero kit" : "2 sel · motor · penggerak 4WD"}</span></div>}
-        <RaceScene setup={carSetup(game)} equipped={game.bodyParts?.equipped} driving={driving} onTelemetry={setTelemetry} cinematic={cinematic && !reducedMotion} levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.progress} seconds={seconds} baseSeconds={baseSeconds} opponentSeconds={opponents} color={game.color} boosted={boosted} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
+        <RaceScene setup={carSetup(game)} equipped={game.bodyParts?.equipped} driving={driving} onTelemetry={setTelemetry} cinematic={cinematic && !reducedMotion} levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.laps + game.progress} seconds={seconds} baseSeconds={baseSeconds} opponents={opponents} opponentProgress={opponentProgress} color={game.color} boosted={false} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
         {inspect && <div className="scene-overlay inspect-hint">Geser untuk memutar · balapan tetap jalan</div>}
       </div>
-      {!inspect && <RaceOverviewHud seconds={seconds} baseSeconds={baseSeconds} reward={lapReward(game)} progress={game.progress} telemetry={telemetry} boosted={boosted} batteryLevel={game.levels.battery} />}
+      {!inspect && <RaceOverviewHud seconds={seconds} baseSeconds={baseSeconds} reward={lapReward(game)} progress={game.progress} telemetry={telemetry} laps={game.laps} />}
+      <RaceStandings game={game} />
       <div className="scene-controls" role="group" aria-label="Kontrol balapan dan kamera">
           {inspect ? <>
             <Button variant="outline" size="sm" onClick={() => setBodyVisible(value => !value)} aria-pressed={bodyVisible} aria-label={bodyVisible ? "Lepas bodi untuk melihat baterai" : "Pasang bodi untuk melihat detail mobil"}>{bodyVisible ? "Lepas bodi" : "Pasang bodi"}</Button>
@@ -179,11 +150,6 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
           <Button variant="outline" size="icon-sm" onClick={() => setSettingsOpen(value => !value)} aria-expanded={settingsOpen} aria-controls={settingsId} aria-label="Pengaturan balapan" title="Pengaturan balapan">
             <SlidersHorizontal aria-hidden="true" />
           </Button>
-          {!inspect && <Button className="race-boost-action" variant="gold" size="sm" onClick={onBoost} disabled={disabled || boosting || !battery.canBoost} aria-busy={boosting} aria-label={boostLabelForAssistiveTechnology} title={game.cooldown > 0 ? `Baterai siap dalam ${battery.readyIn} detik` : undefined}>
-            {boosting ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <Zap data-icon="inline-start" fill="currentColor" />}
-            <span>{boostLabel}</span>
-            {!boosting && (boosted || game.cooldown > 0) && <small>{Math.ceil(boosted ? game.boostLeft : game.cooldown)}s</small>}
-          </Button>}
           <span className="sr-only" role="status" aria-live="polite">{controlFeedback}</span>
       </div>
       <section className="race-settings" id={settingsId} hidden={!settingsOpen} aria-label="Pengaturan balapan">
