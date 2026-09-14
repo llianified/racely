@@ -16,7 +16,6 @@ export function PaintCollection({ game, disabled, onAction }: {
 }) {
   return <section className="panel rewards-list-panel" aria-label="Koleksi cat">
     <SectionCardHeading icon={Palette} title="Koleksi cat" aside={<Badge variant="secondary">{game.ownedPaints?.length ?? 0}/{PAINT_IDS.length} dimiliki</Badge>} />
-    <p className="px-xl pb-md text-read text-muted-foreground">Target koleksi jangka panjang. Hanya mengubah warna, tanpa bonus kecepatan atau penghasilan. Beli sekali, pasang gratis; warna bawaan tetap gratis.</p>
     <ul className="reward-list">
       {PAINT_IDS.map(id => {
         const paint = PAINT_CATALOG[id];
