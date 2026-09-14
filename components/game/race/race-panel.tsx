@@ -6,11 +6,12 @@ import { Camera, ChevronDown, Coins, Flag, LoaderCircle, Maximize, Minimize, Rot
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { batteryTelemetry, coins, formatCoins, lapReward, lapSeconds, raceOpponentLapSeconds, racePosition, type GameState } from "@/lib/game";
+import { batteryTelemetry, carSetup, coins, formatCoins, lapReward, lapSeconds, raceOpponentLapSeconds, racePosition, type GameState } from "@/lib/game";
 import { RaceOverviewHud, RacePositionHud } from "./race-overview-hud";
 import { cn } from "@/lib/utils";
 import { createDrivingState, isCleanBoostLaunch } from "@/lib/race-dynamics";
 import { RaceSwitch, SettingRow } from "./setting-row";
+import { NEUTRAL_SETUP } from "@/lib/car-setup";
 
 const RaceScene = dynamic(() => import("../scene/race-scene"), {
   ssr: false,
@@ -62,7 +63,8 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
     () => false,
   );
   const seconds = lapSeconds(game);
-  const baseSeconds = lapSeconds({ ...game, boostLeft: 0 });
+  // Setup speed and recovery are animated in the scene, not applied twice.
+  const baseSeconds = lapSeconds({ ...game, boostLeft: 0, setup: NEUTRAL_SETUP });
   const opponents = raceOpponentLapSeconds(game);
   const position = racePosition(game);
   const boosted = game.boostLeft > 0;
@@ -144,9 +146,9 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
       </div>
       <div className={cn("scene-wrap", inspect && "is-inspecting", !inspect && cinematic && "is-cinematic", !inspect && telemetry.recovery > 0 && "is-course-out", !inspect && telemetry.grip < 40 && "is-grip-critical")}>
         {!inspect && <div className="race-vignette" aria-hidden="true" />}
-        {!inspect && <RacePositionHud position={position} followCamera={followCamera} recovering={telemetry.recovery > 0} />}
+        {!inspect && <RacePositionHud telemetry={telemetry} position={position} followCamera={followCamera} recovering={telemetry.recovery > 0} />}
         {inspect && <div className="scene-overlay inspect-hud"><strong>{bodyVisible ? "DETAIL MOBIL" : "DI BALIK BODI"}</strong><span>{bodyVisible ? "Cat metalik · ban · aero kit" : "2 sel · motor · penggerak 4WD"}</span></div>}
-        <RaceScene equipped={game.bodyParts?.equipped} driving={driving} onTelemetry={setTelemetry} cinematic={cinematic && !reducedMotion} levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.progress} seconds={seconds} baseSeconds={baseSeconds} opponentSeconds={opponents} color={game.color} boosted={boosted} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
+        <RaceScene setup={carSetup(game)} equipped={game.bodyParts?.equipped} driving={driving} onTelemetry={setTelemetry} cinematic={cinematic && !reducedMotion} levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.progress} seconds={seconds} baseSeconds={baseSeconds} opponentSeconds={opponents} color={game.color} boosted={boosted} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
         {inspect && <div className="scene-overlay inspect-hint">Geser untuk memutar · balapan tetap jalan</div>}
       </div>
       {!inspect && <RaceOverviewHud seconds={seconds} baseSeconds={baseSeconds} reward={lapReward(game)} progress={game.progress} telemetry={telemetry} boosted={boosted} batteryLevel={game.levels.battery} />}
@@ -203,7 +205,7 @@ export function RacePanel({ game, onBoost, onCircuits, active = true, disabled =
             }}>{inspect ? "Kembali balapan" : "Lihat sasis"}</Button>
           </SettingRow>
         </div>
-        <p className="race-settings-note">Laju, RPM, dan energi di arena hanya simulasi. Lap dan koin tetap mengikuti server.</p>
+        <p className="race-settings-note">Arena mengilustrasikan laju, beban tikungan, dan rate course-out setup; bukan replay kejadian server. Lap dan koin tetap mengikuti server.</p>
       </section>
     </section>
   );

@@ -224,19 +224,6 @@ function createCarGeometry(model: CarModelId) {
       const top = rear ? .336 : .29
       add('alloy', cylinder(.008, top - .103, 16), [x, (top + .103) / 2, z])
       add('alloy', cylinder(.015, .026, 24), [x, .171, z])
-      for (const y of [rear ? .144 : .135, rear ? .295 : .155]) {
-        add('body', turned([
-          [.009, -.008], [.049, -.008], [.057, -.004], [.057, .003],
-          [.05, .008], [.009, .008], [.009, -.008],
-        ], 32), [x, y, z])
-        add('rubber', ring(.055, .0017), [x, y, z], [Math.PI / 2, 0, 0])
-        add('alloy', cylinder(.015, .004, 24), [x, y + .01, z])
-        add('chassis', cylinder(.006, .005, 6), [x, y + .014, z])
-        for (let hole = 0; hole < 5; hole++) {
-          const angle = hole / 5 * Math.PI * 2
-          add('chassis', cylinder(.003, .001, 8), [x + Math.cos(angle) * .037, y + .0085, z + Math.sin(angle) * .037])
-        }
-      }
       add('rubber', new THREE.SphereGeometry(.018, 16, 12), [x, top, z])
       add('alloy', cylinder(.01, .004, 12), [x, top - .016, z])
       add('alloy', cylinder(.012, .008, 6), [side * .112, .123, z - end * .035])
@@ -276,13 +263,63 @@ function createCarGeometry(model: CarModelId) {
 // Both canvases share immutable geometry; batch details by finish instead of drawing each bolt separately.
 const GEOMETRY_CACHE: Partial<Record<CarModelId, ReturnType<typeof createCarGeometry>>> = {}
 
-function CarSurfaces({ parts, color, model, inspect = false }: {
-  parts: Partial<Record<Finish, THREE.BufferGeometry>>; color: string; model: CarModelId; inspect?: boolean
+type RollerId = NonNullable<GameState['setup']>['roller']
+
+function createRollerGeometry(roller: RollerId) {
+  const parts: Partial<Record<Finish, THREE.BufferGeometry[]>> = {}
+  const radiusScale = roller === 'light' ? .72 : roller === 'heavy' ? 1.3 : 1
+  const heightScale = roller === 'light' ? .8 : roller === 'heavy' ? 1.15 : 1
+  const add = (finish: Finish, geometry: THREE.BufferGeometry, position: Position, horizontal = false) => {
+    if (horizontal) geometry.rotateX(Math.PI / 2)
+    geometry.translate(...position)
+    const triangles = geometry.index ? geometry.toNonIndexed() : geometry
+    if (triangles !== geometry) geometry.dispose()
+    for (const name of Object.keys(triangles.attributes)) if (name !== 'position' && name !== 'normal') triangles.deleteAttribute(name)
+    ;(parts[finish] ??= []).push(triangles)
+  }
+  for (const end of SIDES) for (const side of SIDES) {
+    const x = side * .324
+    const z = end * .425
+    const rear = end < 0
+    for (const y of [rear ? .144 : .135, rear ? .295 : .155]) {
+      const disc = turned([
+        [.009, -.008], [.049, -.008], [.057, -.004], [.057, .003],
+        [.05, .008], [.009, .008], [.009, -.008],
+      ], 32)
+      disc.scale(radiusScale, heightScale, radiusScale)
+      add(roller === 'heavy' ? 'alloy' : 'body', disc, [x, y, z])
+      add(roller === 'light' ? 'body' : 'rubber', new THREE.TorusGeometry(.055 * radiusScale, .0017, 8, 48), [x, y, z], true)
+      add('alloy', new THREE.CylinderGeometry(.015, .015, .004, 24), [x, y + .01, z])
+      add('chassis', new THREE.CylinderGeometry(.006, .006, .005, 6), [x, y + .014, z])
+      for (let hole = 0; hole < 5; hole++) {
+        const angle = hole / 5 * Math.PI * 2
+        add('chassis', new THREE.CylinderGeometry(.003, .003, .001, 8), [x + Math.cos(angle) * .037 * radiusScale, y + .0085 * heightScale, z + Math.sin(angle) * .037 * radiusScale])
+      }
+      if (roller === 'heavy') {
+        add('alloy', new THREE.TorusGeometry(.065, .003, 8, 32), [x, y + .006, z], true)
+        add('chassis', new THREE.TorusGeometry(.022, .0025, 8, 24), [x, y + .01, z], true)
+      }
+    }
+  }
+  return Object.fromEntries(Object.entries(parts).map(([finish, geometries]) => [finish, mergeIndexed(geometries!)])) as Partial<Record<Finish, THREE.BufferGeometry>>
+}
+
+// Three small shared roller sets; swapping setup never duplicates the body or wheels.
+const ROLLER_CACHE: Partial<Record<RollerId, ReturnType<typeof createRollerGeometry>>> = {}
+
+const Rollers = memo(function Rollers({ roller, color, model }: { roller: RollerId; color: string; model: CarModelId }) {
+  const parts = ROLLER_CACHE[roller] ?? (ROLLER_CACHE[roller] = createRollerGeometry(roller))
+  return <group name={`rollers-${roller}`}><CarSurfaces parts={parts} color={roller === 'light' ? COLORS.white : color} model={model} plastic={roller === 'light'} /></group>
+})
+
+function CarSurfaces({ parts, color, model, inspect = false, plastic = false }: {
+  parts: Partial<Record<Finish, THREE.BufferGeometry>>; color: string; model: CarModelId; inspect?: boolean; plastic?: boolean
 }) {
   return <>{(Object.entries(parts) as [Finish, THREE.BufferGeometry][]).map(([finish, geometry]) => {
     if (inspect && ['body', 'panel', 'glass', 'livery'].includes(finish)) return null
     return <mesh key={finish} geometry={geometry} dispose={null} castShadow receiveShadow>
-      {finish === 'body' ? <meshPhysicalMaterial color={color} roughness={.29} metalness={.25} clearcoat={1} clearcoatRoughness={.16} />
+      {finish === 'body' && plastic ? <meshStandardMaterial color={color} roughness={.72} metalness={0} />
+        : finish === 'body' ? <meshPhysicalMaterial color={color} roughness={.29} metalness={.25} clearcoat={1} clearcoatRoughness={.16} />
         : finish === 'panel' ? <meshPhysicalMaterial color={MATERIAL_COLORS.panel} roughness={.31} metalness={.42} clearcoat={.7} />
         : finish === 'glass' ? <meshPhysicalMaterial color={MATERIAL_COLORS.glass} roughness={.12} metalness={.35} clearcoat={1} clearcoatRoughness={.06} />
         : <meshStandardMaterial
@@ -395,8 +432,8 @@ const InstalledParts = memo(function InstalledParts({ levels, inspect }: { level
   </group>
 })
 
-export const MiniCar = memo(function MiniCar({ color, model = 'neo-falcon', scale = 1, speed = 0, speedRef, inspect = false, charge = 1, levels = STOCK_LEVELS, equipped }: {
-  color: string; model?: CarModelId; scale?: number; speed?: number; speedRef?: RefObject<number>; inspect?: boolean; charge?: number; levels?: GameState['levels']; equipped?: BodyParts['equipped']
+export const MiniCar = memo(function MiniCar({ color, model = 'neo-falcon', scale = 1, speed = 0, speedRef, inspect = false, charge = 1, levels = STOCK_LEVELS, equipped, roller = 'standard' }: {
+  color: string; model?: CarModelId; scale?: number; speed?: number; speedRef?: RefObject<number>; inspect?: boolean; charge?: number; levels?: GameState['levels']; equipped?: BodyParts['equipped']; roller?: RollerId
 }) {
   const geometry = GEOMETRY_CACHE[model] ?? (GEOMETRY_CACHE[model] = createCarGeometry(model))
   return <group scale={scale}>
@@ -405,6 +442,7 @@ export const MiniCar = memo(function MiniCar({ color, model = 'neo-falcon', scal
     {!equipped?.spoiler && <CarSurfaces parts={geometry.spoiler} color={color} model={model} inspect={inspect} />}
     {!inspect && Object.values(equipped ?? {}).map(id => <AeroPart key={id} id={id} color={color} model={model} />)}
     {inspect && <CarSurfaces parts={geometry.internals} color={color} model={model} />}
+    <Rollers roller={roller} color={color} model={model} />
     <InstalledParts levels={levels} inspect={inspect} />
     {geometry.wheels.map((wheel, index) => <RollingWheel key={index} wheel={wheel} color={color} model={model} speed={speed} speedRef={speedRef} level={levels.tires} />)}
     {inspect && Array.from({ length: 5 }, (_, index) => <mesh key={index} position={[(index - 2) * .023, .216, -.157]}>

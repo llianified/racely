@@ -72,7 +72,7 @@ export function powertrainTuning(engine = 1, battery = 1) {
 }
 
 // Local arena telemetry only: server boost duration and earnings are untouched.
-export function stepPowertrain(state: DrivingState, delta: number, boosted: boolean, engine = 1, battery = 1) {
+export function stepPowertrain(state: DrivingState, delta: number, boosted: boolean, engine = 1, battery = 1, setupVisual?: { cornerMultiplier: number; accelerationMultiplier: number }) {
   const dt = Number.isFinite(delta) ? Math.max(0, Math.min(delta, .1)) : 0;
   if (dt === 0) return;
   const tuning = powertrainTuning(engine, battery);
@@ -90,8 +90,8 @@ export function stepPowertrain(state: DrivingState, delta: number, boosted: bool
     state.boostEnergy = Math.min(1, state.boostEnergy + dt / tuning.rechargeSeconds);
   }
   const previousSpeed = state.visualSpeed;
-  const target = state.recovery > 0 ? 0 : state.speedMultiplier * (state.corner ? .82 : 1) * (1 + state.boostPower);
-  const response = target > previousSpeed ? tuning.accelerationRate : 6;
+  const target = state.recovery > 0 ? 0 : state.speedMultiplier * (state.corner ? setupVisual?.cornerMultiplier ?? .82 : 1) * (1 + state.boostPower);
+  const response = target > previousSpeed ? tuning.accelerationRate * (setupVisual?.accelerationMultiplier ?? 1) : 6;
   state.visualSpeed += (target - previousSpeed) * (1 - Math.exp(-response * dt));
   state.acceleration = (state.visualSpeed - previousSpeed) / dt;
   const targetRpm = state.recovery > 0 ? 0 : Math.min(tuning.maxRpm, 2200 + state.visualSpeed * 5000 + state.boostPower * 1600);
