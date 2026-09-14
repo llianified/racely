@@ -1,6 +1,6 @@
 'use client'
 
-import { Component, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type ComponentRef, type RefObject } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentRef, type RefObject } from 'react'
 import { Flag, RotateCcw } from 'lucide-react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid, OrbitControls, OrthographicCamera, PerspectiveCamera } from '@react-three/drei'
@@ -12,6 +12,7 @@ import type { CarModelId } from '@/lib/car-catalog'
 import type { GameState } from '@/lib/game'
 import { PLAYER_RADIUS, TRACK_HALF, RECOVERY_SECONDS, courseOutPose, stepDriving, stepPowertrain, type DrivingState } from '@/lib/race-dynamics'
 import { RacingEffects } from './racing-effects'
+import { ContextMonitor, SceneBoundary } from './scene-recovery'
 
 const HALF = TRACK_HALF
 export type SceneProps = { equipped?: NonNullable<GameState['bodyParts']>['equipped']; driving?: RefObject<DrivingState>; onTelemetry?: (state: DrivingState) => void; cinematic?: boolean; levels?: GameState['levels']; model?: CarModelId; progress: number; seconds: number; baseSeconds: number; opponentSeconds: readonly [number, number]; color: string; boosted: boolean; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean }
@@ -402,30 +403,6 @@ function SceneError({ onRetry }: { onRetry: () => void }) {
   return <div className="scene-loading absolute inset-0" role="alert"><Flag /><strong>Arena 3D perlu dinyalakan ulang.</strong><span>Progres sesi tetap aman. Coba lagi atau buka di browser yang mendukung WebGL.</span><button onClick={onRetry} className="flex items-center gap-sm"><RotateCcw className="size-(--icon-sm)" />Muat ulang arena</button></div>
 }
 
-class SceneBoundary extends Component<{ children: ReactNode; onRetry: () => void }, { failed: boolean }> {
-  state = { failed: false }
-  static getDerivedStateFromError() { return { failed: true } }
-  render() {
-    if (this.state.failed) return <SceneError onRetry={this.props.onRetry} />
-    return this.props.children
-  }
-}
-
-function ContextMonitor({ onLost }: { onLost: () => void }) {
-  const { gl } = useThree()
-  useEffect(() => {
-    const canvas = gl.domElement
-    // Tanpa preventDefault: itu meminta browser menyiapkan context restoration
-    // lewat 'webglcontextrestored', padahal onLost() membongkar Canvas-nya dan
-    // retry membangun context yang benar-benar baru. Memintanya lalu pergi cuma
-    // menyuruh browser menyiapkan sesuatu yang tidak akan pernah dipakai.
-    const lost = () => onLost()
-    canvas.addEventListener('webglcontextlost', lost)
-    return () => canvas.removeEventListener('webglcontextlost', lost)
-  }, [gl, onLost])
-  return null
-}
-
 type ArenaProps = Omit<SceneProps, keyof RaceTiming | 'followCamera' | 'active'> & { timing: RefObject<RaceTiming>; playerRef: RefObject<THREE.Group | null>; follow: boolean; running: boolean; onLost: () => void }
 
 // Everything inside the Canvas. Memoized so parent re-renders driven by telemetry or the
@@ -501,7 +478,7 @@ export default function RaceScene(props: SceneProps) {
   if (lost) return <SceneError onRetry={retry} />
   if (standby) return <SceneStandby />
   const running = visible
-  return <SceneBoundary key={attempt} onRetry={retry}>
+  return <SceneBoundary key={attempt} fallback={<SceneError onRetry={retry} />}>
     {!ready && <div className="scene-loading absolute inset-0" role="status"><Flag /><strong>Menyalakan lampu sirkuit.</strong><span>Menyiapkan lintasan 3D…</span></div>}
     <Canvas orthographic dpr={[1, 1.25]} frameloop={running ? 'always' : 'never'} shadows="percentage" camera={{ position: [9, 12.5, 12], zoom: 30, near: .1, far: 100 }} gl={{ antialias: true, alpha: false, powerPreference: 'default' }} fallback={<SceneError onRetry={retry} />} onCreated={() => setReady(true)} aria-label={props.inspect ? 'Inspeksi sasis dan dua sel baterai mobil. Geser untuk memutar, cubit untuk zoom. Balapan tetap berlangsung.' : follow ? 'Arena mini 4WD 3D. Kamera mengikuti mobilmu. Pilih Overview untuk melihat seluruh lintasan.' : 'Arena mini 4WD 3D. Kamera overview. Geser untuk memutar, cubit untuk zoom.'}>
       <Arena equipped={props.equipped} driving={props.driving} onTelemetry={props.onTelemetry} cinematic={props.cinematic} levels={props.levels} model={props.model} color={props.color} cameraMode={props.cameraMode} resetKey={props.resetKey} circuit={props.circuit} reducedMotion={props.reducedMotion} inspect={props.inspect} charge={props.inspect ? props.charge : undefined} bodyVisible={props.bodyVisible} timing={timing} playerRef={playerRef} follow={follow} running={running} onLost={onLost} />
