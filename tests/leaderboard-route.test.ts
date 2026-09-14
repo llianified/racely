@@ -122,7 +122,7 @@ describe("Leaderboard endpoint", () => {
       state: {
         ...INITIAL_GAME,
         laps: 12,
-        referral: { ...INITIAL_GAME.referral, earned: 50 },
+        referral: { ...INITIAL_GAME.referral, earned: 2 * DEFAULT_ECONOMY.referralRewardInviter },
       },
       cookieValue: "unused",
     });

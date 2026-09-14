@@ -17,6 +17,7 @@ import { StatHero } from "../shell/stat-hero";
 import { cn } from "@/lib/utils";
 import {
   accountPattern,
+  coinRate,
   coins,
   formatCoins,
   idr,
@@ -36,8 +37,9 @@ export type WithdrawPayload = {
 
 /**
  * Nominal cepat diturunkan dari batas minimum, bukan ditulis lepas: minimum yang
- * disetel jadi 500 dari panel akan membuat chip "100" menawarkan penarikan yang
- * pasti ditolak server. Pada nilai bawaan hasilnya tetap 100/250/500/1000.
+ * disetel lebih tinggi dari panel akan membuat chip terendah menawarkan
+ * penarikan yang pasti ditolak server. Pada nilai bawaan hasilnya
+ * 200.000/500.000/1.000.000/2.000.000.
  *
  * Ikut dipagari batas ATAS. Kelipatannya bisa melewati `maxWithdrawCoins`
  * (min 100 + max 500 menghasilkan chip 1000), dan chip yang ditawarkan sendiri
@@ -154,7 +156,7 @@ export function WalletPanel({
           <SheetHeader>
             <SheetTitle>Tarik koin</SheetTitle>
             <SheetDescription>
-              {formatCoins(balance)} koin tersedia · 1 koin = {idr(1, economy)}
+              {formatCoins(balance)} koin tersedia · {coinRate(economy)}
             </SheetDescription>
           </SheetHeader>
           <div className="sheet-body">

@@ -72,8 +72,8 @@ describe("Modification workshop", () => {
   });
 
   it("shows exact affordability and caps the maximum level", () => {
-    expect(modificationPreview({ ...INITIAL_GAME, balance: 24.5 }, "engine").shortfall).toBe(.5);
-    expect(modificationPreview({ ...INITIAL_GAME, balance: 25 }, "engine").shortfall).toBe(0);
+    expect(modificationPreview({ ...INITIAL_GAME, balance: 4_999.5 }, "engine").shortfall).toBe(.5);
+    expect(modificationPreview({ ...INITIAL_GAME, balance: 5_000 }, "engine").shortfall).toBe(0);
     const maxed = modificationPreview({ ...INITIAL_GAME, levels: { engine: 10, tires: 10, battery: 10 } }, "engine");
     expect(maxed).toMatchObject({ maxed: true, nextLevel: 10, cost: 0 });
     expect(maxed.afterSeconds).toBe(maxed.beforeSeconds);
@@ -93,9 +93,9 @@ describe("Modification workshop", () => {
 describe("Racely economy", () => {
   it("keeps the base lap time and upgrade costs", () => {
     expect(lapSeconds(INITIAL_GAME)).toBe(8);
-    expect(upgradeCostAt(E, "engine", 1)).toBe(25);
-    expect(upgradeCostAt(E, "tires", 1)).toBe(15);
-    expect(upgradeCostAt(E, "battery", 1)).toBe(20);
+    expect(upgradeCostAt(E, "engine", 1)).toBe(5_000);
+    expect(upgradeCostAt(E, "tires", 1)).toBe(3_000);
+    expect(upgradeCostAt(E, "battery", 1)).toBe(4_000);
   });
 
   it("does not invent rivals or position multipliers", () => {
@@ -113,7 +113,7 @@ describe("Racely economy", () => {
     );
 
     expect(result.completedLaps).toBe(2);
-    expect(result.income).toBe(0.1);
+    expect(result.income).toBe(10);
     expect(result.progress).toBeCloseTo(0);
   });
 
@@ -124,7 +124,7 @@ describe("Racely economy", () => {
     );
 
     expect(result.completedLaps).toBe(1);
-    expect(result.income).toBe(0.05);
+    expect(result.income).toBe(5);
     expect(result.progress).toBeCloseTo(0);
   });
 
@@ -137,12 +137,12 @@ describe("Racely economy", () => {
     expect(result.offline).toBeNull();
     expect(result.creditedSeconds).toBe(E.heartbeatCapSeconds);
     expect(result.completedLaps).toBe(15);
-    expect(result.income).toBe(0.75);
+    expect(result.income).toBe(75);
   });
 });
 
 /**
- * Base settlement state laps every 8s for 0.05 coins, so the
+ * Base settlement state laps every 8s for 5 coins, so the
  * whole table below is derived from those two numbers.
  */
 describe("Offline earnings", () => {
@@ -160,10 +160,10 @@ describe("Offline earnings", () => {
       creditedSeconds: 480,
       capped: false,
       laps: 30,
-      coins: 1.5,
+      coins: 150,
     });
     expect(result.completedLaps).toBe(45);
-    expect(result.income).toBe(2.25);
+    expect(result.income).toBe(225);
     expect(result.creditedSeconds).toBe(600);
   });
 
@@ -175,10 +175,10 @@ describe("Offline earnings", () => {
       creditedSeconds: E.offlineCapSeconds - E.heartbeatCapSeconds,
       capped: false,
       laps: 892,
-      coins: 44.6,
+      coins: 4_460,
     });
     expect(result.completedLaps).toBe(907);
-    expect(result.income).toBe(45.35);
+    expect(result.income).toBe(4_535);
     expect(result.creditedSeconds).toBe(E.offlineCapSeconds);
   });
 
@@ -190,13 +190,13 @@ describe("Offline earnings", () => {
       creditedSeconds: E.offlineCapSeconds,
       capped: true,
       laps: 900,
-      coins: 45,
+      coins: 4_500,
     });
     // A full day away pays exactly the same as the capped four hours.
     expect(settleAfter(24 * 60 * 60).offline).toMatchObject({
       creditedSeconds: E.offlineCapSeconds,
       laps: 900,
-      coins: 45,
+      coins: 4_500,
     });
   });
 
@@ -254,36 +254,36 @@ describe("Check-in harian", () => {
 
   it("menaik lalu mentok, berapa pun panjang streak", () => {
     expect(E.dailyRewards.map((_, i) => dailyRewardFor(i + 1, E))).toEqual([...E.dailyRewards]);
-    expect(dailyRewardFor(8, E)).toBe(10);
-    expect(dailyRewardFor(365, E)).toBe(10);
+    expect(dailyRewardFor(8, E)).toBe(5_000);
+    expect(dailyRewardFor(365, E)).toBe(5_000);
     // Hari ke-0 dan negatif tetap membayar rung pertama, bukan undefined.
-    expect(dailyRewardFor(0, E)).toBe(1);
-    expect(dailyRewardFor(-3, E)).toBe(1);
+    expect(dailyRewardFor(0, E)).toBe(500);
+    expect(dailyRewardFor(-3, E)).toBe(500);
   });
 
   it("pemain baru langsung bisa klaim hari pertama", () => {
-    expect(cek([])).toEqual({ streak: 0, claimedToday: false, reward: 1, nextReward: 2 });
+    expect(cek([])).toEqual({ streak: 0, claimedToday: false, reward: 500, nextReward: 750 });
   });
 
   it("menyambung streak dari kemarin, bukan memulai ulang", () => {
-    expect(cek(["2026-09-11"])).toEqual({ streak: 1, claimedToday: false, reward: 2, nextReward: 3 });
+    expect(cek(["2026-09-11"])).toEqual({ streak: 1, claimedToday: false, reward: 750, nextReward: 1_000 });
   });
 
   it("tidak membayar dua kali di hari yang sama", () => {
     expect(cek(["2026-09-12", "2026-09-11", "2026-09-10"])).toEqual({
-      streak: 3, claimedToday: true, reward: 0, nextReward: 4,
+      streak: 3, claimedToday: true, reward: 0, nextReward: 1_500,
     });
   });
 
   it("mereset streak kalau ada hari yang bolong", () => {
     expect(cek(["2026-09-09", "2026-09-08"])).toEqual({
-      streak: 0, claimedToday: false, reward: 1, nextReward: 2,
+      streak: 0, claimedToday: false, reward: 500, nextReward: 750,
     });
   });
 
   it("melewati pergantian bulan", () => {
     const awalBulan = new Date("2026-09-01T05:00:00.000Z");
-    expect(cek(["2026-08-31", "2026-08-30"], awalBulan)).toMatchObject({ streak: 2, reward: 3 });
+    expect(cek(["2026-08-31", "2026-08-30"], awalBulan)).toMatchObject({ streak: 2, reward: 1_000 });
   });
 
   it("menahan hadiah di rung terakhir untuk streak panjang", () => {
@@ -293,9 +293,9 @@ describe("Check-in harian", () => {
       return d.toISOString().slice(0, 10);
     });
     expect(cek(sepuluhHari)).toEqual({
-      streak: 10, claimedToday: true, reward: 0, nextReward: 10,
+      streak: 10, claimedToday: true, reward: 0, nextReward: 5_000,
     });
-    // Belum klaim hari ini, streak 7 -> hadiah hari ke-8 tetap 10.
-    expect(cek(sepuluhHari.slice(1, 8))).toMatchObject({ streak: 7, reward: 10 });
+    // Belum klaim hari ini, streak 7 -> hadiah hari ke-8 tetap 5.000.
+    expect(cek(sepuluhHari.slice(1, 8))).toMatchObject({ streak: 7, reward: 5_000 });
   });
 });
