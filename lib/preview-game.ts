@@ -450,7 +450,7 @@ export function performPreviewGameAction(
       ].slice(0, MAX_WITHDRAWALS),
     };
   } else if (action.type === "boost") {
-    throw new PreviewGameRuleError("Aksi ini sudah tidak tersedia.", 410);
+    throw new PreviewGameRuleError("Gaspol sudah dihapus dari permainan.", 410);
   } else if (action.type === "gift" && !state.rewardClaimed) {
     state = {
       ...state,
