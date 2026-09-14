@@ -150,9 +150,9 @@ function ModificationSlot({ game, onUpgrade, onPreviewSheet, disabled, part }: U
   // Penjelasan panjangnya tetap ada di lembar modifikasi.
   const benefit = key === "battery"
     ? `+${formatCoins(preview.afterReward - preview.beforeReward)} koin`
-    : `−${seconds(preview.beforeSeconds - preview.afterSeconds)} dtk`;
+    : `−${seconds(preview.beforeSeconds - preview.afterSeconds)}s`;
   const arena = key === "engine"
-    ? { label: "Akselerasi", now: `${seconds(Math.log(10) / currentPowertrain.accelerationRate)} d`, next: `${seconds(Math.log(10) / nextPowertrain.accelerationRate)} d` }
+    ? { label: "Akselerasi", now: `${seconds(Math.log(10) / currentPowertrain.accelerationRate)}s`, next: `${seconds(Math.log(10) / nextPowertrain.accelerationRate)}s` }
     : key === "tires"
       ? { label: "Grip", now: `−${currentGrip.drainReductionPercent}%`, next: `−${nextGrip.drainReductionPercent}%` }
       : { label: "Hasil / lap", now: `${formatCoins(preview.beforeReward)}`, next: `${formatCoins(preview.afterReward)}` };
