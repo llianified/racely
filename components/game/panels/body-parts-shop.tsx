@@ -4,14 +4,17 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
-import { Check, LoaderCircle, RotateCcw, ShoppingBag, Wind, Wrench } from "lucide-react";
+import { Check, Columns2, LoaderCircle, PanelBottom, PanelTop, RotateCcw, ShoppingBag, Wind, Wrench, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { PART_CATALOG, PART_IDS, PART_SLOTS, SLOT_LABELS, type PartCommand, type PartId } from "@/lib/car-parts";
+import { PART_CATALOG, PART_IDS, PART_SLOTS, SLOT_LABELS, type PartCommand, type PartId, type PartSlot } from "@/lib/car-parts";
 import { CAR_CATALOG } from "@/lib/car-catalog";
 import { coins, type GameState } from "@/lib/game";
+import { cn } from "@/lib/utils";
 import { SectionCardHeading } from "../shell/section-card-heading";
+
+const SLOT_ICONS: Record<PartSlot, LucideIcon> = { hood: PanelTop, spoiler: Wind, splitter: PanelBottom, skirts: Columns2 };
 
 const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
   ssr: false,
@@ -31,8 +34,10 @@ type ShopProps = {
   onPreviewSheet: (open: boolean) => void;
 };
 
-function ShopContents({ game, disabled, onAction, onPending }: Omit<ShopProps, "active" | "onPreviewSheet"> & { onPending: (value: boolean) => void }) {
-  const [selected, setSelected] = useState<PartId>("vented-hood");
+type ShopContentsProps = Omit<ShopProps, "active" | "onPreviewSheet"> & { initialPart: PartId; onPending: (value: boolean) => void };
+
+function ShopContents({ game, disabled, onAction, initialPart, onPending }: ShopContentsProps) {
+  const [selected, setSelected] = useState<PartId>(initialPart);
   const [trying, setTrying] = useState(true);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -134,7 +139,13 @@ function ShopContents({ game, disabled, onAction, onPending }: Omit<ShopProps, "
 
 export function BodyPartsShop({ game, active, disabled, onAction, onPreviewSheet }: ShopProps) {
   const [open, setOpen] = useState(false);
+  const [initialPart, setInitialPart] = useState<PartId>("vented-hood");
   const pending = useRef(false);
+  const equipped = game.bodyParts?.equipped ?? {};
+  const openSlot = (slot: PartSlot) => {
+    setInitialPart(equipped[slot] ?? PART_IDS.find(id => PART_CATALOG[id].slot === slot) ?? "vented-hood");
+    setOpen(true);
+  };
   // Panggung toko baru hidup ketika sheet-nya terbuka DI tab Garasi -- syarat
   // yang sama dengan yang merender CarPreviewScene di bawah. Selama itu,
   // panggung garasi di belakangnya melepas context-nya supaya tidak ada dua
@@ -148,21 +159,43 @@ export function BodyPartsShop({ game, active, disabled, onAction, onPreviewSheet
   const ownedCount = game.bodyParts?.owned.length ?? 0;
   const equippedCount = Object.keys(game.bodyParts?.equipped ?? {}).length;
   return <Sheet open={open && active} onOpenChange={value => { if (!pending.current) setOpen(value); }}>
-    <section id="aero-kit" tabIndex={-1} className="panel garage-parts" aria-label="Aero kit">
+    <section id="aero-kit" tabIndex={-1} className="panel upgrade-panel garage-parts" aria-label="Aero kit">
       <SectionCardHeading
         icon={Wind}
         title="Aero kit"
         aside={<Badge variant="secondary">{equippedCount}/{PART_SLOTS.length} terpasang</Badge>}
       />
-      <dl className="garage-parts-slots" aria-label="Slot aero kit">
+      <ul className="upgrade-list" aria-label="Slot aero kit">
         {PART_SLOTS.map(slot => {
-          const id = game.bodyParts?.equipped[slot];
-          return <div key={slot} data-fitted={Boolean(id)}>
-            <dt>{SLOT_LABELS[slot]}</dt>
-            <dd>{id ? <><Check aria-hidden="true" /><strong>{PART_CATALOG[id].name}</strong></> : <span>Bawaan</span>}</dd>
-          </div>;
+          const id = equipped[slot];
+          const Icon = SLOT_ICONS[slot];
+          const choices = PART_IDS.filter(part => PART_CATALOG[part].slot === slot);
+          const ownedHere = choices.filter(part => game.bodyParts?.owned.includes(part)).length;
+          return <li key={slot} className={cn("upgrade-row parts-row", id && "is-active")}>
+            <div className="upgrade-head">
+              <span className="upgrade-icon" aria-hidden="true"><Icon /></span>
+              <div className="upgrade-name">
+                <h3>{SLOT_LABELS[slot]}</h3>
+                <p className="setup-metric">
+                  {id
+                    ? <><Check aria-hidden="true" /><b>{PART_CATALOG[id].name}</b></>
+                    : <>Bawaan<span aria-hidden="true"> · </span>{ownedHere > 0 ? `${ownedHere} dimiliki` : `${choices.length} pilihan`}</>}
+                </p>
+              </div>
+              <Button
+                variant={id ? "secondary" : "goldSoft"}
+                size="sm"
+                className="upgrade-buy"
+                disabled={disabled}
+                onClick={() => openSlot(slot)}
+                aria-label={`${id ? "Ganti" : "Pilih"} ${SLOT_LABELS[slot].toLowerCase()} di toko aero kit`}
+              >
+                {id ? "Ganti" : "Pilih"}
+              </Button>
+            </div>
+          </li>;
         })}
-      </dl>
+      </ul>
       <div className="garage-parts-foot">
         <p><strong>{ownedCount}/{PART_IDS.length}</strong> part dimiliki</p>
         <SheetTrigger render={<Button variant="gold" size="sm" disabled={disabled} />}><ShoppingBag data-icon="inline-start" />Buka toko</SheetTrigger>
@@ -173,7 +206,7 @@ export function BodyPartsShop({ game, active, disabled, onAction, onPreviewSheet
         <SheetTitle>Toko aero kit</SheetTitle>
         <SheetDescription>Coba langsung pada mobilmu, koleksi, lalu pasang ke slot yang sesuai.</SheetDescription>
       </SheetHeader>
-      {previewLive && <ShopContents game={game} disabled={disabled} onAction={onAction} onPending={value => { pending.current = value; }} />}
+      {previewLive && <ShopContents game={game} disabled={disabled} onAction={onAction} initialPart={initialPart} onPending={value => { pending.current = value; }} />}
     </SheetContent>
   </Sheet>;
 }
