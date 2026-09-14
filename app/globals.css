@@ -838,6 +838,13 @@
 .setup-risk svg { flex-shrink: 0; width: var(--icon-xs); height: var(--icon-xs); }
 .setup-alert { display: flex; align-items: flex-start; gap: var(--space-sm); margin: 0; padding: var(--space-md); border-bottom: var(--stroke) solid var(--border); background: color-mix(in srgb, var(--warning) 8%, var(--card)); font-size: var(--fs-small); line-height: var(--lh-normal); text-wrap: pretty; }
 .setup-alert svg { flex-shrink: 0; width: var(--icon-base); height: var(--icon-base); margin-top: var(--space-2); color: var(--warning); }
+/* Koleksi cat: tile-nya diisi warna cat, dan cincin tipis --card menjaga cat
+   gelap tetap terbaca di atas --surface-inset. Baris yang siap dibeli memakai
+   metrik emas -- sama artinya dengan "siap dipakai" di baris Bengkel. */
+.paint-row .upgrade-name p.setup-metric { font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
+.paint-swatch { box-shadow: inset 0 0 0 var(--swatch-ring-w) color-mix(in srgb, var(--card) 55%, transparent); }
+.paint-row.is-active .upgrade-icon { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); }
+.paint-row.is-ready .setup-metric b { color: var(--accent); }
 .body-colors { display: flex; align-items: center; gap: var(--space-xs); }
 .color-swatch { height: var(--space-40); width: var(--space-40); border: var(--swatch-ring-w) solid var(--card); border-radius: var(--corner-round); background: var(--swatch); color: var(--background); display: grid; place-items: center; }
 .color-swatch svg { width: var(--icon-base); height: var(--icon-base); stroke-width: var(--icon-stroke-bold); }
