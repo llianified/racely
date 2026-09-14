@@ -72,7 +72,7 @@ function dailyNote(daily: GameState["daily"], economy: GameState["economy"]) {
       ? `Streak ${daily.streak} hari. Balik besok untuk ${coins(daily.nextReward)}.`
       : `Sudah diklaim hari ini. Besok ${coins(daily.nextReward)}.`;
   if (daily.streak > 0)
-    return `Streak ${daily.streak} hari berjalan. Klaim hari ini supaya tidak putus.`;
+    return `Streak ${daily.streak} hari. Klaim lagi supaya tidak putus.`;
   const rungs = economy.dailyRewards.length;
   return rungs > 1
     ? `Klaim tiap hari; hadiahnya naik sampai hari ke-${rungs}.`
@@ -86,10 +86,10 @@ function RowStatus({ state }: { state: Exclude<RowState, "ready"> }) {
       Diklaim
     </span>
   ) : (
-    <span className="mission-status">
-      <LockKeyhole size={14} aria-hidden="true" />
+    <Button variant="secondary" disabled>
+      <LockKeyhole data-icon="inline-start" />
       Belum siap
-    </span>
+    </Button>
   );
 }
 
@@ -141,7 +141,7 @@ export function RewardsPanel({
       label: "Bonus starter",
       note: game.rewardClaimed
         ? "Bonus sudah masuk ke saldo kamu."
-        : "Hadiah pertamamu. Sekali klaim, langsung masuk saldo.",
+        : "Hadiah pertamamu, langsung masuk saldo.",
       amount: game.economy.starterGift,
       state: game.rewardClaimed ? "claimed" : "ready",
       onClaim: onClaimGift,
@@ -302,13 +302,8 @@ export function RewardsPanel({
                   >
                     Klaim
                   </Button>
-                ) : row.state === "waiting" ? (
-                  <Button variant="secondary" disabled>
-                    <LockKeyhole data-icon="inline-start" />
-                    Belum siap
-                  </Button>
                 ) : (
-                  <RowStatus state="claimed" />
+                  <RowStatus state={row.state} />
                 )}
               </div>
             </li>
