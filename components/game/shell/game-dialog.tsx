@@ -1,4 +1,4 @@
-import { ArrowRight, Camera, Check, Flag, Gauge, Lock, Timer, Zap } from "lucide-react";
+import { ArrowRight, Camera, Check, Flag, Gauge, Lock, Palette, Timer, Zap } from "lucide-react";
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,7 +32,7 @@ const DIALOG_COPY: Record<DialogKind, { title: string; description: string }> =
     },
     help: {
       title: "Mobil kecil. Langsung jalan.",
-      description: "Empat hal inti sebelum kamu mulai.",
+      description: "Lima hal inti sebelum kamu mulai.",
     },
   };
 
@@ -251,6 +251,17 @@ export function GameDialog({
                   <span>
                     Geser untuk orbit, cubit untuk zoom, tombol kamera untuk
                     berganti sudut.
+                  </span>
+                </p>
+              </div>
+              <div className="help-step">
+                <Palette aria-hidden="true" />
+                <p>
+                  <strong>Koleksi cat cuma gaya</strong>
+                  <span>
+                    Hanya mengubah warna, tanpa bonus kecepatan atau
+                    penghasilan. Beli sekali, pasang gratis; warna bawaan tetap
+                    gratis.
                   </span>
                 </p>
               </div>

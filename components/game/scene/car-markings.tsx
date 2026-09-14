@@ -33,13 +33,13 @@ function markingTexture(marking: Marking) {
     ctx.fillStyle = '#f5f4ef'
     ctx.fillRect(0, 0, 128, 128)
     ctx.fillStyle = '#25282b'
-    ctx.font = 'italic 900 85px Arial'
+    ctx.font = '900 85px Arial'
     ctx.textAlign = 'center'
     ctx.fillText(marking, 58, 100)
     ctx.fillRect(12, 12, 104, 6)
   } else {
     ctx.fillStyle = '#f5f4ef'
-    ctx.font = 'italic 900 92px Arial'
+    ctx.font = '900 92px Arial'
     ctx.textAlign = 'center'
     ctx.fillText('RACELY', 250, 96)
   }
