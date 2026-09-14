@@ -72,13 +72,132 @@ async function fetchLeaderboard([url, initData]: GameKey): Promise<Leaderboard> 
   return response.json();
 }
 
-export function LeaderboardShortcut({ onOpen }: { onOpen: () => void }) {
+export function LeaderboardShortcut({
+  initData,
+  active,
+  onOpen,
+}: {
+  initData: string;
+  active: boolean;
+  onOpen: () => void;
+}) {
+  const sessionEnded = useRef(false);
+  const { data, error, isLoading, isValidating, mutate } = useSWR<Leaderboard>(
+    active ? ["/api/game/leaderboard?metric=laps", initData] as const : null,
+    fetchLeaderboard,
+    {
+      refreshInterval: LEADERBOARD_REFRESH_MS,
+      refreshWhenHidden: false,
+      revalidateOnFocus: true,
+      dedupingInterval: 5_000,
+      errorRetryCount: 2,
+      shouldRetryOnError: (cause) => !(cause instanceof GameRequestError) || cause.status >= 500,
+      isPaused: () => sessionEnded.current,
+      onError: (cause) => { sessionEnded.current = isSessionExpired(cause); },
+    },
+  );
+  const expired = isSessionExpired(error);
+  const me = data?.currentPlayer;
+  const rival = data?.nextRival;
+
   return (
-    <Button variant="menuDirect" className="leaderboard-shortcut w-full" onClick={onOpen}>
-      <Trophy data-icon="inline-start" aria-hidden="true" />
-      <span><strong>Leaderboard</strong><small>Kejar putaran. Rebut peringkat.</small></span>
-      <ArrowRight data-icon="inline-end" aria-hidden="true" />
-    </Button>
+    <section className="panel leaderboard-teaser" aria-labelledby="leaderboard-teaser-title" aria-busy={isLoading}>
+      <header className="leaderboard-teaser-heading">
+        <div className="leaderboard-teaser-emblem" aria-hidden="true"><Trophy /></div>
+        <div className="leaderboard-teaser-intro">
+          <div>
+            <h2 id="leaderboard-teaser-title">Leaderboard</h2>
+            {data?.developmentPreview && <Badge variant="outline">Preview</Badge>}
+          </div>
+          <p>Satu putaran lebih dekat ke puncak.</p>
+        </div>
+      </header>
+
+      {isLoading && !data && (
+        <p className="leaderboard-teaser-message" role="status">Mencari posisi kamu di lintasan…</p>
+      )}
+      {error && (
+        <div className="leaderboard-teaser-message" role="status">
+          <p>{expired
+            ? "Sesi berakhir. Buka ulang Racely dari Telegram."
+            : data ? "Koneksi terputus. Menampilkan peringkat terakhir." : "Peringkat belum bisa dimuat."}</p>
+          {!expired && (
+            <Button variant="outline" size="sm" onClick={() => void mutate().catch(() => undefined)} disabled={isValidating}>
+              <RefreshCw data-icon="inline-start" aria-hidden="true" />
+              Coba lagi
+            </Button>
+          )}
+        </div>
+      )}
+
+      {data && !expired && (
+        <>
+          <div className="leaderboard-teaser-personal">
+            <dl>
+              <div>
+                <dt>Posisimu</dt>
+                <dd>{me ? <><span>#</span>{number(me.rank)}</> : <span aria-label="Belum masuk peringkat">—</span>}</dd>
+              </div>
+              <div>
+                <dt>Total putaran</dt>
+                <dd>{number(me?.score ?? 0)}</dd>
+              </div>
+            </dl>
+            <p>
+              {me && rival ? (
+                <><strong>{number(scoreToOvertake(me.score, rival.score))} putaran lagi</strong> untuk menyalip <bdi>{rival.name}</bdi>.</>
+              ) : !me ? (
+                "Putaran pertama jadi langkahmu menuju podium."
+              ) : data.developmentPreview ? (
+                "Posisi ini hanya untuk sesi preview kamu."
+              ) : (
+                "Kamu di puncak. Terus melaju, jaga posisimu."
+              )}
+            </p>
+          </div>
+
+          {data.entries.length > 0 ? (
+            <div className="leaderboard-teaser-standings">
+              <div className="leaderboard-teaser-list-heading">
+                <h3>Barisan terdepan</h3>
+                <span>{number(data.totalPlayers)} pembalap</span>
+              </div>
+              <ol aria-label="Pembalap dengan putaran terbanyak">
+                {data.entries.slice(0, 3).map((entry, index) => (
+                  <li key={`${entry.rank}-${entry.name}-${index}`} data-place={entry.rank}>
+                    <span className="leaderboard-teaser-position"><span className="sr-only">Peringkat </span>{number(entry.rank)}</span>
+                    <RacerInitial name={entry.name} />
+                    <div className="leaderboard-teaser-racer">
+                      <strong className="truncate" title={entry.name}><bdi>{entry.name}</bdi></strong>
+                      <span>{entry.isCurrentPlayer ? "Kamu" : entry.rank === 1 ? "Pemimpin klasemen" : "Penantang podium"}</span>
+                    </div>
+                    <div className="leaderboard-teaser-score">
+                      {entry.rank === 1 && <Crown aria-hidden="true" />}
+                      <strong>{number(entry.score)}<span className="sr-only"> putaran</span></strong>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ) : (
+            <div className="leaderboard-teaser-empty">
+              <Flag aria-hidden="true" />
+              <div>
+                <strong>Garis start masih terbuka</strong>
+                <p>{data.developmentPreview ? "Selesaikan satu putaran untuk melihat peringkat preview." : "Belum ada putaran tercatat. Jadilah yang pertama!"}</p>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      <footer className="leaderboard-teaser-footer">
+        <Button variant="ghost" className="w-full justify-between" onClick={onOpen}>
+          Lihat klasemen lengkap
+          <ArrowRight data-icon="inline-end" aria-hidden="true" />
+        </Button>
+      </footer>
+    </section>
   );
 }
 
