@@ -58,6 +58,7 @@ import {
   type EconomyConfig,
 } from "@/lib/economy-config";
 import { isCleanBoostLaunch } from "@/lib/race-dynamics";
+import { trackLayoutAt } from "@/lib/track-layout";
 import { readEconomyConfig } from "@/lib/economy-store";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
 import { referralLink } from "@/lib/telegram-bot";
@@ -881,7 +882,11 @@ const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
     if ((row.cooldownEndsAt?.getTime() ?? 0) > now.getTime()) {
       throw new GameRuleError("Boost masih mengisi ulang.");
     }
-    const clean = isCleanBoostLaunch(row.progress, economy.boostLaunchGraceLap);
+    const clean = isCleanBoostLaunch(
+      row.progress,
+      economy.boostLaunchGraceLap,
+      trackLayoutAt(row.circuit),
+    );
     const seconds = boostDurationFor(economy, clean);
     return {
       row: {

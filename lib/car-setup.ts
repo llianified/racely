@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { RECOVERY_SECONDS, STRAIGHT_LAP_FRACTION } from "./race-dynamics";
+import { RECOVERY_SECONDS } from "./race-dynamics";
+import { trackLayoutAt } from "./track-layout";
 
 /**
  * Setup mobil: gear ratio dan roller. Murni, tanpa I/O -- sama seperti
@@ -24,9 +25,11 @@ import { RECOVERY_SECONDS, STRAIGHT_LAP_FRACTION } from "./race-dynamics";
  *   Kelebihan bebannya dibayar dua kali: mobil melambat di tikungan, dan
  *   sebagian tikungan berakhir dengan keluar lintasan.
  *
- * Pecahannya datang dari `STRAIGHT_LAP_FRACTION`, yang diturunkan dari
- * geometri yang sama dengan `trackCornerProgress` -- jadi bagian yang dihukum
- * server persis bagian yang terlihat sebagai tikungan di layar.
+ * Pecahan lurus-vs-tikungan dan ketatan tiap tikungan datang dari
+ * `lib/track-layout.ts`, yang memegang bentuk trek sebagai data dan dibaca
+ * bersama oleh mesh 3D -- jadi bagian yang dihukum server persis bagian yang
+ * terlihat sebagai tikungan di layar. Trek dengan S-curve atau hairpin cukup
+ * menambah layout baru; berkas ini tidak perlu tahu bentuknya.
  *
  * ## Angka di bawah adalah hipotesis, bukan angka suci
  *
@@ -132,20 +135,37 @@ export const ROLLER_CATALOG: Record<RollerId, SetupModifier> = {
 };
 
 /**
- * Karakter tikungan tiap sirkuit, dibaca dengan indeks `circuit`.
+ * Ketatan tikungan sekarang DITURUNKAN dari geometri di `lib/track-layout.ts`,
+ * bukan lagi ditulis sebagai angka per sirkuit di sini. Oval menghasilkan
+ * kelengkungan 1, jadi skala layout (Jakarta 1,00 dan Midnight 0,70)
+ * menghasilkan severity yang sama persis dengan daftar yang dulu ada di baris
+ * ini -- dikunci `tests/track-layout.test.ts`.
  *
- * Yang berbeda adalah KETATAN tikungannya, bukan bentuk treknya: geometri di
- * `race-dynamics.ts` tetap satu dan dipakai bersama scene 3D maupun penilaian
- * Gaspol, jadi tidak ada yang perlu diubah di lapisan visual.
- *
- * - Jakarta Raceway (1) -- tikungan ketat, menghukum setup agresif.
- * - Midnight Speedway (0,70) -- tikungan lebar dan cepat, memberi ruang lebih
- *   untuk gear panjang.
- *
- * Nilainya tidak pernah melebihi 1, jadi setup netral selalu tepat berada di
- * ambang beban dan tidak pernah kena hukuman di sirkuit mana pun.
+ * Bobot di bawah dijumlahkan supaya tepat 1: suku terakhir diambil sebagai sisa
+ * alih-alih dihitung ulang, sehingga penjumlahan pecahan tidak pernah
+ * menggeser hasil di digit terakhir. Invarian setup netral memakai perbandingan
+ * PERSIS, jadi drift sekecil apa pun akan merahkan test -- dan memotong koin
+ * pemain yang sudah berjalan.
  */
-export const CIRCUIT_CORNER_SEVERITY = [1, 0.7] as const;
+type CornerWeight = { severity: number; weight: number };
+const CORNER_WEIGHT_CACHE = new Map<number, readonly CornerWeight[]>();
+
+function cornerWeights(circuit: number): readonly CornerWeight[] {
+  const cached = CORNER_WEIGHT_CACHE.get(circuit);
+  if (cached) return cached;
+  const layout = trackLayoutAt(circuit);
+  const corners = layout.sections.filter((section) => section.severity > 0);
+  const total = corners.reduce((sum, section) => sum + section.lengthFraction, 0);
+  let remaining = 1;
+  const weights = corners.map((section, index) => {
+    const weight =
+      index === corners.length - 1 ? remaining : section.lengthFraction / total;
+    remaining -= weight;
+    return { severity: section.severity, weight };
+  });
+  CORNER_WEIGHT_CACHE.set(circuit, weights);
+  return weights;
+}
 
 /**
  * Grip tambahan per level ban di atas level 1.
@@ -176,8 +196,9 @@ export const COURSE_OUT_PER_OVERLOAD = 1.4;
  */
 export const CORNER_EXIT_SHARE = 0.3;
 
+/** Ketatan tikungan efektif satu sirkuit, dibobot panjang. Dipakai panel & test. */
 export const cornerSeverityAt = (circuit: number) =>
-  CIRCUIT_CORNER_SEVERITY[circuit] ?? CIRCUIT_CORNER_SEVERITY[0];
+  cornerWeights(circuit).reduce((sum, corner) => sum + corner.severity * corner.weight, 0);
 
 const gearOf = (setup: CarSetup) => GEAR_CATALOG[setup.gear] ?? GEAR_CATALOG["4:1"];
 const rollerOf = (setup: CarSetup) =>
@@ -232,12 +253,31 @@ export function setupPerformance(
     gear.stability +
     roller.stability +
     (level - 1) * TIRES_STABILITY_PER_LEVEL;
-  // Kuadrat, bukan linier: gaya yang harus ditahan saat menikung tumbuh dengan
-  // kuadrat laju. Percobaan pertama memakai bentuk linier dan hasilnya gear
-  // terpanjang menang di SEMUA keadaan -- untung di trek lurus lebih besar
-  // daripada biayanya di tikungan, jadi tidak ada yang perlu dipilih.
-  const cornerLoad = speed * speed * cornerSeverityAt(circuit);
-  const overload = Math.max(0, cornerLoad - grip);
+
+  // Tiap tikungan dihitung sendiri memakai ketatannya masing-masing, lalu
+  // digabung dengan bobot panjangnya. Di oval kedua tikungan identik sehingga
+  // hasilnya menyusut kembali ke rumus satu-tikungan yang lama -- itulah yang
+  // membuat Jakarta dan Midnight tidak bergeser sedikit pun.
+  const corners = cornerWeights(circuit);
+  let cornerLoad = 0;
+  let overload = 0;
+  let cornerSpeedFactor = 0;
+  let courseOutsPerLap = 0;
+  for (const { severity, weight } of corners) {
+    // Kuadrat, bukan linier: gaya yang harus ditahan saat menikung tumbuh
+    // dengan kuadrat laju. Percobaan pertama memakai bentuk linier dan hasilnya
+    // gear terpanjang menang di SEMUA keadaan -- untung di trek lurus lebih
+    // besar daripada biayanya di tikungan, jadi tidak ada yang perlu dipilih.
+    const load = speed * speed * severity;
+    const excess = Math.max(0, load - grip);
+    cornerLoad += load * weight;
+    overload += excess * weight;
+    // Dibobot sebagai waktu, bukan sebagai laju: bagian yang lambat memakan
+    // porsi putaran yang lebih besar, dan penjumlahan kebalikannyalah yang
+    // benar secara fisika.
+    cornerSpeedFactor += (weight * (1 + excess * CORNER_OVERLOAD_SLOWDOWN)) / speed;
+    courseOutsPerLap += excess * COURSE_OUT_PER_OVERLOAD * weight;
+  }
 
   return {
     speed,
@@ -245,8 +285,8 @@ export function setupPerformance(
     cornerLoad,
     overload,
     accel,
-    cornerSpeed: speed / (1 + overload * CORNER_OVERLOAD_SLOWDOWN),
-    courseOutsPerLap: overload * COURSE_OUT_PER_OVERLOAD,
+    cornerSpeed: cornerSpeedFactor > 0 ? 1 / cornerSpeedFactor : speed,
+    courseOutsPerLap,
   };
 }
 
@@ -259,7 +299,7 @@ export function setupPerformance(
  * hukuman  = courseOutsPerLap * RECOVERY_SECONDS
  * ```
  *
- * `F` adalah `STRAIGHT_LAP_FRACTION`. Keluar lintasan dibayar dengan DETIK --
+ * `F` adalah porsi lurus milik layout sirkuit. Keluar lintasan dibayar dengan DETIK --
  * `RECOVERY_SECONDS` yang sama dengan animasi pemulihan di arena -- dan tidak
  * pernah dengan potongan koin. Tidak ada satu koin pun yang ditambahkan maupun
  * dipotong langsung oleh berkas ini.
@@ -277,12 +317,21 @@ export function setupLapSeconds(
   circuit: number,
 ): number {
   const performance = setupPerformance(setup, tiresLevel, circuit);
-  const straightSeconds = baseSeconds * STRAIGHT_LAP_FRACTION;
+  const layout = trackLayoutAt(circuit);
+  const straightSeconds = baseSeconds * layout.straightFraction;
+  // Diambil sebagai sisa, bukan dihitung ulang dari pecahan tikungan: itu yang
+  // menjamin kedua suku menjumlah kembali ke `baseSeconds` secara PERSIS pada
+  // setup netral.
   const cornerSeconds = baseSeconds - straightSeconds;
   // Suku keluar-tikungan: negatif untuk gear pendek (lebih galak menarik lagi),
-  // positif untuk gear panjang, dan tepat nol untuk gear bawaan.
+  // positif untuk gear panjang, dan tepat nol untuk gear bawaan. Diskalakan
+  // dengan banyaknya tikungan -- trek berisi empat tikungan menuntut dua kali
+  // lebih banyak akselerasi keluar daripada oval berisi dua.
   const cornerExitSeconds =
-    baseSeconds * CORNER_EXIT_SHARE * (1 / performance.accel - 1);
+    baseSeconds *
+    CORNER_EXIT_SHARE *
+    (layout.cornerCount / 2) *
+    (1 / performance.accel - 1);
   return (
     straightSeconds / performance.speed +
     cornerSeconds / performance.cornerSpeed +
