@@ -93,10 +93,11 @@ export type OfflineEarnings = {
 };
 
 /**
- * Hasil satu tekanan Gaspol, untuk umpan balik di UI. Transien seperti
- * `OfflineEarnings`: server menghitungnya ulang per respons dan tidak pernah
- * menyimpannya, jadi ia hanya muncul pada satu respons yang benar-benar
- * menyalakan Gaspol -- bukan pada sync berikutnya.
+ * Bentuk payload Gaspol yang sudah pensiun. Tidak ada lagi yang mengisinya --
+ * `boost` ditolak 410 di server maupun mode preview -- jadi field ini SELALU
+ * absen pada respons. Dipertahankan sebagai kontrak yang dijaga
+ * `tests/server-preview-parity.test.ts`: klien lama yang masih membacanya harus
+ * melihat `undefined`, bukan durasi karangan.
  */
 export type BoostLaunch = {
   /** True kalau tombolnya ditekan di trek lurus. */
@@ -302,10 +303,14 @@ export const displaySpeedKmh = (secondsPerLap: number) =>
 /**
  * Satu format untuk laju, dipakai HUD balapan dan statistik garasi.
  *
- * Desimalnya dilepas mulai 100 km/j. Dengan level maksimum dan Gaspol, laju
- * tembus 156 km/j -- lima karakter, dan kolom HUD tidak muat selebar itu di
- * lebar HP mana pun (tumpah 18px di 320, masih 6px di 390). Di angka segitu
- * presisi 0,1 km/j juga tidak memberi tahu pemain apa pun.
+ * Desimalnya dilepas mulai 100 km/j -- lima karakter, dan kolom HUD tidak muat
+ * selebar itu di lebar HP mana pun (tumpah 18px di 320, masih 6px di 390). Di
+ * angka segitu presisi 0,1 km/j juga tidak memberi tahu pemain apa pun.
+ *
+ * Pada `DEFAULT_ECONOMY` ambang itu tidak pernah tercapai: level maksimum di
+ * setup tercepat berhenti di ~82 km/j sejak Gaspol dihapus. Cabangnya tetap
+ * ada karena `lapBaseSeconds` dan laju per level disetel dari /admin, dan
+ * menaikkannya sedikit saja sudah melewati 100.
  *
  * Pembulatan dilakukan sebelum ambangnya diuji, supaya 99,96 jadi "100" dan
  * bukan "100,0" yang justru lima karakter lagi.

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_ECONOMY as E, cosmeticPriceAt, economyConfigSchema } from "../lib/economy-config";
@@ -15,6 +16,31 @@ const identity = { userId: `preview:${randomUUID()}`, displayName: "Feature Race
 const request = (cookie?: string) => new Request("http://localhost/api/game", { headers: cookie ? { cookie: `${PREVIEW_GAME_COOKIE}=${cookie}` } : {} });
 const act = (cookie: string, command: Parameters<typeof performPreviewGameAction>[3], id = randomUUID()) => performPreviewGameAction(request(cookie), identity, id, command, E);
 const racing = () => act(getPreviewGameState(request(), identity, E).cookieValue, { type: "select-car", model: "luna-gt", color: "#b9a1ed" });
+
+/**
+ * Panel misi harian pernah menulis "0/3 selesai" sebagai literal, sisa dari
+ * masa empat jenis misi (`boosts` dan `clean` pensiun bersama Gaspol).
+ * `dailyMissionsFor` hanya membuat dua, jadi badge itu tidak pernah bisa penuh
+ * -- pemain yang menuntaskan keduanya tetap dibilang kurang satu. Dibaca dari
+ * source, sama seperti pagar angka ekonomi di tests/economy-config.test.ts:
+ * suite ini berjalan di lingkungan node dan yang perlu dikunci memang bentuk
+ * kodenya.
+ */
+describe("Panel misi harian membaca jumlahnya dari data", () => {
+  const panel = readFileSync(
+    "components/game/panels/daily-missions-panel.tsx",
+    "utf8",
+  );
+
+  it("tidak menulis jumlah misi sebagai literal", () => {
+    expect(panel).not.toMatch(/\/\s*\d+\s*selesai/);
+  });
+
+  it("menghitungnya dari items yang benar-benar dikirim server", () => {
+    expect(panel).toContain("daily.items.length");
+    expect(dailyMissionsFor(null, now, E).items).toHaveLength(2);
+  });
+});
 
 describe("Daily missions", () => {
   it("resets two automatic mission kinds at WIB midnight, resetting only daily progress", () => {
