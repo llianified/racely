@@ -205,6 +205,7 @@ function settlePreviewGame(
   now: number,
   economy: EconomyConfig,
 ): SettledPreview {
+  now = Math.max(now, game.updatedAt);
   const dailyMissions = game.state.carSelection?.model === null
     ? dailyMissionsFor(game.state.dailyMissions, new Date(now), economy)
     : settleDailyMissions(game.state.dailyMissions, {
