@@ -312,9 +312,14 @@ export function WalletPanel({
           aside={<Badge variant="secondary">{game.withdrawals.length} permintaan</Badge>}
         />
         {game.withdrawals.length === 0 ? (
-          <p className="wallet-empty">
-            Belum ada penarikan. Riwayat kamu akan muncul di sini.
-          </p>
+          <div className="wallet-empty">
+            <Banknote aria-hidden="true" />
+            <h3>Belum ada penarikan</h3>
+            <p>
+              Kumpulkan minimal {coins(minWithdraw)}, lalu tarik ke e-wallet
+              atau rekening. Riwayat permintaanmu akan muncul di sini.
+            </p>
+          </div>
         ) : (
           <ul className="wallet-history">
             {game.withdrawals.map((item) => (
