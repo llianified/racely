@@ -17,17 +17,17 @@ import {
   trackCornerProgress,
 } from "../lib/race-dynamics";
 
-const CIRCUITS = [0, 1] as const;
+const LEGACY_OVAL_CIRCUITS = [0] as const;
 
 /**
- * Pagar utama berkas ini. Selama Jakarta dan Midnight masih oval, layout
+ * Pagar utama berkas ini. Jakarta tetap oval, sehingga layout Jakarta
  * WAJIB menghasilkan angka yang sama persis dengan rumus lama -- kalau tidak,
  * memindahkan model server ke layout akan menggeser penghasilan pemain yang
  * sudah berjalan.
  */
 describe("layout oval identik dengan rumus lama", () => {
   it("menghasilkan STRAIGHT_LAP_FRACTION yang sama persis", () => {
-    for (const circuit of CIRCUITS) {
+    for (const circuit of LEGACY_OVAL_CIRCUITS) {
       expect(trackLayoutAt(circuit).straightFraction).toBe(STRAIGHT_LAP_FRACTION);
     }
   });
@@ -69,6 +69,33 @@ describe("layout oval identik dengan rumus lama", () => {
       TRACK_HALF * 4 + Math.PI * PLAYER_RADIUS * 2,
       12,
     );
+  });
+});
+
+describe("Midnight segitiga membulat", () => {
+  const midnight = trackLayoutAt(1);
+
+  it("memiliki tiga lurus dan tiga tikungan, berbeda dari oval Jakarta", () => {
+    expect(isClosedLoop(midnight)).toBe(true);
+    expect(midnight.cornerCount).toBe(3);
+    expect(midnight.sections.map((section) => section.kind)).toEqual([
+      "straight", "corner", "straight", "corner", "straight", "corner",
+    ]);
+    expect(midnight.totalLength).toBeCloseTo(TRACK_HALF * 6 + Math.PI * PLAYER_RADIUS * 2, 12);
+    expect(midnight.straightFraction).toBeGreaterThan(trackLayoutAt(0).straightFraction);
+    expect(midnight.sections).not.toEqual(trackLayoutAt(0).sections);
+  });
+
+  it("mengikuti seluruh jendela Gaspol pada tiga sisi, bukan posisi oval", () => {
+    let progress = 0;
+    for (const section of midnight.sections) {
+      const midpoint = progress + section.lengthFraction / 2;
+      expect(trackPositionAt(midpoint, midnight).section.id).toBe(section.id);
+      expect(isCleanBoostLaunch(midpoint, 0, midnight)).toBe(section.kind === "straight");
+      progress += section.lengthFraction;
+    }
+    expect(isCleanBoostLaunch(0.4, 0, midnight)).toBe(true);
+    expect(isCleanBoostLaunch(0.4, 0, trackLayoutAt(0))).toBe(false);
   });
 });
 
@@ -171,16 +198,16 @@ describe("trackPositionAt", () => {
 /**
  * Penilaian Gaspol adalah satu-satunya pemakai geometri trek yang membayar
  * dengan koin sungguhan: menekan di tikungan memotong durasi Gaspol. Sekarang
- * ia bisa membaca layout, dan selama Jakarta maupun Midnight masih oval,
+ * ia bisa membaca layout; untuk Jakarta yang tetap oval,
  * jawabannya WAJIB sama persis dengan jalur lama.
  */
 describe("penilaian Gaspol mengikuti layout", () => {
-  it("memberi jawaban identik dengan jalur oval lama di kedua sirkuit", () => {
+  it("memberi jawaban identik dengan jalur oval lama di Jakarta", () => {
     for (const grace of [0, 0.05, 0.2]) {
       for (let step = 0; step < 1000; step += 1) {
         const progress = step / 1000;
         const legacy = isCleanBoostLaunch(progress, grace);
-        for (const circuit of CIRCUITS) {
+        for (const circuit of LEGACY_OVAL_CIRCUITS) {
           expect(isCleanBoostLaunch(progress, grace, trackLayoutAt(circuit))).toBe(legacy);
         }
       }
@@ -236,9 +263,9 @@ describe("sirkuit teknikal (Apex)", () => {
     expect(hairpin!.severity).toBeGreaterThan(1);
   });
 
-  it("tidak menyentuh Jakarta dan Midnight", () => {
-    for (const circuit of CIRCUITS) {
-      expect(trackLayoutAt(circuit).straightFraction).toBe(STRAIGHT_LAP_FRACTION);
+  it("tetap lebih menuntut grip daripada Jakarta dan Midnight", () => {
+    expect(trackLayoutAt(0).straightFraction).toBe(STRAIGHT_LAP_FRACTION);
+    for (const circuit of [0, 1]) {
       for (const section of trackLayoutAt(circuit).sections) {
         expect(section.severity).toBeLessThanOrEqual(1);
       }

@@ -15,6 +15,8 @@ export function createTrackPath(sections: readonly PathSection[], start: TrackPo
     return span
   }))
   const totalLength = distance
+  const minimumOffset = Math.max(-Infinity, ...spans.flatMap(({ primitive }) => primitive.kind === 'arc' && primitive.turn > 0 ? [-primitive.radius] : []))
+  const maximumOffset = Math.min(Infinity, ...spans.flatMap(({ primitive }) => primitive.kind === 'arc' && primitive.turn < 0 ? [primitive.radius] : []))
   const lanes = new Map<number, { lengths: number[]; totalLength: number }>()
 
   function lane(offset: number) {
@@ -39,11 +41,13 @@ export function createTrackPath(sections: readonly PathSection[], start: TrackPo
   function point(progress: number, offset = 0, mode: DistanceMode = 'lane', wrap = true) {
     const value = Number.isFinite(progress) ? progress : 0
     const fraction = wrap ? ((value % 1) + 1) % 1 : Math.min(1, Math.max(0, value))
-    const profile = lane(offset)
-    let remaining = fraction * (mode === 'lane' ? profile.totalLength : totalLength)
+    if (!Number.isFinite(offset) || offset <= minimumOffset || offset >= maximumOffset) throw new RangeError('Track offset would fold an arc')
+    // Lane changers sample a continuously varying offset; do not cache every frame's offset.
+    const profile = mode === 'lane' ? lane(offset) : undefined
+    let remaining = fraction * (profile?.totalLength ?? totalLength)
     for (let index = 0; index < spans.length; index++) {
       const span = spans[index]
-      const length = mode === 'lane' ? profile.lengths[index] : span.length
+      const length = profile?.lengths[index] ?? span.length
       if (remaining < length || index === spans.length - 1) {
         const pose = advanceTrackPose(span.start, span.primitive, length > 0 ? remaining / length : 0)
         return { ...offsetPose(pose, offset), sectionId: span.sectionId, angle: Math.PI / 2 - pose.heading }

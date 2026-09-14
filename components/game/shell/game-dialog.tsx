@@ -20,6 +20,8 @@ import {
   type GameState,
   type OfflineEarnings,
 } from "@/lib/game";
+import { circuitUnlockLaps } from "@/lib/economy-config";
+import { CIRCUIT_NAMES } from "@/lib/track-layout";
 
 
 export type DialogKind = "help" | "circuits" | "welcome";
@@ -216,7 +218,7 @@ export function GameDialog({
   onClose: () => void;
   game: GameState;
   offline: OfflineEarnings | null;
-  onChooseCircuit: (circuit: 1) => void;
+  onChooseCircuit: (circuit: number) => void;
   disabled: boolean;
 }) {
   // Closing sets kind to null while the popup is still fading out, so the copy
@@ -226,9 +228,6 @@ export function GameDialog({
   if (kind) shown.current = kind;
   // eslint-disable-next-line react-hooks/refs
   const active = kind ?? shown.current;
-  const unlockLaps = game.economy.circuitUnlockLaps;
-  const midnightLocked = game.laps < unlockLaps;
-
   return (
     <Sheet
       open={kind !== null}
@@ -260,24 +259,32 @@ export function GameDialog({
         ) : active === "circuits" ? (
           <div className="sheet-body">
             <ul className="circuit-list">
-              <CircuitRow
-                name="Jakarta Raceway"
-                meta={`${coins(lapReward({ ...game, circuit: 0 }))} / putaran`}
-                state={game.circuit === 0 ? "active" : "passed"}
-              />
-              <CircuitRow
-                name="Midnight Speedway"
-                meta={
-                  midnightLocked
-                    ? `Butuh ${unlockLaps} putaran · ${game.laps}/${unlockLaps}`
-                    : `${coins(lapReward({ ...game, circuit: 1 }))} / putaran`
-                }
-                state={
-                  game.circuit === 1 ? "active" : midnightLocked ? "locked" : "open"
-                }
-                disabled={disabled}
-                onClick={() => onChooseCircuit(1)}
-              />
+              {CIRCUIT_NAMES.map((name, circuit) => {
+                const needed = circuitUnlockLaps(game.economy, circuit);
+                const locked = game.laps < needed;
+                return (
+                  <CircuitRow
+                    key={name}
+                    name={name}
+                    meta={
+                      locked && circuit > game.circuit
+                        ? `Butuh ${needed} putaran · ${game.laps}/${needed}`
+                        : `${coins(lapReward({ ...game, circuit }))} / putaran`
+                    }
+                    state={
+                      game.circuit === circuit
+                        ? "active"
+                        : circuit < game.circuit
+                          ? "passed"
+                          : locked
+                            ? "locked"
+                            : "open"
+                    }
+                    disabled={disabled}
+                    onClick={() => onChooseCircuit(circuit)}
+                  />
+                );
+              })}
             </ul>
           </div>
         ) : (

@@ -51,6 +51,8 @@ import { GEAR_CATALOG, ROLLER_CATALOG, type GearId, type RollerId } from "@/lib/
 import { PAINT_CATALOG, type PaintCommand } from "@/lib/car-paints";
 import type { DailyMissionKind } from "@/lib/daily-missions";
 import { PART_CATALOG, SLOT_LABELS, type PartCommand } from "@/lib/car-parts";
+import { circuitUnlockLaps } from "@/lib/economy-config";
+import { circuitName } from "@/lib/track-layout";
 
 const GAME_TOAST_OFFSET = {
   bottom: "calc(var(--nav-height) + var(--safe-bottom) + var(--space-md))",
@@ -344,16 +346,17 @@ export function GameDashboard() {
     toast.success("Penarikan dikirim");
     return true;
   };
-  const chooseCircuit = async (circuit: 1) => {
-    // Ambangnya dari config, sama seperti panel dan dialog sirkuit. Literal di
-    // sini membuat tombol yang ditawarkan dialog diam-diam tidak melakukan apa
-    // pun begitu ambangnya disetel di bawah 25.
-    if (game.circuit >= circuit || game.laps < game.economy.circuitUnlockLaps)
+  const chooseCircuit = async (circuit: number) => {
+    // Ambangnya dari config PER SIRKUIT, sama seperti panel dan dialog sirkuit.
+    // Literal di sini membuat tombol yang ditawarkan dialog diam-diam tidak
+    // melakukan apa pun begitu ambangnya disetel lain lewat /admin -- dan
+    // mengunci pemain di trek kedua walau trek ketiga sudah terbuka.
+    if (game.circuit >= circuit || game.laps < circuitUnlockLaps(game.economy, circuit))
       return;
     if (await runAction({ type: "circuit", circuit })) {
       setDialog(null);
       navigate("race");
-      toast.success("Midnight aktif");
+      toast.success(`${circuitName(circuit)} aktif`);
     }
   };
   const boost = async () => {

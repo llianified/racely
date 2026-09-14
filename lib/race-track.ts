@@ -1,5 +1,6 @@
 import { PLAYER_RADIUS, TRACK_HALF, trackLayoutAt, type TrackLayout } from './track-layout'
 import { createTrackPath } from './track-path'
+import { createTamiyaRoute } from './tamiya-route'
 
 // Existing oval dimensions become lateral offsets from the player's racing line.
 export const RACE_TRACK_OFFSETS = {
@@ -49,7 +50,7 @@ export function createRaceTrack(layout: TrackLayout) {
   const brand = rectangleFits(hole, center, 5.6, 1.4) ? center : { x: center.x, z: bounds.minZ - 1.2 }
   const startPose = (forward: number, offset: number) => path.point(forward / path.totalLength, offset, 'centerline', false)
   return {
-    ...path, bounds, center, buildings, brand,
+    ...path, route: createTamiyaRoute(path), bounds, center, buildings, brand,
     gantry: startPose(1.8, 2.95 - PLAYER_RADIUS),
     grid: startPose(.8, .68),
     stands: [-5, -3, -1, 1, 3, 5].map(x => ({ x: center.x + x, z: bounds.maxZ + .25 })),

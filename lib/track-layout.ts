@@ -124,13 +124,18 @@ const OVAL_SECTIONS: readonly TrackSectionInput[] = [
 ];
 
 /**
- * Layout per sirkuit, dibaca dengan indeks `circuit`.
- *
- * Keduanya masih oval. Yang membedakan hanya skala ketatan tikungan -- persis
- * seperti `CIRCUIT_CORNER_SEVERITY` sebelumnya, dan dengan angka yang sama.
- * Bentuk yang berbeda akan datang lewat layout baru, bukan lewat perubahan di
- * kedua layout ini: mengubahnya menggeser penghasilan pemain yang sudah ada.
+ * Midnight berbentuk segitiga membulat: tiga sisi sama panjang dan tiga busur
+ * 120 derajat menutup posisi sekaligus arah. Radius tetap selebar oval supaya
+ * karakter tikungannya tetap ramah, tetapi jendela Gaspol mengikuti tiga lurus.
  */
+const MIDNIGHT_SECTIONS: readonly TrackSectionInput[] = [
+  { id: "start-straight", kind: "straight", geometry: [{ kind: "line", length: TRACK_HALF * 2 }] },
+  { id: "turn-1", kind: "corner", geometry: [{ kind: "arc", radius: PLAYER_RADIUS, turn: Math.PI * 2 / 3 }] },
+  { id: "skyline-straight", kind: "straight", geometry: [{ kind: "line", length: TRACK_HALF * 2 }] },
+  { id: "turn-2", kind: "corner", geometry: [{ kind: "arc", radius: PLAYER_RADIUS, turn: Math.PI * 2 / 3 }] },
+  { id: "return-straight", kind: "straight", geometry: [{ kind: "line", length: TRACK_HALF * 2 }] },
+  { id: "turn-3", kind: "corner", geometry: [{ kind: "arc", radius: PLAYER_RADIUS, turn: Math.PI * 2 / 3 }] },
+];
 /**
  * Sirkuit ketiga: trek teknikal yang benar-benar berbentuk lain.
  *
@@ -147,7 +152,18 @@ const OVAL_SECTIONS: readonly TrackSectionInput[] = [
  * panjang.
  */
 const TECHNICAL_SECTIONS: readonly TrackSectionInput[] = [
-  { id: "launch", kind: "straight", geometry: [{ kind: "line", length: 5 }] },
+  { id: "launch", kind: "straight", geometry: [{ kind: "line", length: 8 }] },
+  {
+    id: "double-chicane",
+    kind: "s-curve",
+    geometry: [
+      { kind: "arc", radius: 4, turn: Math.PI / 6 },
+      { kind: "arc", radius: 4, turn: -Math.PI / 6 },
+      { kind: "arc", radius: 4, turn: -Math.PI / 6 },
+      { kind: "arc", radius: 4, turn: Math.PI / 6 },
+    ],
+  },
+  { id: "bridge-straight", kind: "straight", geometry: [{ kind: "line", length: 8 }] },
   { id: "technical", kind: "corner", geometry: [{ kind: "arc", radius: 3.4, turn: Math.PI }] },
   {
     id: "s-curve",
@@ -157,14 +173,16 @@ const TECHNICAL_SECTIONS: readonly TrackSectionInput[] = [
       { kind: "arc", radius: 4, turn: -Math.PI / 3 },
     ],
   },
+  { id: "obstacle-straight", kind: "straight", geometry: [{ kind: "line", length: 19 }] },
   { id: "hairpin", kind: "hairpin", geometry: [{ kind: "arc", radius: 1.4, turn: Math.PI }] },
   // S-curve menggeser X sebesar 8 sin(60 derajat); lurus ini menutup posisi DAN arah.
+  // Tambahan 19 unit di launch diimbangi obstacle-straight sebelum hairpin.
   { id: "return", kind: "straight", geometry: [{ kind: "line", length: 8 * Math.sin(Math.PI / 3) - 5 }] },
 ];
 
 export const TRACK_LAYOUTS: readonly TrackLayout[] = [
   buildTrackLayout("jakarta", OVAL_SECTIONS, 1),
-  buildTrackLayout("midnight", OVAL_SECTIONS, 0.7),
+  buildTrackLayout("midnight", MIDNIGHT_SECTIONS, 0.7),
   buildTrackLayout("apex", TECHNICAL_SECTIONS, 1),
 ];
 
