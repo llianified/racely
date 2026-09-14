@@ -1,16 +1,17 @@
 import { displaySpeedKmh, formatCoins, formatSpeedKmh } from "@/lib/game";
 import { powertrainTuning, type DrivingState } from "@/lib/race-dynamics";
 
-export function RacePositionHud({ position, followCamera, recovering, telemetry }: {
+export function RacePositionHud({ position, total, followCamera, recovering, telemetry }: {
   position: number;
+  total: number;
   followCamera: boolean;
   recovering: boolean;
   telemetry?: DrivingState;
 }) {
   return (
     <div className="race-hud-top font-sans">
-      <div className="race-hud-position" aria-label={`Posisi ${position} dari 3`}>
-        <span>Pos</span><strong>{position}</strong><span>/ 3</span>
+      <div className="race-hud-position" aria-label={`Posisi ${position} dari ${total} berdasarkan progres lap`}>
+        <span>Pos</span><strong>{position}</strong><span>/ {total}</span>
       </div>
       <span className="race-hud-mode" role="status">
         {recovering ? "Course-out · kembali ke trek" : telemetry ? telemetry.corner ? telemetry.grip < 40 ? "Tikungan · grip lepas" : telemetry.grip < 70 ? "Tikungan · beban tinggi" : "Tikungan · stabil" : telemetry.acceleration > .15 ? "Lurus · akselerasi" : "Lurus · laju puncak" : followCamera ? "Follow" : "Overview"}
@@ -19,26 +20,19 @@ export function RacePositionHud({ position, followCamera, recovering, telemetry 
   );
 }
 
-export function RaceOverviewHud({ seconds, baseSeconds, reward, progress, telemetry, boosted, batteryLevel }: {
+export function RaceOverviewHud({ seconds, baseSeconds, reward, progress, telemetry, laps }: {
   seconds: number;
   baseSeconds: number;
   reward: number;
   progress: number;
   telemetry: DrivingState;
-  boosted: boolean;
-  batteryLevel: number;
+  laps: number;
 }) {
   const lapPercent = Math.min(100, Math.max(0, Math.round(progress * 100)));
   const lapSeconds = seconds.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const recovering = telemetry.recovery > 0;
-  const tuning = powertrainTuning(1, batteryLevel);
+  const tuning = powertrainTuning(1, 1);
   const rpm = Math.round(telemetry.rpm / 100) * 100;
-  const energy = Math.round(telemetry.boostEnergy * 100);
-  const reserveSeconds = telemetry.boostEnergy * tuning.boostCapacitySeconds;
-  const energyStatus = !boosted
-    ? energy === 100 ? "Penuh" : "Mengisi"
-    : telemetry.boostExhausted ? "Habis" : recovering || telemetry.offRoad ? "Tertahan" : "Mendorong";
-  const energyDescription = `${energyStatus}, ${energy} persen, cadangan ${reserveSeconds.toFixed(1)} detik dorongan`;
   return (
     <section className="race-overview-hud font-sans" aria-label="Telemetri balapan">
       <dl className="race-hud-grid">
@@ -56,12 +50,9 @@ export function RaceOverviewHud({ seconds, baseSeconds, reward, progress, teleme
             <span style={{ transform: `scaleX(${telemetry.rpm / tuning.maxRpm})` }} />
           </dd>
         </div>
-        <div className="race-hud-cell" title={energyDescription}>
-          <dt>Boost</dt>
-          <dd>{energy}<small>%</small></dd>
-          <dd className="race-hud-meter" role="meter" aria-label="Energi boost" aria-valuemin={0} aria-valuemax={100} aria-valuenow={energy} aria-valuetext={energyDescription}>
-            <span style={{ transform: `scaleX(${telemetry.boostEnergy})` }} />
-          </dd>
+        <div className="race-hud-cell">
+          <dt>Total lap</dt>
+          <dd>{laps.toLocaleString('id-ID')}</dd>
         </div>
         <div className="race-hud-cell race-hud-lap">
           <dt>Lap</dt>

@@ -367,13 +367,12 @@ export const upgradeCostAt = (
 export const lapSecondsAt = (
   e: EconomyConfig,
   levels: Record<UpgradeKey, number>,
-  boosted: boolean,
+  _boosted: boolean,
 ) =>
   e.lapBaseSeconds /
   (1 +
     (levels.engine - 1) * e.lapEnginePerLevel +
-    (levels.tires - 1) * e.lapTiresPerLevel) /
-  (boosted ? e.boostMultiplier : 1);
+    (levels.tires - 1) * e.lapTiresPerLevel);
 
 /**
  * Waktu per putaran sesudah setup ikut diperhitungkan -- inilah angka yang
@@ -454,13 +453,6 @@ export const raceRewardAt = (
   e: EconomyConfig,
   levels: Record<UpgradeKey, number>,
   circuit: number,
-  boosted: boolean,
-  setup: CarSetup = NEUTRAL_SETUP,
-) => {
-  const position = racePositionAt(e, levels, circuit, boosted, setup);
-  const multiplier = 1 + (2 - position) * e.racePositionRewardStep;
-  return (
-    Math.round(lapRewardAt(e, levels.battery, circuit) * multiplier * 100) /
-    100
-  );
-};
+  _boosted: boolean,
+  _setup: CarSetup = NEUTRAL_SETUP,
+) => lapRewardAt(e, levels.battery, circuit);
