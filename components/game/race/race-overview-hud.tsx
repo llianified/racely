@@ -15,9 +15,10 @@ export function RacePositionHud({ position, total, lane, switching, followCamera
       <div className="race-hud-position" aria-label={`Posisi ${position} dari ${total} berdasarkan progres lap`}>
         <span>Pos arena</span><strong>{position}</strong><span>/ {total}</span>
       </div>
-      <span className="race-hud-mode" role="status">
-        {switching ? 'Pindah lane' : `Lane ${lane}`} · {recovering ? "Course-out · kembali ke trek" : telemetry ? telemetry.corner ? telemetry.grip < 40 ? "Tikungan · grip lepas" : telemetry.grip < 70 ? "Tikungan · beban tinggi" : "Tikungan · stabil" : telemetry.acceleration > .15 ? "Lurus · akselerasi" : "Lurus · laju puncak" : followCamera ? "Follow" : "Overview"}
-      </span>
+      <div className="race-hud-mode">
+        <span>{switching ? 'Pindah lane' : `Lane ${lane}`} · {recovering ? "Course-out" : telemetry ? telemetry.corner ? "Tikungan" : "Lurus" : followCamera ? "Follow" : "Overview"}</span>
+        <span>{recovering ? "Kembali ke trek" : telemetry ? telemetry.corner ? telemetry.grip < 40 ? "Grip lepas" : telemetry.grip < 70 ? "Beban tinggi" : "Stabil" : telemetry.acceleration > .15 ? "Akselerasi" : "Laju puncak" : "Balapan otomatis"}</span>
+      </div>
     </div>
   );
 }
