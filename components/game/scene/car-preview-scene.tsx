@@ -13,6 +13,7 @@ import type { GameState } from '@/lib/game'
 type CarPreviewProps = {
   color: string
   model?: CarModelId
+  roller?: NonNullable<GameState['setup']>['roller']
   levels?: GameState['levels']
   equipped?: NonNullable<GameState['bodyParts']>['equipped']
   inspect?: boolean
@@ -32,8 +33,8 @@ type CarPreviewProps = {
   onReady?: () => void
 }
 
-function PreviewCar({ color, model, levels, inspect, equipped }: CarPreviewProps) {
-  return <group rotation={[0, -.35, 0]}><MiniCar color={color} model={model} levels={levels} inspect={inspect} equipped={equipped} /></group>
+function PreviewCar({ color, model, levels, inspect, equipped, roller }: CarPreviewProps) {
+  return <group rotation={[0, -.35, 0]}><MiniCar roller={roller} color={color} model={model} levels={levels} inspect={inspect} equipped={equipped} /></group>
 }
 
 function PreviewCamera() {
@@ -63,7 +64,7 @@ function PreviewError({ onRetry }: { onRetry: () => void }) {
   )
 }
 
-export default function CarPreviewScene({ color, model, levels, inspect, equipped, active = true, standbyHint = 'Buka tab Garasi untuk menyalakannya lagi.', onReady }: CarPreviewProps) {
+export default function CarPreviewScene({ color, model, levels, inspect, equipped, roller, active = true, standbyHint = 'Buka tab Garasi untuk menyalakannya lagi.', onReady }: CarPreviewProps) {
   const [ready, setReady] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const [lost, setLost] = useState(false)
@@ -129,7 +130,7 @@ export default function CarPreviewScene({ color, model, levels, inspect, equippe
           <directionalLight position={[2, 5, 3]} intensity={2.2} />
           <directionalLight position={[-3, 2, -2]} intensity={.9} color={COLORS.white} />
           <group position={[0, -.12, 0]}>
-            <PreviewCar color={color} model={model} levels={levels} inspect={inspect} equipped={equipped} />
+            <PreviewCar roller={roller} color={color} model={model} levels={levels} inspect={inspect} equipped={equipped} />
           </group>
           <ContextMonitor onLost={onLost} />
         </Canvas>
