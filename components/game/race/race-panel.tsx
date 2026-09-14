@@ -2,15 +2,16 @@
 
 import dynamic from "next/dynamic";
 import { useId, useRef, useState, useSyncExternalStore } from "react";
-import { Camera, ChevronDown, Coins, Flag, LoaderCircle, Maximize, Minimize, RotateCcw, SlidersHorizontal, SwitchCamera, Zap } from "lucide-react";
+import { Camera, ChevronDown, Coins, Flag, LoaderCircle, Maximize, Minimize, RotateCcw, SlidersHorizontal, SwitchCamera } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { batteryTelemetry, carSetup, coins, formatCoins, lapReward, lapSeconds, racePosition, type GameState } from "@/lib/game";
 import { RaceOverviewHud, RacePositionHud } from "./race-overview-hud";
 import { cn } from "@/lib/utils";
-import { createDrivingState, isCleanBoostLaunch } from "@/lib/race-dynamics";
-import { LAST_CIRCUIT, circuitName, trackLayoutAt } from "@/lib/track-layout";
+import { createDrivingState } from "@/lib/race-dynamics";
+import { raceTrackAt } from '@/lib/race-track';
+import { LAST_CIRCUIT, circuitName } from "@/lib/track-layout";
 import { circuitUnlockLaps } from "@/lib/economy-config";
 import { RaceSwitch, SettingRow } from "./setting-row";
 import { NEUTRAL_SETUP } from "@/lib/car-setup";
@@ -69,6 +70,7 @@ export function RacePanel({ game, onCircuits, active = true }: {
   const opponents = game.rivals?.opponents ?? [];
   const opponentProgress = opponents.map(opponent => opponentDistance(opponent, game.economy, game.rivals?.elapsedSeconds));
   const position = racePosition(game);
+  const lane = raceTrackAt(game.circuit).route.profile(game.laps + game.progress, 0);
   const fullscreen = async () => {
     try {
       if (document.fullscreenElement) {
@@ -124,9 +126,9 @@ export function RacePanel({ game, onCircuits, active = true }: {
       </div>
       <div className={cn("scene-wrap", inspect && "is-inspecting", !inspect && cinematic && "is-cinematic", !inspect && telemetry.recovery > 0 && "is-course-out", !inspect && telemetry.grip < 40 && "is-grip-critical")}>
         {!inspect && <div className="race-vignette" aria-hidden="true" />}
-        {!inspect && <RacePositionHud telemetry={telemetry} position={position} total={opponents.length + 1} followCamera={followCamera} recovering={telemetry.recovery > 0} />}
+        {!inspect && <RacePositionHud lane={lane.lane + 1} switching={lane.feature === 'lane-changer'} telemetry={telemetry} position={position} total={opponents.length + 1} followCamera={followCamera} recovering={telemetry.recovery > 0} />}
         {inspect && <div className="scene-overlay inspect-hud"><strong>{bodyVisible ? "DETAIL MOBIL" : "DI BALIK BODI"}</strong><span>{bodyVisible ? "Cat metalik · ban · aero kit" : "2 sel · motor · penggerak 4WD"}</span></div>}
-        <RaceScene setup={carSetup(game)} equipped={game.bodyParts?.equipped} driving={driving} onTelemetry={setTelemetry} cinematic={cinematic && !reducedMotion} levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.laps + game.progress} seconds={seconds} baseSeconds={baseSeconds} opponents={opponents} opponentProgress={opponentProgress} color={game.color} boosted={false} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
+        <RaceScene setup={carSetup(game)} equipped={game.bodyParts?.equipped} driving={driving} onTelemetry={setTelemetry} cinematic={cinematic && !reducedMotion} levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.laps + game.progress} seconds={seconds} baseSeconds={baseSeconds} opponents={opponents} opponentProgress={opponentProgress} color={game.color} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
         {inspect && <div className="scene-overlay inspect-hint">Geser untuk memutar · balapan tetap jalan</div>}
       </div>
       {!inspect && <RaceOverviewHud seconds={seconds} baseSeconds={baseSeconds} reward={lapReward(game)} progress={game.progress} telemetry={telemetry} laps={game.laps} />}

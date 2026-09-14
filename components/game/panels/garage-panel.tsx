@@ -155,7 +155,7 @@ function ModificationSlot({ game, onUpgrade, onPreviewSheet, disabled, part }: U
     ? { label: "Akselerasi", now: `${seconds(Math.log(10) / currentPowertrain.accelerationRate)} d`, next: `${seconds(Math.log(10) / nextPowertrain.accelerationRate)} d` }
     : key === "tires"
       ? { label: "Grip", now: `−${currentGrip.drainReductionPercent}%`, next: `−${nextGrip.drainReductionPercent}%` }
-      : { label: "Boost", now: `${seconds(currentPowertrain.boostCapacitySeconds)} d`, next: `${seconds(nextPowertrain.boostCapacitySeconds)} d` };
+      : { label: "Hasil / lap", now: `${formatCoins(preview.beforeReward)}`, next: `${formatCoins(preview.afterReward)}` };
 
   const install = async () => {
     if (installLock.current || blocked || maxed || shortfall > 0) return;
@@ -189,7 +189,7 @@ function ModificationSlot({ game, onUpgrade, onPreviewSheet, disabled, part }: U
             <dd>{maxed ? "Maksimal" : <b>{benefit}</b>}</dd>
           </div>
           <div>
-            <dt>{arena.label} <small>arena</small></dt>
+            <dt>{arena.label} <small>{key === "battery" ? "koin" : "arena"}</small></dt>
             <dd>{arena.now}{!maxed && <><span aria-hidden="true"> → </span><b>{arena.next}</b></>}</dd>
           </div>
         </dl>
@@ -237,9 +237,9 @@ function ModificationSlot({ game, onUpgrade, onPreviewSheet, disabled, part }: U
             ? "Visual: sirip heatsink bertambah setiap level. Di arena, mesin mempercepat akselerasi setelah tikungan atau kecelakaan; bodi mendongak ringan dan putaran roda serta RPM mengikuti tenaga aktual."
             : key === "tires"
               ? "Visual: ban lebih lebar, cincin velg emas, dan roller bertingkat."
-              : "Visual: strip emas dudukan baterai bertambah setiap level. Di arena, cadangan boost bertahan lebih lama dan lampu indikator meredup ketika energi menipis. Lepas bodi untuk melihat detail sel."}</p>
+              : "Baterai menambah hasil koin per putaran. Strip emas dudukan baterai bertambah setiap level. Lepas bodi untuk melihat detail sel."}</p>
           <table className="w-full text-left tabular-nums">
-            <caption className="px-md pt-md pb-sm text-left font-semibold">Simulasi performa tanpa boost</caption>
+            <caption className="px-md pt-md pb-sm text-left font-semibold">Performa balapan otomatis</caption>
             <thead className="text-muted-foreground">
               <tr><th scope="col" className="px-md pb-sm font-normal">Performa</th><th scope="col" className="pb-sm text-right font-normal">Saat ini</th><th scope="col" className="px-md pb-sm text-right font-normal">Setelah</th></tr>
             </thead>
@@ -248,23 +248,21 @@ function ModificationSlot({ game, onUpgrade, onPreviewSheet, disabled, part }: U
               <tr className="border-y border-border"><th scope="row" className="px-md py-sm font-normal">Koin / putaran</th><td className="text-right">{formatCoins(preview.beforeReward)}</td><td className="px-md text-right font-bold text-accent">{formatCoins(preview.afterReward)}</td></tr>
             </tbody>
           </table>
-          {key !== "tires" && <>
+          {key === "engine" && <>
             <table className="w-full text-left tabular-nums">
-              <caption className="px-md pt-md pb-sm text-left font-semibold">Simulasi arena · {key === "engine" ? "akselerasi" : "energi boost"}</caption>
+              <caption className="px-md pt-md pb-sm text-left font-semibold">Simulasi arena · akselerasi</caption>
               <thead className="text-muted-foreground">
                 <tr><th scope="col" className="px-md pb-sm font-normal">Performa</th><th scope="col" className="pb-sm text-right font-normal">Saat ini</th><th scope="col" className="px-md pb-sm text-right font-normal">Setelah</th></tr>
               </thead>
               <tbody>
                 <tr className="border-t border-border">
-                  <th scope="row" className="px-md py-sm font-normal">{key === "engine" ? "Respons 90% · detik" : "Cadangan boost · detik"}</th>
-                  <td className="text-right">{seconds(key === "engine" ? Math.log(10) / currentPowertrain.accelerationRate : currentPowertrain.boostCapacitySeconds)}</td>
-                  <td className="px-md text-right font-bold text-accent">{seconds(key === "engine" ? Math.log(10) / nextPowertrain.accelerationRate : nextPowertrain.boostCapacitySeconds)}</td>
+                  <th scope="row" className="px-md py-sm font-normal">Respons 90% · detik</th>
+                  <td className="text-right">{seconds(Math.log(10) / currentPowertrain.accelerationRate)}</td>
+                  <td className="px-md text-right font-bold text-accent">{seconds(Math.log(10) / nextPowertrain.accelerationRate)}</td>
                 </tr>
               </tbody>
             </table>
-            <p className="border-y border-border px-md py-md text-muted-foreground">{key === "engine"
-              ? "Waktu mencapai 90% kecepatan target di lintasan lurus; lebih kecil berarti lebih responsif. RPM dan gerak bodi mengikuti akselerasi, bukan sekadar level."
-              : `Cadangan dari energi penuh, bukan tambahan durasi Gaspol. Dorongan melemah menjelang habis, tertahan saat keluar lintasan, dan terisi penuh dalam ${currentPowertrain.rechargeSeconds} detik tanpa Gaspol.`} Efek arena tidak mengubah lap, koin, baterai idle, atau timer Gaspol server.</p>
+            <p className="border-y border-border px-md py-md text-muted-foreground">Waktu mencapai 90% kecepatan target di lintasan lurus; lebih kecil berarti lebih responsif. RPM dan gerak bodi mengikuti akselerasi. Efek arena tidak mengubah lap atau koin server.</p>
           </>}
           {key === "tires" && <>
             <table className="w-full text-left tabular-nums">
@@ -275,7 +273,6 @@ function ModificationSlot({ game, onUpgrade, onPreviewSheet, disabled, part }: U
               <tbody>
                 {[
                   { label: "Terkuras · normal", before: currentGrip.cornerDrain, after: nextGrip.cornerDrain },
-                  { label: "Terkuras · boost", before: currentGrip.boostedCornerDrain, after: nextGrip.boostedCornerDrain },
                   { label: "Pulih · lurus", before: currentGrip.straightRecovery, after: nextGrip.straightRecovery },
                 ].map(row => <tr key={row.label} className="border-t border-border">
                   <th scope="row" className="px-md py-sm font-normal">{row.label}</th>
@@ -284,7 +281,7 @@ function ModificationSlot({ game, onUpgrade, onPreviewSheet, disabled, part }: U
                 </tr>)}
               </tbody>
             </table>
-            <p className="border-y border-border px-md py-md text-muted-foreground">Pengurasan lebih kecil, pemulihan lebih cepat. Pengurangan dihitung dari ban level 1, hingga {gripTuning(ceiling).drainReductionPercent}% di level {ceiling}. Boost tetap berisiko selip. Efek grip hanya saat simulasi aktif; tidak mengubah koin atau lap server.</p>
+            <p className="border-y border-border px-md py-md text-muted-foreground">Pengurasan lebih kecil, pemulihan lebih cepat. Pengurangan dihitung dari ban level 1, hingga {gripTuning(ceiling).drainReductionPercent}% di level {ceiling}. Efek grip hanya saat simulasi aktif; tidak mengubah koin atau lap server.</p>
           </>}
           <dl className="flex flex-col gap-sm border-b border-border px-md py-md">
             <div className="flex justify-between gap-md"><dt>Biaya pemasangan</dt><dd className="font-bold">{coins(cost)}</dd></div>

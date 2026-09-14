@@ -64,26 +64,13 @@ export function calculateRaceSettlement(
     };
   }
 
-  const onlineEnd = intervalStart + onlineMs;
-  const boostEnd = state.boostEndsAt?.getTime() ?? intervalStart;
-  // Boost jauh lebih pendek dari jendela heartbeat, jadi hanya bisa bertumpang
-  // dengan jendela itu.
-  const boostedMs = Math.max(0, Math.min(onlineEnd, boostEnd) - intervalStart);
-  const normalMs = onlineMs - boostedMs;
   const normalState = { ...state, boostLeft: 0 };
-  const boostedState = { ...state, boostLeft: 1 };
-
-  const boosted = advanceRaceProgress(
-    state.progress,
-    boostedMs / 1000,
-    lapSeconds(boostedState),
-  );
   const normal = advanceRaceProgress(
-    boosted.progress,
-    normalMs / 1000,
+    state.progress,
+    onlineMs / 1000,
     lapSeconds(normalState),
   );
-  const onlineCompletedLaps = boosted.completedLaps + normal.completedLaps;
+  const onlineCompletedLaps = normal.completedLaps;
   const offline = advanceRaceProgress(
     normal.progress,
     (offlineMs / 1000) * economy.offlineRate,
@@ -93,9 +80,6 @@ export function calculateRaceSettlement(
   // Attribute to the away window only the laps the heartbeat would not have
   // closed on its own, so the summary matches what the balance actually gained.
   const offlineLaps = offline.completedLaps;
-  const boostedIncome = roundCoins(
-    boosted.completedLaps * lapReward(boostedState),
-  );
   const normalIncome = roundCoins(
     normal.completedLaps * lapReward(normalState),
   );
@@ -103,7 +87,7 @@ export function calculateRaceSettlement(
 
   return {
     completedLaps,
-    income: roundCoins(boostedIncome + normalIncome + offlineIncome),
+    income: roundCoins(normalIncome + offlineIncome),
     progress: offline.progress,
     creditedSeconds: (onlineMs + offlineMs) / 1000,
     offline:
