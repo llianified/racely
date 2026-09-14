@@ -1,4 +1,6 @@
 import "server-only";
+import { DAILY_MISSION_KINDS, dailyMissionsFor, settleDailyMissions, recordDailyBoost, claimDailyMission } from "./daily-missions";
+import { PAINT_IDS, applyPaintCommand, ownedPaintsSchema, type PaintCommand } from "./car-paints";
 
 import { and, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -78,6 +80,9 @@ const RECEIPT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const RECEIPT_PRUNE_PROBABILITY = 0.02;
 
 const commandSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("daily-mission"), day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), kind: z.enum(DAILY_MISSION_KINDS) }).strict(),
+  z.object({ type: z.literal("buy-paint"), paintId: z.enum(PAINT_IDS) }).strict(),
+  z.object({ type: z.literal("equip-paint"), paintId: z.enum(PAINT_IDS) }).strict(),
   z.object({ type: z.literal("buy-part"), partId: z.enum(PART_IDS) }).strict(),
   z.object({ type: z.literal("equip-part"), partId: z.enum(PART_IDS) }).strict(),
   z.object({ type: z.literal("unequip-part"), slot: z.enum(PART_SLOTS) }).strict(),
@@ -241,6 +246,8 @@ function stateFromRow(
     developmentPreview: false,
     economy,
     bodyParts: knownBodyParts(row.bodyParts),
+    dailyMissions: dailyMissionsFor(row.dailyMissions, now, economy),
+    ownedPaints: ownedPaintsSchema.safeParse(row.ownedPaints).data ?? [],
     // Left off the payload entirely when there is nothing to report, so the
     // client can treat its presence as "show the welcome-back dialog".
     offlineEarnings: offlineEarnings ?? undefined,
@@ -510,6 +517,14 @@ export function settlePlayerRow(
   now: Date,
   economy: EconomyConfig,
 ): SettledPlayer {
+  const dailyMissions = row.carModel === null
+    ? dailyMissionsFor(row.dailyMissions, now, economy)
+    : settleDailyMissions(row.dailyMissions, {
+        progress: row.progress,
+        levels: { engine: row.engineLevel, tires: row.tiresLevel, battery: row.batteryLevel },
+        circuit: row.circuit, economy, lastSettledAt: row.lastSettledAt, boostEndsAt: row.boostEndsAt,
+      }, now);
+  row = { ...row, dailyMissions };
   if (row.carModel === null) {
     return {
       row: { ...row, lastSettledAt: now, updatedAt: now },
@@ -632,6 +647,7 @@ export async function getGameState(
         earned: settled.row.earned,
         laps: settled.row.laps,
         progress: settled.row.progress,
+        dailyMissions: settled.row.dailyMissions,
         lastSettledAt: settled.row.lastSettledAt,
         updatedAt: now,
       })
@@ -740,8 +756,36 @@ const applyPartAction = (row: PlayerRow, action: PartCommand): ActionOutcome => 
  * Handler hanya menghitung baris berikutnya. Yang menyimpannya tetap
  * `performGameAction`, di dalam transaksi dan lock yang sama.
  */
+const applyPaintAction = (row: PlayerRow, action: PaintCommand, { economy }: ActionContext): ActionOutcome => {
+  try {
+    return { row: { ...row, ...applyPaintCommand(row, action, economy) } };
+  } catch (error) {
+    throw new GameRuleError(error instanceof Error ? error.message : "Cat gagal diproses.");
+  }
+};
+
 const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
   sync: (row) => ({ row }),
+  "buy-paint": applyPaintAction,
+  "equip-paint": applyPaintAction,
+  "daily-mission": async (row, action, { tx, identity, now, economy }) => {
+    let result;
+    try {
+      result = claimDailyMission(dailyMissionsFor(row.dailyMissions, now, economy), action.day, action.kind);
+    } catch (error) {
+      throw new GameRuleError(error instanceof Error ? error.message : "Misi gagal diklaim.");
+    }
+    let credit = 0;
+    if (result.reward > 0) {
+      const inserted = await tx.insert(rewardClaims).values({
+        userId: identity.userId,
+        rewardKey: `daily-mission:${action.day}:${action.kind}`,
+        amount: result.reward,
+      }).onConflictDoNothing().returning({ id: rewardClaims.id });
+      if (inserted.length > 0) credit = result.reward;
+    }
+    return { row: { ...row, dailyMissions: result.dailyMissions, balance: row.balance + credit } };
+  },
 
   "select-car": (row, action) => {
     if (row.carModel !== null) {
@@ -831,6 +875,7 @@ const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
     return {
       row: {
         ...row,
+        dailyMissions: recordDailyBoost(dailyMissionsFor(row.dailyMissions, now, economy), clean),
         boostEndsAt: new Date(now.getTime() + seconds * 1000),
         // Cooldown penuh apa pun hasilnya: lihat `boostDurationFor`.
         cooldownEndsAt: new Date(
@@ -1003,6 +1048,7 @@ export async function performGameAction(
             earned: next.earned,
             laps: next.laps,
             progress: next.progress,
+            dailyMissions: next.dailyMissions,
             lastSettledAt: next.lastSettledAt,
             updatedAt: now,
           })
@@ -1069,6 +1115,8 @@ export async function performGameAction(
         cooldownEndsAt: next.cooldownEndsAt,
         rewardClaimed: next.rewardClaimed,
         missionsClaimed: next.missionsClaimed,
+        dailyMissions: next.dailyMissions,
+        ownedPaints: next.ownedPaints,
         bodyParts: next.bodyParts,
         carModel: next.carModel,
         color: next.color,

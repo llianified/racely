@@ -107,6 +107,35 @@ describeDatabase("Neon Postgres persistence", () => {
     expect(constraint.rows).toHaveLength(1);
   });
 
+  it("serializes duplicate paint purchases and daily mission claims, persisting ownership and reward receipts", async () => {
+    const { cosmeticPriceAt } = await import("../lib/economy-config");
+    const { PAINT_CATALOG } = await import("../lib/car-paints");
+    const racer = { ...identity, userId: `test:${randomUUID()}` };
+    extraUserIds.push(racer.userId);
+    const selected = await gameServer.performGameAction(racer, randomUUID(), { type: "select-car", model: "luna-gt", color: "#b9a1ed" });
+    const daily = selected.dailyMissions!;
+    const mission = daily.items[0];
+    await db!.update(schema.players).set({
+      balance: 5000,
+      dailyMissions: { ...daily, values: { ...daily.values, [mission.kind]: mission.target } },
+    }).where(drizzle.eq(schema.players.userId, racer.userId));
+    await Promise.all([1, 2].map(() => gameServer.performGameAction(racer, randomUUID(), { type: "buy-paint", paintId: "jade" })));
+    await Promise.all([1, 2].map(() => gameServer.performGameAction(racer, randomUUID(), { type: "daily-mission", day: daily.day, kind: mission.kind })));
+    const equipId = randomUUID();
+    await gameServer.performGameAction(racer, equipId, { type: "equip-paint", paintId: "jade" });
+    await gameServer.performGameAction(racer, equipId, { type: "equip-paint", paintId: "jade" });
+    const saved = await gameServer.getGameState(racer);
+    expect(saved.balance).toBe(5000 - cosmeticPriceAt(selected.economy, 1) + mission.reward);
+    expect(saved.ownedPaints).toEqual(["jade"]);
+    expect(saved.color).toBe(PAINT_CATALOG.jade.color);
+    expect(saved.dailyMissions?.items.find(item => item.kind === mission.kind)?.claimed).toBe(true);
+    const claims = await db!.select().from(schema.rewardClaims).where(drizzle.and(
+      drizzle.eq(schema.rewardClaims.userId, racer.userId),
+      drizzle.eq(schema.rewardClaims.rewardKey, `daily-mission:${daily.day}:${mission.kind}`),
+    ));
+    expect(claims).toHaveLength(mission.reward > 0 ? 1 : 0);
+  });
+
   it("ranks settled laps with ties, a private self rank beyond Top 50, and no preview racers", async () => {
     const { pool } = await import("@/lib/db");
     const { getLeaderboard } = await import("@/lib/leaderboard-server");

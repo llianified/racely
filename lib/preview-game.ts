@@ -1,4 +1,6 @@
 import "server-only";
+import { dailyMissionsSchema, dailyMissionsFor, settleDailyMissions, recordDailyBoost, claimDailyMission } from "./daily-missions";
+import { ownedPaintsSchema, applyPaintCommand } from "./car-paints";
 
 import { Buffer } from "node:buffer";
 import { z } from "zod";
@@ -58,6 +60,8 @@ const previewGameSchema = z.object({
   state: z.object({
     developmentPreview: z.boolean().default(true),
     bodyParts: bodyPartsSchema.optional(),
+    dailyMissions: dailyMissionsSchema.optional(),
+    ownedPaints: ownedPaintsSchema.optional(),
     carSelection: z.object({
       model: z.enum(CAR_MODEL_IDS).nullable(),
       returningPlayer: z.boolean(),
@@ -198,6 +202,14 @@ function settlePreviewGame(
   now: number,
   economy: EconomyConfig,
 ): SettledPreview {
+  const dailyMissions = game.state.carSelection?.model === null
+    ? dailyMissionsFor(game.state.dailyMissions, new Date(now), economy)
+    : settleDailyMissions(game.state.dailyMissions, {
+        progress: game.state.progress, levels: game.state.levels,
+        circuit: game.state.circuit, economy, lastSettledAt: new Date(game.updatedAt),
+        boostEndsAt: game.state.boostLeft > 0 ? new Date(game.updatedAt + game.state.boostLeft * 1000) : null,
+      }, new Date(now));
+  game = { ...game, state: { ...game.state, dailyMissions } };
   if (game.state.carSelection?.model === null) {
     return { game: { ...game, updatedAt: now }, offline: null };
   }
@@ -366,6 +378,19 @@ export function performPreviewGameAction(
       if (error instanceof PartRuleError) throw new PreviewGameRuleError(error.message);
       throw error;
     }
+  } else if (action.type === "buy-paint" || action.type === "equip-paint") {
+    try {
+      state = { ...state, ...applyPaintCommand(state, action, economy) };
+    } catch (error) {
+      throw new PreviewGameRuleError(error instanceof Error ? error.message : "Cat gagal diproses.");
+    }
+  } else if (action.type === "daily-mission") {
+    try {
+      const result = claimDailyMission(dailyMissionsFor(state.dailyMissions, new Date(now), economy), action.day, action.kind);
+      state = { ...state, dailyMissions: result.dailyMissions, balance: state.balance + result.reward };
+    } catch (error) {
+      throw new PreviewGameRuleError(error instanceof Error ? error.message : "Misi gagal diklaim.");
+    }
   } else if (action.type === "upgrade") {
     state = applyUpgrade(state, action.key, economy);
   } else if (action.type === "claim" && Math.floor(state.pending) > 0) {
@@ -427,6 +452,7 @@ export function performPreviewGameAction(
     boostLaunch = { clean, seconds };
     state = {
       ...state,
+      dailyMissions: recordDailyBoost(dailyMissionsFor(state.dailyMissions, new Date(now), economy), clean),
       boostLeft: seconds,
       // Cooldown penuh apa pun hasilnya: lihat `boostDurationFor`.
       cooldown: boostCooldownSeconds(economy),
