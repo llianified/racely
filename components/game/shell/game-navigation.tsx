@@ -9,6 +9,7 @@ import {
   Wallet,
 } from "lucide-react";
 import Image from "next/image";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { formatCoins } from "@/lib/game";
 
@@ -87,6 +88,15 @@ export function Topbar({
 }) {
   const initial = Array.from(racerName.trim())[0]?.toUpperCase() || "R";
   const displayedBalance = formatCoins(Math.floor(balance));
+  // Foto yang gagal dimuat harus JATUH KE inisial, bukan menyisakan ikon gambar
+  // rusak di pojok atas -- satu-satunya potret pemain di seluruh layar. Gagalnya
+  // bisa karena apa saja di luar kendali kami: foto yang sudah dihapus di
+  // Telegram, atau jaringan yang putus tepat saat avatar diambil.
+  // Yang disimpan URL-nya, bukan sebuah boolean: foto berikutnya harus dicoba
+  // lagi dari nol, dan menyimpan URL membuat itu terjadi sendirinya tanpa efek
+  // yang menyetel ulang state.
+  const [failedPhoto, setFailedPhoto] = useState<string | null>(null);
+  const showPhoto = Boolean(racerPhotoUrl) && failedPhoto !== racerPhotoUrl;
 
   return (
     <header className="topbar font-sans">
@@ -116,7 +126,7 @@ export function Topbar({
           aria-label={`${racerName}, level ${level}. Cara bermain`}
           title={`${racerName} · Level ${level} · Cara bermain`}
         >
-          {racerPhotoUrl ? (
+          {showPhoto && racerPhotoUrl ? (
             <Image
               src={racerPhotoUrl}
               alt=""
@@ -125,6 +135,7 @@ export function Topbar({
               sizes="32px"
               className="racer-photo"
               aria-hidden="true"
+              onError={() => setFailedPhoto(racerPhotoUrl)}
             />
           ) : (
             <span className="racer-initial" aria-hidden="true">{initial}</span>
