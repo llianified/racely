@@ -172,7 +172,7 @@ export function RewardsPanel({
       <StatHero
         ariaLabel="Total hadiah siap diklaim"
         label="Siap diklaim"
-        figure={formatCoins(total)}
+        figure={total}
         action={
           <Button
             variant="gold"

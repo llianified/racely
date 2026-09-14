@@ -4,7 +4,7 @@ import { Link2, ListChecks, Send, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SectionCardHeading } from "../shell/section-card-heading";
 import { StatHero } from "../shell/stat-hero";
-import { coins, formatCoins, type GameState } from "@/lib/game";
+import { coins, type GameState } from "@/lib/game";
 
 export function ReferralPanel({
   game,
@@ -27,7 +27,7 @@ export function ReferralPanel({
       <StatHero
         ariaLabel="Ringkasan ajak teman"
         label="Dari ajak teman"
-        figure={formatCoins(referral.earned)}
+        figure={referral.earned}
         action={
           <Button variant="gold" disabled={disabled || !referral.link} onClick={onInvite}>
             <Send data-icon="inline-start" />
