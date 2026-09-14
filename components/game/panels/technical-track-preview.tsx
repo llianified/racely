@@ -25,7 +25,7 @@ export function TechnicalTrackPreview() {
       <p className="text-small text-muted-foreground">Calon sirkuit, belum aktif. Tidak ada race, reward, boost, atau settlement.</p>
     </header>
     <figure className="flex flex-col gap-sm">
-      <div className="aspect-square w-full overflow-hidden rounded-lg border border-border bg-card">
+      <div className="aspect-square w-full overflow-hidden rounded-(--corner-box) border border-border bg-card">
         <TechnicalTrackScene progress={progress} lane={lane} topDown={topDown} />
       </div>
       <figcaption className="text-small text-muted-foreground">START → straight → technical corner → S-curve → hairpin → straight → FINISH. Garis emas = racing line jalur terpilih.</figcaption>
@@ -33,7 +33,7 @@ export function TechnicalTrackPreview() {
     <div className="flex flex-wrap items-center gap-lg">
       <label className="flex items-center gap-sm"><input type="checkbox" checked={topDown} onChange={event => setTopDown(event.target.checked)} />Tampak atas</label>
       <label className="flex items-center gap-sm">Jalur
-        <select className="rounded-md border border-border bg-card p-sm" value={lane} onChange={event => setLane(Number(event.target.value))}>
+        <select className="rounded-(--corner-box) border border-border bg-card p-sm" value={lane} onChange={event => setLane(Number(event.target.value))}>
           {TECHNICAL_TRACK.laneOffsets.map((_, index) => <option key={index} value={index}>{index + 1}</option>)}
         </select>
       </label>
@@ -43,7 +43,7 @@ export function TechnicalTrackPreview() {
       <input id="track-progress" className="w-full accent-accent" type="range" min="0" max="1000" value={Math.round(progress * 1000)} onChange={event => setProgress(Number(event.target.value) / 1000)} aria-valuetext={`${Math.round(progress * 100)} persen, ${section.label}`} />
     </label>
     <p className="text-small text-muted-foreground">Slider hanya memindahkan mobil contoh di sepanjang geometri, bukan waktu putaran atau simulasi fisika.</p>
-    <details className="rounded-lg border border-border p-md text-small">
+    <details className="rounded-(--corner-box) border border-border bg-card p-md text-small">
       <summary className="cursor-pointer font-bold">Kontrak section & batas integrasi</summary>
       <ol className="flex list-inside list-decimal flex-col gap-sm py-md">
         {TECHNICAL_TRACK.sections.map(section => <li key={section.id}>
