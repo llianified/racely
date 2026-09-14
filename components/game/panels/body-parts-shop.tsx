@@ -164,7 +164,7 @@ export function BodyPartsShop({ game, active, disabled, onAction, onPreviewSheet
         })}
       </dl>
       <div className="garage-parts-foot">
-        <p><strong>{ownedCount}/{PART_IDS.length}</strong> part dimiliki · kosmetik, tidak memengaruhi kecepatan</p>
+        <p><strong>{ownedCount}/{PART_IDS.length}</strong> part dimiliki</p>
         <SheetTrigger render={<Button variant="gold" size="sm" disabled={disabled} />}><ShoppingBag data-icon="inline-start" />Buka toko</SheetTrigger>
       </div>
     </section>

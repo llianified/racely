@@ -25,6 +25,12 @@ type CarPreviewProps = {
    * BERADA di sana adalah petunjuk yang salah.
    */
   standbyHint?: string
+  /**
+   * Dipanggil sekali panggungnya benar-benar berdiri (atau menyerah). Onboarding
+   * memakainya untuk menahan boot screen sampai mobilnya siap, bukan menampilkan
+   * layar kosong yang masih memuat.
+   */
+  onReady?: () => void
 }
 
 function PreviewCar({ color, model, levels, inspect, equipped, roller }: CarPreviewProps) {
@@ -58,11 +64,11 @@ function PreviewError({ onRetry }: { onRetry: () => void }) {
   )
 }
 
-export default function CarPreviewScene({ color, model, levels, inspect, equipped, roller, active = true, standbyHint = 'Buka tab Garasi untuk menyalakannya lagi.' }: CarPreviewProps) {
+export default function CarPreviewScene({ color, model, levels, inspect, equipped, roller, active = true, standbyHint = 'Buka tab Garasi untuk menyalakannya lagi.', onReady }: CarPreviewProps) {
   const [ready, setReady] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const [lost, setLost] = useState(false)
-  const onLost = useCallback(() => setLost(true), [])
+  const onLost = useCallback(() => { setLost(true); onReady?.() }, [onReady])
   const retry = () => { setReady(false); setLost(false); setAttempt(value => value + 1) }
 
   /**
@@ -114,7 +120,7 @@ export default function CarPreviewScene({ color, model, levels, inspect, equippe
           gl={{ antialias: true, alpha: true, powerPreference: 'default' }}
           frameloop="demand"
           fallback={<PreviewError onRetry={retry} />}
-          onCreated={() => setReady(true)}
+          onCreated={() => { setReady(true); onReady?.() }}
           aria-label="Preview mobil 3D. Geser untuk memutar."
         >
           <PreviewCamera />
