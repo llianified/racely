@@ -2,11 +2,12 @@
 
 import dynamic from "next/dynamic";
 import { memo, useEffect, useRef, useState } from "react";
-import { ArrowUp, BatteryMedium, CarFront, Check, Cog, CircleDot, LoaderCircle, Wrench } from "lucide-react";
+import { ArrowUp, BatteryMedium, CarFront, Check, Cog, CircleDot, LoaderCircle, Lock, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { CAR_CATALOG, type CarColor } from "@/lib/car-catalog";
+import { CAR_CATALOG, CAR_MODEL_IDS, STARTER_CAR_IDS, carReferralRequirement, isReferralCar, type CarColor, type CarModelId } from "@/lib/car-catalog";
+import { referralRewardUnlocked } from "@/lib/referral-rewards";
 import { CarColorPicker } from "../car/car-color-picker";
 import { SectionCardHeading } from "../shell/section-card-heading";
 import { BodyPartsShop } from "./body-parts-shop";
@@ -67,6 +68,7 @@ export const GaragePanel = memo(function GaragePanel({
   onChooseColor,
   onPartAction,
   onPaintAction,
+  onSelectCar,
   disabled = false,
 }: {
   game: GameState;
@@ -77,11 +79,21 @@ export const GaragePanel = memo(function GaragePanel({
   onChooseColor: (color: CarColor, name: string) => void;
   onPartAction: (action: PartCommand) => Promise<boolean>;
   onPaintAction: (action: PaintCommand) => Promise<boolean>;
+  onSelectCar: (model: CarModelId) => Promise<boolean>;
   disabled?: boolean;
 }) {
   const model = game.carSelection?.model ?? "neo-falcon";
   const car = CAR_CATALOG[model];
   const colorName = car.colors.find((choice) => choice.color === game.color)?.name ?? PAINT_IDS.map(id => PAINT_CATALOG[id]).find(paint => paint.color === game.color)?.name ?? "pilihan";
+  // Model pendaftaran dikunci (lihat select-car di lib/game-server.ts); satu-
+  // satunya pergantian yang sah melibatkan mobil hadiah ajakan. Pilihannya
+  // baru muncul begitu mobil eksklusif pertama terbuka -- sebelum itu kartu
+  // ini tetap seperti sebelumnya.
+  const exclusiveCars = CAR_MODEL_IDS.filter(isReferralCar);
+  const friends = game.referral.completed;
+  const unlockedExclusive = exclusiveCars.filter((id) => referralRewardUnlocked("car", id, friends));
+  const onExclusiveCar = isReferralCar(model);
+  const switchable: readonly CarModelId[] = onExclusiveCar ? [...unlockedExclusive, ...STARTER_CAR_IDS] : unlockedExclusive.length > 0 ? [model, ...unlockedExclusive] : [];
   return (
     <>
       <section id="body-colors" tabIndex={-1} className="panel garage-panel" aria-label="Mobil kamu">
@@ -105,6 +117,37 @@ export const GaragePanel = memo(function GaragePanel({
           <div><dt>Kecepatan dasar</dt><dd><strong>{formatSpeedKmh(displaySpeedKmh(lapSeconds({ ...game, boostLeft: 0 })))}</strong> km/j</dd></div>
           <div><dt>Hasil per putaran</dt><dd><strong>{formatCoins(lapReward(game))}</strong> koin</dd></div>
         </dl>
+        {(switchable.length > 0 || exclusiveCars.length > 0) && (
+          <div className="garage-car-switch">
+            <p className="setup-metric">
+              {switchable.length > 0
+                ? <>Progres, koin, dan koleksi ikut ke mobil mana pun.</>
+                : <><Lock aria-hidden="true" />Ajak <b>{carReferralRequirement(exclusiveCars[0])} teman</b> untuk membuka {CAR_CATALOG[exclusiveCars[0]].name}.</>}
+            </p>
+            {switchable.length > 0 && (
+              <ul className="garage-car-options" aria-label="Ganti mobil">
+                {switchable.map((id) => {
+                  const current = id === model;
+                  return (
+                    <li key={id}>
+                      <Button
+                        variant={current ? "secondary" : "goldSoft"}
+                        size="sm"
+                        className="w-full"
+                        disabled={disabled || current}
+                        aria-pressed={current}
+                        onClick={() => void onSelectCar(id)}
+                      >
+                        {current && <Check data-icon="inline-start" aria-hidden="true" />}
+                        {CAR_CATALOG[id].name}
+                      </Button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        )}
       </section>
       <BodyPartsShop game={game} active={active} disabled={disabled} onAction={onPartAction} onPreviewSheet={onPreviewSheet} />
       <PaintCollection game={game} disabled={disabled} onAction={onPaintAction} />
