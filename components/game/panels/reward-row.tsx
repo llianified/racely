@@ -47,9 +47,8 @@ export function RewardRow({
           <h3>{label}</h3>
           <p className="setup-metric">
             <b>{formatCoins(amount)} koin</b>
-            <span aria-hidden="true"> · </span>
-            {note}
           </p>
+          <p className="reward-note">{note}</p>
         </div>
         {state === "claimed" ? (
           <Badge variant="secondary" className="upgrade-buy"><Check data-icon="inline-start" aria-hidden="true" />Diklaim</Badge>
