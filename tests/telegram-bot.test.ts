@@ -170,8 +170,10 @@ describe("Bot command replies", () => {
     const reply = buildReferralRewardReply({
       chatId: 777,
       inviterId: "777",
+      inviterName: "Raka",
       inviteeName: "Nadia",
       reward: 30,
+      inviteeReward: 5_000,
     });
 
     expect(reply.chat_id).toBe(777);
@@ -180,9 +182,10 @@ describe("Bot command replies", () => {
     const button = reply.reply_markup.inline_keyboard[0][0];
     expect(button.text).toBe("Ajak teman lagi");
     expect("url" in button ? button.url : null).toContain("t.me/share/url");
-    expect("url" in button ? decodeURIComponent(button.url) : null).toContain(
-      "start=ref_777",
-    );
+    const shareUrl = "url" in button ? new URL(button.url) : null;
+    expect(shareUrl?.searchParams.get("url")).toContain("start=ref_777");
+    expect(shareUrl?.searchParams.get("text")).toContain("Raka mengajakmu balapan");
+    expect(shareUrl?.searchParams.get("text")).toContain("5.000 koin");
   });
 
   it("nudges unknown text toward /play but still offers the button", () => {

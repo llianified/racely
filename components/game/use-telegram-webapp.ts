@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { referralShareText } from "@/lib/game";
 
 type SafeAreaInsets = { top: number; bottom: number; left: number; right: number };
 
@@ -112,8 +113,12 @@ export function useTelegramWebApp() {
 
 export type ReferralShareResult = "telegram" | "shared" | "copied" | "cancelled";
 
-export async function shareReferralLink(link: string): Promise<ReferralShareResult> {
-  const text = "Ayo balapan bareng aku di Racely!";
+export async function shareReferralLink(
+  link: string,
+  inviterName: string,
+  inviteeReward: number,
+): Promise<ReferralShareResult> {
+  const text = referralShareText(inviterName, inviteeReward);
   const app = window.Telegram?.WebApp;
   if (app?.platform !== "unknown" && app?.openTelegramLink) {
     try {
@@ -138,7 +143,7 @@ export async function shareReferralLink(link: string): Promise<ReferralShareResu
     }
   }
 
-  await navigator.clipboard.writeText(link);
+  await navigator.clipboard.writeText(`${text}\n${link}`);
   return "copied";
 }
 

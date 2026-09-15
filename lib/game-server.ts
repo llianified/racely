@@ -430,8 +430,10 @@ async function payInviteeMilestone(
 type InviterRewardNotification = {
   chatId: number;
   inviterId: string;
+  inviterName: string;
   inviteeName: string;
   reward: number;
+  inviteeReward: number;
 };
 
 async function sendInviterRewardNotification(
@@ -480,6 +482,7 @@ async function payInviter(row: PlayerRow, economy: EconomyConfig) {
       const [inviter] = await tx
         .select({
           userId: players.userId,
+          displayName: players.displayName,
           chatUserId: botChats.userId,
         })
         .from(players)
@@ -514,8 +517,10 @@ async function payInviter(row: PlayerRow, economy: EconomyConfig) {
             rewardNotification = {
               chatId,
               inviterId,
+              inviterName: inviter.displayName,
               inviteeName: row.displayName,
               reward: economy.referralRewardInviter,
+              inviteeReward: economy.referralRewardInvitee,
             };
           }
         }
