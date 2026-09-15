@@ -113,7 +113,7 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
           <span>{car.chassis}</span>
           <Badge variant="outline">Gratis</Badge>
         </div>
-        <div className="selection-stage" role="img" aria-label={`${car.name}, warna ${colorName}. Geser untuk memutar mobil 3D.`}>
+        <div className="selection-stage" role="group" aria-label={`${car.name}, warna ${colorName}. Geser untuk memutar mobil 3D.`}>
           <CarPreviewScene model={model} color={color} onReady={revealSelection} />
         </div>
         <div className="selection-details" aria-live="polite" aria-atomic="true">
