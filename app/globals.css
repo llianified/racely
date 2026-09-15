@@ -345,20 +345,20 @@
 .leaderboard-teaser-empty p { margin-top: var(--space-xs); color: var(--muted-foreground); font-size: var(--fs-small); text-wrap: pretty; }
 .leaderboard-teaser-footer { padding: var(--space-xs); border-top: var(--stroke) solid var(--border); background: var(--surface-inset); }
 
-/* ── aero kit (garasi) ─ kepala · 4 sel slot · kaki koleksi + tombol ──────
-   Sel slot meniru .upgrade-specs di Bengkel supaya kedua panel garasi terasa
-   satu alat. Status terpasang dibaca dari garis emas + centang, tanpa baris
-   teks tambahan. */
-/* Aero kit memakai baris .upgrade-row yang sama dengan Setup dan Koleksi cat;
-   satu baris = satu slot, tombolnya membuka toko langsung di part slot itu. */
+/* ── aero kit (garasi) ─ kepala · 4 baris slot · kaki koleksi + tombol ─────
+   Aero kit memakai baris .upgrade-row yang sama dengan Bengkel, Setup, dan
+   Koleksi cat; satu baris = satu slot, tombolnya membuka toko langsung di
+   part slot itu. Status terpasang dibaca dari garis emas + centang. */
 .parts-row .upgrade-name p.setup-metric { display: flex; align-items: center; gap: var(--space-xs); font-size: var(--fs-small); }
 .parts-row .setup-metric > svg { flex-shrink: 0; width: var(--icon-xs); height: var(--icon-xs); color: var(--accent); }
 .parts-row .setup-metric b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .parts-row.is-active .upgrade-icon { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); }
 /* Kaki menempel ke tepi kartu supaya terbaca sebagai ambang kartu, bukan blok
-   di dalam blok. Garis atasnya sudah disediakan border-bottom baris terakhir
-   yang dihapus .upgrade-row:last-child, jadi digambar ulang di sini. */
-.garage-parts-foot { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-md); padding: var(--space-sm) var(--space-md); border-top: var(--stroke) solid var(--border); background: var(--surface-inset); }
+   di dalam blok. Hitungan koleksi rata kiri sejajar tile baris di atasnya,
+   tombol rata kanan sejajar tombol baris -- bukan keduanya menumpuk di kanan.
+   Garis atasnya sudah disediakan border-bottom baris terakhir yang dihapus
+   .upgrade-row:last-child, jadi digambar ulang di sini. */
+.garage-parts-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); padding: var(--space-sm) var(--space-md); border-top: var(--stroke) solid var(--border); background: var(--surface-inset); }
 .garage-parts-foot > p { min-width: 0; font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); text-wrap: pretty; }
 .garage-parts-foot > p > strong { color: var(--foreground); font-variant-numeric: tabular-nums; }
 .garage-parts-foot > [data-slot='button'] { flex-shrink: 0; }
@@ -768,7 +768,7 @@
 .reward-copy > strong { display: block; margin-top: var(--space-xs); font-size: var(--fs-4xl); font-weight: var(--fw-heavier); line-height: var(--lh-tight); letter-spacing: var(--track-tight-xs); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .race-reward > [data-slot='button'] { flex-shrink: 0; }
 
-/* ── garasi ─────────────────��──────────────────────── */
+/* ── garasi ──────���──────────��──────────────────────── */
 .car-stage { position: relative; height: var(--stage-garage-h); margin: var(--space-md) var(--space-md) 0; overflow: hidden; border: var(--stroke) solid var(--border); border-radius: var(--corner-box); background:
   radial-gradient(78% 58% at 50% 4%, color-mix(in srgb, var(--primary) 26%, transparent), transparent 70%),
   linear-gradient(180deg, var(--secondary), color-mix(in srgb, var(--background) 72%, var(--secondary))); }
@@ -797,27 +797,26 @@
 .garage-stats strong { color: var(--foreground); font-size: var(--fs-2xl); font-variant-numeric: tabular-nums; }
 
 .upgrade-list { padding-inline: 0; }
-/* Lembar spek: judul + tombol di satu baris, dua sel angka, lalu rel level.
-   Tidak ada kolom samping — kolom samping memaksa teks melipat sempit dan
-   menyisakan ruang kosong di atas tombol. Sel angkanya sengaja meniru
-   .parts-shop-specs di lembar modifikasi supaya keduanya terasa satu alat. */
+/* Satu anatomi baris untuk semua box garasi (Bengkel, Setup, Koleksi cat, Aero
+   kit): tile ikon + nama + satu baris metrik, tombol kecil di kanan. Tidak ada
+   kolom samping — kolom samping memaksa teks melipat sempit dan menyisakan
+   ruang kosong di atas tombol. Isi tambahan (rel level, deskripsi, risiko)
+   ditumpuk di bawah kepala baris. */
 .upgrade-row { display: flex; flex-direction: column; gap: var(--space-sm); padding: var(--space-md); border-bottom: var(--stroke) solid var(--border); }
 .upgrade-row:last-child { border-bottom: none; }
 .upgrade-head { display: flex; align-items: center; gap: var(--space-sm); }
-/* Tile ikon setinggi tombol `sm` (--space-32) supaya baris judul rata kiri-kanan;
-   kulitnya sama dengan sel .upgrade-specs di bawahnya. */
+/* Tile ikon setinggi tombol `sm` (--space-32) supaya baris judul rata kiri-kanan. */
 .upgrade-icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: var(--space-32); height: var(--space-32); border: var(--stroke) solid var(--border); border-radius: var(--corner-box); background: var(--surface-inset); color: var(--accent); }
 .upgrade-icon > svg { width: var(--icon-base); height: var(--icon-base); }
 .upgrade-name { flex: 1 1 auto; min-width: 0; line-height: var(--lh-tight); }
 .upgrade-name h3 { font-size: var(--fs-read); font-weight: var(--fw-heavy); }
 .upgrade-name p { margin-top: var(--space-2); font-size: var(--fs-micro); color: var(--muted-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .upgrade-buy { flex-shrink: 0; font-variant-numeric: tabular-nums; }
-.upgrade-specs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-sm); }
-.upgrade-specs > div { min-width: 0; padding: var(--space-sm) var(--space-md); border: var(--stroke) solid var(--border); border-radius: var(--corner-box); background: var(--surface-inset); }
-.upgrade-specs dt { display: flex; align-items: baseline; gap: var(--space-xs); color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-semibold); letter-spacing: var(--track-caps-sm); text-transform: uppercase; white-space: nowrap; }
-.upgrade-specs dt small { font-size: inherit; font-weight: var(--fw-medium); letter-spacing: inherit; opacity: .7; }
-.upgrade-specs dd { margin-top: var(--space-2); color: var(--muted-foreground); font-size: var(--fs-body); line-height: var(--lh-snug); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.upgrade-specs dd b { color: var(--foreground); font-weight: var(--fw-bold); }
+/* Bengkel: metrik = part saat ini + dampak level berikutnya. Emas saat saldo
+   cukup (sama artinya dengan Koleksi cat), tile emas saat level maksimal. */
+.mod-row .upgrade-name p.setup-metric { font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
+.mod-row.is-ready .setup-metric b { color: var(--accent); }
+.mod-row.is-active .upgrade-icon { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); }
 .upgrade-level { display: flex; align-items: center; gap: var(--space-sm); }
 .level-label { flex-shrink: 0; min-width: var(--space-32); font-size: var(--fs-micro); font-weight: var(--fw-bold); color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .level-segments { display: flex; flex: 1 1 auto; gap: var(--space-3); }
