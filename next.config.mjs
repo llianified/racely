@@ -14,17 +14,16 @@
 const isProduction = process.env.NODE_ENV === 'production'
 
 /**
- * Adsgram: SDK-nya dimuat dari sad.adsgram.ai, permintaan banner ke
- * api.adsgram.ai, dan kreatifnya (gambar/video) datang dari CDN pengiklan yang
- * berganti-ganti -- host yang tidak pernah diumumkan Adsgram. Karena itu img-src
- * dan media-src dibuka ke https: (bukan ke daftar tebakan yang akan basi), sementara
- * script/connect/frame tetap dikunci ke host Adsgram yang eksplisit.
+ * Rewarded interstitial Monetag dimuat dari loader yang diberikan publisher.
+ * Kreatif dan frame iklan datang dari host HTTPS yang dapat berubah, sedangkan
+ * loader dan telemetri SDK tetap dibatasi ke host yang diketahui.
  */
-const adsgramHosts = 'https://*.adsgram.ai'
+const monetagSdkHost = 'https://libtl.com'
+const monetagTelemetryHost = 'https://mc.yandex.ru'
 
 const contentSecurityPolicy = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isProduction ? '' : " 'unsafe-eval'"} https://telegram.org https://sad.adsgram.ai`,
+  `script-src 'self' 'unsafe-inline'${isProduction ? '' : " 'unsafe-eval'"} https://telegram.org ${monetagSdkHost} ${monetagTelemetryHost}`,
   "style-src 'self' 'unsafe-inline'",
   /**
    * Foto profil pemain TIDAK lagi disebut di sini. `photo_url` di initData
@@ -39,9 +38,9 @@ const contentSecurityPolicy = [
    */
   "img-src 'self' data: blob: https:",
   "media-src 'self' data: blob: https:",
-  `frame-src 'self' ${adsgramHosts}`,
+  "frame-src 'self' https:",
   "font-src 'self' data:",
-  `connect-src 'self' https://telegram.org ${adsgramHosts}`,
+  `connect-src 'self' https://telegram.org ${monetagSdkHost} ${monetagTelemetryHost}`,
   "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",

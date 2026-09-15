@@ -1142,7 +1142,7 @@ const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
   },
 
   /**
-   * Klien memanggil ini setelah promise `show()` Adsgram resolve. Server tidak
+   * Klien memanggil ini setelah promise rewarded Monetag resolve. Server tidak
    * bisa membuktikan iklannya benar-benar diputar, jadi yang ditegakkan di sini
    * adalah plafonnya: paling banyak `adRewardDailyCap` tontonan per hari
    * balapan, tiap tontonan satu baris `reward_claims` yang unik.

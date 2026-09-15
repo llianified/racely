@@ -140,12 +140,15 @@ Di produksi **tidak ada** file env di dalam repo. Nilai asli hidup di
 `node --env-file`. `.env.development` sengaja ikut di-commit karena hanya berisi
 flag preview non-rahasia.
 
-`PUBLIC_APP_URL` dan semua `NEXT_PUBLIC_*` (mis. `NEXT_PUBLIC_ADSGRAM_BLOCK_ID`)
-dibutuhkan **saat build**, bukan hanya saat runtime: halaman `/` di-prerender
-sehingga `metadataBase` dibekukan, dan `NEXT_PUBLIC_*` di-inline ke bundle
-klien. Build tanpa env itu menghasilkan aplikasi yang jalan tapi kartu Bonus
-Iklan hilang dan OG card rusak — `scripts/deploy-racely.sh` memuat env file
-sebelum `build:standalone` karena alasan ini.
+`PUBLIC_APP_URL` dibutuhkan **saat build**, bukan hanya saat runtime: halaman
+`/` di-prerender sehingga `metadataBase` dibekukan. Build tanpa env itu
+menghasilkan aplikasi yang jalan tetapi OG card memakai origin cadangan;
+`scripts/deploy-racely.sh` memuat env file sebelum `build:standalone` karena
+alasan ini.
+
+Rewarded interstitial memakai Monetag zone `11811175`. Loader
+`https://libtl.com/sdk.js` baru dimuat saat pemain menekan tombol **Tonton**;
+zone ini tidak membutuhkan environment variable publik.
 
 Jangan pernah menulis token, connection string, atau secret ke dalam repo, log,
 atau commit message.

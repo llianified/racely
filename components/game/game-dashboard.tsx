@@ -19,7 +19,7 @@ import { WalletPanel, type WithdrawPayload } from "./panels/wallet-panel";
 import { CircuitPanel } from "./race/circuit-panel";
 import { AdRewardShortcut, RacePanel, RaceReward } from "./race/race-panel";
 import { CarSelection } from "./car/car-selection";
-import { ADSGRAM_BLOCK_ID, showRewardedAd } from "./adsgram";
+import { MONETAG_ZONE_ID, showRewardedAd } from "./monetag";
 import {
   GameRequestError,
   createGameActionSender,
@@ -286,15 +286,11 @@ export function GameDashboard() {
     const amount = game.adReward.reward;
     setAdPlaying(true);
     try {
-      // Block tes Adsgram hanya tayang dengan debug di luar Telegram, jadi mode
-      // preview memakainya; di produksi debug harus mati agar tayangan tercatat.
-      const result = await showRewardedAd({ debug: Boolean(game.developmentPreview) });
+      const result = await showRewardedAd();
       if (result === "rewarded") {
         if (await runAction({ type: "watch-ad" })) toast.success(`Bonus iklan +${coins(amount)}`);
-      } else if (result === "skipped") {
-        toast.error("Iklan ditutup sebelum selesai; bonus belum diberikan.");
       } else if (result === "error") {
-        toast.error("Iklan gagal dimuat. Coba lagi sebentar.");
+        toast.error("Iklan belum selesai atau gagal dimuat. Bonus belum diberikan.");
       } else {
         toast.error("Iklan belum tersedia saat ini.");
       }
@@ -485,7 +481,7 @@ export function GameDashboard() {
                     onClaim={claim}
                     disabled={Boolean(busyAction)}
                   />
-                  {ADSGRAM_BLOCK_ID && game.adReward.dailyCap > 0 && (
+                  {MONETAG_ZONE_ID && game.adReward.dailyCap > 0 && (
                     <AdRewardShortcut
                       ad={game.adReward}
                       playing={adPlaying}
@@ -574,7 +570,7 @@ export function GameDashboard() {
               onClaimDailyMission={dailyMission}
               onClaimAll={claimAll}
               onWatchAd={watchAd}
-              adAvailable={Boolean(ADSGRAM_BLOCK_ID)}
+              adAvailable={Boolean(MONETAG_ZONE_ID)}
               adBusy={adPlaying}
               disabled={Boolean(busyAction)}
             />

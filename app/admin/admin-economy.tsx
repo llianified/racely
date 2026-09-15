@@ -90,7 +90,7 @@ const GROUPS: Group[] = [
     ],
   },
   {
-    legend: "Bonus iklan (Adsgram)",
+    legend: "Bonus iklan (Monetag)",
     fields: [
       { key: "adRewardCoins", label: "Koin per iklan", hint: "koin, dibayar setelah iklan rewarded selesai", step: "1" },
       { key: "adRewardDailyCap", label: "Iklan per hari", hint: "per pemain; 0 mematikan tombolnya", step: "1" },

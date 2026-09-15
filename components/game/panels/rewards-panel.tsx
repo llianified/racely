@@ -80,7 +80,7 @@ export function RewardsPanel({
   onClaimDailyMission: (day: string, kind: DailyMissionKind) => void;
   onClaimAll: () => void;
   onWatchAd: () => void;
-  /** Block Adsgram terkonfigurasi di build ini; tanpa itu barisnya disembunyikan. */
+  /** Zona rewarded terkonfigurasi; tanpa itu barisnya disembunyikan. */
   adAvailable?: boolean;
   /** Iklan sedang diputar; tombolnya menampilkan spinner. */
   adBusy?: boolean;

@@ -3,8 +3,8 @@
 **Scope:** read-only inspection of `racely-main` (Next.js 16 Telegram Mini App, Neon Postgres, EC2 + PM2).
 **Question answered:** which capabilities must exist before V1 launch, which should follow soon after real users arrive, and which are later/experimental.
 **Not in scope:** code quality, UI redesign, visual hierarchy. The current UX hierarchy and design tokens are treated as the source of truth.
-**Implementation update:** 16 September 2026 — visibilitas ajakan yang masih menunggu syarat, notifikasi payout ke inviter, salinan ajakan personal, event tracking pertumbuhan, dan notifikasi status penarikan sudah dirilis.
-**Owner decisions:** launch segera setelah final check lolos dan bekukan scope V1; operator withdrawal siap dengan SLA 3–5 hari kerja; ekonomi awal sudah disetujui; environment production dan setup bot production sudah dikonfirmasi beres. SLA wajib tampil di Wallet dan FAQ sebelum launch.
+**Implementation update:** 16 September 2026 — visibilitas ajakan yang masih menunggu syarat, notifikasi payout ke inviter, salinan ajakan personal, event tracking pertumbuhan, notifikasi status penarikan, SLA penarikan di Wallet/FAQ, dan migrasi rewarded interstitial ke Monetag sudah dirilis.
+**Owner decisions:** final check sudah lolos dan scope V1 dibekukan; operator withdrawal siap dengan SLA 3–5 hari kerja; ekonomi awal sudah disetujui; environment production dan setup bot production sudah dikonfirmasi beres.
 
 Legend: `[DONE]` clearly exists and is usable · `[PARTIAL]` exists but incomplete · `[MISSING]` not meaningfully available · `[UNCERTAIN]` cannot verify from code alone.
 Blocker classes: **A** = true launch blocker · **B** = growth feature, post-launch · **C** = nice-to-have polish.
@@ -19,13 +19,13 @@ Blocker classes: **A** = true launch blocker · **B** = growth feature, post-lau
 | Progression / basic economy | `[DONE]` | A — satisfied | Engine/tires/battery upgrades Lv 1–10 with geometric cost growth; lap time and lap reward derive from levels + circuit (`lib/economy-config.ts`). All numbers are DB-backed and tunable from `/admin` → Ekonomi without deploy (`lib/economy-store.ts`, 30s cache). Offline earnings capped at 4h @ 50% rate with a welcome-back dialog. |
 | Onboarding | `[DONE]` | A — satisfied | Two-step car + colour selection with 3D preview (`car/car-selection.tsx`, `carSelection.model === null` gate), then a starter-bonus bottom sheet that pushes the player to the garage (`shell/starter-bonus-dialog.tsx`). Referral binding happens on first sync via `start_param` before the first lap (`bindReferrer`). Bot `/start` replies with a Mini App button (`lib/telegram-bot.ts`). |
 | Garage / setup | `[DONE]` | A — satisfied | Garage tab: car switch sheet, colour picker, paint collection (tiered, coin-priced), aero body-parts shop with slots, upgrade panel with before/after lap-time preview, and a free gear/roller setup panel that really affects lap time (`lib/car-setup.ts`, `SetupPanel`). |
-| Reward / claim flow | `[DONE]` | A — satisfied | Rewards tab (`panels/rewards-panel.tsx`): race pending → claim, 7-rung daily check-in streak, one-time starter gift, three lifetime missions, two daily missions (laps/earn, reset at WIB midnight), rewarded-ad bonus (Adsgram, 5/day cap), and a "claim all" action. Every claim is idempotent via `racely_reward_claims (user_id, reward_key)` unique index. |
+| Reward / claim flow | `[DONE]` | A — satisfied | Rewards tab (`panels/rewards-panel.tsx`): race pending → claim, 7-rung daily check-in streak, one-time starter gift, three lifetime missions, two daily missions (laps/earn, reset at WIB midnight), rewarded-ad bonus (Monetag zone `11811175`, 5/day cap), and a "claim all" action. Every claim is idempotent via `racely_reward_claims (user_id, reward_key)` unique index. |
 | Referral (if acquisition loop) | `[DONE]` | A — satisfied | Full loop present: server-built `t.me/<bot>?start=ref_<id>` link, Telegram native share sheet with copy fallback (`shareReferralLink`), bot reply for referred `/start` with `startapp` deep link, binding before first lap, qualification = check-in on N distinct days **and** N total upgrades (`referralActivityQualified`), inviter 10k / invitee 5k coins paid straight to balance, plus 5 non-monetary exclusive milestones at 1/3/5/10/25 friends (`lib/referral-rewards.ts`). Referral leaderboard metric exists. |
 | Persistence | `[DONE]` | A — satisfied | Neon Postgres via Drizzle; 19 additive idempotent migrations; per-player row with `version` + `SELECT … FOR UPDATE`; action receipts give per-request idempotency; rejected withdrawals refunded exactly once. DB tests run against real Postgres in CI. |
 | Deployment | `[DONE]` | A — satisfied | README states live at `https://racely.fun`. `.github/workflows/deploy.yml` SSHes into EC2 and runs `scripts/deploy-racely.sh` (install → migrate → verify schema → build with env → PM2 restart). `/api/health` returns 503 when DB is unreachable. `vercel.json` disables Vercel auto-deploys on purpose. |
 | Critical bug / security | `[DONE]` | A — satisfied | Production requires Telegram `initData` HMAC + expiry; preview bypass only when `NODE_ENV !== production`. Per-player token-bucket rate limits on state + action routes, stricter per-IP bucket on admin login. Body size limits (`readJsonBody`). CSP, HSTS, nosniff, Referrer-Policy, Permissions-Policy in `next.config.mjs`; admin adds `frame-ancestors 'none'`. Admin password ≥16 chars, all admin routes `guardAdmin()`, every money decision audited. 41 Vitest suites, CI gates typecheck → lint → migrate → test → build. Withdrawal is a manual queue by design (cannot auto-pay). |
 | UI ambiguity that could confuse users | `[DONE]` | C — satisfied | A consolidated help/FAQ dialog explains how racing, rivals, offline, circuits and referrals work; server error messages are surfaced verbatim in toasts; the setup panel shows lap-time deltas; and the referral panel spells out the four steps plus the exact qualification rule. The panel now also shows both *completed* friends and friends who are still *menunggu syarat*, using the existing `referral.invited` payload. |
-| Wallet / withdrawal (implied by "reward flow" for a cash-out game) | `[DONE]` | A — satisfied | Wallet tab: balance, min/max, quick amounts derived from config, 8 payout methods with per-method account validation, history with status labels. Admin queue `pending → processing → paid | rejected` with copy-account button, liabilities view, audit trail. |
+| Wallet / withdrawal (implied by "reward flow" for a cash-out game) | `[DONE]` | A — satisfied | Wallet tab: balance, min/max, quick amounts derived from config, 8 payout methods with per-method account validation, history with status labels, and the approved 3–5-business-day SLA in both the withdrawal sheet and FAQ. Admin queue `pending → processing → paid | rejected` with copy-account button, liabilities view, audit trail. |
 | Return / re-engagement mechanic | `[PARTIAL]` | B | Exists: idle notifier sweep every 5 min sends **one** Telegram message 30 min before the 4h offline cap fills; inviter payout triggers a personal message with a re-share action; and terminal withdrawal changes (`paid` / `rejected`) trigger an exact-amount status message. All only target players who opened the bot chat. Missing: no notification for streak-at-risk or daily missions unclaimed. |
 | Product analytics / growth measurement | `[DONE]` | B — satisfied | `racely_game_events` records idempotent growth events for app opens, onboarding, first claim, D1/D7 return, referral open/bind/qualify/share/payout, completed ads, and withdrawal requests. `racely_referral_funnel_daily` exposes daily WIB referral counts; an admin analytics UI remains optional. |
 
@@ -112,9 +112,9 @@ Everything else in the growth roadmap builds on a loop that is already whole.
 ## 4. FINAL LAUNCH CHECKLIST
 
 ### MUST HAVE BEFORE LAUNCH
-- [x] Production env is complete at build time: `PUBLIC_APP_URL`, `NEXT_PUBLIC_ADSGRAM_BLOCK_ID`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `DATABASE_URL`, `RACELY_ADMIN_PASSWORD` — owner-confirmed 16 September 2026.
+- [x] Production env is complete at build time: `PUBLIC_APP_URL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `DATABASE_URL`, `RACELY_ADMIN_PASSWORD` — owner-confirmed 16 September 2026. Monetag zone `11811175` is configured in the client loader and needs no public env variable.
 - [x] `pnpm run bot:setup` has been run against the production bot so `/start`, `/play` and the webhook are registered — owner-confirmed 16 September 2026.
-- [ ] Communicate the owner-approved withdrawal SLA of **3–5 hari kerja** in both the Wallet withdrawal sheet and the FAQ. The operator is confirmed ready; only the player-facing copy remains.
+- [x] The owner-approved withdrawal SLA of **3–5 hari kerja** is shown in both the Wallet withdrawal sheet and the FAQ — shipped 16 September 2026.
 - [x] Economy config row in `racely_economy_config` has been reviewed against the liability projection in `/admin` → Ekonomi — owner-approved 16 September 2026.
 
 ### ALREADY DONE
@@ -148,16 +148,11 @@ Everything else in the growth roadmap builds on a loop that is already whole.
 
 ## 5. BOTTOM LINE
 
-**Racely is one player-facing copy change away from launch-ready.**
+**Racely is launch-ready with the V1 scope frozen.**
 
-Every product and operational requirement on the pre-launch "wajib" list — core loop, economy, onboarding, garage/setup, reward/claim, referral, persistence, deployment, security, production env, bot setup, withdrawal operator, and economy approval — is present or confirmed. One launch-blocking code/content change remains: replace the inaccurate one-day payout wording and expose the approved **3–5 hari kerja** SLA in both Wallet and FAQ.
+Every product and operational requirement on the pre-launch "wajib" list — core loop, economy, onboarding, garage/setup, reward/claim, referral, persistence, deployment, security, production env, bot setup, withdrawal operator, economy approval, and the player-facing **3–5 hari kerja** SLA — is present or confirmed. The Wallet sheet and FAQ were verified in the preview; no launch-blocking code or content remains.
 
-**Remaining code before launch:**
-1. Update `components/game/panels/wallet-panel.tsx`: replace “biasanya dalam sehari” with the approved 3–5-business-day SLA.
-2. Update `components/game/shell/game-dialog.tsx`: add the same SLA to the withdrawal FAQ answer.
-3. Verify both player-facing surfaces, then mark the final checklist item complete. No backend, database, payout automation, or economy change is required.
-
-After that final check passes, launch immediately with the V1 scope frozen. Do not add post-launch roadmap features first.
+Launch with the current V1 scope. Do not add post-launch roadmap features first.
 
 **Freeze now:**
 - Game rules, economy formulas, and qualification rule shape (tune numbers only via `/admin`).

@@ -74,7 +74,7 @@ function faqItems(game: GameState): { icon: typeof Flag; question: string; answe
     {
       icon: Wallet,
       question: "Bagaimana saldo dan penarikan bekerja?",
-      answer: `Koin dari balapan masuk ke "belum diklaim" dulu. Setiap 1 koin penuh bisa kamu klaim ke saldo. Saldo bisa ditarik ke e-wallet atau rekening bank saat mencapai ${coins(economy.minWithdrawCoins)} (${idr(economy.minWithdrawCoins, economy)}), dengan kurs ${coinRate(economy)}. Penarikan diproses manual oleh admin.`,
+      answer: `Koin dari balapan masuk ke "belum diklaim" dulu. Setiap 1 koin penuh bisa kamu klaim ke saldo. Saldo bisa ditarik ke e-wallet atau rekening bank saat mencapai ${coins(economy.minWithdrawCoins)} (${idr(economy.minWithdrawCoins, economy)}), dengan kurs ${coinRate(economy)}. Penarikan diproses manual oleh tim Racely dalam 3–5 hari kerja.`,
     },
     {
       icon: CalendarCheck,

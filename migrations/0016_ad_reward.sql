@@ -1,4 +1,4 @@
--- Bonus iklan rewarded (Adsgram): aksi baru 'watch-ad'. Setiap tontonan yang
+-- Bonus rewarded interstitial: aksi baru 'watch-ad'. Setiap tontonan yang
 -- dibayar menjadi satu baris racely_reward_claims dengan kunci
 -- 'ad:<YYYY-MM-DD>:<n>', jadi tidak ada kolom baru -- hanya daftar action_type
 -- yang boleh dicatat di tanda terima yang bertambah. Tanpa baris ini setiap
