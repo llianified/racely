@@ -8,7 +8,7 @@ import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { ArrowLeft, ArrowRight, Check, Flag, LoaderCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CAR_CATALOG, CAR_MODEL_IDS, isCarColor, type CarColor, type CarModelId } from "@/lib/car-catalog";
+import { CAR_CATALOG, STARTER_CAR_IDS, isCarColor, type CarColor, type CarModelId } from "@/lib/car-catalog";
 import { CarColorPicker } from "./car-color-picker";
 import { BootScreen } from "../shell/boot-screen";
 
@@ -102,7 +102,8 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
               ? "Koin, upgrade, dan progresmu tetap aman. Model hanya dipilih sekali."
               // Jumlahnya dari katalog: menambah mobil (lihat rute di AGENTS.md)
               // tidak boleh meninggalkan kalimat yang menyebut jumlah lama.
-              : `${CAR_MODEL_IDS.length} karakter. Satu pilihan. Mana jagoanmu? Model hanya dipilih sekali.${developmentPreview ? " Progres preview disimpan di browser ini." : ""}`
+              // Mobil hadiah ajakan tidak dihitung -- ia tidak tampil di sini.
+              : `${STARTER_CAR_IDS.length} karakter. Satu pilihan. Mana jagoanmu? Model hanya dipilih sekali.${developmentPreview ? " Progres preview disimpan di browser ini." : ""}`
             : "Sentuhan terakhir sebelum turun ke lintasan. Model tetap, warna bisa diganti."}</p>
         </div>
       </header>
@@ -129,14 +130,14 @@ export function CarSelection({ developmentPreview, returningPlayer, initialColor
             value={[model]}
             disabled={busy}
             onValueChange={(values) => {
-              const next = CAR_MODEL_IDS.find((id) => id === values[0]);
+              const next = STARTER_CAR_IDS.find((id) => id === values[0]);
               if (!next || next === model) return;
               setModel(next);
               setColor(CAR_CATALOG[next].defaultColor);
               setFailed(false);
             }}
           >
-            {CAR_MODEL_IDS.map((id) => (
+            {STARTER_CAR_IDS.map((id) => (
               <Toggle key={id} value={id} className="car-model-option">
                 <span>{CAR_CATALOG[id].name}</span>
                 <Check className="selection-check size-(--icon-base)" aria-hidden="true" />
