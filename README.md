@@ -148,7 +148,10 @@ alasan ini.
 
 Rewarded interstitial memakai Monetag zone `11811175`. Loader
 `https://libtl.com/sdk.js` baru dimuat saat pemain menekan tombol **Tonton**;
-zone ini tidak membutuhkan environment variable publik.
+zone ini tidak membutuhkan environment variable publik. CSP app pemain tetap
+mematok `script-src` ke host loader tersebut, tetapi `connect-src` menerima
+HTTPS karena endpoint jaringan dan kreatif Monetag memakai host dinamis. Policy
+`/admin` terpisah: koneksi hanya ke origin sendiri, tanpa host atau frame iklan.
 
 Jangan pernah menulis token, connection string, atau secret ke dalam repo, log,
 atau commit message.

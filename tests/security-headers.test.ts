@@ -42,6 +42,13 @@ const BASE_DIRECTIVES = [
   "form-action 'self'",
 ];
 
+function directiveFor(policy: string | null, name: string) {
+  return policy
+    ?.split(";")
+    .map((directive) => directive.trim())
+    .find((directive) => directive.startsWith(`${name} `));
+}
+
 describe("Content-Security-Policy", () => {
   it("memasang policy penuh di app pemain", async () => {
     const policy = await cspFor("/");
@@ -51,11 +58,25 @@ describe("Content-Security-Policy", () => {
     }
   });
 
+  it("mengizinkan endpoint HTTPS dinamis Monetag tanpa membuka semua script", async () => {
+    const policy = await cspFor("/");
+    const connectSrc = directiveFor(policy, "connect-src");
+    const scriptSrc = directiveFor(policy, "script-src");
+
+    expect(connectSrc?.split(/\s+/)).toContain("https:");
+    expect(scriptSrc).toContain("https://libtl.com");
+    expect(scriptSrc?.split(/\s+/)).not.toContain("https:");
+  });
+
   it.each(["/admin", "/admin/", "/admin/apa-saja"])(
-    "menahan %s dari iframe TANPA kehilangan policy dasarnya",
+    "mengisolasi %s dari iframe dan jaringan iklan tanpa kehilangan policy dasar",
     async (pathname) => {
       const policy = await cspFor(pathname);
       expect(policy).toContain("frame-ancestors 'none'");
+      expect(directiveFor(policy, "frame-src")).toBe("frame-src 'none'");
+      expect(directiveFor(policy, "connect-src")).toBe("connect-src 'self'");
+      expect(policy).not.toContain("libtl.com");
+      expect(policy).not.toContain("mc.yandex.ru");
       // Inti regresinya: dulu baris-baris ini hilang di /admin.
       for (const directive of BASE_DIRECTIVES) {
         expect(policy).toContain(directive);
