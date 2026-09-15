@@ -9,7 +9,6 @@ import { dailyMissionClaimable, type DailyMissionKind } from "@/lib/daily-missio
 import { SectionCardHeading } from "../shell/section-card-heading";
 import { StatHero } from "../shell/stat-hero";
 import {
-  coins,
   missions,
   missionValue,
   type GameState,
@@ -18,11 +17,10 @@ import {
 
 type RowState = RewardRowState;
 
-type RewardRow = {
+type RewardItem = {
   id: string;
   icon: typeof Gift;
   label: string;
-  note: string;
   amount: number;
   state: RowState;
   onClaim: () => void;
@@ -38,7 +36,6 @@ type MissionRow = {
   id: MissionId;
   icon: typeof Gift;
   label: string;
-  note: string;
   amount: number;
   state: RowState;
   value: number;
@@ -62,20 +59,6 @@ export function claimableTotal(game: GameState) {
   );
 }
 
-/** Panjang tangga hadiah ikut config, jadi kalimatnya tidak boleh menyebut 7 sendiri. */
-function dailyNote(daily: GameState["daily"], economy: GameState["economy"]) {
-  if (daily.claimedToday)
-    return daily.streak > 1
-      ? `Streak ${daily.streak} hari. Balik besok untuk ${coins(daily.nextReward)}.`
-      : `Sudah diklaim hari ini. Besok ${coins(daily.nextReward)}.`;
-  if (daily.streak > 0)
-    return `Streak ${daily.streak} hari. Klaim lagi supaya tidak putus.`;
-  const rungs = economy.dailyRewards.length;
-  return rungs > 1
-    ? `Klaim tiap hari; hadiahnya naik sampai hari ke-${rungs}.`
-    : "Klaim tiap hari untuk tambahan koin.";
-}
-
 export function RewardsPanel({
   game,
   onClaimRace,
@@ -96,15 +79,11 @@ export function RewardsPanel({
   disabled?: boolean;
 }) {
   const total = claimableTotal(game);
-  const rewards: RewardRow[] = [
+  const rewards: RewardItem[] = [
     {
       id: "race",
       icon: Flag,
       label: "Hasil balapan",
-      note:
-        game.pending >= 1
-          ? "Koin dari putaran yang sudah selesai."
-          : `Terkumpul ${coins(game.pending)} · butuh 1 koin penuh.`,
       amount: Math.floor(game.pending),
       state: game.pending >= 1 ? "ready" : "waiting",
       onClaim: onClaimRace,
@@ -113,7 +92,6 @@ export function RewardsPanel({
       id: "daily",
       icon: CalendarCheck,
       label: "Check-in harian",
-      note: dailyNote(game.daily, game.economy),
       amount: game.daily.claimedToday ? game.daily.nextReward : game.daily.reward,
       state: game.daily.claimedToday ? "claimed" : "ready",
       onClaim: onClaimDaily,
@@ -122,9 +100,6 @@ export function RewardsPanel({
       id: "gift",
       icon: Gift,
       label: "Bonus starter",
-      note: game.rewardClaimed
-        ? "Bonus sudah masuk ke saldo kamu."
-        : "Hadiah pertamamu, langsung masuk saldo.",
       amount: game.economy.starterGift,
       state: game.rewardClaimed ? "claimed" : "ready",
       onClaim: onClaimGift,
@@ -137,7 +112,6 @@ export function RewardsPanel({
       id: mission.id,
       icon: MISSION_ICONS[mission.id],
       label: mission.title,
-      note: mission.description,
       amount: mission.reward,
       state: claimed ? "claimed" : value >= mission.target ? "ready" : "waiting",
       value: claimed ? mission.target : value,
@@ -190,7 +164,6 @@ export function RewardsPanel({
               id={row.id === "gift" ? "starter-gift" : `reward-${row.id}`}
               icon={row.icon}
               label={row.label}
-              note={row.note}
               amount={row.amount}
               state={row.state}
               disabled={disabled}
@@ -224,7 +197,6 @@ export function RewardsPanel({
               id={`reward-${row.id}`}
               icon={row.icon}
               label={row.label}
-              note={row.note}
               amount={row.amount}
               state={row.state}
               progress={{ value: row.value, target: row.target }}
