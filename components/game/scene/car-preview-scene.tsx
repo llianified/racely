@@ -18,6 +18,7 @@ type CarPreviewProps = {
   levels?: GameState['levels']
   equipped?: NonNullable<GameState['bodyParts']>['equipped']
   inspect?: boolean
+  interactive?: boolean
   active?: boolean
   /**
    * Kalimat kedua pada plakat "Preview dijeda". Panggung yang sama dijeda oleh
@@ -43,14 +44,14 @@ const FIT_MARGIN = 1.08
 /** Dipakai sampai pengukuran pertama selesai; seukuran bodi standar. */
 const FALLBACK_RADIUS = .8
 
-function PreviewCamera({ radius }: { radius: number }) {
+function PreviewCamera({ radius, interactive }: { radius: number; interactive: boolean }) {
   const size = useThree(state => state.size)
   // Jari-jari bola pembatas bersifat sama ke segala arah, jadi zoom yang muat
   // untuk satu sudut orbit muat untuk semuanya -- tidak ada lagi sudut yang
   // memotong ban depan atau sayap belakang di tepi bingkai.
   return <>
-    <OrthographicCamera makeDefault position={[1.6, 1.1, 1.9]} zoom={Math.min(size.width, size.height) / (radius * 2 * FIT_MARGIN)} near={.1} far={40} />
-    <OrbitControls makeDefault enablePan={false} enableZoom={false} enableDamping={false} minPolarAngle={.15} maxPolarAngle={Math.PI / 2.1} />
+    <OrthographicCamera makeDefault position={[1.6, 1.1, 1.9]} zoom={Math.min(size.width, size.height) / (radius * 2 * FIT_MARGIN)} near={.1} far={40} onUpdate={camera => { if (!interactive) camera.lookAt(0, 0, 0) }} />
+    {interactive && <OrbitControls makeDefault enablePan={false} enableZoom={false} enableDamping={false} minPolarAngle={.15} maxPolarAngle={Math.PI / 2.1} />}
   </>
 }
 
@@ -60,7 +61,7 @@ function PreviewCamera({ radius }: { radius: number }) {
  * terpasang, jadi angka mati tidak pernah cocok untuk semua kombinasi --
  * apalagi ketika pemain memutarnya.
  */
-function FittedCar(props: CarPreviewProps) {
+export function FittedCar(props: CarPreviewProps) {
   const car = useRef<Group>(null)
   const [radius, setRadius] = useState(FALLBACK_RADIUS)
   const invalidate = useThree(state => state.invalidate)
@@ -82,7 +83,7 @@ function FittedCar(props: CarPreviewProps) {
   }, [model, shape, inspect, invalidate])
 
   return <>
-    <PreviewCamera radius={radius} />
+    <PreviewCamera radius={radius} interactive={props.interactive ?? true} />
     <group ref={car}><PreviewCar {...props} /></group>
   </>
 }

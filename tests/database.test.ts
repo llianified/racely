@@ -142,7 +142,7 @@ describeDatabase("Neon Postgres persistence", () => {
 
   it("ranks settled laps with ties, a private self rank beyond Top 50, and no preview racers", async () => {
     const { pool } = await import("@/lib/db");
-    const { getLeaderboard } = await import("@/lib/leaderboard-server");
+    const { getLeaderboard, getReferralLeaderboard } = await import("@/lib/leaderboard-server");
     const client = await pool!.connect();
     try {
       await client.query("BEGIN");
@@ -150,17 +150,32 @@ describeDatabase("Neon Postgres persistence", () => {
       // leaderboard, even when this suite runs alongside a development server.
       await client.query(`CREATE TEMPORARY TABLE racely_players (
         user_id text PRIMARY KEY, display_name text NOT NULL,
-        laps integer NOT NULL, created_at timestamptz NOT NULL
+        laps integer NOT NULL, created_at timestamptz NOT NULL,
+        car_model text DEFAULT 'neo-falcon', color text DEFAULT '#4275ff',
+        engine_level integer DEFAULT 1, tires_level integer DEFAULT 1, battery_level integer DEFAULT 1,
+        setup jsonb DEFAULT '{"gear":"4:1","roller":"standard"}',
+        body_parts jsonb DEFAULT '{"owned":[],"equipped":{}}',
+        referred_by text, referral_paid_at timestamptz
       ) ON COMMIT DROP`);
       expect(await getLeaderboard("999", client)).toMatchObject({ entries: [], currentPlayer: null, totalPlayers: 0, nextRival: null });
-      await client.query(`INSERT INTO racely_players VALUES
+      await client.query(`INSERT INTO racely_players (user_id, display_name, laps, created_at) VALUES
         ('10', 'First', 1000, '2026-01-01'),
         ('20', 'Tied', 1000, '2026-01-02'),
         ('30', 'Chaser', 900, '2026-01-03'),
         ('40', 'No laps', 0, '2026-01-01'),
         ('preview:fake', 'Preview', 9999, '2026-01-01'),
         ('test:fake', 'Test', 9999, '2026-01-01')`);
+      await client.query(`UPDATE racely_players SET car_model = 'luna-gt', color = '#ff3366',
+        engine_level = 8, tires_level = 5, battery_level = 3,
+        setup = '{"gear":"5:1","roller":"heavy"}',
+        body_parts = '{"owned":["gt-wing","ram-hood"],"equipped":{"spoiler":"gt-wing"}}'
+        WHERE user_id = '20'`);
+      const appearance = { color: "#ff3366", levels: { engine: 8, tires: 5, battery: 3 }, roller: "heavy", equipped: { spoiler: "gt-wing" } };
       const tied = await getLeaderboard("20", client);
+      expect(tied.entries[1]).toMatchObject({ carModel: "luna-gt", carAppearance: appearance });
+      expect(tied.currentPlayer?.carAppearance).toEqual(appearance);
+      expect(tied.entries[0].carAppearance?.color).toBe("#4275ff");
+      expect(JSON.stringify(tied)).not.toMatch(/owned|ram-hood/);
       expect(tied.entries.map(({ rank, name, isCurrentPlayer }) => ({ rank, name, isCurrentPlayer }))).toEqual([
         { rank: 1, name: "First", isCurrentPlayer: false },
         { rank: 1, name: "Tied", isCurrentPlayer: true },
@@ -175,17 +190,22 @@ describeDatabase("Neon Postgres persistence", () => {
       expect((await getLeaderboard("preview:fake", client)).currentPlayer).toBeNull();
       expect((await getLeaderboard("30", client)).nextRival).toEqual({ name: "First", score: 1000, laps: 1000 });
 
-      await client.query(`INSERT INTO racely_players
+      await client.query(`INSERT INTO racely_players (user_id, display_name, laps, created_at)
         SELECT (100 + n)::text, 'Racer ' || n, 800 - n, '2026-02-01'::timestamptz
         FROM generate_series(1, 60) n`);
       const outside = await getLeaderboard("160", client);
       expect(outside.entries).toHaveLength(50);
       expect(outside.entries.some((entry) => entry.isCurrentPlayer)).toBe(false);
-      expect(outside.currentPlayer).toEqual({ rank: 63, name: "Racer 60", score: 740, laps: 740, isCurrentPlayer: true });
+      expect(outside.currentPlayer).toMatchObject({ rank: 63, name: "Racer 60", score: 740, laps: 740, isCurrentPlayer: true });
       expect(outside.nextRival).toEqual({ name: "Racer 59", score: 741, laps: 741 });
       expect(outside.totalPlayers).toBe(63);
       expect(JSON.stringify(outside)).not.toMatch(/user_id|userId|created_at|balance|username|photo/);
       expect((await getLeaderboard("'; DROP TABLE racely_players; --", client)).currentPlayer).toBeNull();
+      await client.query(`UPDATE racely_players SET referred_by = '20', referral_paid_at = NOW() WHERE user_id IN ('30', '40')`);
+      const referrals = await getReferralLeaderboard("20", client);
+      expect(referrals.entries[0]).toMatchObject({ rank: 1, score: 2, carModel: "luna-gt", carAppearance: appearance });
+      expect(referrals.currentPlayer?.carAppearance).toEqual(appearance);
+      expect(JSON.stringify(referrals)).not.toMatch(/owned|ram-hood|user_id|balance/);
     } finally {
       await client.query("ROLLBACK");
       client.release();

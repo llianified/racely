@@ -8,6 +8,18 @@ import {
   type LeaderboardMetric,
 } from "@/lib/leaderboard";
 
+// Read appearance only after ranking, without carrying JSON through the sort.
+const carAppearanceQuery = `(SELECT jsonb_build_object(
+  'color', appearance.color,
+  'levels', jsonb_build_object(
+    'engine', appearance.engine_level,
+    'tires', appearance.tires_level,
+    'battery', appearance.battery_level
+  ),
+  'roller', appearance.setup->>'roller',
+  'equipped', appearance.body_parts->'equipped'
+) FROM racely_players appearance WHERE appearance.user_id = ranked.user_id)`;
+
 // LIMIT precedes the window: only the leaders need sorting for rank. The
 // requesting player's rank and nearest higher score use the same SQL snapshot.
 const leaderboardQuery = `
@@ -35,14 +47,16 @@ const leaderboardQuery = `
     COALESCE((
       SELECT jsonb_agg(jsonb_build_object(
         'rank', place, 'name', display_name, 'score', score, 'laps', score,
+        'carAppearance', ${carAppearanceQuery},
         'carModel', car_model, 'isCurrentPlayer', user_id = $1
       ) ORDER BY score DESC, created_at ASC, user_id ASC)
-      FROM ranked_leaders
+      FROM ranked_leaders ranked
     ), '[]'::jsonb) AS entries,
     (SELECT jsonb_build_object(
       'rank', place, 'name', display_name, 'score', score, 'laps', score,
-      'carModel', car_model, 'isCurrentPlayer', true
-    ) FROM mine) AS current_player,
+      'carAppearance', ${carAppearanceQuery},
+        'carModel', car_model, 'isCurrentPlayer', true
+    ) FROM mine ranked) AS current_player,
     (SELECT jsonb_build_object(
       'name', display_name, 'score', score, 'laps', score
     ) FROM rival) AS next_rival,
@@ -84,14 +98,16 @@ const referralLeaderboardQuery = `
     COALESCE((
       SELECT jsonb_agg(jsonb_build_object(
         'rank', place, 'name', display_name, 'score', score,
+        'carAppearance', ${carAppearanceQuery},
         'carModel', car_model, 'isCurrentPlayer', user_id = $1
       ) ORDER BY score DESC, created_at ASC, user_id ASC)
-      FROM ranked_leaders
+      FROM ranked_leaders ranked
     ), '[]'::jsonb) AS entries,
     (SELECT jsonb_build_object(
       'rank', place, 'name', display_name, 'score', score,
-      'carModel', car_model, 'isCurrentPlayer', true
-    ) FROM mine) AS current_player,
+      'carAppearance', ${carAppearanceQuery},
+        'carModel', car_model, 'isCurrentPlayer', true
+    ) FROM mine ranked) AS current_player,
     (SELECT jsonb_build_object('name', display_name, 'score', score) FROM rival) AS next_rival,
     (SELECT COUNT(*)::integer FROM eligible) AS total_players,
     statement_timestamp() AS updated_at

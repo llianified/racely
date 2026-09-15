@@ -103,6 +103,7 @@
      Angka yang memang berdiri sendiri: tinggi panggung 3D, lebar logo, lebar
      kolom aksi. Bukan bagian tangga ukuran karena tidak berulang dan tidak
      ikut naik-turun bersama spacing -- tapi tetap satu tempat untuk disetel. */
+  --stage-podium-h: 96px;
   --stage-garage-h: 150px;
   --stage-parts-fluid-h: 24svh;
   --parts-choice-w: 144px;
@@ -270,6 +271,8 @@
 .leaderboard-challenge > p strong { color: var(--foreground); }
 .leaderboard-podium-section { display: flex; flex-direction: column; gap: var(--space-sm); }
 .leaderboard-podium-heading { padding-inline: var(--space-xs); }
+.leaderboard-podium-car { display: flex; align-items: center; justify-content: center; width: 100%; height: var(--stage-podium-h); flex-shrink: 0; }
+.leaderboard-podium-canvas { position: fixed; inset: 0; pointer-events: none; z-index: var(--z-base); }
 .leaderboard-podium { display: flex; align-items: stretch; gap: var(--space-sm); margin: 0; padding: 0; list-style: none; }
 .leaderboard-podium > li { display: flex; flex: 1 1 0; flex-direction: column; align-items: center; gap: var(--space-6); min-width: 0; padding: var(--space-sm); border: var(--stroke) solid var(--border); border-radius: var(--corner-box); background: var(--card); text-align: center; overflow: hidden; }
 .leaderboard-podium > li:first-child { order: 1; border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); background: color-mix(in srgb, var(--accent) 8%, var(--card)); box-shadow: inset 0 var(--space-3) 0 var(--accent); }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import useSWR from "swr";
 import {
   ArrowRight,
@@ -21,10 +22,13 @@ import {
   LEADERBOARD_LIMIT,
   LEADERBOARD_REFRESH_MS,
   scoreToOvertake,
+  leaderboardCar,
   type Leaderboard,
   type LeaderboardMetric,
 } from "@/lib/leaderboard";
 import { GameRequestError, isSessionExpired, requestHeaders, type GameKey } from "../game-client";
+
+const PodiumScene = dynamic(() => import("../scene/leaderboard-podium-scene"), { ssr: false });
 
 const number = (value: number) => value.toLocaleString("id-ID");
 
@@ -217,6 +221,15 @@ function RacerInitial({ name }: { name: string }) {
 }
 
 function Podium({ data }: { data: Leaderboard }) {
+  const first = useRef<HTMLDivElement>(null);
+  const second = useRef<HTMLDivElement>(null);
+  const third = useRef<HTMLDivElement>(null);
+  const tracks = [first, second, third];
+  const cars = data.entries.slice(0, 3).map(leaderboardCar);
+  const [ready, setReady] = useState(false);
+  const [unavailable, setUnavailable] = useState(false);
+  const onReady = useCallback(() => setReady(true), []);
+  const onUnavailable = useCallback(() => { setReady(false); setUnavailable(true); }, []);
   const copy = metricCopy[data.metric];
   return (
     <section className="leaderboard-podium-section" aria-labelledby="podium-title">
@@ -234,7 +247,14 @@ function Podium({ data }: { data: Leaderboard }) {
               <span>#{number(entry.rank)}</span>
               {index === 0 ? <Crown /> : <Medal />}
             </div>
-            <RacerInitial name={entry.name} />
+            <div
+              ref={tracks[index]}
+              className="leaderboard-podium-car"
+              role="img"
+              aria-label={cars[index] ? `${CAR_CATALOG[cars[index].model].name} milik ${entry.name}, warna ${cars[index].color}, sesuai setup terpasang${unavailable ? ". Preview 3D tidak tersedia" : ""}` : `Pembalap ${entry.name}`}
+            >
+              {(!ready || !cars[index] || unavailable) && <RacerInitial name={entry.name} />}
+            </div>
             <strong className="leaderboard-podium-name" title={entry.name}><bdi>{entry.name}</bdi></strong>
             {entry.isCurrentPlayer && <Badge variant="secondary">Kamu</Badge>}
             <ExclusiveCarBadge entry={entry} />
@@ -242,6 +262,7 @@ function Podium({ data }: { data: Leaderboard }) {
           </li>
         ))}
       </ol>
+      {!unavailable && cars.some(Boolean) && <PodiumScene cars={cars} tracks={tracks} onReady={onReady} onUnavailable={onUnavailable} />}
     </section>
   );
 }
