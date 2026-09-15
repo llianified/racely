@@ -32,6 +32,9 @@
   --menu-header: #494078;
   --gold-highlight: #fff18b;
   --gold-shadow: #ba731b;
+  /* Alas 3D tombol non-emas: solid dan lebih gelap dari kartu supaya terlihat
+     di atas panel, bukan alpha tipis seperti --border. */
+  --press-shadow: #110f28;
   /* Satu sumber radius untuk seluruh permukaan kotak aplikasi. */
   --press-radius: .375rem;
   --radius: var(--press-radius);
@@ -769,7 +772,7 @@
 .inspect-hint { bottom: var(--space-56); left: var(--space-md); right: var(--space-md); font-size: var(--fs-read); line-height: var(--lh-normal); color: var(--muted-foreground); text-align: center; }
 
 /* ── keluarga tombol beralas: alas 3px statis, tidak ada gerak saat hover/tekan ── */
-.press-button { --press-depth: var(--space-3); --press-shadow-color: var(--border); border-radius: var(--press-radius); box-shadow: 0 var(--press-depth) 0 var(--press-shadow-color), var(--press-inset-shadow, 0 0 transparent); }
+.press-button { --press-depth: var(--space-3); --press-shadow-color: var(--press-shadow); border-radius: var(--press-radius); box-shadow: 0 var(--press-depth) 0 var(--press-shadow-color), var(--press-inset-shadow, 0 0 transparent); }
 
 /* ── tombol emas: warna khusus dalam keluarga tombol beralas ────────────── */
 .gold-button { --press-shadow-color: var(--gold-shadow); --press-inset-shadow: inset 0 var(--stroke) 0 var(--gold-highlight); background: linear-gradient(60deg, transparent 9%, color-mix(in srgb, var(--foreground) 19%, transparent) 9%, color-mix(in srgb, var(--foreground) 19%, transparent) 18%, transparent 18%), linear-gradient(110deg, var(--accent), var(--warning)); color: var(--accent-foreground); border: var(--stroke) solid var(--accent); border-top: var(--stroke-2) solid var(--gold-highlight); font-weight: var(--fw-heavier); letter-spacing: var(--track-snug-xs); }
@@ -781,8 +784,11 @@
 [data-slot='button'], .gold-button, .wallet-chip, .color-swatch { transition-property: transform, translate, box-shadow, filter; transition-duration: var(--dur-instant); }
 [data-slot='button']:disabled, .gold-button:disabled, .wallet-chip:disabled, .color-swatch:disabled { transition: none; transform: none; translate: none; }
 
-/* satu bahasa disabled untuk semua tombol: rata, solid, tanpa peredupan opacity */
-[data-slot='button']:disabled, .gold-button:disabled, .wallet-chip:disabled, .color-swatch:disabled { background: var(--secondary); color: var(--muted-foreground); border-color: var(--border); border-top-color: var(--border); box-shadow: none; opacity: 1; filter: none; cursor: not-allowed; }
+/* satu bahasa disabled untuk semua tombol: solid, tanpa peredupan opacity.
+   Alas 3D tetap ada (warna netral) supaya tinggi dan silhouette tidak berubah
+   saat tombol berpindah enabled ↔ disabled. */
+[data-slot='button']:disabled, .gold-button:disabled, .wallet-chip:disabled, .color-swatch:disabled { --press-shadow-color: var(--press-shadow); --press-inset-shadow: 0 0 transparent; background: var(--secondary); color: var(--muted-foreground); border-color: var(--border); border-top-color: var(--border); opacity: 1; filter: none; cursor: not-allowed; }
+.wallet-chip:disabled, .color-swatch:disabled { box-shadow: none; }
 [data-slot='button']:disabled svg, .wallet-chip:disabled svg { color: var(--muted-foreground); }
 /* varian kecil: alas lebih tipis biar proporsional */
 .press-button[data-size='sm']:not(:disabled), .press-button[data-size='xs']:not(:disabled), .press-button[data-size='icon-sm']:not(:disabled), .press-button[data-size='icon-xs']:not(:disabled) { --press-depth: var(--space-2); }
