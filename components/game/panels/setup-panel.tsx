@@ -82,23 +82,21 @@ function OptionRow({
             )}
           </p>
         </div>
-        {active ? (
-          <Badge variant="secondary" className="upgrade-buy">
-            <Check data-icon="inline-start" aria-hidden="true" />
-            Terpasang
-          </Badge>
-        ) : (
-          <Button
-            variant="secondary"
-            size="sm"
-            className="upgrade-buy"
-            disabled={disabled}
-            onClick={onPick}
-            aria-label={`Pasang ${name}, ${seconds(preview)} per putaran`}
-          >
-            Pasang
-          </Button>
-        )}
+        <Button
+          variant="secondary"
+          size="sm"
+          className="upgrade-buy"
+          disabled={active || disabled}
+          onClick={active ? undefined : onPick}
+          aria-label={
+            active
+              ? `${name} terpasang, ${seconds(preview)} per putaran`
+              : `Pasang ${name}, ${seconds(preview)} per putaran`
+          }
+        >
+          {active && <Check data-icon="inline-start" aria-hidden="true" />}
+          {active ? "Terpasang" : "Pasang"}
+        </Button>
       </div>
       <p className="setup-desc">{description}</p>
       {risky && (
