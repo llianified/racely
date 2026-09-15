@@ -9,8 +9,9 @@ const buttonVariants = cva(
     variants: {
       variant: {
         // Semua varian berisi (bukan ghost/link/menu) satu keluarga `press-button`:
-        // alas 3px yang sama, jadi tombol emas dan tombol biasa selalu sama tinggi
-        // dan satu silhouette. Emas hanya mengganti warnanya lewat `gold-button`.
+        // kotak datar tanpa hairline/alas di luar, jadi tombol emas dan tombol
+        // biasa selalu sama tinggi dan satu silhouette. Emas hanya menambah
+        // warna dan efek inset lewat `gold-button`.
         default: 'press-button bg-primary text-primary-foreground hover:bg-primary/85',
         gold: 'press-button gold-button',
         // Pasangan tonal dari `gold`, untuk aksi per-baris: emas tetap
