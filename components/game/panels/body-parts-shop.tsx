@@ -8,9 +8,10 @@ import { Check, Columns2, LoaderCircle, PanelBottom, PanelTop, RotateCcw, Shoppi
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { PART_CATALOG, PART_IDS, PART_SLOTS, SLOT_LABELS, type PartCommand, type PartId, type PartSlot } from "@/lib/car-parts";
+import { PART_CATALOG, PART_IDS, PART_SLOTS, SLOT_LABELS, isReferralPart, partReferralRequirement, type PartCommand, type PartId, type PartSlot } from "@/lib/car-parts";
 import { CAR_CATALOG } from "@/lib/car-catalog";
 import { coins, type GameState } from "@/lib/game";
+import { referralRewardUnlocked } from "@/lib/referral-rewards";
 import { cn } from "@/lib/utils";
 import { SectionCardHeading } from "../shell/section-card-heading";
 
@@ -50,6 +51,13 @@ function ShopContents({ game, disabled, onAction, initialPart, onPending }: Shop
   const model = game.carSelection?.model ?? "neo-falcon";
   const previewParts = trying ? { ...equipped, [part.slot]: selected } : equipped;
   const blocked = pending || disabled;
+  // Part hadiah ajakan tidak dijual: ambangnya dibaca dari referral.completed,
+  // dan "Pasang" pertama-lah yang memasukkannya ke koleksi (lihat lib/car-parts.ts).
+  const friends = game.referral.completed;
+  const exclusive = isReferralPart(selected);
+  const needed = exclusive ? partReferralRequirement(selected) ?? 0 : 0;
+  const unlocked = !exclusive || referralRewardUnlocked("part", selected, friends);
+  const obtainable = owned || (exclusive ? unlocked : shortfall === 0);
 
   const submit = async (action: PartCommand) => {
     if (lock.current || blocked) return;
@@ -97,11 +105,14 @@ function ShopContents({ game, disabled, onAction, initialPart, onPending }: Shop
             const item = PART_CATALOG[id];
             const has = game.bodyParts?.owned.includes(id);
             const fitted = equipped[item.slot] === id;
+            const gift = isReferralPart(id);
+            const giftOpen = gift && referralRewardUnlocked("part", id, friends);
             return <Toggle key={id} value={id} className="parts-shop-choice">
               <span className="parts-shop-choice-slot">{SLOT_LABELS[item.slot]}</span>
               <strong>{item.name}</strong>
               <span className="parts-shop-choice-state" data-fitted={fitted || undefined}>
-                {fitted && <Check aria-hidden="true" />}{fitted ? "Terpasang" : has ? "Dimiliki" : coins(item.price)}
+                {fitted && <Check aria-hidden="true" />}
+                {fitted ? "Terpasang" : has ? "Dimiliki" : gift ? (giftOpen ? "Hadiah terbuka" : `${partReferralRequirement(id)} teman`) : coins(item.price)}
               </span>
             </Toggle>;
           })}
@@ -114,13 +125,22 @@ function ShopContents({ game, disabled, onAction, initialPart, onPending }: Shop
             <div><dt>Kompatibel</dt><dd>{CAR_CATALOG[model].name}</dd></div>
           </dl>
           <dl className="parts-shop-pricing">
-            <div><dt>Saldo koin</dt><dd>{coins(game.balance)}</dd></div>
-            {!owned && <div><dt>{shortfall > 0 ? "Kekurangan" : "Saldo setelah beli"}</dt><dd>{coins(shortfall > 0 ? shortfall : game.balance - part.price)}</dd></div>}
+            {exclusive && !owned
+              ? <>
+                <div><dt>Ajakan tuntas</dt><dd>{friends} teman</dd></div>
+                <div><dt>{unlocked ? "Harga" : "Kekurangan"}</dt><dd>{unlocked ? "Gratis, hadiah ajakan" : `${needed - friends} teman`}</dd></div>
+              </>
+              : <>
+                <div><dt>Saldo koin</dt><dd>{coins(game.balance)}</dd></div>
+                {!owned && <div><dt>{shortfall > 0 ? "Kekurangan" : "Saldo setelah beli"}</dt><dd>{coins(shortfall > 0 ? shortfall : game.balance - part.price)}</dd></div>}
+              </>}
           </dl>
           <div className="parts-shop-note">
             <Wind aria-hidden="true" />
             <p>{!owned
-              ? shortfall > 0 ? "Klaim hasil balapan atau hadiah untuk menambah saldo." : "Kosmetik murni. Beli sekali, lalu lepas-pasang gratis dari koleksimu."
+              ? exclusive
+                ? unlocked ? "Hadiah ajak teman. Tidak dijual di toko; pasang sekali dan ia masuk koleksimu selamanya." : `Ajak ${needed} teman sampai tuntas untuk membuka part ini. Progresnya ada di tab Ajak teman.`
+                : shortfall > 0 ? "Klaim hasil balapan atau hadiah untuk menambah saldo." : "Kosmetik murni. Beli sekali, lalu lepas-pasang gratis dari koleksimu."
               : installed ? "Sedang aktif. Lepas untuk kembali ke setelan pabrik tanpa menghapus koleksi." : equipped[part.slot] ? `Akan menggantikan ${PART_CATALOG[equipped[part.slot]!].name}; part lama tetap dimiliki.` : "Siap dipasang tanpa biaya tambahan."}</p>
           </div>
           {error && <p role="alert">{error}</p>}
@@ -128,11 +148,22 @@ function ShopContents({ game, disabled, onAction, initialPart, onPending }: Shop
       </div>
     </div>
     <SheetFooter>
-      <Button variant={installed ? "outline" : "gold"} disabled={blocked || (!owned && shortfall > 0)} aria-busy={pending} onClick={() => void submit(!owned ? { type: "buy-part", partId: selected } : installed ? { type: "unequip-part", slot: part.slot } : { type: "equip-part", partId: selected })}>
-        {pending ? <LoaderCircle className="animate-spin" data-icon="inline-start" /> : !owned ? <ShoppingBag data-icon="inline-start" /> : installed ? <RotateCcw data-icon="inline-start" /> : <Wrench data-icon="inline-start" />}
-        {pending ? "Memproses…" : !owned ? `Beli ${part.name} · ${coins(part.price)}` : installed ? `Lepas ${part.name}` : `Pasang ${part.name} · Gratis`}
+      <Button
+        variant={installed ? "outline" : "gold"}
+        disabled={blocked || !obtainable}
+        aria-busy={pending}
+        onClick={() => void submit(!owned && !exclusive ? { type: "buy-part", partId: selected } : installed ? { type: "unequip-part", slot: part.slot } : { type: "equip-part", partId: selected })}
+      >
+        {pending ? <LoaderCircle className="animate-spin" data-icon="inline-start" /> : !owned && !exclusive ? <ShoppingBag data-icon="inline-start" /> : !owned && !unlocked ? <LockKeyhole data-icon="inline-start" /> : installed ? <RotateCcw data-icon="inline-start" /> : <Wrench data-icon="inline-start" />}
+        {pending
+          ? "Memproses…"
+          : !owned
+            ? exclusive
+              ? unlocked ? `Pasang ${part.name} · Hadiah` : `Ajak ${needed} teman`
+              : `Beli ${part.name} · ${coins(part.price)}`
+            : installed ? `Lepas ${part.name}` : `Pasang ${part.name} · Gratis`}
       </Button>
-      <span className="sheet-footnote" role="status">{owned ? "Milikmu selamanya · lepas-pasang gratis" : "Hanya tombol Beli yang memotong koin"}</span>
+      <span className="sheet-footnote" role="status">{owned ? "Milikmu selamanya · lepas-pasang gratis" : exclusive ? "Hadiah ajak teman · tidak dijual" : "Hanya tombol Beli yang memotong koin"}</span>
     </SheetFooter>
   </>;
 }
