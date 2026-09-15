@@ -6,7 +6,6 @@ import {
   ArrowRight,
   Crown,
   Flag,
-  Medal,
   RefreshCw,
   ShieldCheck,
   Trophy,
@@ -25,6 +24,7 @@ import {
   type LeaderboardMetric,
 } from "@/lib/leaderboard";
 import { GameRequestError, isSessionExpired, requestHeaders, type GameKey } from "../game-client";
+import { LeaderboardPodium } from "./leaderboard-podium";
 
 const number = (value: number) => value.toLocaleString("id-ID");
 
@@ -216,36 +216,6 @@ function RacerInitial({ name }: { name: string }) {
   return <span className="leaderboard-avatar" aria-hidden="true">{Array.from(name.trim())[0]?.toUpperCase() || "R"}</span>;
 }
 
-function Podium({ data }: { data: Leaderboard }) {
-  const copy = metricCopy[data.metric];
-  return (
-    <section className="leaderboard-podium-section" aria-labelledby="podium-title">
-      <div className="leaderboard-podium-heading">
-        <div>
-          <p className="eyebrow">Barisan terdepan</p>
-          <h2 id="podium-title">Podium</h2>
-        </div>
-        <Badge variant="outline">Top 3</Badge>
-      </div>
-      <ol className="leaderboard-podium" aria-label="Tiga pemain teratas">
-        {data.entries.slice(0, 3).map((entry, index) => (
-          <li key={`${entry.rank}-${entry.name}-${index}`} data-place={entry.rank}>
-            <div className="leaderboard-podium-mark" aria-hidden="true">
-              <span>#{number(entry.rank)}</span>
-              {index === 0 ? <Crown /> : <Medal />}
-            </div>
-            <RacerInitial name={entry.name} />
-            <strong className="leaderboard-podium-name" title={entry.name}><bdi>{entry.name}</bdi></strong>
-            {entry.isCurrentPlayer && <Badge variant="secondary">Kamu</Badge>}
-            <ExclusiveCarBadge entry={entry} />
-            <p><strong>{number(entry.score)}</strong><span>{copy.unit}</span></p>
-          </li>
-        ))}
-      </ol>
-    </section>
-  );
-}
-
 function PersonalRank({
   data,
   onAction,
@@ -434,7 +404,7 @@ export function LeaderboardPanel({
       {data && !expired && (
         <>
           <PersonalRank data={data} onAction={metric === "laps" ? onRace : onInvite} />
-          {data.entries.length >= 3 && <Podium data={data} />}
+          <LeaderboardPodium entries={data.entries} unit={copy.unit} />
           {data.entries.length > 0 ? <Rankings data={data} /> : (
             <section className="panel leaderboard-empty" aria-labelledby="leaderboard-empty-title">
               <Trophy aria-hidden="true" /><h2 id="leaderboard-empty-title">{copy.emptyTitle}</h2>
