@@ -11,14 +11,13 @@ export type RewardRowState = "ready" | "waiting" | "claimed";
 
 /**
  * Baris hadiah dan misi memakai anatomi `.upgrade-row` yang sama dengan box
- * garasi: tile ikon + judul + satu baris metrik (nominal · keterangan) dan
- * tombol kecil di kanan. Misi menumpuk bar progres di bawah kepala baris.
+ * garasi: tile ikon + judul + satu baris metrik (nominal) dan tombol kecil di
+ * kanan. Misi menumpuk bar progres di bawah kepala baris.
  */
 export function RewardRow({
   id,
   icon: Icon,
   label,
-  note,
   amount,
   state,
   progress,
@@ -28,7 +27,6 @@ export function RewardRow({
   id?: string;
   icon: LucideIcon;
   label: string;
-  note: string;
   amount: number;
   state: RewardRowState;
   progress?: { value: number; target: number };
@@ -61,7 +59,6 @@ export function RewardRow({
           </Button>
         )}
       </div>
-      <p className="reward-note">{note}</p>
       {progress && (
         <div className="mission-progress">
           <Progress

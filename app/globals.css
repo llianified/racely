@@ -169,7 +169,7 @@
   --opacity-light-off: .14;
   --opacity-light-reduced: .7;
 
-  /* ── animasi ─────────────────────────────────────────────────────────────
+  /* ── animasi ────────────────��────────────────────────────────────────────
      Durasi transisi ada di --dur-* di atas; ini durasi animasi bernama plus
      kurva easing untuk layar boot. */
   --ease-out-soft: cubic-bezier(.2, .7, .2, 1);
@@ -891,10 +891,9 @@
    diklaim) dan bar progres misi di bawah kepala baris. Hitungan bar dikunci
    lebarnya supaya semua bar dalam satu daftar berhenti di garis yang sama. */
 .reward-row .upgrade-name p.setup-metric { font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
-/* Keterangan ditumpuk di bawah kepala baris dan diindentasi selebar tile ikon
-   supaya rata dengan judul; kolom aksi kanan (tombol/badge) dikunci tinggi dan
-   lebar minimumnya supaya tepi kanan semua baris jatuh di garis yang sama. */
-.reward-row .reward-note { margin: 0; padding-left: calc(var(--space-32) + var(--space-sm)); font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); text-wrap: pretty; }
+/* Bar progres diindentasi selebar tile ikon supaya rata dengan judul; kolom
+   aksi kanan (tombol/badge) dikunci tinggi dan lebar minimumnya supaya tepi
+   kanan semua baris jatuh di garis yang sama. */
 .reward-row .mission-progress { padding-left: calc(var(--space-32) + var(--space-sm)); }
 .reward-row .upgrade-buy { min-width: var(--reward-action-w); justify-content: center; }
 .reward-row .reward-badge { height: var(--space-32); }
