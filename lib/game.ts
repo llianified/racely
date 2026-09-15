@@ -118,6 +118,18 @@ export type DailyCheckIn = {
   nextReward: number;
 };
 
+/**
+ * Ringkasan bonus iklan rewarded untuk UI; dihitung ulang tiap respons dari
+ * jumlah klaim `ad:<hari>:<n>` yang sudah tercatat hari ini.
+ */
+export type AdReward = {
+  watchedToday: number;
+  dailyCap: number;
+  /** Koin untuk satu tontonan berikutnya; 0 kalau jatah habis atau fitur mati. */
+  reward: number;
+  available: boolean;
+};
+
 /** Ringkasan ajakan untuk UI; link dibangun server dari username bot. */
 export type ReferralSummary = {
   link: string;
@@ -162,6 +174,7 @@ export type GameState = {
   player: PlayerProfile;
   withdrawals: WithdrawalRecord[];
   daily: DailyCheckIn;
+  adReward: AdReward;
   referral: ReferralSummary;
   offlineEarnings?: OfflineEarnings;
   boostLaunch?: BoostLaunch;
@@ -191,6 +204,12 @@ export const INITIAL_GAME: GameState = {
     claimedToday: false,
     reward: DEFAULT_ECONOMY.dailyRewards[0],
     nextReward: DEFAULT_ECONOMY.dailyRewards[1] ?? DEFAULT_ECONOMY.dailyRewards[0],
+  },
+  adReward: {
+    watchedToday: 0,
+    dailyCap: DEFAULT_ECONOMY.adRewardDailyCap,
+    reward: DEFAULT_ECONOMY.adRewardCoins,
+    available: DEFAULT_ECONOMY.adRewardDailyCap > 0,
   },
   referral: { link: "", invited: 0, earned: 0 },
 };
@@ -420,7 +439,7 @@ export type GameCommand =
   | PartCommand
   | { type: "sync" }
   | { type: "upgrade"; key: Upgrade }
-  | { type: "claim" | "boost" | "gift" | "daily" }
+  | { type: "claim" | "boost" | "gift" | "daily" | "watch-ad" }
   | { type: "mission"; id: MissionId }
   | { type: "select-car"; model: CarModelId; color: CarColor }
   | { type: "color"; color: CarColor }

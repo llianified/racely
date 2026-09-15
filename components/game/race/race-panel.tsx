@@ -2,11 +2,11 @@
 
 import dynamic from "next/dynamic";
 import { useId, useRef, useState, useSyncExternalStore } from "react";
-import { Camera, ChevronDown, Coins, Flag, LoaderCircle, Maximize, Minimize, RotateCcw, SlidersHorizontal, SwitchCamera, Volume2, VolumeX } from "lucide-react";
+import { Camera, ChevronDown, Clapperboard, Coins, Flag, LoaderCircle, Maximize, Minimize, RotateCcw, SlidersHorizontal, SwitchCamera, Volume2, VolumeX } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { batteryTelemetry, carSetup, coins, formatCoins, lapReward, lapSeconds, racePosition, type GameState } from "@/lib/game";
+import { batteryTelemetry, carSetup, coins, formatCoins, lapReward, lapSeconds, racePosition, type AdReward, type GameState } from "@/lib/game";
 import { RaceOverviewHud, RacePositionHud } from "./race-overview-hud";
 import { cn } from "@/lib/utils";
 import { createDrivingState } from "@/lib/race-dynamics";
@@ -225,6 +225,32 @@ export function RaceReward({ pending, onClaim, disabled = false, claiming = fals
       <Button size="sm" variant={readyToClaim ? "goldSoft" : "secondary"} disabled={disabled || !readyToClaim} onClick={onClaim} aria-busy={claiming} aria-label={readyToClaim ? "Klaim koin hasil balapan" : `Belum bisa diklaim. ${rewardStatus}`}>
         {claiming ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <Coins data-icon="inline-start" />}
         {claiming ? "Mengklaim…" : "Klaim"}
+      </Button>
+    </section>
+  );
+}
+
+/**
+ * Jalan pintas bonus iklan di tab Balapan; memakai kerangka visual yang sama
+ * dengan `RaceReward` supaya kedua kartu hadiah terbaca sebagai satu keluarga.
+ * Kreditnya tetap diputuskan server lewat aksi `watch-ad`.
+ */
+export function AdRewardShortcut({ ad, onWatch, disabled = false, playing = false }: { ad: AdReward; onWatch: () => void; disabled?: boolean; playing?: boolean }) {
+  const quota = `${ad.watchedToday}/${ad.dailyCap} hari ini`;
+  const status = ad.available ? quota : "Jatah hari ini habis";
+
+  return (
+    <section className={cn("race-reward", ad.available && "reward-ready")} aria-label="Bonus iklan">
+      <div className="reward-copy">
+        <header className="reward-heading">
+          <h2>Bonus iklan</h2>
+          <span className="reward-status">{status}</span>
+        </header>
+        <strong>{ad.available ? `+${coins(ad.reward)}` : "Besok lagi"}</strong>
+      </div>
+      <Button size="sm" variant={ad.available ? "goldSoft" : "secondary"} disabled={disabled || !ad.available} onClick={onWatch} aria-busy={playing} aria-label={ad.available ? `Tonton iklan untuk ${coins(ad.reward)}` : `Jatah iklan habis. ${quota}`}>
+        {playing ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <Clapperboard data-icon="inline-start" />}
+        {playing ? "Memutar…" : "Tonton"}
       </Button>
     </section>
   );

@@ -16,8 +16,9 @@ import { ReferralPanel } from "./panels/referral-panel";
 import { LeaderboardPanel, LeaderboardShortcut } from "./panels/leaderboard-panel";
 import { WalletPanel, type WithdrawPayload } from "./panels/wallet-panel";
 import { CircuitPanel } from "./race/circuit-panel";
-import { RacePanel, RaceReward } from "./race/race-panel";
+import { AdRewardShortcut, RacePanel, RaceReward } from "./race/race-panel";
 import { CarSelection } from "./car/car-selection";
+import { ADSGRAM_BLOCK_ID, showRewardedAd } from "./adsgram";
 import {
   GameRequestError,
   createGameActionSender,
@@ -64,6 +65,9 @@ export function GameDashboard() {
   const [dialog, setDialog] = useState<DialogKind | null>(null);
   const [welcomeBack, setWelcomeBack] = useState<OfflineEarnings | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  // Terpisah dari busyAction: selama iklan diputar belum ada permintaan ke
+  // server, tapi tombol iklan lain harus ikut terkunci.
+  const [adPlaying, setAdPlaying] = useState(false);
   const [sendAction] = useState(createGameActionSender);
   const [raceMounted, setRaceMounted] = useState(false);
   const [garageMounted, setGarageMounted] = useState(false);
@@ -272,6 +276,27 @@ export function GameDashboard() {
     if (await runAction({ type: "daily" }))
       toast.success(`Harian +${coins(amount)}`);
   };
+  const watchAd = async () => {
+    if (!game.adReward.available || adPlaying || busyAction) return;
+    const amount = game.adReward.reward;
+    setAdPlaying(true);
+    try {
+      // Block tes Adsgram hanya tayang dengan debug di luar Telegram, jadi mode
+      // preview memakainya; di produksi debug harus mati agar tayangan tercatat.
+      const result = await showRewardedAd({ debug: Boolean(game.developmentPreview) });
+      if (result === "rewarded") {
+        if (await runAction({ type: "watch-ad" })) toast.success(`Bonus iklan +${coins(amount)}`);
+      } else if (result === "skipped") {
+        toast.error("Iklan ditutup sebelum selesai; bonus belum diberikan.");
+      } else if (result === "error") {
+        toast.error("Iklan gagal dimuat. Coba lagi sebentar.");
+      } else {
+        toast.error("Iklan belum tersedia saat ini.");
+      }
+    } finally {
+      setAdPlaying(false);
+    }
+  };
   const invite = async () => {
     const link = game.referral.link;
     if (!link) return;
@@ -436,6 +461,14 @@ export function GameDashboard() {
                   onClaim={claim}
                   disabled={Boolean(busyAction)}
                 />
+                {ADSGRAM_BLOCK_ID && game.adReward.dailyCap > 0 && (
+                  <AdRewardShortcut
+                    ad={game.adReward}
+                    playing={adPlaying}
+                    onWatch={watchAd}
+                    disabled={Boolean(busyAction) || adPlaying}
+                  />
+                )}
                 <LeaderboardShortcut
                   initData={initData}
                   active={tab === "race"}
@@ -512,6 +545,9 @@ export function GameDashboard() {
               onClaimMission={mission}
               onClaimDailyMission={dailyMission}
               onClaimAll={claimAll}
+              onWatchAd={watchAd}
+              adAvailable={Boolean(ADSGRAM_BLOCK_ID)}
+              adBusy={adPlaying}
               disabled={Boolean(busyAction)}
             />
           )}

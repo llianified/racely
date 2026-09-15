@@ -13,9 +13,18 @@
  */
 const isProduction = process.env.NODE_ENV === 'production'
 
+/**
+ * Adsgram: SDK-nya dimuat dari sad.adsgram.ai, permintaan banner ke
+ * api.adsgram.ai, dan kreatifnya (gambar/video) datang dari CDN pengiklan yang
+ * berganti-ganti -- host yang tidak pernah diumumkan Adsgram. Karena itu img-src
+ * dan media-src dibuka ke https: (bukan ke daftar tebakan yang akan basi), sementara
+ * script/connect/frame tetap dikunci ke host Adsgram yang eksplisit.
+ */
+const adsgramHosts = 'https://*.adsgram.ai'
+
 const contentSecurityPolicy = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isProduction ? '' : " 'unsafe-eval'"} https://telegram.org`,
+  `script-src 'self' 'unsafe-inline'${isProduction ? '' : " 'unsafe-eval'"} https://telegram.org https://sad.adsgram.ai`,
   "style-src 'self' 'unsafe-inline'",
   /**
    * Foto profil pemain TIDAK lagi disebut di sini. `photo_url` di initData
@@ -28,9 +37,11 @@ const contentSecurityPolicy = [
    * mengalirkan byte-nya dari origin ini. 'self' menutupi seluruhnya. Lihat
    * `lib/telegram-avatar.ts`. blob: dipakai canvas WebGL.
    */
-  "img-src 'self' data: blob:",
+  "img-src 'self' data: blob: https:",
+  "media-src 'self' data: blob: https:",
+  `frame-src 'self' ${adsgramHosts}`,
   "font-src 'self' data:",
-  "connect-src 'self' https://telegram.org",
+  `connect-src 'self' https://telegram.org ${adsgramHosts}`,
   "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",
