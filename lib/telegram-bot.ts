@@ -67,7 +67,8 @@ export type TelegramReply = {
 export type ReferralStartContext = {
   inviterId: string;
   inviterName: string;
-  milestoneLaps: number;
+  activeDays: number;
+  upgradeTarget: number;
   inviterReward: number;
   inviteeReward: number;
 };
@@ -172,7 +173,8 @@ export async function resolveReferralStartContext(
   return {
     inviterId: request.inviterId,
     inviterName: participants.inviterName.trim() || "Seorang teman",
-    milestoneLaps: economy.referralMilestoneLaps,
+    activeDays: economy.referralActiveDays,
+    upgradeTarget: economy.referralUpgradeTarget,
     inviterReward: economy.referralRewardInviter,
     inviteeReward: economy.referralRewardInvitee,
   };
@@ -196,7 +198,7 @@ export function buildTelegramReply(
   return {
     chat_id: message.chat.id,
     text: isReferralStart
-      ? `${referral.inviterName} mengajakmu balapan di Racely. Selesaikan ${referral.milestoneLaps.toLocaleString("id-ID")} putaran untuk mendapat ${coins(referral.inviteeReward)}; pengajakmu mendapat ${coins(referral.inviterReward)}.`
+      ? `${referral.inviterName} mengajakmu balapan di Racely. Check-in pada ${referral.activeDays.toLocaleString("id-ID")} hari berbeda (WIB), tidak harus berurutan, dan lakukan total ${referral.upgradeTarget.toLocaleString("id-ID")} kali upgrade mesin, ban, atau baterai untuk mendapat ${coins(referral.inviteeReward)}; pengajakmu mendapat ${coins(referral.inviterReward)}. Kedua syarat wajib terpenuhi; putaran idle saja tidak cukup.`
       : isLaunchCommand
         ? "Mesin siap. Buka Racely untuk memilih mobil dan mulai balapan."
         : "Gunakan /play atau tombol di bawah untuk membuka Racely.",

@@ -4,6 +4,7 @@ import {
   dailyCheckIn,
   dailyRewardFor,
   racingDayKey,
+  referralActivityQualified,
 } from "../lib/game-economy";
 import { INITIAL_GAME, batteryTelemetry, formatDuration, gameReducer, lapReward, lapSeconds, modificationPartName, modificationPreview, racePosition } from "../lib/game";
 import { DEFAULT_ECONOMY, upgradeCostAt } from "../lib/economy-config";
@@ -30,6 +31,41 @@ function settlementInput(
     ...overrides,
   };
 }
+
+describe("Referral activity qualification", () => {
+  const days = ["2026-09-10", "2026-09-12", "2026-09-15"];
+  const upgraded = { engine: 2, tires: 2, battery: 2 };
+
+  it("requires both distinct check-in days and actual level increases", () => {
+    expect(referralActivityQualified([], upgraded, E)).toBe(false);
+    expect(referralActivityQualified(days.slice(0, 2), upgraded, E)).toBe(false);
+    expect(referralActivityQualified(days, { engine: 1, tires: 1, battery: 1 }, E)).toBe(false);
+    expect(referralActivityQualified(days, { engine: 2, tires: 2, battery: 1 }, E)).toBe(false);
+    expect(referralActivityQualified(days, upgraded, E)).toBe(true);
+  });
+
+  it("counts a day once, accepts non-consecutive days, and aggregates all components", () => {
+    expect(referralActivityQualified(Array(10).fill(days[0]), upgraded, E)).toBe(false);
+    expect(referralActivityQualified([...days, ...days], upgraded, E)).toBe(true);
+    for (const component of ["engine", "tires", "battery"] as const) {
+      expect(referralActivityQualified(days, { engine: 1, tires: 1, battery: 1, [component]: 4 }, E)).toBe(true);
+    }
+  });
+
+  it("uses WIB day boundaries rather than repeated requests or UTC dates", () => {
+    const before = racingDayKey(new Date("2026-09-12T16:59:59Z"));
+    const after = racingDayKey(new Date("2026-09-12T17:00:00Z"));
+    expect(referralActivityQualified([before, before, before], upgraded, E)).toBe(false);
+    expect(referralActivityQualified([before, after, "2026-09-14"], upgraded, E)).toBe(true);
+  });
+
+  it("uses live activity thresholds and ignores the retired lap threshold", () => {
+    expect(referralActivityQualified(days, upgraded, { ...E, referralActiveDays: 4 })).toBe(false);
+    expect(referralActivityQualified(days, upgraded, { ...E, referralUpgradeTarget: 4 })).toBe(false);
+    expect(referralActivityQualified(days, upgraded, { ...E, referralMilestoneLaps: 10_000_000 })).toBe(true);
+    expect(referralActivityQualified([], upgraded, { ...E, referralMilestoneLaps: 0 })).toBe(false);
+  });
+});
 
 describe("Automatic racing without Gaspol", () => {
   it("never exposes an actionable boost reserve", () => {

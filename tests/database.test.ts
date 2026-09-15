@@ -600,17 +600,34 @@ describeDatabase("Neon Postgres persistence", () => {
     const invitee = player("invitee", `ref_${inviter.userId}`);
     const bound = await gameServer.getGameState(invitee);
     expect((await balanceOf(invitee.userId))!.referredBy).toBe(inviter.userId);
-    // Belum mencapai 100 putaran -> belum ada yang dibayar.
+    // Belum ada aktivitas nyata -> belum ada yang dibayar.
     expect(bound.referral.earned).toBe(0);
     expect((await balanceOf(inviter.userId))!.balance).toBe(inviterStart);
 
     const inviteeStart = (await balanceOf(invitee.userId))!.balance;
     await db!
       .update(schema.players)
-      .set({ laps: E.referralMilestoneLaps })
+      .set({ laps: 10_000 })
       .where(drizzle.eq(schema.players.userId, invitee.userId));
 
     await gameServer.getGameState(invitee);
+    expect((await balanceOf(invitee.userId))!.balance).toBe(inviteeStart);
+    expect((await balanceOf(inviter.userId))!.balance).toBe(inviterStart);
+    expect((await gameServer.getGameState(inviter)).referral.completed).toBe(0);
+
+    await db!.insert(schema.rewardClaims).values(
+      ["2026-01-01", "2026-01-03", "2026-01-05"].map((day) => ({
+        userId: invitee.userId, rewardKey: `daily:${day}`, amount: 1,
+      })),
+    );
+    await gameServer.getGameState(invitee);
+    expect((await balanceOf(invitee.userId))!.balance).toBe(inviteeStart);
+    expect((await balanceOf(inviter.userId))!.balance).toBe(inviterStart);
+
+    await db!.update(schema.players)
+      .set({ engineLevel: 2, tiresLevel: 2, batteryLevel: 2 })
+      .where(drizzle.eq(schema.players.userId, invitee.userId));
+    await Promise.all([gameServer.getGameState(invitee), gameServer.getGameState(invitee)]);
     expect((await balanceOf(invitee.userId))!.balance).toBe(
       inviteeStart + E.referralRewardInvitee,
     );
@@ -628,6 +645,7 @@ describeDatabase("Neon Postgres persistence", () => {
     const inviterState = await gameServer.getGameState(inviter);
     expect(inviterState.referral).toMatchObject({
       invited: 1,
+      completed: 1,
       earned: E.referralRewardInviter,
     });
     expect(inviterState.referral.link).toContain(`ref_${inviter.userId}`);
@@ -641,6 +659,61 @@ describeDatabase("Neon Postgres persistence", () => {
       .where(drizzle.eq(schema.players.userId, veteran.userId));
     await gameServer.getGameState({ ...veteran, startParam: `ref_${inviter.userId}` });
     expect((await balanceOf(veteran.userId))!.referredBy).toBeNull();
+  });
+
+  it.each(["daily", "upgrade"] as const)("membayar langsung saat %s menuntaskan aktivitas, tanpa pembayaran ulang", async (actionType) => {
+    const { DEFAULT_ECONOMY: E, upgradeCostAt } = await import("@/lib/economy-config");
+    const { racingDayKey } = await import("@/lib/game-economy");
+    const inviter = { userId: `test-ref-inviter-${randomUUID()}`, displayName: "Inviter", username: null, photoUrl: null, startParam: null };
+    const invitee = { ...inviter, userId: `test-ref-invitee-${randomUUID()}`, startParam: `ref_${inviter.userId}` };
+    extraUserIds.push(inviter.userId, invitee.userId);
+    await gameServer.getGameState(inviter);
+    await gameServer.getGameState(invitee);
+    await db!.update(schema.players).set({
+      carModel: "luna-gt", balance: 50_000,
+      engineLevel: 2, tiresLevel: 2, batteryLevel: actionType === "daily" ? 2 : 1,
+    }).where(drizzle.eq(schema.players.userId, invitee.userId));
+    const count = actionType === "daily" ? E.referralActiveDays - 1 : E.referralActiveDays;
+    const today = Date.now();
+    await db!.insert(schema.rewardClaims).values(Array.from({ length: count }, (_, i) => ({
+      userId: invitee.userId,
+      rewardKey: `daily:${racingDayKey(new Date(today - (i + 1) * 86_400_000))}`,
+      amount: 1,
+    })));
+    const before = await gameServer.getGameState(invitee);
+    expect(before.balance).toBe(50_000);
+    expect((await gameServer.getGameState(inviter)).referral.completed).toBe(0);
+    const requestId = randomUUID();
+    const action = actionType === "daily" ? { type: "daily" as const } : { type: "upgrade" as const, key: "battery" as const };
+    const expectedBalance = before.balance + E.referralRewardInvitee +
+      (actionType === "daily" ? before.daily.reward : -upgradeCostAt(E, "battery", 1));
+    const result = await gameServer.performGameAction(invitee, requestId, action);
+    expect(result.balance).toBe(expectedBalance);
+    expect((await gameServer.getGameState(inviter)).referral).toMatchObject({ completed: 1, earned: E.referralRewardInviter });
+    const replay = await gameServer.performGameAction(invitee, requestId, action);
+    expect(replay.balance).toBe(expectedBalance);
+    expect((await gameServer.getGameState(inviter)).referral.earned).toBe(E.referralRewardInviter);
+  });
+
+  it("menyelesaikan pembayaran pengajak lama tanpa mencabut atau menggandakan hadiah", async () => {
+    const { DEFAULT_ECONOMY: E } = await import("@/lib/economy-config");
+    const inviter = { userId: `test-ref-legacy-${randomUUID()}`, displayName: "Legacy", username: null, photoUrl: null, startParam: null };
+    const invitee = { ...inviter, userId: `test-ref-legacy-${randomUUID()}`, startParam: `ref_${inviter.userId}` };
+    extraUserIds.push(inviter.userId, invitee.userId);
+    await gameServer.getGameState(inviter);
+    await gameServer.getGameState(invitee);
+    await db!.insert(schema.rewardClaims).values({
+      userId: invitee.userId, rewardKey: `ref-referee:${invitee.userId}`, amount: E.referralRewardInvitee,
+    });
+    await db!.update(schema.players).set({ balance: E.startingBalance + E.referralRewardInvitee })
+      .where(drizzle.eq(schema.players.userId, invitee.userId));
+    await gameServer.getGameState(invitee);
+    const [paid] = await db!.select().from(schema.players).where(drizzle.eq(schema.players.userId, invitee.userId));
+    expect(paid.referralPaidAt).not.toBeNull();
+    expect((await gameServer.getGameState(inviter)).referral).toMatchObject({ completed: 1, earned: E.referralRewardInviter });
+    expect((await gameServer.getGameState(invitee)).balance).toBe(E.startingBalance + E.referralRewardInvitee);
+    const [replayed] = await db!.select().from(schema.players).where(drizzle.eq(schema.players.userId, invitee.userId));
+    expect(replayed.referralPaidAt).toEqual(paid.referralPaidAt);
   });
 
   /**
