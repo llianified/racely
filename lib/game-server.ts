@@ -25,7 +25,7 @@ import {
   dailyCheckIn,
   racingDayKey,
 } from "@/lib/game-economy";
-import { CAR_MODEL_IDS, carReferralRequirement, isCarColor, isReferralCar, type CarModelId } from "@/lib/car-catalog";
+import { CAR_MODEL_IDS, canSwitchCar, carReferralRequirement, isCarColor, isReferralCar, type CarModelId } from "@/lib/car-catalog";
 import { referralRewardUnlocked } from "@/lib/referral-rewards";
 import {
   applyPartCommand,
@@ -271,6 +271,7 @@ function stateFromRow(
     carSelection: {
       model: carModel,
       returningPlayer: carModel === null && hasExistingProgress(row, history),
+      starterModel: knownCarModel(row.starterCarModel),
     },
     withdrawals: history.map(withdrawalRecord),
     daily,
@@ -831,11 +832,13 @@ const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
         `Ajak ${carReferralRequirement(action.model)} teman untuk membuka mobil ini.`,
       );
     }
+    const starter = knownCarModel(row.starterCarModel);
     if (row.carModel !== null && row.carModel !== action.model) {
       // Model pendaftaran dikunci. Satu-satunya pergantian yang sah melibatkan
       // mobil hadiah ajakan: naik ke mobil eksklusif yang sudah terbuka, atau
-      // turun darinya kembali ke mobil biasa. Progres, koin, dan koleksi ikut.
-      if (!isReferralCar(row.carModel) && !isReferralCar(action.model)) {
+      // turun darinya kembali ke starter yang dipilih saat onboarding -- BUKAN
+      // ke starter lain. Progres, koin, dan koleksi ikut.
+      if (!canSwitchCar(action.model, starter, referral.completed)) {
         throw new GameRuleError(
           "Model sudah dikonfirmasi dan tidak dapat diganti.",
         );
@@ -852,7 +855,17 @@ const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
     if (!isCarColor(action.model, action.color)) {
       throw new GameRuleError("Model atau warna mobil tidak valid.", 400);
     }
-    return { row: { ...row, carModel: action.model, color: action.color } };
+    // Dicatat sekali, saat mobil starter pertama kali dipakai. Memilih mobil
+    // hadiah ajakan duluan tidak mengunci apa pun: starter-nya masih kosong,
+    // jadi pemain itu tetap boleh turun ke starter mana pun satu kali.
+    return {
+      row: {
+        ...row,
+        carModel: action.model,
+        color: action.color,
+        starterCarModel: starter ?? (isReferralCar(action.model) ? null : action.model),
+      },
+    };
   },
 
   "buy-part": applyPartAction,
@@ -1202,6 +1215,7 @@ export async function performGameAction(
         bodyParts: next.bodyParts,
         setup: next.setup,
         carModel: next.carModel,
+        starterCarModel: next.starterCarModel,
         color: next.color,
         circuit: next.circuit,
         lastSettledAt: next.lastSettledAt,
