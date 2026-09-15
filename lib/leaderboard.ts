@@ -1,4 +1,30 @@
-import type { CarModelId } from "./car-catalog";
+import { z } from "zod";
+import { CAR_MODEL_IDS, type CarModelId } from "./car-catalog";
+import { PART_CATALOG, bodyPartsSchema } from "./car-parts";
+import { NEUTRAL_SETUP, ROLLER_IDS } from "./car-setup";
+
+const carAppearanceSchema = z.object({
+  color: z.string().regex(/^#[0-9a-f]{6}$/i),
+  levels: z.object({
+    engine: z.number().int().positive(),
+    tires: z.number().int().positive(),
+    battery: z.number().int().positive(),
+  }),
+  roller: z.enum(ROLLER_IDS),
+  equipped: bodyPartsSchema.shape.equipped.refine(parts =>
+    Object.entries(parts).every(([slot, id]) => !id || PART_CATALOG[id].slot === slot),
+  ),
+});
+
+export type LeaderboardCarAppearance = z.infer<typeof carAppearanceSchema>;
+
+export function leaderboardCar(entry: LeaderboardEntry) {
+  const model = z.enum(CAR_MODEL_IDS).safeParse(entry.carModel);
+  const appearance = carAppearanceSchema.safeParse(entry.carAppearance);
+  return model.success && appearance.success
+    ? { model: model.data, ...appearance.data }
+    : null;
+}
 import type { GameState } from "./game";
 
 export const LEADERBOARD_LIMIT = 50;
@@ -14,11 +40,13 @@ export type LeaderboardEntry = {
   /** Kept on lap responses for existing leaderboard consumers. */
   laps?: number;
   /**
-   * Mobil yang dipakai; hanya dipakai klasemen untuk menandai mobil hadiah
-   * ajakan (`isReferralCar`). Bisa `null` untuk pemain yang belum memilih dan
+   * Mobil yang dipakai untuk podium dan penanda mobil hadiah ajakan.
+   * Bisa `null` untuk pemain yang belum memilih dan
    * hilang pada respons dari server yang lebih lama.
    */
   carModel?: CarModelId | null;
+  /** Hanya tampilan terpasang, tanpa inventaris atau data pribadi pemain. */
+  carAppearance?: LeaderboardCarAppearance | null;
   isCurrentPlayer: boolean;
 };
 
@@ -39,7 +67,7 @@ export function scoreToOvertake(score: number, rivalScore: number) {
 export const lapsToOvertake = scoreToOvertake;
 
 export function previewLeaderboard(
-  game: Pick<GameState, "laps" | "player" | "referral" | "economy"> & Partial<Pick<GameState, "carSelection">>,
+  game: Pick<GameState, "laps" | "player" | "referral" | "economy" | "color" | "levels" | "carSelection" | "setup" | "bodyParts">,
   metric: LeaderboardMetric = "laps",
   now = new Date(),
 ): Leaderboard {
@@ -55,6 +83,12 @@ export function previewLeaderboard(
         score,
         ...(metric === "laps" ? { laps: score } : {}),
         carModel: game.carSelection?.model ?? null,
+        carAppearance: game.carSelection?.model ? {
+          color: game.color,
+          levels: { ...game.levels },
+          roller: game.setup?.roller ?? NEUTRAL_SETUP.roller,
+          equipped: { ...game.bodyParts?.equipped },
+        } : null,
         isCurrentPlayer: true,
       }
     : null;
