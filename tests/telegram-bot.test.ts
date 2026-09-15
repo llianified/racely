@@ -93,6 +93,17 @@ describe("Bot command replies", () => {
     }
   });
 
+  it("attaches the GIF only to the main /start reply", () => {
+    for (const text of ["/start", "/start@RacelyBot", "/START", " /start "]) {
+      expect(buildTelegramReply(message(text), `${APP_URL}/`)?.animation).toBe(
+        `${APP_URL}/telegram/start.gif`,
+      );
+    }
+    for (const text of ["/play", "/play@RacelyBot", "halo bot"]) {
+      expect(buildTelegramReply(message(text), APP_URL)?.animation).toBeUndefined();
+    }
+  });
+
   it("acknowledges a valid referral with configured milestone and rewards", async () => {
     const update = message("/start ref_777", { from: { id: 4242 } });
     const lookup = vi.fn().mockResolvedValue({
@@ -113,6 +124,7 @@ describe("Bot command replies", () => {
     expect(lookup).toHaveBeenCalledWith("777", "4242");
     expect(context).toMatchObject({ inviterId: "777", inviterName: "Nadia" });
     const reply = buildTelegramReply(update, APP_URL, context);
+    expect(reply?.animation).toBeUndefined();
     expect(reply?.text).toContain("Nadia mengajakmu");
     expect(reply?.text).toContain("120 putaran");
     expect(reply?.text).toContain("12 koin");
@@ -220,7 +232,62 @@ describe("Duplicate update handling", () => {
 });
 
 describe("Outbound bot messages", () => {
-  const reply = buildTelegramReply(message("/start"), APP_URL)!;
+  const reply = buildTelegramReply(message("/play"), APP_URL)!;
+  const startReply = buildTelegramReply(message("/start"), APP_URL)!;
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it("sends /start as one animation with its caption and Mini App button", async () => {
+    vi.stubEnv("TELEGRAM_BOT_TOKEN", "123456789:TESTTOKENabcdefghijklmnopqrst");
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({ ok: true }),
+    );
+
+    await sendTelegramReply(startReply);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("/sendAnimation");
+    expect(JSON.parse(String(init.body))).toEqual({
+      chat_id: 4242,
+      animation: `${APP_URL}/telegram/start.gif`,
+      caption: startReply.text,
+      reply_markup: startReply.reply_markup,
+    });
+  });
+
+  it("falls back to the text and button when Telegram rejects the media", async () => {
+    vi.stubEnv("TELEGRAM_BOT_TOKEN", "123456789:TESTTOKENabcdefghijklmnopqrst");
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(Response.json({ ok: false }, { status: 400 }))
+      .mockResolvedValueOnce(Response.json({ ok: true }));
+
+    await sendTelegramReply(startReply);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toContain("/sendMessage");
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual(reply);
+  });
+
+  it.each([401, 403, 429, 500])("does not mask a %s animation failure", async (status) => {
+    vi.stubEnv("TELEGRAM_BOT_TOKEN", "123456789:TESTTOKENabcdefghijklmnopqrst");
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({ ok: false }, { status }),
+    );
+    await expect(sendTelegramReply(startReply)).rejects.toThrow("Telegram rejected");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not send duplicate text after an ambiguous network failure", async () => {
+    vi.stubEnv("TELEGRAM_BOT_TOKEN", "123456789:TESTTOKENabcdefghijklmnopqrst");
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("timeout"));
+    await expect(sendTelegramReply(startReply)).rejects.toThrow("timeout");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("surfaces API-level failures even with an HTTP 200 response", async () => {
+    vi.stubEnv("TELEGRAM_BOT_TOKEN", "123456789:TESTTOKENabcdefghijklmnopqrst");
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ ok: false }));
+    await expect(sendTelegramReply(startReply)).rejects.toThrow("Telegram rejected");
+  });
 
   it("refuses to send without a well formed bot token", async () => {
     vi.stubEnv("TELEGRAM_BOT_TOKEN", "");
@@ -233,7 +300,7 @@ describe("Outbound bot messages", () => {
     vi.stubEnv("TELEGRAM_BOT_TOKEN", "123456789:TESTTOKENabcdefghijklmnopqrst");
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValue(new Response("{}", { status: 200 }));
+      .mockResolvedValue(Response.json({ ok: true }));
 
     await sendTelegramReply(reply);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
