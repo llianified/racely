@@ -140,8 +140,12 @@ Di produksi **tidak ada** file env di dalam repo. Nilai asli hidup di
 `node --env-file`. `.env.development` sengaja ikut di-commit karena hanya berisi
 flag preview non-rahasia.
 
-`PUBLIC_APP_URL` dibutuhkan **saat build**, bukan hanya saat runtime: halaman
-`/` di-prerender, jadi `metadataBase` ikut dibekukan ke dalam hasil build.
+`PUBLIC_APP_URL` dan semua `NEXT_PUBLIC_*` (mis. `NEXT_PUBLIC_ADSGRAM_BLOCK_ID`)
+dibutuhkan **saat build**, bukan hanya saat runtime: halaman `/` di-prerender
+sehingga `metadataBase` dibekukan, dan `NEXT_PUBLIC_*` di-inline ke bundle
+klien. Build tanpa env itu menghasilkan aplikasi yang jalan tapi kartu Bonus
+Iklan hilang dan OG card rusak — `scripts/deploy-racely.sh` memuat env file
+sebelum `build:standalone` karena alasan ini.
 
 Jangan pernah menulis token, connection string, atau secret ke dalam repo, log,
 atau commit message.
@@ -306,9 +310,13 @@ merah, jangan deploy.
 
 ## Deploy
 
-Urutan rilis produksi:
+Push ke `main` memicu `.github/workflows/deploy.yml`, yang SSH ke EC2 dan
+menjalankan `scripts/deploy-racely.sh`: install → migrasi → verifikasi skema →
+build (dengan env file dimuat) → `pm2 restart`. Rilis manual mengikuti urutan
+yang sama, dan env harus sudah dimuat **sebelum** build:
 
 ```bash
+set -a; source /etc/racely/racely.env; set +a
 pnpm run db:migrate
 pnpm run build:standalone
 pnpm run pm2:reload
