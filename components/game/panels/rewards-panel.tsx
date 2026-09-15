@@ -1,24 +1,22 @@
 "use client";
 
-import { CalendarCheck, Check, Coins, Flag, Gift, LockKeyhole, Trophy, Wrench } from "lucide-react";
+import { CalendarCheck, Coins, Flag, Gift, Trophy, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { DailyMissionsPanel } from "./daily-missions-panel";
+import { RewardRow, type RewardRowState } from "./reward-row";
 import { dailyMissionClaimable, type DailyMissionKind } from "@/lib/daily-missions";
 import { SectionCardHeading } from "../shell/section-card-heading";
 import { StatHero } from "../shell/stat-hero";
-import { cn } from "@/lib/utils";
 import {
   coins,
-  formatCoins,
   missions,
   missionValue,
   type GameState,
   type MissionId,
 } from "@/lib/game";
 
-type RowState = "ready" | "waiting" | "claimed";
+type RowState = RewardRowState;
 
 type RewardRow = {
   id: string;
@@ -76,20 +74,6 @@ function dailyNote(daily: GameState["daily"], economy: GameState["economy"]) {
   return rungs > 1
     ? `Klaim tiap hari; hadiahnya naik sampai hari ke-${rungs}.`
     : "Klaim tiap hari untuk tambahan koin.";
-}
-
-function RowStatus({ state }: { state: Exclude<RowState, "ready"> }) {
-  return state === "claimed" ? (
-    <span className="mission-status">
-      <Check size={14} aria-hidden="true" />
-      Diklaim
-    </span>
-  ) : (
-    <Button variant="secondary" disabled>
-      <LockKeyhole data-icon="inline-start" />
-      Belum siap
-    </Button>
-  );
 }
 
 export function RewardsPanel({
@@ -189,7 +173,7 @@ export function RewardsPanel({
         ]}
       />
 
-      <section className="panel rewards-list-panel" aria-label="Hadiah">
+      <section className="panel upgrade-panel" aria-label="Hadiah">
         <SectionCardHeading
           icon={Gift}
           title="Hadiah"
@@ -199,41 +183,19 @@ export function RewardsPanel({
             </Badge>
           }
         />
-        <ul className="reward-list">
+        <ul className="upgrade-list">
           {rewards.map((row) => (
-            <li
+            <RewardRow
               key={row.id}
               id={row.id === "gift" ? "starter-gift" : `reward-${row.id}`}
-              tabIndex={-1}
-              className={cn(
-                "reward-row",
-                row.state === "ready" && "is-ready",
-                row.state === "claimed" && "is-claimed",
-              )}
-            >
-              <span className="reward-row-icon" aria-hidden="true">
-                <row.icon />
-              </span>
-              <div className="reward-row-copy">
-                <h3>{row.label}</h3>
-                <p>{row.note}</p>
-              </div>
-              <div className="reward-row-action">
-                <strong>{formatCoins(row.amount)} <span>koin</span></strong>
-                {row.state === "ready" ? (
-                  <Button
-                    variant="goldSoft"
-                    disabled={disabled}
-                    onClick={row.onClaim}
-                    aria-label={`Klaim ${row.label}`}
-                  >
-                    Klaim
-                  </Button>
-                ) : (
-                  <RowStatus state={row.state} />
-                )}
-              </div>
-            </li>
+              icon={row.icon}
+              label={row.label}
+              note={row.note}
+              amount={row.amount}
+              state={row.state}
+              disabled={disabled}
+              onClaim={row.onClaim}
+            />
           ))}
         </ul>
       </section>
@@ -243,7 +205,7 @@ export function RewardsPanel({
       <section
         id="missions"
         tabIndex={-1}
-        className="panel rewards-list-panel"
+        className="panel upgrade-panel"
         aria-label="Misi"
       >
         <SectionCardHeading
@@ -255,51 +217,20 @@ export function RewardsPanel({
             </Badge>
           }
         />
-        <ul className="reward-list">
+        <ul className="upgrade-list">
           {missionRows.map((row) => (
-            <li
+            <RewardRow
               key={row.id}
               id={`reward-${row.id}`}
-              tabIndex={-1}
-              className={cn(
-                "reward-row",
-                row.state === "ready" && "is-ready",
-                row.state === "claimed" && "is-claimed",
-              )}
-            >
-              <span className="reward-row-icon" aria-hidden="true">
-                <row.icon />
-              </span>
-              <div className="reward-row-copy">
-                <h3>{row.label}</h3>
-                <p>{row.note}</p>
-                <div className="mission-progress">
-                  <Progress
-                    value={(row.value / row.target) * 100}
-                    aria-label={`${row.label}: ${row.value.toLocaleString("id-ID")} dari ${row.target.toLocaleString("id-ID")}`}
-                    className="flex-1"
-                  />
-                  <span>
-                    {row.value.toLocaleString("id-ID")}/{row.target.toLocaleString("id-ID")}
-                  </span>
-                </div>
-              </div>
-              <div className="reward-row-action">
-                <strong>{formatCoins(row.amount)} <span>koin</span></strong>
-                {row.state === "ready" ? (
-                  <Button
-                    variant="goldSoft"
-                    disabled={disabled}
-                    onClick={row.onClaim}
-                    aria-label={`Klaim ${row.label}`}
-                  >
-                    Klaim
-                  </Button>
-                ) : (
-                  <RowStatus state={row.state} />
-                )}
-              </div>
-            </li>
+              icon={row.icon}
+              label={row.label}
+              note={row.note}
+              amount={row.amount}
+              state={row.state}
+              progress={{ value: row.value, target: row.target }}
+              disabled={disabled}
+              onClaim={row.onClaim}
+            />
           ))}
         </ul>
       </section>
