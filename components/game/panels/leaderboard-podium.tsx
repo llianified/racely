@@ -48,7 +48,7 @@ export function LeaderboardPodium({ entries, unit }: { entries: LeaderboardEntry
               </div>
               <strong className="leaderboard-podium-name" title={entry.name}><bdi>{entry.name}</bdi></strong>
               <span className="leaderboard-podium-car" data-exclusive={entry.carModel ? isReferralCar(entry.carModel) : false}>
-                {entry.carModel ? CAR_CATALOG[entry.carModel].name : "Mobil belum dipilih"}
+                {entry.carModel ? CAR_CATALOG[entry.carModel]?.name ?? "Mobil tidak dikenal" : "Mobil belum dipilih"}
               </span>
               <p><strong>{entry.score.toLocaleString("id-ID")}</strong><span>{unit}</span></p>
               {entry.isCurrentPlayer && <Badge variant="secondary">Kamu</Badge>}
