@@ -90,12 +90,12 @@ function OptionRow({
           onClick={active ? undefined : onPick}
           aria-label={
             active
-              ? `${name} terpasang, ${seconds(preview)} per putaran`
-              : `Pasang ${name}, ${seconds(preview)} per putaran`
+              ? `${name} dipilih, ${seconds(preview)} per putaran`
+              : `Pilih ${name}, ${seconds(preview)} per putaran`
           }
         >
           {active && <Check data-icon="inline-start" aria-hidden="true" />}
-          {active ? "Terpasang" : "Pasang"}
+          {active ? "Dipilih" : "Pilih"}
         </Button>
       </div>
       <div className="setup-foot">
