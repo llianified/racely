@@ -6,7 +6,7 @@ import { ArrowUp, BatteryMedium, CarFront, Check, Cog, CircleDot, LoaderCircle, 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { CAR_CATALOG, CAR_MODEL_IDS, STARTER_CAR_IDS, carReferralRequirement, isReferralCar, type CarColor, type CarModelId } from "@/lib/car-catalog";
+import { CAR_CATALOG, CAR_MODEL_IDS, carReferralRequirement, isReferralCar, switchableCars, type CarColor, type CarModelId } from "@/lib/car-catalog";
 import { referralRewardUnlocked } from "@/lib/referral-rewards";
 import { CarColorPicker } from "../car/car-color-picker";
 import { SectionCardHeading } from "../shell/section-card-heading";
@@ -86,14 +86,15 @@ export const GaragePanel = memo(function GaragePanel({
   const car = CAR_CATALOG[model];
   const colorName = car.colors.find((choice) => choice.color === game.color)?.name ?? PAINT_IDS.map(id => PAINT_CATALOG[id]).find(paint => paint.color === game.color)?.name ?? "pilihan";
   // Model pendaftaran dikunci (lihat select-car di lib/game-server.ts); satu-
-  // satunya pergantian yang sah melibatkan mobil hadiah ajakan. Pilihannya
-  // baru muncul begitu mobil eksklusif pertama terbuka -- sebelum itu kartu
-  // ini tetap seperti sebelumnya.
+  // satunya pergantian yang sah melibatkan mobil hadiah ajakan, dan turunnya
+  // hanya ke starter yang dipilih saat onboarding. Pilihannya baru muncul
+  // begitu mobil eksklusif pertama terbuka -- sebelum itu kartu ini tetap
+  // seperti sebelumnya.
   const exclusiveCars = CAR_MODEL_IDS.filter(isReferralCar);
   const friends = game.referral.completed;
   const unlockedExclusive = exclusiveCars.filter((id) => referralRewardUnlocked("car", id, friends));
-  const onExclusiveCar = isReferralCar(model);
-  const switchable: readonly CarModelId[] = onExclusiveCar ? [...unlockedExclusive, ...STARTER_CAR_IDS] : unlockedExclusive.length > 0 ? [model, ...unlockedExclusive] : [];
+  const switchable: readonly CarModelId[] =
+    unlockedExclusive.length > 0 ? switchableCars(game.carSelection?.starterModel ?? null, friends) : [];
   return (
     <>
       <section id="body-colors" tabIndex={-1} className="panel garage-panel" aria-label="Mobil kamu">

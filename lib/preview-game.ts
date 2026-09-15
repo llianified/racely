@@ -27,7 +27,7 @@ import {
   racingDayKey,
 } from "./game-economy";
 import { LAST_CIRCUIT } from "./track-layout";
-import { CAR_MODEL_IDS, isCarColor, isReferralCar } from "./car-catalog";
+import { CAR_MODEL_IDS, canSwitchCar, isCarColor, isReferralCar } from "./car-catalog";
 import { applyPartCommand, bodyPartsSchema, PartRuleError } from "./car-parts";
 import { REFERRAL_MAX_FRIENDS } from "./referral-rewards";
 import { referralLink } from "./telegram-bot";
@@ -77,6 +77,8 @@ const previewGameSchema = z.object({
     carSelection: z.object({
       model: z.enum(CAR_MODEL_IDS).nullable(),
       returningPlayer: z.boolean(),
+      // Opsional: cookie preview lama belum mencatat mobil starter-nya.
+      starterModel: z.enum(CAR_MODEL_IDS).nullable().optional(),
     }).optional(),
     balance: z.number().nonnegative(),
     pending: z.number().nonnegative(),
@@ -377,8 +379,9 @@ export function performPreviewGameAction(
     if (selection?.model) {
       // A retry must not reset a later garage color or grant any progress.
       if (selection.model === action.model) return previewResult(game, offline, now, economy);
-      // Pergantian hanya sah lewat mobil hadiah ajakan, sama seperti server.
-      if (!isReferralCar(selection.model) && !isReferralCar(action.model)) {
+      // Pergantian hanya sah lewat mobil hadiah ajakan, dan turunnya hanya ke
+      // mobil starter yang dipilih saat onboarding -- sama seperti server.
+      if (!canSwitchCar(action.model, selection.starterModel ?? null, REFERRAL_MAX_FRIENDS)) {
         throw new PreviewGameRuleError("Model sudah dikonfirmasi dan tidak dapat diganti.");
       }
     }
@@ -399,7 +402,11 @@ export function performPreviewGameAction(
   if (action.type === "select-car") {
     state = {
       ...state,
-      carSelection: { model: action.model, returningPlayer: selection?.returningPlayer ?? false },
+      carSelection: {
+        model: action.model,
+        returningPlayer: selection?.returningPlayer ?? false,
+        starterModel: selection?.starterModel ?? (isReferralCar(action.model) ? null : action.model),
+      },
       color: action.color,
     };
   } else if (action.type === "buy-part" || action.type === "equip-part" || action.type === "unequip-part") {

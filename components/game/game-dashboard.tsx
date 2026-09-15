@@ -48,7 +48,7 @@ import {
   type Upgrade,
 } from "@/lib/game";
 import { cn } from "@/lib/utils";
-import { CAR_CATALOG, type CarColor } from "@/lib/car-catalog";
+import { CAR_CATALOG, isCarColor, type CarColor, type CarModelId } from "@/lib/car-catalog";
 import { GEAR_CATALOG, ROLLER_CATALOG, type GearId, type RollerId } from "@/lib/car-setup";
 import { PAINT_CATALOG, type PaintCommand } from "@/lib/car-paints";
 import type { DailyMissionKind } from "@/lib/daily-missions";
@@ -338,15 +338,15 @@ export function GameDashboard() {
     toast.success(`${PAINT_CATALOG[action.paintId].name} ${action.type === "buy-paint" ? "dibeli; pasang dari koleksi" : "terpasang"}`);
     return true;
   };
-  const claimReferralReward = async (action: GameCommand) => {
-    const next = await runAction(action, `referral:${action.type}`);
+  // Ganti mobil dari garasi. Warna ikut yang sedang dipakai supaya perintahnya
+  // sama dengan yang dikirim layar pemilihan mobil.
+  const switchCar = async (model: CarModelId) => {
+    // Server hanya menerima warna dari palet model tujuan, jadi cat yang tidak
+    // ada di sana jatuh ke warna bawaan mobil itu.
+    const color = isCarColor(model, game.color) ? game.color : CAR_CATALOG[model].defaultColor;
+    const next = await runAction({ type: "select-car", model, color }, `select-car:${model}`);
     if (!next) return false;
-    toast.success(
-      action.type === "select-car" ? `${CAR_CATALOG[action.model].name} dipakai`
-        : action.type === "equip-paint" ? `${PAINT_CATALOG[action.paintId].name} terpasang`
-        : action.type === "equip-part" ? `${PART_CATALOG[action.partId].name} aktif`
-        : "Hadiah dipasang",
-    );
+    toast.success(`${CAR_CATALOG[model].name} dipakai`);
     return true;
   };
   const dailyMission = async (day: string, kind: DailyMissionKind) => {
@@ -512,7 +512,8 @@ export function GameDashboard() {
                 onPreviewSheet={trackPreviewSheet}
                 onChooseColor={chooseColor}
                 onPartAction={modifyBodyPart}
-              onPaintAction={modifyPaint}
+                onPaintAction={modifyPaint}
+                onSelectCar={switchCar}
                 disabled={Boolean(busyAction)}
               />
               <UpgradePanel
@@ -552,7 +553,7 @@ export function GameDashboard() {
             <ReferralPanel
               game={game}
               onInvite={invite}
-              onReward={claimReferralReward}
+              onOpenGarage={(target) => navigate("garage", target)}
               disabled={Boolean(busyAction)}
             />
           ) : (

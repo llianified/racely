@@ -44,6 +44,8 @@ export const players = pgTable("racely_players", {
   bodyParts: jsonb("body_parts").$type<BodyParts>().notNull().default({ owned: [], equipped: {} }),
   setup: jsonb("setup").$type<CarSetup>().notNull().default({ gear: "4:1", roller: "standard" }),
   carModel: text("car_model").$type<CarModelId>(),
+  /** Mobil pilihan onboarding; satu-satunya starter yang boleh dipakai lagi. */
+  starterCarModel: text("starter_car_model").$type<CarModelId>(),
   color: text("color").notNull().default("#4275ff"),
   circuit: integer("circuit").notNull().default(0),
   lastSettledAt: timestamp("last_settled_at", { withTimezone: true })
