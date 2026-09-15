@@ -53,6 +53,9 @@ export function RacePanel({ game, onCircuits, active = true }: {
   const [cameraMode, setCameraMode] = useState(0);
   const [inspect, setInspect] = useState(false);
   const [bodyVisible, setBodyVisible] = useState(false);
+  // Arena melaporkan sendiri kapan lintasannya tampil; overlay HUD ikut padam
+  // selama placeholder supaya pesan "muat ulang arena" tidak tertutup chip.
+  const [sceneLive, setSceneLive] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsId = useId();
   const battery = batteryTelemetry(game);
@@ -127,10 +130,10 @@ export function RacePanel({ game, onCircuits, active = true }: {
         )}
       </div>
       <div className={cn("scene-wrap", inspect && "is-inspecting", !inspect && cinematic && "is-cinematic", !inspect && telemetry.recovery > 0 && "is-course-out", !inspect && telemetry.grip < 40 && "is-grip-critical")}>
-        {!inspect && <div className="race-vignette" aria-hidden="true" />}
-        {!inspect && <RacePositionHud lane={lane.lane + 1} switching={lane.feature === 'lane-changer'} telemetry={telemetry} position={position} total={opponents.length + 1} followCamera={followCamera} recovering={telemetry.recovery > 0} />}
+        {!inspect && sceneLive && <div className="race-vignette" aria-hidden="true" />}
+        {!inspect && sceneLive && <RacePositionHud lane={lane.lane + 1} switching={lane.feature === 'lane-changer'} telemetry={telemetry} position={position} total={opponents.length + 1} followCamera={followCamera} recovering={telemetry.recovery > 0} />}
         {inspect && <div className="scene-overlay inspect-hud"><strong>{bodyVisible ? "DETAIL MOBIL" : "DI BALIK BODI"}</strong><span>{bodyVisible ? "Cat metalik · ban · aero kit" : "2 sel · motor · penggerak 4WD"}</span></div>}
-        <RaceScene setup={carSetup(game)} equipped={game.bodyParts?.equipped} driving={driving} onTelemetry={setTelemetry} cinematic={cinematic && !reducedMotion} levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.laps + game.progress} seconds={seconds} baseSeconds={baseSeconds} opponents={opponents} opponentProgress={opponentProgress} color={game.color} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} />
+        <RaceScene setup={carSetup(game)} equipped={game.bodyParts?.equipped} driving={driving} onTelemetry={setTelemetry} cinematic={cinematic && !reducedMotion} levels={game.levels} model={game.carSelection?.model ?? 'neo-falcon'} progress={game.laps + game.progress} seconds={seconds} baseSeconds={baseSeconds} opponents={opponents} opponentProgress={opponentProgress} color={game.color} cameraMode={cameraMode} followCamera={followCamera} resetKey={resetKey} circuit={game.circuit} active={active} reducedMotion={reducedMotion} inspect={inspect} charge={battery.charge} bodyVisible={bodyVisible} onSceneStatus={setSceneLive} />
         {inspect && <div className="scene-overlay inspect-hint">Geser untuk memutar · balapan tetap jalan</div>}
       </div>
       {!inspect && <RaceOverviewHud seconds={seconds} baseSeconds={baseSeconds} reward={lapReward(game)} progress={game.progress} telemetry={telemetry} laps={game.laps} />}
