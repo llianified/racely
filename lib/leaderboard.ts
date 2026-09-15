@@ -2,6 +2,7 @@ import { z } from "zod";
 import { CAR_MODEL_IDS, type CarModelId } from "./car-catalog";
 import { PART_CATALOG, bodyPartsSchema } from "./car-parts";
 import { NEUTRAL_SETUP, ROLLER_IDS } from "./car-setup";
+import type { GameState } from "./game";
 
 const carAppearanceSchema = z.object({
   color: z.string().regex(/^#[0-9a-f]{6}$/i),
@@ -25,7 +26,6 @@ export function leaderboardCar(entry: LeaderboardEntry) {
     ? { model: model.data, ...appearance.data }
     : null;
 }
-import type { GameState } from "./game";
 
 export const LEADERBOARD_LIMIT = 50;
 export const LEADERBOARD_REFRESH_MS = 30_000;
