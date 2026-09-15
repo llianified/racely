@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "group/badge inline-flex h-(--space-20) w-fit shrink-0 items-center justify-center gap-xs overflow-hidden rounded-full border border-transparent px-sm py-(--space-2) text-xs font-medium whitespace-nowrap transition-all focus-visible:border-ring focus-visible:ring-(length:--stroke-3) focus-visible:ring-ring/50 has-data-[icon=inline-end]:pr-(--space-6) has-data-[icon=inline-start]:pl-(--space-6) aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-(--icon-2xs)!",
+  "group/badge inline-flex h-(--space-20) w-fit shrink-0 items-center justify-center gap-xs overflow-hidden rounded-full border border-transparent px-sm py-(--space-2) text-(length:--fs-nano) leading-(--lh-compact) font-medium whitespace-nowrap transition-all focus-visible:border-ring focus-visible:ring-(length:--stroke-3) focus-visible:ring-ring/50 has-data-[icon=inline-end]:pr-(--space-6) has-data-[icon=inline-start]:pl-(--space-6) aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-(--icon-2xs)!",
   {
     variants: {
       variant: {
