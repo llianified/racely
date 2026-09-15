@@ -25,7 +25,8 @@ import {
   dailyCheckIn,
   racingDayKey,
 } from "@/lib/game-economy";
-import { CAR_MODEL_IDS, isCarColor, type CarModelId } from "@/lib/car-catalog";
+import { CAR_MODEL_IDS, carReferralRequirement, isCarColor, isReferralCar, type CarModelId } from "@/lib/car-catalog";
+import { referralRewardUnlocked } from "@/lib/referral-rewards";
 import {
   applyPartCommand,
   bodyPartsSchema,
@@ -250,6 +251,7 @@ function stateFromRow(
   referral: ReferralSummary = {
     link: referralLink(row.userId),
     invited: 0,
+    completed: 0,
     earned: 0,
   },
   adReward: AdReward = adRewardStatus(0, economy),
@@ -515,10 +517,12 @@ async function readReferralSummary(
   tx: Transaction,
   userId: string,
 ): Promise<ReferralSummary> {
-  const result = await tx.execute<{ invited: number; earned: string | number }>(sql`
+  const result = await tx.execute<{ invited: number; completed: number; earned: string | number }>(sql`
     select
       (select count(*)::int from racely_players
          where referred_by = ${userId}) as invited,
+      (select count(*)::int from racely_players
+         where referred_by = ${userId} and referral_paid_at is not null) as completed,
       (select coalesce(sum(amount), 0) from racely_reward_claims
          where user_id = ${userId}
            and reward_key >= ${INVITER_CLAIM_PREFIX}
@@ -528,6 +532,7 @@ async function readReferralSummary(
   return {
     link: referralLink(userId),
     invited: Number(row?.invited ?? 0),
+    completed: Number(row?.completed ?? 0),
     earned: Number(row?.earned ?? 0),
   };
 }
@@ -743,6 +748,8 @@ type ActionContext = {
   now: Date;
   dailyClaims: string[];
   adWatchesToday: number;
+  /** Ringkasan ajakan yang sama dengan yang dikirim ke klien; `completed` membuka hadiah milestone. */
+  referral: ReferralSummary;
 };
 
 /**
@@ -769,9 +776,9 @@ type ActionHandler<T extends GameCommand["type"]> = (
  * jadi satu handler tidak akan diterima oleh ketiga kuncinya. Tipe fungsi biasa
  * tetap kena pemeriksaan kontravarian yang normal.
  */
-const applyPartAction = (row: PlayerRow, action: PartCommand): ActionOutcome => {
+const applyPartAction = (row: PlayerRow, action: PartCommand, { referral }: ActionContext): ActionOutcome => {
   try {
-    return { row: { ...row, ...applyPartCommand(row, action) } };
+    return { row: { ...row, ...applyPartCommand(row, action, referral.completed) } };
   } catch (error) {
     if (error instanceof PartRuleError) throw new GameRuleError(error.message);
     throw error;
@@ -787,9 +794,9 @@ const applyPartAction = (row: PlayerRow, action: PartCommand): ActionOutcome => 
  * Handler hanya menghitung baris berikutnya. Yang menyimpannya tetap
  * `performGameAction`, di dalam transaksi dan lock yang sama.
  */
-const applyPaintAction = (row: PlayerRow, action: PaintCommand, { economy }: ActionContext): ActionOutcome => {
+const applyPaintAction = (row: PlayerRow, action: PaintCommand, { economy, referral }: ActionContext): ActionOutcome => {
   try {
-    return { row: { ...row, ...applyPaintCommand(row, action, economy) } };
+    return { row: { ...row, ...applyPaintCommand(row, action, economy, referral.completed) } };
   } catch (error) {
     throw new GameRuleError(error instanceof Error ? error.message : "Cat gagal diproses.");
   }
@@ -818,13 +825,22 @@ const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
     return { row: { ...row, dailyMissions: result.dailyMissions, balance: row.balance + credit } };
   },
 
-  "select-car": (row, action) => {
-    if (row.carModel !== null) {
-      if (row.carModel !== action.model) {
+  "select-car": (row, action, { referral }) => {
+    if (isReferralCar(action.model) && !referralRewardUnlocked("car", action.model, referral.completed)) {
+      throw new GameRuleError(
+        `Ajak ${carReferralRequirement(action.model)} teman untuk membuka mobil ini.`,
+      );
+    }
+    if (row.carModel !== null && row.carModel !== action.model) {
+      // Model pendaftaran dikunci. Satu-satunya pergantian yang sah melibatkan
+      // mobil hadiah ajakan: naik ke mobil eksklusif yang sudah terbuka, atau
+      // turun darinya kembali ke mobil biasa. Progres, koin, dan koleksi ikut.
+      if (!isReferralCar(row.carModel) && !isReferralCar(action.model)) {
         throw new GameRuleError(
           "Model sudah dikonfirmasi dan tidak dapat diganti.",
         );
       }
+    } else if (row.carModel !== null) {
       // Mengulang model yang sama bukan pelanggaran, cuma tidak ada yang
       // berubah: jaringan yang putus setelah server menyimpan membuat klien
       // mencoba lagi dengan requestId baru, dan tanda terima tidak mengenali
@@ -1084,6 +1100,10 @@ export async function performGameAction(
     );
     let dailyClaims = await readDailyClaims(tx, identity.userId);
     let adWatchesToday = await readAdWatchesToday(tx, identity.userId, now);
+    // Dibaca sekali sebelum handler: tidak ada aksi pemain yang mengubah
+    // hitungan ajakannya sendiri, jadi ringkasan yang sama dipakai untuk
+    // membuka hadiah milestone dan untuk respons.
+    const referral = await readReferralSummary(tx, identity.userId);
 
     if (action.type !== "sync") {
       const [receipt] = await tx
@@ -1126,7 +1146,7 @@ export async function performGameAction(
             replayHistory,
             settled.offline,
             dailyCheckIn(dailyClaims, now, economy),
-            await readReferralSummary(tx, identity.userId),
+            referral,
             adRewardStatus(adWatchesToday, economy),
           ),
           saved,
@@ -1156,6 +1176,7 @@ export async function performGameAction(
       now,
       dailyClaims,
       adWatchesToday,
+      referral,
     });
     next = outcome.row;
     dailyClaims = outcome.dailyClaims ?? dailyClaims;
@@ -1203,7 +1224,7 @@ export async function performGameAction(
       history,
       settled.offline,
       dailyCheckIn(dailyClaims, now, economy),
-      await readReferralSummary(tx, identity.userId),
+      referral,
       adRewardStatus(adWatchesToday, economy),
     );
     if (action.type !== "sync") {

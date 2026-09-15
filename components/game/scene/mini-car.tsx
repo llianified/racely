@@ -165,7 +165,7 @@ function createCarGeometry(model: CarModelId) {
         [.122, -.031], [.122, .031], [.120, .045], [.114, .053],
         [.104, .057], [.077, .057], [.077, -.057],
       ]), [x, .124, z], [0, 0, Math.PI / 2])
-      const rimFinish = model === 'neo-falcon' ? 'body' : 'alloy'
+      const rimFinish = model === 'neo-falcon' ? 'body' : model === 'phantom-x' ? 'gold' : 'alloy'
       add(rimFinish, turned([
         [.073, -.045], [.081, -.045], [.085, -.039], [.085, .039],
         [.081, .045], [.073, .045], [.073, -.045],
@@ -175,7 +175,7 @@ function createCarGeometry(model: CarModelId) {
       add('rubber', ring(.107, .0015), [x + side * .054, .124, z], [0, Math.PI / 2, 0])
       add('body', cylinder(.027, .020), [faceX, .124, z], [0, 0, Math.PI / 2])
       add('alloy', cylinder(.010, .023, 6), [faceX + side * .004, .124, z], [0, 0, Math.PI / 2])
-      const spokeCount = model === 'neo-falcon' ? 12 : 8
+      const spokeCount = model === 'neo-falcon' ? 12 : model === 'phantom-x' ? 10 : 8
       for (let spoke = 0; spoke < spokeCount; spoke++) {
         const angle = spoke / spokeCount * Math.PI * 2
         const spokeGeometry = plate([
@@ -378,18 +378,24 @@ function createAeroGeometry(id: PartId, model: CarModelId) {
   } else if (id === 'ducktail') {
     add('body', sculptedShell([[-.21, .018, 0, .005], [-.15, .036, .008, .012], [0, .043, .01, .014], [.15, .036, .008, .012], [.21, .018, 0, .005]], 32, 20), [0, .225, -.322], [0, Math.PI / 2, 0])
     for (const side of SIDES) box('chassis', [.014, .04, .035], [side * .095, .198, -.305])
-  } else if (id === 'gt-wing') {
+  } else if (id === 'gt-wing' || id === 'crown-wing') {
+    // Crown Wing (hadiah 10 teman) memakai rangka GT yang sama, seluruhnya emas.
+    const frame: Finish = id === 'crown-wing' ? 'gold' : 'chassis'
     for (const side of SIDES) {
       box('alloy', [.028, .013, .052], [side * .105, .208, -.299])
-      box('chassis', [.013, .135, .022], [side * .105, .272, -.30], [.2, 0, 0])
-      box('chassis', [.013, .023, .055], [side * .105, .342, -.317])
-      add('chassis', plate([[-.047, -.02], [.047, -.018], [.056, .023], [-.035, .034]], .008), [side * .263, .361, -.333], [0, 0, Math.PI / 2])
+      box(frame, [.013, .135, .022], [side * .105, .272, -.30], [.2, 0, 0])
+      box(frame, [.013, .023, .055], [side * .105, .342, -.317])
+      add(frame, plate([[-.047, -.02], [.047, -.018], [.056, .023], [-.035, .034]], .008), [side * .263, .361, -.333], [0, 0, Math.PI / 2])
       box('gold', [.035, .003, .088], [side * .215, .337, -.334])
+      if (id === 'crown-wing') box('gold', [.012, .028, .006], [side * .19, .378, -.338])
     }
-    add('chassis', sculptedShell([[-.26, .037, 0, .006], [-.19, .058, .004, .011], [0, .053, .009, .013], [.19, .058, .004, .011], [.26, .037, 0, .006]], 36, 24), [0, .325, -.336], [0, Math.PI / 2, 0])
-  } else if (id === 'front-splitter') {
-    add('chassis', plate([[-.22, .30], [-.19, .39], [-.12, .415], [.12, .415], [.19, .39], [.22, .30], [.15, .325], [-.15, .325]], .01), [0, .09, 0])
+    add(frame, sculptedShell([[-.26, .037, 0, .006], [-.19, .058, .004, .011], [0, .053, .009, .013], [.19, .058, .004, .011], [.26, .037, 0, .006]], 36, 24), [0, .325, -.336], [0, Math.PI / 2, 0])
+  } else if (id === 'front-splitter' || id === 'neon-fin') {
+    // Neon Fin (hadiah 3 teman): bilah emas dengan sirip tegak di kedua ujung.
+    const blade: Finish = id === 'neon-fin' ? 'gold' : 'chassis'
+    add(blade, plate([[-.22, .30], [-.19, .39], [-.12, .415], [.12, .415], [.19, .39], [.22, .30], [.15, .325], [-.15, .325]], .01), [0, .09, 0])
     for (const side of SIDES) box('alloy', [.006, .076, .006], [side * .14, .132, .355], [-.28, 0, side * .12])
+    if (id === 'neon-fin') for (const side of SIDES) box('gold', [.005, .05, .07], [side * .2, .118, .34], [.15, 0, 0])
   } else {
     for (const side of SIDES) {
       add('chassis', plate([[-.023, -.17], [.03, -.14], [.027, .16], [-.014, .18]], .012), [side * .177, .079, 0])

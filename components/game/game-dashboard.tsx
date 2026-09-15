@@ -48,7 +48,7 @@ import {
   type Upgrade,
 } from "@/lib/game";
 import { cn } from "@/lib/utils";
-import type { CarColor } from "@/lib/car-catalog";
+import { CAR_CATALOG, type CarColor } from "@/lib/car-catalog";
 import { GEAR_CATALOG, ROLLER_CATALOG, type GearId, type RollerId } from "@/lib/car-setup";
 import { PAINT_CATALOG, type PaintCommand } from "@/lib/car-paints";
 import type { DailyMissionKind } from "@/lib/daily-missions";
@@ -338,6 +338,17 @@ export function GameDashboard() {
     toast.success(`${PAINT_CATALOG[action.paintId].name} ${action.type === "buy-paint" ? "dibeli; pasang dari koleksi" : "terpasang"}`);
     return true;
   };
+  const claimReferralReward = async (action: GameCommand) => {
+    const next = await runAction(action, `referral:${action.type}`);
+    if (!next) return false;
+    toast.success(
+      action.type === "select-car" ? `${CAR_CATALOG[action.model].name} dipakai`
+        : action.type === "equip-paint" ? `${PAINT_CATALOG[action.paintId].name} terpasang`
+        : action.type === "equip-part" ? `${PART_CATALOG[action.partId].name} aktif`
+        : "Hadiah dipasang",
+    );
+    return true;
+  };
   const dailyMission = async (day: string, kind: DailyMissionKind) => {
     if (await runAction({ type: "daily-mission", day, kind })) toast.success("Misi harian diklaim");
   };
@@ -541,6 +552,7 @@ export function GameDashboard() {
             <ReferralPanel
               game={game}
               onInvite={invite}
+              onReward={claimReferralReward}
               disabled={Boolean(busyAction)}
             />
           ) : (
