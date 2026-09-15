@@ -775,7 +775,9 @@
 .press-button { --press-depth: var(--space-3); --press-shadow-color: var(--press-shadow); border-radius: var(--press-radius); box-shadow: 0 var(--press-depth) 0 var(--press-shadow-color), var(--press-inset-shadow, 0 0 transparent); }
 
 /* ── tombol emas: warna khusus dalam keluarga tombol beralas ────────────── */
-.gold-button { --press-shadow-color: var(--gold-shadow); --press-inset-shadow: inset 0 var(--stroke) 0 var(--gold-highlight); background: linear-gradient(60deg, transparent 9%, color-mix(in srgb, var(--foreground) 19%, transparent) 9%, color-mix(in srgb, var(--foreground) 19%, transparent) 18%, transparent 18%), linear-gradient(110deg, var(--accent), var(--warning)); color: var(--accent-foreground); border: var(--stroke) solid var(--accent); border-top: var(--stroke-2) solid var(--gold-highlight); font-weight: var(--fw-heavier); letter-spacing: var(--track-snug-xs); }
+/* Hairline emas digambar sebagai inset box-shadow, bukan border, supaya kotak
+   tombol emas persis sama ukurannya dengan tombol lain yang tanpa hairline. */
+.gold-button { --press-shadow-color: var(--gold-shadow); --press-inset-shadow: inset 0 var(--stroke-2) 0 var(--gold-highlight), inset 0 0 0 var(--stroke) var(--accent); background: linear-gradient(60deg, transparent 9%, color-mix(in srgb, var(--foreground) 19%, transparent) 9%, color-mix(in srgb, var(--foreground) 19%, transparent) 18%, transparent 18%), linear-gradient(110deg, var(--accent), var(--warning)); color: var(--accent-foreground); font-weight: var(--fw-heavier); letter-spacing: var(--track-snug-xs); }
 .gold-button:hover:not(:disabled) { filter: brightness(1.08); }
 
 /* `transition-all` bawaan tombol ikut menganimasikan warna, jadi emasnya masih
@@ -908,7 +910,7 @@
   .garage-customize { flex-direction: column; align-items: flex-start; }
 }
 
-/* ── misi & sirkuit ──────────────────────────────────── */
+/* ── misi & sirkuit ─────��────────────────────────────── */
 .circuit-panel { padding: var(--space-md); }
 .section-card-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-sm); min-height: var(--space-28); }
 .panel:not(.circuit-panel) > .section-card-heading { margin-inline: calc(var(--gutter) * -1); padding: 0 var(--gutter) var(--space-md); border-bottom: var(--stroke) solid var(--border); }
