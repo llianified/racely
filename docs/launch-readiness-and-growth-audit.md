@@ -4,6 +4,7 @@
 **Question answered:** which capabilities must exist before V1 launch, which should follow soon after real users arrive, and which are later/experimental.
 **Not in scope:** code quality, UI redesign, visual hierarchy. The current UX hierarchy and design tokens are treated as the source of truth.
 **Implementation update:** 16 September 2026 — visibilitas ajakan yang masih menunggu syarat, notifikasi payout ke inviter, salinan ajakan personal, event tracking pertumbuhan, dan notifikasi status penarikan sudah dirilis.
+**Owner decisions:** launch segera setelah final check lolos dan bekukan scope V1; operator withdrawal siap dengan SLA 3–5 hari kerja; ekonomi awal sudah disetujui; environment production dan setup bot production sudah dikonfirmasi beres. SLA wajib tampil di Wallet dan FAQ sebelum launch.
 
 Legend: `[DONE]` clearly exists and is usable · `[PARTIAL]` exists but incomplete · `[MISSING]` not meaningfully available · `[UNCERTAIN]` cannot verify from code alone.
 Blocker classes: **A** = true launch blocker · **B** = growth feature, post-launch · **C** = nice-to-have polish.
@@ -111,10 +112,10 @@ Everything else in the growth roadmap builds on a loop that is already whole.
 ## 4. FINAL LAUNCH CHECKLIST
 
 ### MUST HAVE BEFORE LAUNCH
-- [ ] Confirm production env is complete at build time: `PUBLIC_APP_URL`, `NEXT_PUBLIC_ADSGRAM_BLOCK_ID`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `DATABASE_URL`, `RACELY_ADMIN_PASSWORD` (README notes ads card and OG card silently vanish without build-time env). `[UNCERTAIN]` — cannot verify from repo.
-- [ ] `pnpm run bot:setup` has been run against the production bot so `/start`, `/play` and the webhook are registered. `[UNCERTAIN]`
-- [ ] An operator is actually staffing the withdrawal queue and a payout SLA is communicated somewhere the player can read it (wallet sheet or FAQ). The mechanism is done; the operational commitment is what's being checked.
-- [ ] Economy config row in `racely_economy_config` reviewed once against the liability projection in `/admin` → Ekonomi before real users arrive.
+- [x] Production env is complete at build time: `PUBLIC_APP_URL`, `NEXT_PUBLIC_ADSGRAM_BLOCK_ID`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `DATABASE_URL`, `RACELY_ADMIN_PASSWORD` — owner-confirmed 16 September 2026.
+- [x] `pnpm run bot:setup` has been run against the production bot so `/start`, `/play` and the webhook are registered — owner-confirmed 16 September 2026.
+- [ ] Communicate the owner-approved withdrawal SLA of **3–5 hari kerja** in both the Wallet withdrawal sheet and the FAQ. The operator is confirmed ready; only the player-facing copy remains.
+- [x] Economy config row in `racely_economy_config` has been reviewed against the liability projection in `/admin` → Ekonomi — owner-approved 16 September 2026.
 
 ### ALREADY DONE
 - [x] Core racing loop with server-authoritative settlement and real-player rivals
@@ -147,9 +148,16 @@ Everything else in the growth roadmap builds on a loop that is already whole.
 
 ## 5. BOTTOM LINE
 
-**Based on the current app, Racely IS launch-ready.**
+**Racely is one player-facing copy change away from launch-ready.**
 
-Every item on the pre-launch "wajib" list — core loop, economy, onboarding, garage/setup, reward/claim, referral, persistence, deployment, security — is present and server-enforced. The pending-invite and generic-share-copy gaps identified by this audit are now closed; the four unchecked items above remain operational confirmations, not features.
+Every product and operational requirement on the pre-launch "wajib" list — core loop, economy, onboarding, garage/setup, reward/claim, referral, persistence, deployment, security, production env, bot setup, withdrawal operator, and economy approval — is present or confirmed. One launch-blocking code/content change remains: replace the inaccurate one-day payout wording and expose the approved **3–5 hari kerja** SLA in both Wallet and FAQ.
+
+**Remaining code before launch:**
+1. Update `components/game/panels/wallet-panel.tsx`: replace “biasanya dalam sehari” with the approved 3–5-business-day SLA.
+2. Update `components/game/shell/game-dialog.tsx`: add the same SLA to the withdrawal FAQ answer.
+3. Verify both player-facing surfaces, then mark the final checklist item complete. No backend, database, payout automation, or economy change is required.
+
+After that final check passes, launch immediately with the V1 scope frozen. Do not add post-launch roadmap features first.
 
 **Freeze now:**
 - Game rules, economy formulas, and qualification rule shape (tune numbers only via `/admin`).
