@@ -34,11 +34,11 @@ describe('Mini 4WD bodywork', () => {
         expect(wing.length).toBeGreaterThan(0)
         const box = bounds([...body, ...wing])
         expect(box.min.y).toBeGreaterThan(.08)
-        expect(box.max.y).toBeLessThan(.36)
+        expect(box.max.y).toBeLessThan(model === 'phantom-x' ? .43 : .36)
         expect(box.min.z).toBeGreaterThan(-.4)
         expect(box.max.z).toBeLessThan(.4)
         expect(box.min.x).toBeCloseTo(-box.max.x)
-        expect(box.max.x).toBeLessThan(.25)
+        expect(box.max.x).toBeLessThan(model === 'phantom-x' ? .30 : .25)
         for (const { geometry } of [...body, ...wing]) {
           const positions = geometry.getAttribute('position')
           const normals = geometry.getAttribute('normal')
@@ -66,6 +66,25 @@ describe('Mini 4WD bodywork', () => {
       expect(canopy(luna)).toBeGreaterThan(canopy(falcon) * 1.4)
     } finally {
       for (const { geometry } of [...falcon, ...luna]) geometry.dispose()
+    }
+  })
+
+  it('gives Phantom a wider two-tier wing and permanent gold bodywork beyond the starter silhouettes', () => {
+    const phantomBody = collect(add => addBodywork('phantom-x', add))
+    const phantomWing = collect(add => addStockWing('phantom-x', add))
+    const starterWings = ['neo-falcon', 'luna-gt'].map(model => collect(add => addStockWing(model as 'neo-falcon' | 'luna-gt', add)))
+    try {
+      const wing = bounds(phantomWing)
+      for (const starter of starterWings) {
+        const starterBox = bounds(starter)
+        expect(wing.getSize(new THREE.Vector3()).x).toBeGreaterThan(starterBox.getSize(new THREE.Vector3()).x * 1.15)
+        expect(wing.max.y).toBeGreaterThan(starterBox.max.y + .05)
+      }
+      expect(phantomBody.filter(part => part.finish === 'gold').length).toBeGreaterThanOrEqual(10)
+      expect(bounds(phantomBody.filter(part => part.finish === 'body')).getSize(new THREE.Vector3()).x).toBeGreaterThan(.45)
+      expect(phantomWing.some(part => part.finish === 'gold')).toBe(true)
+    } finally {
+      for (const { geometry } of [...phantomBody, ...phantomWing, ...starterWings.flat()]) geometry.dispose()
     }
   })
 

@@ -315,15 +315,17 @@ const Rollers = memo(function Rollers({ roller, color, model }: { roller: Roller
 function CarSurfaces({ parts, color, model, inspect = false, plastic = false }: {
   parts: Partial<Record<Finish, THREE.BufferGeometry>>; color: string; model: CarModelId; inspect?: boolean; plastic?: boolean
 }) {
+  const phantom = model === 'phantom-x'
   return <>{(Object.entries(parts) as [Finish, THREE.BufferGeometry][]).map(([finish, geometry]) => {
     if (inspect && ['body', 'panel', 'glass', 'livery'].includes(finish)) return null
     return <mesh key={finish} geometry={geometry} dispose={null} castShadow receiveShadow>
       {finish === 'body' && plastic ? <meshStandardMaterial color={color} roughness={.72} metalness={0} />
-        : finish === 'body' ? <meshPhysicalMaterial color={color} roughness={.29} metalness={.25} clearcoat={1} clearcoatRoughness={.16} />
-        : finish === 'panel' ? <meshPhysicalMaterial color={MATERIAL_COLORS.panel} roughness={.31} metalness={.42} clearcoat={.7} />
-        : finish === 'glass' ? <meshPhysicalMaterial color={MATERIAL_COLORS.glass} roughness={.12} metalness={.35} clearcoat={1} clearcoatRoughness={.06} />
+        : finish === 'body' ? <meshPhysicalMaterial color={color} roughness={phantom ? .22 : .29} metalness={phantom ? .55 : .25} clearcoat={1} clearcoatRoughness={.16} iridescence={phantom ? .35 : 0} iridescenceIOR={1.3} />
+        : finish === 'panel' ? <meshPhysicalMaterial color={phantom ? '#171525' : MATERIAL_COLORS.panel} roughness={.31} metalness={.42} clearcoat={.7} />
+        : finish === 'glass' ? <meshPhysicalMaterial color={phantom ? '#513586' : MATERIAL_COLORS.glass} roughness={.12} metalness={.35} clearcoat={1} clearcoatRoughness={.06} />
+        : finish === 'livery' && phantom ? <meshStandardMaterial color={COLORS.gold} emissive={COLORS.gold} emissiveIntensity={.8} roughness={.25} />
         : <meshStandardMaterial
-          color={finish === 'gold' && model === 'luna-gt' ? MATERIAL_COLORS.alloy : MATERIAL_COLORS[finish]}
+          color={finish === 'gold' ? model === 'luna-gt' ? MATERIAL_COLORS.alloy : phantom ? '#e6be67' : MATERIAL_COLORS.gold : MATERIAL_COLORS[finish]}
           roughness={finish === 'rubber' ? .92 : finish === 'chassis' ? .58 : .27}
           metalness={['alloy', 'gold'].includes(finish) ? .85 : finish === 'chassis' ? .3 : 0}
         />}
