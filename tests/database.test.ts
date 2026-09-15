@@ -115,8 +115,12 @@ describeDatabase("Neon Postgres persistence", () => {
     const selected = await gameServer.performGameAction(racer, randomUUID(), { type: "select-car", model: "luna-gt", color: "#b9a1ed" });
     const daily = selected.dailyMissions!;
     const mission = daily.items[0];
+    // Harga cat diturunkan dari config ekonomi, bukan angka tetap: mendanai
+    // dengan literal membuat test ini gagal setiap kali knob ekonomi bergeser.
+    const paintPrice = cosmeticPriceAt(selected.economy, PAINT_CATALOG.jade.tier);
+    const funded = paintPrice * 2;
     await db!.update(schema.players).set({
-      balance: 5000,
+      balance: funded,
       dailyMissions: { ...daily, values: { ...daily.values, [mission.kind]: mission.target } },
     }).where(drizzle.eq(schema.players.userId, racer.userId));
     await Promise.all([1, 2].map(() => gameServer.performGameAction(racer, randomUUID(), { type: "buy-paint", paintId: "jade" })));
@@ -125,7 +129,7 @@ describeDatabase("Neon Postgres persistence", () => {
     await gameServer.performGameAction(racer, equipId, { type: "equip-paint", paintId: "jade" });
     await gameServer.performGameAction(racer, equipId, { type: "equip-paint", paintId: "jade" });
     const saved = await gameServer.getGameState(racer);
-    expect(saved.balance).toBe(5000 - cosmeticPriceAt(selected.economy, 1) + mission.reward);
+    expect(saved.balance).toBe(funded - paintPrice + mission.reward);
     expect(saved.ownedPaints).toEqual(["jade"]);
     expect(saved.color).toBe(PAINT_CATALOG.jade.color);
     expect(saved.dailyMissions?.items.find(item => item.kind === mission.kind)?.claimed).toBe(true);
@@ -398,9 +402,11 @@ describeDatabase("Neon Postgres persistence", () => {
     // Every one of these four aborted its own transaction in production -- the
     // reward credit, the purchase and the race settlement rolled back together
     // -- until migration 0007 widened the list.
+    const { PART_CATALOG } = await import("../lib/car-parts");
+    const hoodPrice = PART_CATALOG["vented-hood"].price;
     await db!
       .update(schema.players)
-      .set({ balance: 500 })
+      .set({ balance: hoodPrice + 500 })
       .where(drizzle.eq(schema.players.userId, identity.userId));
 
     const before = await gameServer.performGameAction(identity, randomUUID(), {
@@ -417,7 +423,7 @@ describeDatabase("Neon Postgres persistence", () => {
       partId: "vented-hood",
     });
     expect(bought.bodyParts?.owned).toContain("vented-hood");
-    expect(bought.balance).toBe(claimed.balance - 8);
+    expect(bought.balance).toBe(claimed.balance - hoodPrice);
 
     const fitted = await gameServer.performGameAction(identity, randomUUID(), {
       type: "equip-part",
