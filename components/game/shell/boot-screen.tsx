@@ -1,4 +1,6 @@
 import Image from "next/image";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 /**
  * `overlay` menahan layar boot DI ATAS layar lain yang sedang dirender diam-diam
@@ -8,8 +10,8 @@ import Image from "next/image";
 export function BootScreen({ overlay = false }: { overlay?: boolean } = {}) {
   const Root = overlay ? "div" : "main";
   return (
-    <Root className={overlay ? "boot-screen boot-overlay font-sans" : "boot-screen font-sans"}>
-      <p className="boot-eyebrow">YOUR NEXT LAP STARTS HERE</p>
+    <Root className={cn("boot-screen font-sans", overlay && "boot-overlay")}>
+      <p className="boot-eyebrow">LINTASAN BERIKUTNYA MENUNGGUMU</p>
 
       <div className="boot-content">
         <div className="boot-brand">
@@ -27,6 +29,10 @@ export function BootScreen({ overlay = false }: { overlay?: boolean } = {}) {
         </div>
 
         <div className="boot-loader">
+          <div className="boot-loader-heading">
+            <span>Persiapan balapan</span>
+            <Badge variant="exclusive">Memuat</Badge>
+          </div>
           <div
             className="boot-start-lights"
             role="progressbar"
@@ -41,15 +47,18 @@ export function BootScreen({ overlay = false }: { overlay?: boolean } = {}) {
               </span>
             ))}
           </div>
-          <p className="boot-status" id="boot-status" role="status">
-            Menyiapkan Racely<span aria-hidden="true">...</span>
-          </p>
+          <div className="boot-loader-copy">
+            <p className="boot-status" id="boot-status" role="status">
+              {overlay ? "Menyiapkan mobil pertamamu…" : "Menyiapkan Racely…"}
+            </p>
+            <p className="boot-loader-note">Sebentar lagi, giliranmu di lintasan.</p>
+          </div>
         </div>
       </div>
 
       <p className="boot-footer">
         <span>GARASI</span><span aria-hidden="true">/</span>
-        <span>UPGRADE</span><span aria-hidden="true">/</span>
+        <span>MODIFIKASI</span><span aria-hidden="true">/</span>
         <span>BALAPAN</span>
       </p>
     </Root>

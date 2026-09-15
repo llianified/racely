@@ -1,13 +1,14 @@
 "use client";
 
-import Image from "next/image";
 import { ArrowUpRight, RadioTower, RefreshCw } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   RACELY_CHANNEL_URL,
   RACELY_CHANNEL_USERNAME,
 } from "@/lib/racely-channel";
+import { cn } from "@/lib/utils";
 import { openTelegramLink } from "../use-telegram-webapp";
+import { GateFrame } from "./gate-frame";
 
 export function ChannelGate({
   checking,
@@ -17,42 +18,15 @@ export function ChannelGate({
   onCheck: () => void;
 }) {
   return (
-    <main className="game-gate font-sans">
-      <section className="panel gate-panel" aria-labelledby="channel-gate-title">
-        <Image
-          src="/racely-logo.png"
-          alt="Logo Racely"
-          width={372}
-          height={248}
-          priority
-          className="gate-logo"
-        />
-        <div className="gate-copy">
-          <p className="boot-eyebrow">SATU LANGKAH SEBELUM BALAPAN</p>
-          <h1 id="channel-gate-title" className="text-3xl text-balance">
-            Gabung channel Racely
-          </h1>
-          <p className="text-read leading-relaxed text-muted-foreground">
-            Gabung channel resmi untuk membuka game, update balapan, dan info
-            hadiah terbaru.
-          </p>
-        </div>
-
-        <div className="channel-task">
-          <span className="channel-task-icon" aria-hidden="true">
-            <RadioTower />
-          </span>
-          <div className="channel-task-copy">
-            <p className="channel-task-title">Gabung channel resmi</p>
-            <p className="channel-task-description">
-              Ikuti {RACELY_CHANNEL_USERNAME}, lalu kembali ke sini untuk
-              verifikasi otomatis.
-            </p>
-          </div>
-          <span className="channel-task-status">WAJIB</span>
-        </div>
-
-        <div className="gate-actions">
+    <GateFrame
+      titleId="channel-gate-title"
+      label="Akses pembalap"
+      status="Wajib gabung"
+      icon={RadioTower}
+      title={<>Satu langkah lagi.<br /><span>Lintasan menanti.</span></>}
+      description="Gabung channel resmi untuk akses game, update balapan, dan info hadiah."
+      actions={(
+        <>
           <a
             href={RACELY_CHANNEL_URL}
             target="_blank"
@@ -77,19 +51,31 @@ export function ChannelGate({
             disabled={checking}
             aria-busy={checking}
           >
-            <RefreshCw
-              data-icon="inline-start"
-              className={checking ? "animate-spin" : undefined}
-            />
+            <RefreshCw data-icon="inline-start" className={cn(checking && "motion-safe:animate-spin")} />
             {checking ? "Memeriksa keanggotaan…" : "Saya sudah bergabung"}
           </Button>
-        </div>
-        <p className="channel-gate-note" role="status" aria-live="polite">
-          {checking
-            ? "Tunggu sebentar, Racely sedang memeriksa akun Telegrammu."
-            : "Setelah bergabung, tekan tombol verifikasi di atas."}
-        </p>
-      </section>
-    </main>
+        </>
+      )}
+      note={checking
+        ? "Sebentar, kami sedang memeriksa akun Telegrammu…"
+        : "Sudah gabung? Kembali ke sini, lalu tekan tombol verifikasi."}
+    >
+      <ol className="gate-steps" aria-label="Cara membuka akses balapan">
+        <li>
+          <span className="gate-step-number" aria-hidden="true">01</span>
+          <div>
+            <p className="gate-step-title">Gabung {RACELY_CHANNEL_USERNAME}</p>
+            <p className="gate-step-description">Tekan Gabung di channel Telegram.</p>
+          </div>
+        </li>
+        <li>
+          <span className="gate-step-number" aria-hidden="true">02</span>
+          <div>
+            <p className="gate-step-title">Verifikasi, lalu mulai balapan</p>
+            <p className="gate-step-description">Kembali dan tekan “Saya sudah bergabung”.</p>
+          </div>
+        </li>
+      </ol>
+    </GateFrame>
   );
 }
