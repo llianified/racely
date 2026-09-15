@@ -8,21 +8,24 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-primary/85',
+        // Semua varian berisi (bukan ghost/link/menu) satu keluarga `press-button`:
+        // alas 3px yang sama, jadi tombol emas dan tombol biasa selalu sama tinggi
+        // dan satu silhouette. Emas hanya mengganti warnanya lewat `gold-button`.
+        default: 'press-button bg-primary text-primary-foreground hover:bg-primary/85',
         gold: 'press-button gold-button',
         // Pasangan tonal dari `gold`, untuk aksi per-baris: emas tetap
         // menandai aksi, tapi tanpa isian penuh yang membuat setiap baris
         // berebut jadi tombol utama layar.
         goldSoft:
-          'border-accent/45 bg-accent/12 text-accent hover:bg-accent/22 focus-visible:border-accent focus-visible:ring-accent/25',
+          'press-button border-accent/45 bg-accent/12 text-accent hover:bg-accent/22 focus-visible:border-accent focus-visible:ring-accent/25',
         outline:
-          'border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50',
+          'press-button border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50',
         secondary:
-          'bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground',
+          'press-button bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground',
         ghost:
           'hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50',
         destructive:
-          'bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40',
+          'press-button bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40',
         link: 'text-primary underline-offset-4 hover:underline',
         menu: 'justify-start whitespace-normal text-left font-semibold text-secondary-foreground hover:bg-menu-header [&_svg]:text-muted-foreground',
         menuDirect: 'menu-direct justify-start whitespace-normal text-left [&_svg:last-child]:ml-auto',

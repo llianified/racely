@@ -421,7 +421,7 @@
 .game-sheet [data-slot='sheet-footer'] { flex-direction: row; flex-wrap: wrap; flex-shrink: 0; gap: var(--space-sm); margin-top: 0; padding: var(--space-md) var(--space-md) max(var(--space-md), var(--safe-bottom)); border-top: var(--stroke) solid var(--border); background: var(--surface-inset); }
 .game-sheet [data-slot='sheet-footer'] > * { flex: 1 1 0; min-width: 0; }
 .game-sheet [data-slot='sheet-footer'] > .gold-button { flex: 2 1 0; }
-.game-sheet [data-slot='sheet-footer'] > button { height: auto; min-height: var(--space-44); white-space: normal; }
+.game-sheet [data-slot='sheet-footer'] > button { white-space: normal; }
 .game-sheet [data-slot='sheet-footer'] > .sheet-footnote { flex: 1 1 100%; font-size: var(--fs-small); line-height: var(--lh-normal); text-align: center; color: var(--muted-foreground); }
 /* Kotak catatan yang sama untuk semua sheet: dompet, cara bermain, dst. */
 .sheet-note { padding: var(--space-md); border: var(--stroke) solid var(--border); border-radius: var(--corner-box); background: var(--secondary); font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); text-wrap: pretty; }
@@ -787,7 +787,7 @@
 [data-slot='button']:disabled, .gold-button:disabled, .wallet-chip:disabled, .color-swatch:disabled { background: var(--secondary); color: var(--muted-foreground); border-color: var(--border); border-top-color: var(--border); box-shadow: none; opacity: 1; filter: none; cursor: not-allowed; }
 [data-slot='button']:disabled svg, .wallet-chip:disabled svg { color: var(--muted-foreground); }
 /* varian kecil: bevel lebih tipis biar proporsional */
-.gold-button[data-size='sm']:not(:disabled), .gold-button[data-size='xs']:not(:disabled) { --press-depth: var(--space-2); --press-shift: var(--stroke); }
+.press-button[data-size='sm']:not(:disabled), .press-button[data-size='xs']:not(:disabled), .press-button[data-size='icon-sm']:not(:disabled), .press-button[data-size='icon-xs']:not(:disabled) { --press-depth: var(--space-2); --press-shift: var(--stroke); }
 
 /* ── hasil balapan ───────────────────────────────────── */
 .race-reward { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-md); padding: var(--space-md); border: var(--stroke) solid var(--border); border-left: var(--space-3) solid var(--secondary); border-radius: var(--corner-box); background: var(--surface-inset); transition: border-color var(--dur-base); }
