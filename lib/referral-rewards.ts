@@ -29,7 +29,7 @@ export const REFERRAL_MILESTONES: readonly ReferralMilestone[] = [
   { friends: 3, kind: "part", id: "neon-fin", title: "Neon Fin Splitter", note: "Splitter depan bersirip emas, khusus pengajak." },
   { friends: 5, kind: "paint", id: "aurora", title: "Cat Aurora Prism", note: "Hijau-biru aurora. Terlihat dari tribun mana pun." },
   { friends: 10, kind: "part", id: "crown-wing", title: "Crown Wing", note: "Sayap GT berlapis emas. Tidak dijual, hanya diberikan." },
-  { friends: 25, kind: "car", id: "phantom-x", title: "Phantom X", note: "Prototipe Fable. Kanopi ungu, aero bertingkat, dan detail emas yang tidak dimiliki mobil starter." },
+  { friends: 25, kind: "car", id: "phantom-x", title: "Phantom X", note: "Prototipe eksklusif. Kanopi ungu, aero bertingkat, dan detail emas yang tidak dimiliki mobil starter." },
 ];
 
 export const REFERRAL_MAX_FRIENDS = REFERRAL_MILESTONES[REFERRAL_MILESTONES.length - 1].friends;

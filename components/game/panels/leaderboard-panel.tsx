@@ -7,7 +7,6 @@ import {
   ArrowRight,
   Crown,
   Flag,
-  Medal,
   RefreshCw,
   ShieldCheck,
   Trophy,
@@ -27,6 +26,7 @@ import {
   type LeaderboardMetric,
 } from "@/lib/leaderboard";
 import { GameRequestError, isSessionExpired, requestHeaders, type GameKey } from "../game-client";
+import { LeaderboardPodium } from "./leaderboard-podium";
 
 const PodiumScene = dynamic(() => import("../scene/leaderboard-podium-scene"), { ssr: false });
 
@@ -220,6 +220,7 @@ function RacerInitial({ name }: { name: string }) {
   return <span className="leaderboard-avatar" aria-hidden="true">{Array.from(name.trim())[0]?.toUpperCase() || "R"}</span>;
 }
 
+<<<<<<< HEAD
 function Podium({ data }: { data: Leaderboard }) {
   const first = useRef<HTMLDivElement>(null);
   const second = useRef<HTMLDivElement>(null);
@@ -267,6 +268,8 @@ function Podium({ data }: { data: Leaderboard }) {
   );
 }
 
+=======
+>>>>>>> origin/main
 function PersonalRank({
   data,
   onAction,
@@ -455,7 +458,7 @@ export function LeaderboardPanel({
       {data && !expired && (
         <>
           <PersonalRank data={data} onAction={metric === "laps" ? onRace : onInvite} />
-          {data.entries.length >= 3 && <Podium data={data} />}
+          <LeaderboardPodium entries={data.entries} unit={copy.unit} />
           {data.entries.length > 0 ? <Rankings data={data} /> : (
             <section className="panel leaderboard-empty" aria-labelledby="leaderboard-empty-title">
               <Trophy aria-hidden="true" /><h2 id="leaderboard-empty-title">{copy.emptyTitle}</h2>
