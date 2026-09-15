@@ -771,13 +771,15 @@
 .inspect-hud span { color: var(--muted-foreground); }
 .inspect-hint { bottom: var(--space-56); left: var(--space-md); right: var(--space-md); font-size: var(--fs-read); line-height: var(--lh-normal); color: var(--muted-foreground); text-align: center; }
 
-/* ── keluarga tombol beralas: alas 3px statis, tidak ada gerak saat hover/tekan ── */
-.press-button { --press-depth: var(--space-3); --press-shadow-color: var(--press-shadow); border-radius: var(--press-radius); box-shadow: 0 var(--press-depth) 0 var(--press-shadow-color), var(--press-inset-shadow, 0 0 transparent); }
+/* ── keluarga tombol: satu siluet datar untuk semua, tanpa alas atau hairline
+   di luar kotak. Semua efek dekoratif digambar sebagai inset box-shadow supaya
+   tombol emas dan tombol biasa selalu persis sama tinggi dan sejajar. ── */
+.press-button { --press-depth: var(--space-3); --press-shadow-color: var(--press-shadow); border-radius: var(--press-radius); box-shadow: var(--press-inset-shadow, 0 0 transparent); }
 
-/* ── tombol emas: warna khusus dalam keluarga tombol beralas ────────────── */
-/* Hairline emas digambar sebagai inset box-shadow, bukan border, supaya kotak
-   tombol emas persis sama ukurannya dengan tombol lain yang tanpa hairline. */
-.gold-button { --press-shadow-color: var(--gold-shadow); --press-inset-shadow: inset 0 var(--stroke-2) 0 var(--gold-highlight), inset 0 0 0 var(--stroke) var(--accent); background: linear-gradient(60deg, transparent 9%, color-mix(in srgb, var(--foreground) 19%, transparent) 9%, color-mix(in srgb, var(--foreground) 19%, transparent) 18%, transparent 18%), linear-gradient(110deg, var(--accent), var(--warning)); color: var(--accent-foreground); font-weight: var(--fw-heavier); letter-spacing: var(--track-snug-xs); }
+/* ── tombol emas: warna khusus dalam keluarga tombol ────────────── */
+/* Highlight atas, hairline, dan alas emas semuanya inset — bukan border atau
+   drop shadow — jadi kotaknya identik dengan tombol lain. */
+.gold-button { --press-shadow-color: var(--gold-shadow); --press-inset-shadow: inset 0 var(--stroke-2) 0 var(--gold-highlight), inset 0 calc(var(--press-depth) * -1) 0 var(--press-shadow-color), inset 0 0 0 var(--stroke) var(--accent); background: linear-gradient(60deg, transparent 9%, color-mix(in srgb, var(--foreground) 19%, transparent) 9%, color-mix(in srgb, var(--foreground) 19%, transparent) 18%, transparent 18%), linear-gradient(110deg, var(--accent), var(--warning)); color: var(--accent-foreground); font-weight: var(--fw-heavier); letter-spacing: var(--track-snug-xs); }
 .gold-button:hover:not(:disabled) { filter: brightness(1.08); }
 
 /* `transition-all` bawaan tombol ikut menganimasikan warna, jadi emasnya masih
@@ -787,12 +789,11 @@
 [data-slot='button']:disabled, .gold-button:disabled, .wallet-chip:disabled, .color-swatch:disabled { transition: none; transform: none; translate: none; }
 
 /* satu bahasa disabled untuk semua tombol: solid, tanpa peredupan opacity.
-   Alas 3D tetap ada (warna netral) supaya tinggi dan silhouette tidak berubah
-   saat tombol berpindah enabled ↔ disabled. */
+   Efek inset dimatikan; siluet tidak berubah karena semua efek memang inset. */
 [data-slot='button']:disabled, .gold-button:disabled, .wallet-chip:disabled, .color-swatch:disabled { --press-shadow-color: var(--press-shadow); --press-inset-shadow: 0 0 transparent; background: var(--secondary); color: var(--muted-foreground); border-color: var(--border); border-top-color: var(--border); opacity: 1; filter: none; cursor: not-allowed; }
 .wallet-chip:disabled, .color-swatch:disabled { box-shadow: none; }
 [data-slot='button']:disabled svg, .wallet-chip:disabled svg { color: var(--muted-foreground); }
-/* varian kecil: alas lebih tipis biar proporsional */
+/* varian kecil: alas inset emas lebih tipis biar proporsional */
 .press-button[data-size='sm']:not(:disabled), .press-button[data-size='xs']:not(:disabled), .press-button[data-size='icon-sm']:not(:disabled), .press-button[data-size='icon-xs']:not(:disabled) { --press-depth: var(--space-2); }
 
 /* ── hasil balapan ───────────────────────────────────── */
