@@ -20,7 +20,7 @@ export function CircuitPanel({ game, onChoose, disabled = false }: { game: GameS
   // panel menawarkan unlock yang ditolak server -- atau menyembunyikan unlock
   // yang sebenarnya sudah terbuka.
   const unlockLaps = circuitUnlockLaps(game.economy, target);
-  const unlocked = game.laps >= unlockLaps;
+  const unlocked = target <= game.circuit || game.laps >= unlockLaps;
   const name = circuitName(target);
   const shortName = name.split(" ")[0];
   return (

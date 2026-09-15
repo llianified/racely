@@ -1052,7 +1052,8 @@ const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
   },
 
   color: (row, action) => {
-    if (!row.carModel || !isCarColor(row.carModel, action.color)) {
+    const carModel = knownCarModel(row.carModel);
+    if (!carModel || !isCarColor(carModel, action.color)) {
       throw new GameRuleError("Warna ini tidak tersedia untuk mobilmu.", 400);
     }
     return { row: { ...row, color: action.color } };
