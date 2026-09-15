@@ -82,7 +82,7 @@ function ShopContents({ game, disabled, onAction, initialPart, onPending }: Shop
 
   return <>
     <div className="sheet-body" data-flush>
-      <div className="parts-shop-stage" role="img" aria-label={`${CAR_CATALOG[model].name}: ${trying ? `pratinjau ${part.name}, belum disimpan` : "part yang terpasang"}`}>
+      <div className="parts-shop-stage" role="group" aria-label={`${CAR_CATALOG[model].name}: ${trying ? `pratinjau ${part.name}, belum disimpan` : "part yang terpasang"}`}>
         <CarPreviewScene roller={game.setup?.roller} color={game.color} model={model} levels={game.levels} equipped={previewParts} />
       </div>
       <div className="parts-shop-preview-bar">

@@ -705,7 +705,7 @@
 .coin-balance strong { display: block; overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-lead); font-weight: var(--fw-heavier); font-variant-numeric: tabular-nums; line-height: var(--lh-snug); white-space: nowrap; }
 .coin-balance small { @apply sr-only; }
 
-/* ── page content ──────────────────────────────────── */
+/* ── page content ────────────────���─────────────────── */
 .page-content { position: relative; overflow: clip; overflow-clip-margin: var(--space-8); padding: var(--space-md) var(--gutter) calc(var(--nav-height) + var(--safe-bottom) + var(--space-lg)); }
 /* Keeps mounted 3D views correctly sized while another tab is on screen,
    so returning to Balapan or Garasi never rebuilds their WebGL contexts. */
@@ -1267,9 +1267,16 @@
 
 /* ── scene states ──────────�����──────────────────────── */
   .scene-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100%; gap: var(--space-sm); padding: var(--space-md); text-align: center; background: var(--card); color: var(--foreground); }
-  .car-preview-root { position: relative; width: 100%; height: 100%; overflow: hidden; }
-  .car-preview-loading { position: absolute; inset: 0; z-index: var(--z-overlay); }
-  .car-preview-hint { position: absolute; right: var(--space-sm); bottom: var(--space-sm); z-index: var(--z-overlay); pointer-events: none; padding: var(--space-5) var(--space-sm); border: var(--stroke) solid var(--border); border-radius: var(--corner-pill); background: color-mix(in srgb, var(--background) 88%, transparent); color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-semibold); line-height: var(--lh-none); }
+.car-preview-root { position: relative; display: flex; flex-direction: column; width: 100%; height: 100%; overflow: hidden; }
+.car-preview-viewport { flex: 1; min-height: 0; touch-action: none; }
+.car-preview-loading { position: absolute; inset: 0; z-index: var(--z-overlay); }
+.car-preview-tools { display: flex; align-items: center; justify-content: space-between; gap: var(--space-xs); flex-shrink: 0; min-height: var(--space-44); padding-inline: var(--space-sm); }
+.car-preview-hint { color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-semibold); line-height: var(--lh-snug); }
+.car-preview-zoom { display: flex; align-items: center; flex-shrink: 0; border-radius: var(--corner-box); background: color-mix(in srgb, var(--background) 88%, transparent); }
+.car-preview-zoom .car-preview-reset { min-height: var(--space-44); padding-inline: var(--space-sm); font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
+.car-preview-reset span { min-width: var(--space-32); }
+.car-preview-zoom button:disabled { opacity: var(--opacity-locked); }
+.scene-wrap.is-inspecting > .car-preview-tools { position: absolute; inset-inline: 0; bottom: 0; z-index: var(--z-overlay); background: color-mix(in srgb, var(--background) 88%, transparent); }
   .scene-loading > svg { width: var(--icon-xl); height: var(--icon-xl); color: var(--accent); flex-shrink: 0; }
 .scene-loading strong { font-size: var(--fs-small); font-weight: var(--fw-bold); }
 .scene-loading span { font-size: var(--fs-micro); color: var(--muted-foreground); max-width: var(--scene-hint-max-w); }

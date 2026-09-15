@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
-import { OrbitControls, OrthographicCamera } from '@react-three/drei'
-import { Box3, Sphere, type Group } from 'three'
+import type { Group } from 'three'
+import { PreviewZoomControls, usePreviewZoom } from '../car/preview-zoom-controls'
+import { PreviewCamera, type PreviewCameraControls } from './preview-camera'
+import { measurePreview, previewFitZoom } from './car-preview-framing'
 import { CarFront, RotateCcw } from 'lucide-react'
 import { COLORS, MiniCar } from './mini-car'
 import { CarLighting } from './car-lighting'
@@ -39,21 +41,8 @@ function PreviewCar({ color, model, levels, inspect, equipped, roller }: CarPrev
   return <group rotation={[0, -.35, 0]}><MiniCar roller={roller} color={color} model={model} levels={levels} inspect={inspect} equipped={equipped} /></group>
 }
 
-/** Sisa napas antara mobil dan tepi bingkai, dalam kelipatan jari-jarinya. */
-const FIT_MARGIN = 1.08
 /** Dipakai sampai pengukuran pertama selesai; seukuran bodi standar. */
-const FALLBACK_RADIUS = .8
-
-function PreviewCamera({ radius, interactive }: { radius: number; interactive: boolean }) {
-  const size = useThree(state => state.size)
-  // Jari-jari bola pembatas bersifat sama ke segala arah, jadi zoom yang muat
-  // untuk satu sudut orbit muat untuk semuanya -- tidak ada lagi sudut yang
-  // memotong ban depan atau sayap belakang di tepi bingkai.
-  return <>
-    <OrthographicCamera makeDefault position={[1.6, 1.1, 1.9]} zoom={Math.min(size.width, size.height) / (radius * 2 * FIT_MARGIN)} near={.1} far={40} onUpdate={camera => { if (!interactive) camera.lookAt(0, 0, 0) }} />
-    {interactive && <OrbitControls makeDefault enablePan={false} enableZoom={false} enableDamping={false} minPolarAngle={.15} maxPolarAngle={Math.PI / 2.1} />}
-  </>
-}
+const FALLBACK_BOUNDS = { width: 1.6, height: 1.6 }
 
 /**
  * Mengukur mobil yang sedang tampil lalu menggeser porosnya ke titik tengah
@@ -61,9 +50,10 @@ function PreviewCamera({ radius, interactive }: { radius: number; interactive: b
  * terpasang, jadi angka mati tidak pernah cocok untuk semua kombinasi --
  * apalagi ketika pemain memutarnya.
  */
-export function FittedCar(props: CarPreviewProps) {
+export function FittedCar(props: CarPreviewProps & PreviewCameraControls) {
   const car = useRef<Group>(null)
-  const [radius, setRadius] = useState(FALLBACK_RADIUS)
+  const [bounds, setBounds] = useState(FALLBACK_BOUNDS)
+  const size = useThree(state => state.size)
   const invalidate = useThree(state => state.invalidate)
   const { model, inspect } = props
   // Bentuk dari level/part datang sebagai objek baru tiap render; yang menandai
@@ -74,16 +64,14 @@ export function FittedCar(props: CarPreviewProps) {
     const group = car.current
     if (!group) return
     group.position.set(0, 0, 0)
-    group.updateWorldMatrix(true, true)
-    const sphere = new Box3().setFromObject(group).getBoundingSphere(new Sphere())
-    if (!Number.isFinite(sphere.radius) || sphere.radius <= 0) return
-    group.position.copy(sphere.center).negate()
-    setRadius(sphere.radius)
+    const measured = measurePreview(group)
+    group.position.copy(measured.center).negate()
+    setBounds({ width: measured.width, height: measured.height })
     invalidate()
   }, [model, shape, inspect, invalidate])
 
   return <>
-    <PreviewCamera radius={radius} interactive={props.interactive ?? true} />
+    <PreviewCamera baseZoom={previewFitZoom(size.width, size.height, bounds)} interactive={props.interactive ?? true} zoom={props.zoom} resetKey={props.resetKey} onZoomChange={props.onZoomChange} />
     <group ref={car}><PreviewCar {...props} /></group>
   </>
 }
@@ -107,7 +95,8 @@ function PreviewError({ onRetry }: { onRetry: () => void }) {
   )
 }
 
-export default function CarPreviewScene({ color, model, levels, inspect, equipped, roller, active = true, standbyHint = 'Buka tab Garasi untuk menyalakannya lagi.', onReady }: CarPreviewProps) {
+export default function CarPreviewScene({ color, model, levels, inspect, equipped, roller, interactive = true, active = true, standbyHint = 'Buka tab Garasi untuk menyalakannya lagi.', onReady }: CarPreviewProps) {
+  const zoomControls = usePreviewZoom()
   const [ready, setReady] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const [lost, setLost] = useState(false)
@@ -156,6 +145,7 @@ export default function CarPreviewScene({ color, model, levels, inspect, equippe
         </div>
       )}
       <SceneBoundary key={attempt} fallback={<PreviewError onRetry={retry} />}>
+        <div className="car-preview-viewport">
         <Canvas
           orthographic
           dpr={[1, 1.25]}
@@ -165,18 +155,19 @@ export default function CarPreviewScene({ color, model, levels, inspect, equippe
           frameloop="demand"
           fallback={<PreviewError onRetry={retry} />}
           onCreated={() => { setReady(true); onReady?.() }}
-          aria-label="Preview mobil 3D. Geser untuk memutar."
+          aria-label={interactive ? 'Preview mobil 3D. Geser untuk memutar, cubit atau scroll untuk zoom.' : 'Preview mobil 3D.'}
         >
           <CarLighting />
           <ambientLight intensity={.35} />
           <hemisphereLight args={[COLORS.white, COLORS.navy, .65]} />
           <directionalLight position={[2, 5, 3]} intensity={2.2} />
           <directionalLight position={[-3, 2, -2]} intensity={.9} color={COLORS.white} />
-          <FittedCar roller={roller} color={color} model={model} levels={levels} inspect={inspect} equipped={equipped} />
+          <FittedCar roller={roller} color={color} model={model} levels={levels} inspect={inspect} equipped={equipped} interactive={interactive} zoom={zoomControls.zoom} resetKey={zoomControls.resetKey} onZoomChange={zoomControls.onZoomChange} />
           <ContextMonitor onLost={onLost} />
         </Canvas>
+        </div>
+        {interactive && ready && <PreviewZoomControls {...zoomControls} />}
       </SceneBoundary>
-      {ready && <span className="car-preview-hint">Geser untuk memutar</span>}
     </div>
   )
 }

@@ -89,7 +89,7 @@ export const GaragePanel = memo(function GaragePanel({
     <>
       <section id="body-colors" tabIndex={-1} className="panel garage-panel" aria-label="Mobil kamu">
         <div className="car-stage" role="group" aria-label="Preview mobil garasi">
-          <div role="img" aria-label={`${car.name} warna ${colorName}, model 3D yang sama dengan di lintasan. Geser untuk memutar.`}>
+          <div role="group" aria-label={`${car.name} warna ${colorName}, model 3D yang sama dengan di lintasan. Geser untuk memutar.`}>
             <CarPreviewScene roller={game.setup?.roller} color={game.color} model={model} levels={game.levels} equipped={game.bodyParts?.equipped} active={active && !previewSheetOpen} standbyHint={previewSheetOpen ? "Tutup lembar yang terbuka untuk menyalakannya lagi." : undefined} />
           </div>
           <CarSwitchSheet game={game} active={active} disabled={disabled} onSelectCar={onSelectCar} onPreviewSheet={onPreviewSheet} onOpenReferral={onOpenReferral} />
@@ -221,7 +221,7 @@ function ModificationSlot({ game, onUpgrade, onPreviewSheet, disabled, part }: U
           </div>
           <div className="border-b border-border bg-background px-md py-md text-foreground">
             <div className="overflow-hidden rounded-(--corner-box) border border-border">
-              <div className="h-(--stage-inspect-h)" role="img" aria-label={`${showAfter ? "Setelah" : "Sebelum"} modifikasi ${title}, level ${showAfter ? nextLevel : level}${inspect ? ", bodi dilepas" : ""}. Geser untuk memutar.`}>
+              <div className="h-(--stage-inspect-h)" role="group" aria-label={`${showAfter ? "Setelah" : "Sebelum"} modifikasi ${title}, level ${showAfter ? nextLevel : level}${inspect ? ", bodi dilepas" : ""}. Geser untuk memutar.`}>
                 {open && <CarPreviewScene roller={game.setup?.roller} color={game.color} equipped={game.bodyParts?.equipped} model={game.carSelection?.model ?? "neo-falcon"} levels={showAfter ? { ...game.levels, [key]: nextLevel } : game.levels} inspect={inspect} />}
               </div>
               <div className="flex flex-wrap items-center justify-between gap-sm border-t border-border p-md">

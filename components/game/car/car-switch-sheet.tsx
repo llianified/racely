@@ -94,7 +94,7 @@ export function CarSwitchSheet({ game, active, disabled, onSelectCar, onPreviewS
           {exclusive ? (
             <ExclusiveCarPreview model={model} color={color} locked={locked} compact active={open && active} levels={locked ? undefined : game.levels} equipped={locked ? undefined : game.bodyParts?.equipped} roller={locked ? undefined : game.setup?.roller} />
           ) : (
-            <div className="h-(--stage-inspect-h) bg-background" role="img" aria-label={`Preview ${car.name}. Geser untuk memutar mobil 3D.`}>
+            <div className="h-(--stage-inspect-h) bg-background" role="group" aria-label={`Preview ${car.name}. Geser untuk memutar mobil 3D.`}>
               {open && active && <CarPreviewScene model={model} color={color} levels={game.levels} equipped={game.bodyParts?.equipped} roller={game.setup?.roller} />}
             </div>
           )}

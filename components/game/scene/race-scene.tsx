@@ -19,8 +19,9 @@ import { createSetupFeedback, stepSetupFeedback } from './setup-feedback'
 import { RacingEffects } from './racing-effects'
 import { TamiyaLanes } from './tamiya-lanes'
 import { ContextMonitor, createSafePointerEvents, SceneBoundary } from './scene-recovery'
+import { PreviewCamera } from './preview-camera'
 
-export type SceneProps = { setup?: CarSetup; equipped?: NonNullable<GameState['bodyParts']>['equipped']; driving?: RefObject<DrivingState>; onTelemetry?: (state: DrivingState) => void; cinematic?: boolean; levels?: GameState['levels']; model?: CarModelId; progress: number; seconds: number; baseSeconds: number; opponents: readonly RaceOpponent[]; opponentProgress: readonly number[]; color: string; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean; onSceneStatus?: (live: boolean) => void }
+export type SceneProps = { setup?: CarSetup; equipped?: NonNullable<GameState['bodyParts']>['equipped']; driving?: RefObject<DrivingState>; onTelemetry?: (state: DrivingState) => void; cinematic?: boolean; levels?: GameState['levels']; model?: CarModelId; progress: number; seconds: number; baseSeconds: number; opponents: readonly RaceOpponent[]; opponentProgress: readonly number[]; color: string; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean; inspectorZoom?: number; onInspectorZoomChange?: (zoom: number) => void; onSceneStatus?: (live: boolean) => void }
 
 // The 10Hz game tick changes these every 100ms. They are consumed inside useFrame,
 // so they travel through a ref instead of props: a tick must not reconcile the 3D tree.
@@ -395,11 +396,13 @@ function CameraRig({ mode, follow, resetKey, playerRef, active, reducedMotion, c
   </>
 }
 
-function CarInspector({ color, model, charge, reducedMotion, bodyVisible, levels, equipped, setup }: Pick<SceneProps, 'color' | 'model' | 'charge' | 'reducedMotion' | 'bodyVisible' | 'levels' | 'equipped' | 'setup'>) {
+const INSPECT_POSITION: [number, number, number] = [1.1, 1.5, 1.7]
+const INSPECT_TARGET: [number, number, number] = [0, .12, 0]
+
+function CarInspector({ color, model, charge, bodyVisible, levels, equipped, setup, inspectorZoom, onInspectorZoomChange, resetKey }: Pick<SceneProps, 'color' | 'model' | 'charge' | 'bodyVisible' | 'levels' | 'equipped' | 'setup' | 'inspectorZoom' | 'onInspectorZoomChange' | 'resetKey'>) {
   const { size } = useThree()
   return <>
-    <OrthographicCamera makeDefault position={[1.1, 1.5, 1.7]} zoom={Math.min(size.width / 1.6, size.height / 1.25)} near={.01} far={50} />
-    <OrbitControls makeDefault target={[0, .12, 0]} enablePan={false} minZoom={100} maxZoom={450} minPolarAngle={.1} maxPolarAngle={Math.PI / 2.1} enableDamping={!reducedMotion} />
+    <PreviewCamera position={INSPECT_POSITION} target={INSPECT_TARGET} baseZoom={Math.min(size.width / 1.3, size.height)} zoom={inspectorZoom} onZoomChange={onInspectorZoomChange} resetKey={resetKey} />
     <MiniCar roller={setup?.roller} equipped={equipped} color={color} model={model} inspect={!bodyVisible} charge={charge} levels={levels} />
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -.008, 0]} receiveShadow>
       <circleGeometry args={[1.4, 64]} /><meshStandardMaterial color={COLORS.surface} roughness={.8} />
@@ -434,7 +437,7 @@ const Arena = memo(function Arena(props: ArenaProps) {
     <directionalLight position={[2, 10, 7]} intensity={2.2} castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={props.inspect ? -1.5 : -10} shadow-camera-right={props.inspect ? 1.5 : 10} shadow-camera-top={props.inspect ? 1.5 : 10} shadow-camera-bottom={props.inspect ? -1.5 : -10} shadow-normalBias={.006} shadow-bias={-.0001} />
     <directionalLight position={[-8, 5, -6]} intensity={.8} color={COLORS.white} />
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -.16, 0]} receiveShadow><planeGeometry args={[240, 240]} /><meshStandardMaterial color="#090c1d" roughness={.85} /></mesh>
-    {props.inspect ? <CarInspector setup={props.setup} equipped={props.equipped} levels={props.levels} color={props.color} model={props.model} charge={props.charge} reducedMotion={props.reducedMotion} bodyVisible={props.bodyVisible} /> : <>
+    {props.inspect ? <CarInspector setup={props.setup} equipped={props.equipped} levels={props.levels} color={props.color} model={props.model} charge={props.charge} bodyVisible={props.bodyVisible} inspectorZoom={props.inspectorZoom} onInspectorZoomChange={props.onInspectorZoomChange} resetKey={props.resetKey} /> : <>
     <Grid position={[0, -.145, 0]} args={[36, 36]} infiniteGrid cellSize={1} cellThickness={.35} cellColor="#2c2852" sectionSize={5} sectionThickness={.6} sectionColor="#463e7a" fadeDistance={60} fadeStrength={2} />
     <Circuit circuit={props.circuit} />
     <RacingLine playerRef={playerRef} driving={props.driving} />
@@ -502,7 +505,7 @@ export default function RaceScene(props: SceneProps) {
   return <SceneBoundary key={attempt} fallback={<SceneError onRetry={retry} onShow={reportDown} />}>
     {!ready && <div className="scene-loading absolute inset-0" role="status"><Flag /><strong>Menyalakan lampu sirkuit.</strong><span>Menyiapkan lintasan 3D…</span></div>}
     <Canvas orthographic dpr={[1, 1.25]} events={createSafePointerEvents} frameloop={running ? 'always' : 'never'} shadows="percentage" camera={{ position: [9, 12.5, 12], zoom: 30, near: .1, far: 100 }} gl={{ antialias: true, alpha: false, powerPreference: 'default' }} fallback={<SceneError onRetry={retry} onShow={reportDown} />} onCreated={() => setReady(true)} aria-label={props.inspect ? 'Inspeksi sasis dan dua sel baterai mobil. Geser untuk memutar, cubit untuk zoom. Balapan tetap berlangsung.' : follow ? 'Arena mini 4WD 3D. Kamera mengikuti mobilmu. Pilih Overview untuk melihat seluruh lintasan.' : 'Arena mini 4WD 3D. Kamera overview. Geser untuk memutar, cubit untuk zoom.'}>
-      <Arena opponents={props.opponents} setup={props.setup} equipped={props.equipped} driving={props.driving} onTelemetry={props.onTelemetry} cinematic={props.cinematic} levels={props.levels} model={props.model} color={props.color} cameraMode={props.cameraMode} resetKey={props.resetKey} circuit={props.circuit} reducedMotion={props.reducedMotion} inspect={props.inspect} charge={props.inspect ? props.charge : undefined} bodyVisible={props.bodyVisible} timing={timing} playerRef={playerRef} follow={follow} running={running} onLost={onLost} />
+      <Arena opponents={props.opponents} setup={props.setup} equipped={props.equipped} driving={props.driving} onTelemetry={props.onTelemetry} cinematic={props.cinematic} levels={props.levels} model={props.model} color={props.color} cameraMode={props.cameraMode} resetKey={props.resetKey} circuit={props.circuit} reducedMotion={props.reducedMotion} inspect={props.inspect} charge={props.inspect ? props.charge : undefined} bodyVisible={props.bodyVisible} inspectorZoom={props.inspectorZoom} onInspectorZoomChange={props.onInspectorZoomChange} timing={timing} playerRef={playerRef} follow={follow} running={running} onLost={onLost} />
     </Canvas>
   </SceneBoundary>
 }
