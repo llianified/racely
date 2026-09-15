@@ -42,11 +42,11 @@ function PreviewCar({ color, model, levels, inspect, equipped, roller }: CarPrev
 }
 
 /** Dipakai sampai pengukuran pertama selesai; seukuran bodi standar. */
-const FALLBACK_BOUNDS = { width: 1.6, height: 1.6 }
+const FALLBACK_BOUNDS = { width: 1.6, height: 1.6, safeWidth: 1.6, safeHeight: 1.6 }
 
 /**
  * Mengukur mobil yang sedang tampil lalu menggeser porosnya ke titik tengah
- * bola pembatas. Ukuran bodi berubah menurut model, level, dan aero kit yang
+ * batas geometrinya. Ukuran bodi berubah menurut model, level, dan aero kit yang
  * terpasang, jadi angka mati tidak pernah cocok untuk semua kombinasi --
  * apalagi ketika pemain memutarnya.
  */
@@ -66,7 +66,7 @@ export function FittedCar(props: CarPreviewProps & PreviewCameraControls) {
     group.position.set(0, 0, 0)
     const measured = measurePreview(group)
     group.position.copy(measured.center).negate()
-    setBounds({ width: measured.width, height: measured.height })
+    setBounds({ width: measured.width, height: measured.height, safeWidth: measured.safeWidth, safeHeight: measured.safeHeight })
     invalidate()
   }, [model, shape, inspect, invalidate])
 
