@@ -161,7 +161,7 @@ export function WalletPanel({
           </SheetHeader>
           <div className="sheet-body">
           <p className="sheet-note">
-            Permintaan diproses manual oleh tim Racely, biasanya dalam sehari.
+            Permintaan diproses manual oleh tim Racely dalam 3–5 hari kerja.
             Cek lagi nomor dan nama tujuan sebelum kirim. Kalau ditolak, koinnya
             kembali ke saldo kamu.
           </p>

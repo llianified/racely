@@ -25,10 +25,9 @@ node --env-file="$ENV_FILE" scripts/migrate.mjs
 echo "==> Verifying schema"
 node --env-file="$ENV_FILE" scripts/check-migrations.mjs
 
-# `next build` membekukan NEXT_PUBLIC_* (mis. NEXT_PUBLIC_ADSGRAM_BLOCK_ID) dan
-# PUBLIC_APP_URL (metadataBase) ke dalam bundle. Tanpa env ini saat build,
-# kartu Bonus Iklan hilang dan kartu share OG rusak, walau runtime PM2 memuat
-# env yang sama — jadi env wajib ada di sini, bukan hanya di ecosystem.config.cjs.
+# `next build` membekukan PUBLIC_APP_URL (metadataBase) ke dalam bundle.
+# Env wajib tersedia saat build, bukan hanya saat runtime PM2, agar metadata
+# produksi tidak dibangun dengan origin cadangan.
 echo "==> Building"
 set -a
 # shellcheck source=/dev/null

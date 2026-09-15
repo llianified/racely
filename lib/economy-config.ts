@@ -81,7 +81,7 @@ export type EconomyConfig = {
   /** Hadiah check-in per hari streak (1-based), mentok di rung terakhir. */
   dailyRewards: number[];
 
-  /** Koin per iklan rewarded (Adsgram) yang ditonton sampai habis. */
+  /** Koin per rewarded interstitial Monetag yang ditonton sampai habis. */
   adRewardCoins: number;
   /** Berapa iklan berhadiah per hari balapan per pemain; 0 mematikan fiturnya. */
   adRewardDailyCap: number;
