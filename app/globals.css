@@ -862,8 +862,13 @@
    deskripsi yang boleh melipat, dan baris risiko. Risiko diberi --warning +
    ikon segitiga, bukan --accent: emas di garasi berarti "siap dipakai". */
 .setup-group + .setup-group { border-top: var(--stroke) solid var(--border); }
+.setup-group > .race-settings-title { padding: var(--space-md) var(--space-md) var(--space-xs); }
 .setup-group .upgrade-list { margin: 0; padding: 0; list-style: none; }
-.setup-row .upgrade-name p.setup-metric { font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
+.setup-row .upgrade-head { align-items: flex-start; }
+.setup-row .upgrade-name { line-height: var(--lh-title); }
+.setup-row .upgrade-name p.setup-metric { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--space-xs); row-gap: var(--space-2); overflow: visible; white-space: normal; font-size: var(--fs-small); line-height: var(--lh-base); font-variant-numeric: tabular-nums; }
+.setup-row .setup-metric > span { white-space: nowrap; }
+.setup-row > :is(.setup-desc, .setup-risk) { margin-inline-start: calc(var(--space-32) + var(--space-sm)); }
 .setup-metric b { color: var(--foreground); font-weight: var(--fw-bold); }
 .setup-row.is-active .upgrade-icon { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); background: color-mix(in srgb, var(--accent) 12%, var(--surface-inset)); }
 /* "Pasang" dan "Terpasang" memakai tombol yang sama dengan lebar terkunci:
@@ -872,8 +877,8 @@
 .setup-row .upgrade-buy { min-width: var(--setup-action-w); justify-content: center; }
 .setup-row.is-active .upgrade-buy:disabled { opacity: 1; }
 .setup-desc { margin: 0; font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); text-wrap: pretty; }
-.setup-risk { display: flex; align-items: center; gap: var(--space-xs); margin: 0; font-size: var(--fs-micro); font-weight: var(--fw-semibold); color: var(--warning); }
-.setup-risk svg { flex-shrink: 0; width: var(--icon-xs); height: var(--icon-xs); }
+.setup-risk { display: flex; align-items: flex-start; gap: var(--space-xs); margin: 0; font-size: var(--fs-micro); line-height: var(--lh-normal); font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; color: var(--warning); }
+.setup-risk svg { flex-shrink: 0; width: var(--icon-xs); height: var(--icon-xs); margin-top: var(--space-2); }
 .setup-alert { display: flex; align-items: flex-start; gap: var(--space-sm); margin: 0; padding: var(--space-md); border-bottom: var(--stroke) solid var(--border); background: color-mix(in srgb, var(--warning) 8%, var(--card)); font-size: var(--fs-small); line-height: var(--lh-normal); text-wrap: pretty; }
 .setup-alert svg { flex-shrink: 0; width: var(--icon-base); height: var(--icon-base); margin-top: var(--space-2); color: var(--warning); }
 /* Koleksi cat: tile-nya diisi warna cat, dan cincin tipis --card menjaga cat
