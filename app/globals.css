@@ -103,12 +103,12 @@
      Angka yang memang berdiri sendiri: tinggi panggung 3D, lebar logo, lebar
      kolom aksi. Bukan bagian tangga ukuran karena tidak berulang dan tidak
      ikut naik-turun bersama spacing -- tapi tetap satu tempat untuk disetel. */
-  --stage-garage-h: 150px;
-  --stage-parts-fluid-h: 24svh;
+  --stage-garage-h: 220px;
+  --stage-parts-fluid-h: 34svh;
   --parts-choice-w: 144px;
-  --stage-select-h: 160px;
-  --stage-select-h-max: 240px;
-  --stage-select-h-short: 140px;
+  --stage-select-h: 220px;
+  --stage-select-h-max: 300px;
+  --stage-select-h-short: 200px;
   --car-shadow-w: 132px;
 
   --scene-h: clamp(220px, 40svh, 300px);
@@ -117,8 +117,8 @@
   --race-mode-w: 164px;
   --race-status-h: var(--space-48);
   --race-speed-column: 1.45fr;
-  --scene-h-inspect: 240px;
-  --stage-inspect-h: 192px;
+  --scene-h-inspect: 280px;
+  --stage-inspect-h: 240px;
   --scene-h-alert: 220px;
   --scene-h-fullscreen: 240px;
   --scene-hint-max-w: 260px;
@@ -705,7 +705,7 @@
 .coin-balance strong { display: block; overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-lead); font-weight: var(--fw-heavier); font-variant-numeric: tabular-nums; line-height: var(--lh-snug); white-space: nowrap; }
 .coin-balance small { @apply sr-only; }
 
-/* ── page content ────────────────���─────────────────── */
+/* ── page content ────────────────�����─────────────────── */
 .page-content { position: relative; overflow: clip; overflow-clip-margin: var(--space-8); padding: var(--space-md) var(--gutter) calc(var(--nav-height) + var(--safe-bottom) + var(--space-lg)); }
 /* Keeps mounted 3D views correctly sized while another tab is on screen,
    so returning to Balapan or Garasi never rebuilds their WebGL contexts. */
@@ -1067,7 +1067,7 @@
 .wallet-history-row p { margin-top: var(--space-xs); font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); overflow-wrap: anywhere; }
 .wallet-history-row p.wallet-history-refund { color: var(--success); font-weight: var(--fw-heavy); }
 
-/* ── boot ─────────────────────────────────────────────── */
+/* ── boot ───��─────────────────────────────────────────── */
 .boot-screen { display: flex; flex-direction: column; align-items: center; min-height: 100dvh; padding: calc(var(--space-32) + var(--safe-top)) calc(var(--space-xl) + var(--safe-right)) calc(var(--space-xl) + var(--safe-bottom)) calc(var(--space-xl) + var(--safe-left)); background: radial-gradient(ellipse at 50% 35%, color-mix(in srgb, var(--primary) 16%, var(--background)), var(--background) 70%); color: var(--foreground); text-align: center; }
 .boot-eyebrow { font-size: var(--fs-nano); font-weight: var(--fw-semibold); letter-spacing: var(--track-caps-3xl); line-height: var(--lh-normal); color: var(--muted-foreground); }
 .boot-content { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-48); width: 100%; min-height: var(--boot-content-h); }
