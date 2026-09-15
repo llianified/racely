@@ -1,6 +1,8 @@
 "use client";
 
-import { ArrowRight, Check, Gift, Link2, ListChecks, Lock, LockKeyhole, Send, UserPlus } from "lucide-react";
+import dynamic from "next/dynamic";
+import { ArrowRight, CarFront, Check, Gift, Link2, ListChecks, Lock, LockKeyhole, Send, UserPlus } from "lucide-react";
+import { CAR_CATALOG, CAR_MODEL_IDS } from "@/lib/car-catalog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -11,6 +13,11 @@ import { PART_CATALOG, type PartId } from "@/lib/car-parts";
 import { coins, type GameState } from "@/lib/game";
 import { REFERRAL_MAX_FRIENDS, REFERRAL_MILESTONES, nextReferralMilestone, type ReferralMilestone } from "@/lib/referral-rewards";
 import { cn } from "@/lib/utils";
+
+const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
+  ssr: false,
+  loading: () => <div className="scene-loading" role="status"><CarFront aria-hidden="true" /><strong>Menyiapkan mobil 3D…</strong></div>,
+});
 
 /**
  * Milestone dibaca dari `referral.completed` (ajakan tuntas), bukan `invited`:
@@ -105,6 +112,7 @@ export function ReferralPanel({
             const unlocked = completed >= m.friends;
             const { owned, active, swatch } = milestoneStatus(game, m);
             const isCar = m.kind === "car";
+            const rewardModel = isCar ? CAR_MODEL_IDS.find(id => id === m.id) : undefined;
             const label = isCar ? (active ? "Dipakai" : "Pakai") : active ? "Terpasang" : "Pasang";
             const target = GARAGE_TARGET[m.kind];
             return (
@@ -145,6 +153,11 @@ export function ReferralPanel({
                     </Button>
                   )}
                 </div>
+                {rewardModel && (
+                  <div className="h-(--stage-inspect-h) overflow-hidden rounded-(--corner-box) border border-border bg-background" role="img" aria-label={`Preview hadiah ${CAR_CATALOG[rewardModel].name}. Geser untuk memutar mobil 3D.`}>
+                    <CarPreviewScene model={rewardModel} color={active ? game.color : CAR_CATALOG[rewardModel].defaultColor} />
+                  </div>
+                )}
                 <p className="referral-milestone-note">{m.note}</p>
               </li>
             );
