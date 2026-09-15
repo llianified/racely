@@ -406,8 +406,7 @@
 .starter-next p { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; font-size: var(--fs-small); line-height: var(--lh-normal); text-wrap: pretty; }
 .starter-next strong { font-weight: var(--fw-semibold); }
 .starter-next p > span { color: var(--muted-foreground); }
-.game-sheet.starter-bonus [data-slot='sheet-footer'] { flex-direction: column; gap: var(--space-xs); padding: var(--space-md) var(--space-lg); }
-.game-sheet.starter-bonus [data-slot='sheet-footer'] > * { flex: auto; }
+.game-sheet.starter-bonus [data-slot='sheet-footer'] { flex-direction: row; flex-wrap: nowrap; align-items: stretch; gap: var(--space-sm); padding: var(--space-md) var(--space-lg); }
 .starter-feedback { padding: 0 var(--space-lg) var(--space-md); color: var(--gold-highlight); font-size: var(--fs-small); }
 .starter-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; border-radius: inherit; }
 .starter-confetti i { position: absolute; top: calc(-1 * var(--space-lg)); left: var(--confetti-x); width: var(--space-4); height: var(--space-8); background: var(--accent); opacity: 0; animation: starter-confetti-fall var(--anim-starter-confetti) ease-out var(--confetti-delay) both; }
