@@ -388,7 +388,6 @@ export function LeaderboardPanel({
         <div className="leaderboard-heading-copy">
           <p className="eyebrow">{copy.eyebrow}</p>
           <h1>Leaderboard</h1>
-          <p>{copy.description}</p>
         </div>
         <div className="leaderboard-heading-tools">
           <span className="leaderboard-sync" data-state={syncState} aria-live="polite"><i aria-hidden="true" />{syncLabel}</span>
@@ -396,6 +395,7 @@ export function LeaderboardPanel({
             <RefreshCw aria-hidden="true" />
           </Button>
         </div>
+        <p className="leaderboard-heading-description">{copy.description}</p>
       </header>
       <div className="grid grid-cols-2 gap-sm" role="tablist" aria-label="Kategori leaderboard">
         <Button role="tab" aria-selected={metric === "laps"} variant={metric === "laps" ? "goldSoft" : "outline"} onClick={() => setMetric("laps")}>
