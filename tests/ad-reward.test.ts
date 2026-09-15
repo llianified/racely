@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_ECONOMY } from "../lib/economy-config";
 import { adClaimKey, adClaimRange, adRewardStatus } from "../lib/game-economy";
+import { isMonetagRewardEligible } from "../components/game/monetag";
 
 vi.mock("server-only", () => ({}));
 import { getPreviewGameState, performPreviewGameAction, PREVIEW_GAME_COOKIE } from "../lib/preview-game";
@@ -15,6 +16,16 @@ const action = (cookie: string, command: Parameters<typeof performPreviewGameAct
 
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(now); });
 afterEach(() => vi.useRealTimers());
+
+describe("Monetag reward eligibility", () => {
+  it("only accepts uninterrupted valued events", () => {
+    expect(isMonetagRewardEligible({ reward_event_type: "valued" }, false)).toBe(true);
+    expect(isMonetagRewardEligible({ reward_event_type: "non_valued" }, false)).toBe(false);
+    expect(isMonetagRewardEligible({}, false)).toBe(false);
+    expect(isMonetagRewardEligible(undefined, false)).toBe(false);
+    expect(isMonetagRewardEligible({ reward_event_type: "valued" }, true)).toBe(false);
+  });
+});
 
 describe("adRewardStatus", () => {
   it("offers the configured reward until the daily cap is reached", () => {

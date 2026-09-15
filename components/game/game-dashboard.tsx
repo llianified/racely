@@ -289,6 +289,8 @@ export function GameDashboard() {
       const result = await showRewardedAd();
       if (result === "rewarded") {
         if (await runAction({ type: "watch-ad" })) toast.success(`Bonus iklan +${coins(amount)}`);
+      } else if (result === "ineligible") {
+        toast.error("Iklan ditinggalkan atau tidak bernilai. Bonus tidak diberikan.");
       } else if (result === "error") {
         toast.error("Iklan belum selesai atau gagal dimuat. Bonus belum diberikan.");
       } else {
