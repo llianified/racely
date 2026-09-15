@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
 import { OrbitControls, OrthographicCamera } from '@react-three/drei'
+import { Box3, Sphere, type Group } from 'three'
 import { CarFront, RotateCcw } from 'lucide-react'
 import { COLORS, MiniCar } from './mini-car'
 import { CarLighting } from './car-lighting'
@@ -37,11 +38,52 @@ function PreviewCar({ color, model, levels, inspect, equipped, roller }: CarPrev
   return <group rotation={[0, -.35, 0]}><MiniCar roller={roller} color={color} model={model} levels={levels} inspect={inspect} equipped={equipped} /></group>
 }
 
-function PreviewCamera() {
-  const { size } = useThree()
+/** Sisa napas antara mobil dan tepi bingkai, dalam kelipatan jari-jarinya. */
+const FIT_MARGIN = 1.08
+/** Dipakai sampai pengukuran pertama selesai; seukuran bodi standar. */
+const FALLBACK_RADIUS = .8
+
+function PreviewCamera({ radius }: { radius: number }) {
+  const size = useThree(state => state.size)
+  // Jari-jari bola pembatas bersifat sama ke segala arah, jadi zoom yang muat
+  // untuk satu sudut orbit muat untuk semuanya -- tidak ada lagi sudut yang
+  // memotong ban depan atau sayap belakang di tepi bingkai.
   return <>
-    <OrthographicCamera makeDefault position={[1.6, 1.1, 1.9]} zoom={Math.min(size.width / 1.15, size.height / .8)} near={.1} far={40} />
+    <OrthographicCamera makeDefault position={[1.6, 1.1, 1.9]} zoom={Math.min(size.width, size.height) / (radius * 2 * FIT_MARGIN)} near={.1} far={40} />
     <OrbitControls makeDefault enablePan={false} enableZoom={false} enableDamping={false} minPolarAngle={.15} maxPolarAngle={Math.PI / 2.1} />
+  </>
+}
+
+/**
+ * Mengukur mobil yang sedang tampil lalu menggeser porosnya ke titik tengah
+ * bola pembatas. Ukuran bodi berubah menurut model, level, dan aero kit yang
+ * terpasang, jadi angka mati tidak pernah cocok untuk semua kombinasi --
+ * apalagi ketika pemain memutarnya.
+ */
+function FittedCar(props: CarPreviewProps) {
+  const car = useRef<Group>(null)
+  const [radius, setRadius] = useState(FALLBACK_RADIUS)
+  const invalidate = useThree(state => state.invalidate)
+  const { model, inspect } = props
+  // Bentuk dari level/part datang sebagai objek baru tiap render; yang menandai
+  // perubahan ukuran adalah isinya, bukan identitasnya.
+  const shape = JSON.stringify([props.levels, props.equipped, props.roller])
+
+  useLayoutEffect(() => {
+    const group = car.current
+    if (!group) return
+    group.position.set(0, 0, 0)
+    group.updateWorldMatrix(true, true)
+    const sphere = new Box3().setFromObject(group).getBoundingSphere(new Sphere())
+    if (!Number.isFinite(sphere.radius) || sphere.radius <= 0) return
+    group.position.copy(sphere.center).negate()
+    setRadius(sphere.radius)
+    invalidate()
+  }, [model, shape, inspect, invalidate])
+
+  return <>
+    <PreviewCamera radius={radius} />
+    <group ref={car}><PreviewCar {...props} /></group>
   </>
 }
 
@@ -123,15 +165,12 @@ export default function CarPreviewScene({ color, model, levels, inspect, equippe
           onCreated={() => { setReady(true); onReady?.() }}
           aria-label="Preview mobil 3D. Geser untuk memutar."
         >
-          <PreviewCamera />
           <CarLighting />
           <ambientLight intensity={.35} />
           <hemisphereLight args={[COLORS.white, COLORS.navy, .65]} />
           <directionalLight position={[2, 5, 3]} intensity={2.2} />
           <directionalLight position={[-3, 2, -2]} intensity={.9} color={COLORS.white} />
-          <group position={[0, -.12, 0]}>
-            <PreviewCar roller={roller} color={color} model={model} levels={levels} inspect={inspect} equipped={equipped} />
-          </group>
+          <FittedCar roller={roller} color={color} model={model} levels={levels} inspect={inspect} equipped={equipped} />
           <ContextMonitor onLost={onLost} />
         </Canvas>
       </SceneBoundary>
