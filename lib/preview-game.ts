@@ -285,12 +285,9 @@ function previewResult(
     daily: dailyCheckIn(game.dailyClaims, new Date(now), economy),
     adReward: adRewardStatus(adWatchesToday(game, now), economy),
     // Mode preview hanya punya satu pemain di dalam cookie, jadi tidak ada yang
-    // bisa diajak dan tidak ada yang bisa dibayar. Linknya tetap dibangun
-    // supaya tata letak kartu ajakan bisa dicek saat `pnpm dev`. `completed`
-    // dipatok ke milestone tertinggi dengan alasan yang sama seperti
-    // `unlockAllCircuits`: hadiah eksklusif harus bisa dilihat dan dipasang
-    // saat dev tanpa 25 akun Telegram; ambang aslinya hidup di produksi.
-    referral: { link: referralLink(game.userId), invited: 0, completed: REFERRAL_MAX_FRIENDS, earned: 0 },
+    // bisa diajak atau dibayar. Link tetap dibangun agar kartu ajakan dapat diuji,
+    // sementara akses item eksklusif preview diberikan langsung di action terkait.
+    referral: { link: referralLink(game.userId), invited: 0, completed: 0, earned: 0 },
   };
   return {
     state: {
