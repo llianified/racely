@@ -4,6 +4,7 @@ import {
   isValidWebhookSecret,
   MAX_TELEGRAM_UPDATE_BYTES,
   parsePublicAppUrl,
+  parseReferralStart,
   resolveReferralStartContext,
   sendTelegramReply,
   telegramUpdateSchema,
@@ -13,6 +14,8 @@ import {
   releaseTelegramUpdate,
 } from "@/lib/telegram-updates";
 import { recordBotChat } from "@/lib/bot-chats";
+import { db } from "@/lib/db";
+import { gameEvents } from "@/lib/db/schema";
 import { readTextBody, RequestBodyTooLargeError } from "@/lib/http-body";
 
 export const runtime = "nodejs";
@@ -90,6 +93,20 @@ export async function POST(request: Request) {
     // menghubungi pemain nanti; catat sebelum membalas.
     const chat = update.data.message?.chat;
     if (chat?.type === "private") await recordBotChat(chat.id);
+
+    const referralStart = parseReferralStart(update.data);
+    if (referralStart && db) {
+      await db
+        .insert(gameEvents)
+        .values({
+          eventName: "referral_open",
+          userId: referralStart.inviteeId,
+          referrerId: referralStart.inviterId,
+          dedupeKey: `referral-open:${updateId}`,
+          detail: { source: "telegram_bot" },
+        })
+        .onConflictDoNothing();
+    }
 
     const referral = await resolveReferralStartContext(update.data).catch(
       () => null,

@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import {
   actionReceipts,
   botChats,
+  gameEvents,
   players,
   rewardClaims,
   withdrawals,
@@ -98,6 +99,7 @@ const commandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("equip-part"), partId: z.enum(PART_IDS) }).strict(),
   z.object({ type: z.literal("unequip-part"), slot: z.enum(PART_SLOTS) }).strict(),
   z.object({ type: z.literal("sync") }).strict(),
+  z.object({ type: z.literal("track-referral-share") }).strict(),
   z
     .object({
       type: z.literal("set-setup"),
@@ -317,6 +319,42 @@ function stateFromRow(
 type Transaction = Parameters<
   Parameters<NonNullable<typeof db>["transaction"]>[0]
 >[0];
+type GameEventInsert = typeof gameEvents.$inferInsert;
+
+async function recordGrowthEvent(tx: Transaction, event: GameEventInsert) {
+  await tx.insert(gameEvents).values(event).onConflictDoNothing();
+}
+
+function racingDayNumber(day: string) {
+  const [year, month, date] = day.split("-").map(Number);
+  return Date.UTC(year, month - 1, date) / (24 * 60 * 60 * 1000);
+}
+
+async function recordOpenEvents(tx: Transaction, row: PlayerRow, now: Date) {
+  const currentDay = racingDayKey(now);
+  const cohortDay = racingDayKey(row.createdAt);
+  const ageInDays = racingDayNumber(currentDay) - racingDayNumber(cohortDay);
+  const events: GameEventInsert[] = [
+    {
+      eventName: "app_open",
+      userId: row.userId,
+      dedupeKey: `app-open:${row.userId}:${currentDay}`,
+      detail: { day: currentDay },
+      occurredAt: now,
+    },
+  ];
+  if (ageInDays === 1 || ageInDays === 7) {
+    const eventName = ageInDays === 1 ? "d1_return" : "d7_return";
+    events.push({
+      eventName,
+      userId: row.userId,
+      dedupeKey: `${eventName}:${row.userId}`,
+      detail: { cohortDay, returnDay: currentDay },
+      occurredAt: now,
+    });
+  }
+  await tx.insert(gameEvents).values(events).onConflictDoNothing();
+}
 
 async function readDailyClaims(tx: Transaction, userId: string) {
   const rows = await tx
@@ -378,6 +416,15 @@ async function bindReferrer(
     .set({ referredBy: inviterId })
     .where(and(eq(players.userId, row.userId), isNull(players.referredBy)))
     .returning();
+  if (bound) {
+    await recordGrowthEvent(tx, {
+      eventName: "referral_bound",
+      userId: row.userId,
+      referrerId: inviterId,
+      dedupeKey: `referral-bound:${row.userId}`,
+      detail: { source: "mini_app" },
+    });
+  }
   return bound ?? row;
 }
 
@@ -403,9 +450,17 @@ async function payInviteeMilestone(
     })
     .onConflictDoNothing()
     .returning({ id: rewardClaims.id });
-  return inserted.length > 0
-    ? { ...row, balance: row.balance + economy.referralRewardInvitee }
-    : row;
+  if (inserted.length > 0) {
+    await recordGrowthEvent(tx, {
+      eventName: "referral_qualified",
+      userId: row.userId,
+      referrerId: row.referredBy,
+      dedupeKey: `referral-qualified:${row.userId}`,
+      detail: { inviteeReward: economy.referralRewardInvitee },
+    });
+    return { ...row, balance: row.balance + economy.referralRewardInvitee };
+  }
+  return row;
 }
 
 /**
@@ -511,6 +566,13 @@ async function payInviter(row: PlayerRow, economy: EconomyConfig) {
               balance: sql`${players.balance} + ${economy.referralRewardInviter}`,
             })
             .where(eq(players.userId, inviterId));
+          await recordGrowthEvent(tx, {
+            eventName: "referral_reward_paid",
+            userId: row.userId,
+            referrerId: inviterId,
+            dedupeKey: `referral-paid:${row.userId}`,
+            detail: { inviterReward: economy.referralRewardInviter },
+          });
 
           const chatId = Number(inviter.chatUserId);
           if (Number.isSafeInteger(chatId) && chatId > 0) {
@@ -741,6 +803,7 @@ export async function getGameState(
       .for("update");
 
     const now = new Date(Math.max(Date.now(), locked.lastSettledAt.getTime()));
+    await recordOpenEvents(tx, locked, now);
     const bound = await bindReferrer(tx, locked, identity.startParam);
     const settled = settlePlayerRow(bound, now, economy);
     const dailyClaims = await readDailyClaims(tx, identity.userId);
@@ -877,6 +940,16 @@ const applyPaintAction = (row: PlayerRow, action: PaintCommand, { economy, refer
 
 const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
   sync: (row) => ({ row }),
+  "track-referral-share": async (row, _action, { tx, identity, requestId, now }) => {
+    await recordGrowthEvent(tx, {
+      eventName: "referral_share",
+      userId: identity.userId,
+      dedupeKey: `referral-share:${identity.userId}:${requestId}`,
+      detail: { source: "mini_app" },
+      occurredAt: now,
+    });
+    return { row };
+  },
   "buy-paint": applyPaintAction,
   "equip-paint": applyPaintAction,
   "daily-mission": async (row, action, { tx, identity, now, economy }) => {
@@ -898,7 +971,7 @@ const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
     return { row: { ...row, dailyMissions: result.dailyMissions, balance: row.balance + credit } };
   },
 
-  "select-car": (row, action, { referral }) => {
+  "select-car": async (row, action, { tx, identity, referral, now }) => {
     if (isReferralCar(action.model) && !referralRewardUnlocked("car", action.model, referral.completed)) {
       throw new GameRuleError(
         `Ajak ${carReferralRequirement(action.model)} teman untuk membuka mobil ini.`,
@@ -927,6 +1000,15 @@ const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
     if (!isCarColor(action.model, action.color)) {
       throw new GameRuleError("Model atau warna mobil tidak valid.", 400);
     }
+    if (row.carModel === null) {
+      await recordGrowthEvent(tx, {
+        eventName: "onboarding_complete",
+        userId: identity.userId,
+        dedupeKey: `onboarding-complete:${identity.userId}`,
+        detail: { carModel: action.model },
+        occurredAt: now,
+      });
+    }
     // Dicatat sekali, saat mobil starter pertama kali dipakai. Memilih mobil
     // hadiah ajakan duluan tidak mengunci apa pun: starter-nya masih kosong,
     // jadi pemain itu tetap boleh turun ke starter mana pun satu kali.
@@ -948,10 +1030,17 @@ const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
     row: applyUpgrade(row, action.key, economy),
   }),
 
-  claim: (row) => {
+  claim: async (row, _action, { tx, identity, now }) => {
     // Only whole coins move into the withdrawable balance; the remainder keeps accruing.
     const settled = Math.floor(row.pending);
     if (settled <= 0) return { row };
+    await recordGrowthEvent(tx, {
+      eventName: "first_claim",
+      userId: identity.userId,
+      dedupeKey: `first-claim:${identity.userId}`,
+      detail: { amount: settled },
+      occurredAt: now,
+    });
     return {
       row: {
         ...row,
@@ -988,6 +1077,12 @@ const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
       method: action.method,
       account: action.account,
       accountName: action.accountName,
+    });
+    await recordGrowthEvent(tx, {
+      eventName: "withdrawal_requested",
+      userId: identity.userId,
+      dedupeKey: `withdrawal-requested:${identity.userId}:${requestId}`,
+      detail: { coins: action.coins, method: action.method },
     });
     return { row: { ...row, balance: row.balance - action.coins } };
   },
@@ -1052,7 +1147,7 @@ const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
    * adalah plafonnya: paling banyak `adRewardDailyCap` tontonan per hari
    * balapan, tiap tontonan satu baris `reward_claims` yang unik.
    */
-  "watch-ad": async (row, _action, { tx, identity, economy, now, adWatchesToday }) => {
+  "watch-ad": async (row, _action, { tx, identity, requestId, economy, now, adWatchesToday }) => {
     const status = adRewardStatus(adWatchesToday, economy);
     if (economy.adRewardDailyCap <= 0) {
       throw new GameRuleError("Bonus iklan sedang tidak aktif.");
@@ -1070,6 +1165,13 @@ const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
       .onConflictDoNothing()
       .returning({ id: rewardClaims.id });
     if (inserted.length === 0) return { row };
+    await recordGrowthEvent(tx, {
+      eventName: "ad_completed",
+      userId: identity.userId,
+      dedupeKey: `ad-completed:${identity.userId}:${requestId}`,
+      detail: { amount: status.reward, day: racingDayKey(now) },
+      occurredAt: now,
+    });
     return {
       row: { ...row, balance: row.balance + status.reward },
       adWatchesToday: adWatchesToday + 1,
@@ -1177,6 +1279,7 @@ export async function performGameAction(
       .for("update");
 
     const now = new Date(Math.max(Date.now(), locked.lastSettledAt.getTime()));
+    await recordOpenEvents(tx, locked, now);
     const bound = await bindReferrer(tx, locked, identity.startParam);
     const settled = settlePlayerRow(bound, now, economy);
     let dailyClaims = await readDailyClaims(tx, identity.userId);

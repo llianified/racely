@@ -448,7 +448,7 @@ export type GameCommand =
   | PaintCommand
   | { type: "daily-mission"; day: string; kind: DailyMissionKind }
   | PartCommand
-  | { type: "sync" }
+  | { type: "sync" | "track-referral-share" }
   | { type: "upgrade"; key: Upgrade }
   | { type: "claim" | "boost" | "gift" | "daily" | "watch-ad" }
   | { type: "mission"; id: MissionId }

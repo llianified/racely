@@ -3,7 +3,7 @@
 **Scope:** read-only inspection of `racely-main` (Next.js 16 Telegram Mini App, Neon Postgres, EC2 + PM2).
 **Question answered:** which capabilities must exist before V1 launch, which should follow soon after real users arrive, and which are later/experimental.
 **Not in scope:** code quality, UI redesign, visual hierarchy. The current UX hierarchy and design tokens are treated as the source of truth.
-**Implementation update:** 16 September 2026 — visibilitas ajakan yang masih menunggu syarat, notifikasi payout ke inviter, dan salinan ajakan personal sudah dirilis.
+**Implementation update:** 16 September 2026 — visibilitas ajakan yang masih menunggu syarat, notifikasi payout ke inviter, salinan ajakan personal, dan event tracking pertumbuhan sudah dirilis.
 
 Legend: `[DONE]` clearly exists and is usable · `[PARTIAL]` exists but incomplete · `[MISSING]` not meaningfully available · `[UNCERTAIN]` cannot verify from code alone.
 Blocker classes: **A** = true launch blocker · **B** = growth feature, post-launch · **C** = nice-to-have polish.
@@ -74,7 +74,7 @@ Blocker classes: **A** = true launch blocker · **B** = growth feature, post-lau
 ### 2.9 Minimum pieces to make the existing growth concept actually work
 1. [x] **Show pending invites** in the referral panel using `referral.invited` — shipped 16 September 2026.
 2. [x] **Notify inviter on payout** via the bot — shipped 16 September 2026; one personal message after the idempotent payout commit, with an “Ajak teman lagi” action, only when `racely_bot_chats` confirms the bot may contact the inviter.
-3. [ ] **Measure the funnel** — at minimum count: link opened (`/start ref_` received), bound (`referred_by` set), qualified (`referral_paid_at` set). Two of the three are already columns; the first needs a counter. Without this you cannot tune `referralActiveDays` / `referralUpgradeTarget` from data.
+3. [x] **Measure the funnel** — shipped 16 September 2026; `racely_game_events` records link opened, bound, and qualified with idempotent keys, and `racely_referral_funnel_daily` exposes daily WIB counts ready for analysis.
 
 Everything else in the growth roadmap builds on a loop that is already whole.
 
@@ -83,7 +83,7 @@ Everything else in the growth roadmap builds on a loop that is already whole.
 ## 3. POST-LAUNCH GROWTH ROADMAP
 
 ### Must add soon
-- [ ] Basic event tracking (onboarding complete, first claim, D1/D7 return, referral open/bind/qualify, ad completed, withdrawal requested) — even a single Postgres events table is enough to start.
+- [x] Basic event tracking — shipped 16 September 2026; one append-only Postgres table records app opens, onboarding complete, first claim, D1/D7 return, referral open/bind/qualify/share/payout, completed ads, and withdrawal requests.
 - [x] Referral panel shows `invited` (pending) alongside `completed` — shipped 16 September 2026; qualification details remain in “Cara kerja”.
 - [x] Bot notification to inviter when a friend qualifies — shipped 16 September 2026.
 - [ ] Bot notification to player when a withdrawal is marked `paid` or `rejected`.
@@ -135,7 +135,7 @@ Everything else in the growth roadmap builds on a loop that is already whole.
 - [x] Inviter payout notification with a Telegram re-share action
 
 ### NOT REQUIRED FOR LAUNCH
-- [ ] Event tracking / analytics
+- [x] Event tracking / analytics — shipped 16 September 2026
 - [ ] Withdrawal status notification
 - [ ] Streak-at-risk / mission reminders
 - [ ] Outward share cards (rank, unlock, payout)
@@ -154,10 +154,10 @@ Every item on the pre-launch "wajib" list — core loop, economy, onboarding, ga
 **Freeze now:**
 - Game rules, economy formulas, and qualification rule shape (tune numbers only via `/admin`).
 - UI hierarchy, navigation, and the referral / rewards / wallet flows as they stand.
-- Migration set 0001–0018.
+- Migration set 0001–0019.
 
 **Move to post-launch (in this order):**
-1. Event tracking so the next decisions are data-driven.
+1. [x] Event tracking so the next decisions are data-driven — shipped 16 September 2026.
 2. Notify the player on withdrawal status changes.
 3. Streak / mission reminders over the existing bot channel.
 4. Everything in "Can wait" and "Experimental", gated on what the data shows.

@@ -526,6 +526,8 @@ export function performPreviewGameAction(
       throw new PreviewGameRuleError("Pilih mobil dulu sebelum menyetel setup.");
     }
     state = { ...state, setup: { gear: action.gear, roller: action.roller } };
+  } else if (action.type === "track-referral-share") {
+    // Analytics produksi tidak ditulis dari mode preview.
   } else if (action.type === "circuit") {
     if (action.circuit < state.circuit) {
       throw new PreviewGameRuleError("Trek lama tidak bisa dipilih lagi.");

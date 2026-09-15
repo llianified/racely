@@ -19,6 +19,22 @@ import type { CarSetup } from "@/lib/car-setup";
 import type { DailyMissions } from "@/lib/daily-missions";
 import type { PaintId } from "@/lib/car-paints";
 
+export const GAME_EVENT_NAMES = [
+  "app_open",
+  "onboarding_complete",
+  "first_claim",
+  "d1_return",
+  "d7_return",
+  "referral_open",
+  "referral_bound",
+  "referral_qualified",
+  "referral_reward_paid",
+  "referral_share",
+  "ad_completed",
+  "withdrawal_requested",
+] as const;
+export type GameEventName = (typeof GAME_EVENT_NAMES)[number];
+
 export const players = pgTable("racely_players", {
   userId: text("user_id").primaryKey(),
   telegramUsername: text("telegram_username"),
@@ -77,6 +93,41 @@ export const botChats = pgTable("racely_bot_chats", {
     .notNull()
     .defaultNow(),
 });
+
+/**
+ * Event pertumbuhan append-only. userId tidak memakai foreign key karena
+ * referral_open diterima bot sebelum pemain pertama kali membuka Mini App.
+ */
+export const gameEvents = pgTable(
+  "racely_game_events",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    eventName: text("event_name").$type<GameEventName>().notNull(),
+    userId: text("user_id").notNull(),
+    referrerId: text("referrer_id"),
+    dedupeKey: text("dedupe_key"),
+    detail: jsonb("detail").$type<Record<string, string | number | boolean>>(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("racely_game_events_dedupe_unique")
+      .on(table.dedupeKey)
+      .where(sql`${table.dedupeKey} IS NOT NULL`),
+    index("racely_game_events_name_recent_idx").on(
+      table.eventName,
+      desc(table.occurredAt),
+    ),
+    index("racely_game_events_user_recent_idx").on(
+      table.userId,
+      desc(table.occurredAt),
+    ),
+    index("racely_game_events_referrer_recent_idx")
+      .on(table.referrerId, desc(table.occurredAt))
+      .where(sql`${table.referrerId} IS NOT NULL`),
+  ],
+);
 
 export const actionReceipts = pgTable(
   "racely_action_receipts",
