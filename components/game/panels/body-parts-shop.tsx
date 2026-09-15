@@ -1,10 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
-import { Check, ChevronLeft, ChevronRight, Columns2, LoaderCircle, PanelBottom, PanelTop, RotateCcw, ShoppingBag, Wind, Wrench, type LucideIcon } from "lucide-react";
+import { Check, Columns2, LoaderCircle, PanelBottom, PanelTop, RotateCcw, ShoppingBag, Wind, Wrench, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
