@@ -234,11 +234,11 @@
   --gutter: var(--space-md);
 }
 .leaderboard-layout { display: flex; flex-direction: column; gap: var(--space-lg); min-width: 0; font-size: var(--fs-body); line-height: var(--lh-normal); }
-.leaderboard-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-md); padding-block: var(--space-xs) var(--space-sm); }
+.leaderboard-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: flex-start; gap: var(--space-xs) var(--space-md); padding-block: var(--space-xs) var(--space-sm); }
 .leaderboard-heading-copy { min-width: 0; }
-.leaderboard-heading h1 { margin-block: var(--space-3) var(--space-xs); font-size: var(--fs-5xl); font-weight: var(--fw-black); letter-spacing: var(--track-tight); line-height: var(--lh-tight); }
-.leaderboard-heading-copy > p:last-child { color: var(--muted-foreground); text-wrap: pretty; }
-.leaderboard-heading-tools { display: flex; flex-shrink: 0; align-items: center; gap: var(--space-xs); }
+.leaderboard-heading h1 { margin-top: var(--space-3); font-size: var(--fs-5xl); font-weight: var(--fw-black); letter-spacing: var(--track-tight); line-height: var(--lh-tight); }
+.leaderboard-heading-description { grid-column: 1 / -1; color: var(--muted-foreground); text-wrap: pretty; }
+.leaderboard-heading-tools { display: flex; align-items: center; gap: var(--space-xs); }
 .leaderboard-sync { display: inline-flex; align-items: center; gap: var(--space-5); min-height: var(--space-28); padding-inline: var(--space-sm); border: var(--stroke) solid var(--border); border-radius: var(--corner-pill); background: var(--card); color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps-xs); text-transform: uppercase; }
 .leaderboard-sync > i { width: var(--space-6); height: var(--space-6); border-radius: var(--corner-round); background: var(--success); box-shadow: 0 0 0 var(--space-3) color-mix(in srgb, var(--success) 16%, transparent); }
 .leaderboard-sync[data-state='updating'] > i { background: var(--primary); box-shadow: 0 0 0 var(--space-3) color-mix(in srgb, var(--primary) 20%, transparent); }
