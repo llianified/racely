@@ -69,6 +69,7 @@ export const GaragePanel = memo(function GaragePanel({
   onPartAction,
   onPaintAction,
   onSelectCar,
+  onOpenReferral,
   disabled = false,
 }: {
   game: GameState;
@@ -80,6 +81,7 @@ export const GaragePanel = memo(function GaragePanel({
   onPartAction: (action: PartCommand) => Promise<boolean>;
   onPaintAction: (action: PaintCommand) => Promise<boolean>;
   onSelectCar: (model: CarModelId) => Promise<boolean>;
+  onOpenReferral: () => void;
   disabled?: boolean;
 }) {
   const model = game.carSelection?.model ?? "neo-falcon";
@@ -92,7 +94,7 @@ export const GaragePanel = memo(function GaragePanel({
           <div role="img" aria-label={`${car.name} warna ${colorName}, model 3D yang sama dengan di lintasan. Geser untuk memutar.`}>
             <CarPreviewScene roller={game.setup?.roller} color={game.color} model={model} levels={game.levels} equipped={game.bodyParts?.equipped} active={active && !previewSheetOpen} standbyHint={previewSheetOpen ? "Tutup lembar yang terbuka untuk menyalakannya lagi." : undefined} />
           </div>
-          <CarSwitchSheet game={game} active={active} disabled={disabled} onSelectCar={onSelectCar} onPreviewSheet={onPreviewSheet} />
+          <CarSwitchSheet game={game} active={active} disabled={disabled} onSelectCar={onSelectCar} onPreviewSheet={onPreviewSheet} onOpenReferral={onOpenReferral} />
         </div>
         <div className="car-identity">
           <div className="car-identity-head">

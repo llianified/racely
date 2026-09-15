@@ -514,6 +514,7 @@ export function GameDashboard() {
                 onPartAction={modifyBodyPart}
                 onPaintAction={modifyPaint}
                 onSelectCar={switchCar}
+                onOpenReferral={() => navigate("referral")}
                 disabled={Boolean(busyAction)}
               />
               <UpgradePanel

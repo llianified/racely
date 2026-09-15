@@ -598,6 +598,35 @@
 .car-selection .garage-customize { padding: var(--space-md); border: var(--stroke) solid var(--border); border-radius: var(--corner-box); background: var(--secondary); }
 .car-selection .color-swatch { width: var(--space-44); height: var(--space-44); }
 .car-model-option:disabled { opacity: var(--opacity-locked); }
+.car-model-option[data-exclusive] { border-color: color-mix(in srgb, var(--accent) 30%, var(--border)); background: color-mix(in srgb, var(--accent) 8%, var(--background)); }
+.car-model-option[data-exclusive][data-pressed] { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); background: color-mix(in srgb, var(--accent) 12%, var(--background)); }
+.car-option-status { flex-shrink: 0; width: var(--icon-base); height: var(--icon-base); color: var(--accent); }
+.car-unlock-progress { display: flex; flex-direction: column; gap: var(--space-sm); font-size: var(--fs-small); }
+.car-unlock-progress > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); color: var(--muted-foreground); }
+.car-unlock-progress strong { color: var(--accent); font-variant-numeric: tabular-nums; }
+.car-unlock-progress [data-slot='progress-track'] { height: var(--space-5); background: var(--background); }
+.car-unlock-progress [data-slot='progress-indicator'] { background: var(--accent); }
+.exclusive-car-preview { overflow: hidden; background: var(--background); }
+.exclusive-car-topline, .exclusive-car-caption { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-sm); padding: var(--space-md); }
+.exclusive-car-topline > span:last-child { color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-heavy); text-transform: uppercase; letter-spacing: var(--track-caps-lg); }
+.exclusive-car-stage { height: var(--stage-select-h-max); background: radial-gradient(ellipse at 50% 70%, color-mix(in srgb, var(--primary) 24%, transparent), transparent 65%); touch-action: none; }
+.exclusive-car-preview[data-compact] .exclusive-car-stage { height: var(--stage-inspect-h); }
+.exclusive-car-stage .scene-loading { background: transparent; }
+.exclusive-car-caption { border-top: var(--stroke) solid var(--border); color: var(--muted-foreground); font-size: var(--fs-nano); }
+.exclusive-car-caption > span:first-child { display: flex; align-items: center; gap: var(--space-xs); color: var(--accent); }
+.exclusive-car-caption svg { width: var(--icon-2xs); height: var(--icon-2xs); flex-shrink: 0; }
+.referral-exclusive-reward { margin: var(--space-md); overflow: hidden; border: var(--stroke) solid color-mix(in srgb, var(--accent) 30%, var(--border)); border-radius: var(--corner-box); background: var(--surface-inset); }
+.referral-exclusive-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); padding: var(--space-md); border-bottom: var(--stroke) solid color-mix(in srgb, var(--accent) 30%, var(--border)); background: color-mix(in srgb, var(--accent) 8%, var(--card)); }
+.referral-exclusive-heading > div { min-width: 0; }
+.referral-exclusive-heading p { color: var(--accent); font-size: var(--fs-nano); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps-lg); text-transform: uppercase; }
+.referral-exclusive-heading h3 { margin-top: var(--space-xs); font-size: var(--fs-4xl); font-weight: var(--fw-black); letter-spacing: var(--track-tight-xs); line-height: var(--lh-tight); }
+.referral-exclusive-details { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-md); border-top: var(--stroke) solid var(--border); }
+.referral-exclusive-details > p { color: var(--muted-foreground); font-size: var(--fs-small); text-wrap: pretty; }
+.referral-exclusive-details > p strong { color: var(--foreground); }
+.referral-exclusive-specs { display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+@media (max-height: 680px) {
+  .exclusive-car-preview[data-compact] .exclusive-car-stage { height: var(--stage-select-h-short); }
+}
 .selection-footer { display: flex; flex-direction: column; gap: var(--space-md); margin-top: auto; }
 .selection-actions { display: flex; align-items: stretch; gap: var(--space-sm); }
 .selection-actions > [data-size='icon-lg'] { height: auto; min-height: var(--space-48); }
