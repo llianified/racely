@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createGameActionSender } from "../components/game/game-client";
+import {
+  createGameActionSender,
+  isChannelMembershipRequired,
+  readGameResponse,
+} from "../components/game/game-client";
 import { INITIAL_GAME, type GameCommand } from "../lib/game";
 
 const withdraw = {
@@ -21,6 +25,26 @@ const success = () => Response.json(INITIAL_GAME);
 const rejected = (status: number) => Response.json({ error: "Aksi ditolak" }, { status });
 
 afterEach(() => vi.unstubAllGlobals());
+
+describe("channel membership response", () => {
+  it("preserves the server error code for the mandatory channel gate", async () => {
+    const error = await readGameResponse(
+      Response.json(
+        {
+          error: "Gabung @RacelyApp dulu untuk membuka Racely.",
+          code: "CHANNEL_MEMBERSHIP_REQUIRED",
+        },
+        { status: 403 },
+      ),
+    ).catch((cause: unknown) => cause);
+
+    expect(error).toMatchObject({
+      status: 403,
+      code: "CHANNEL_MEMBERSHIP_REQUIRED",
+    });
+    expect(isChannelMembershipRequired(error)).toBe(true);
+  });
+});
 
 describe("game action retry identity", () => {
   it.each([

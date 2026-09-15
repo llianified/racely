@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { withRaceOpponents } from '@/lib/race-opponents-server';
+import {
+  ChannelMembershipError,
+  requireRacelyChannelMembership,
+} from "@/lib/channel-membership";
 import { getGameState } from "@/lib/game-server";
 import {
   getPreviewGameState,
@@ -42,6 +46,8 @@ export async function GET(request: Request) {
       );
     }
 
+    if (!preview) await requireRacelyChannelMembership(identity.userId);
+
     const previewGame = preview
       ? getPreviewGameState(request, identity, await readEconomyConfig())
       : null;
@@ -72,6 +78,12 @@ export async function GET(request: Request) {
       return NextResponse.json(
         { error: error.message },
         { status: 401, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+    if (error instanceof ChannelMembershipError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: error.status, headers: { "Cache-Control": "no-store" } },
       );
     }
     return NextResponse.json(
