@@ -220,6 +220,34 @@ export function buildTelegramReply(
   };
 }
 
+export function buildWithdrawalStatusReply({
+  chatId,
+  status,
+  coinAmount,
+  amountIdr,
+  publicAppUrl,
+}: {
+  chatId: number;
+  status: "paid" | "rejected";
+  coinAmount: number;
+  amountIdr: number;
+  publicAppUrl: string;
+}): TelegramReply {
+  const amount = `${coins(coinAmount)} (Rp${amountIdr.toLocaleString("id-ID")})`;
+  return {
+    chat_id: chatId,
+    text:
+      status === "paid"
+        ? `Penarikan ${amount} sudah dibayar. Periksa rekening atau e-wallet tujuanmu.`
+        : `Penarikan ${amount} ditolak. ${coins(coinAmount)} akan otomatis kembali ke saldomu saat kamu membuka Racely.`,
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "Buka Racely", web_app: { url: publicAppUrl } }],
+      ],
+    },
+  };
+}
+
 export function buildReferralRewardReply({
   chatId,
   inviterId,

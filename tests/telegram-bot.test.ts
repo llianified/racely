@@ -3,6 +3,7 @@ import { DEFAULT_ECONOMY } from "../lib/economy-config";
 import {
   buildReferralRewardReply,
   buildTelegramReply,
+  buildWithdrawalStatusReply,
   isValidWebhookSecret,
   MAX_TELEGRAM_UPDATE_BYTES,
   parsePublicAppUrl,
@@ -12,6 +13,7 @@ import {
   sendTelegramReply,
   telegramUpdateSchema,
 } from "../lib/telegram-bot";
+import { notifyWithdrawalStatus } from "../lib/withdrawal-notifier";
 
 // Exercises the in-process fallback in isolation; the Postgres claim is covered by
 // tests/database.test.ts, which only runs when DATABASE_URL is present.
@@ -186,6 +188,79 @@ describe("Bot command replies", () => {
     expect(shareUrl?.searchParams.get("url")).toContain("start=ref_777");
     expect(shareUrl?.searchParams.get("text")).toContain("Raka mengajakmu balapan");
     expect(shareUrl?.searchParams.get("text")).toContain("5.000 koin");
+  });
+
+  it("builds paid and rejected withdrawal messages with exact amounts", () => {
+    const paid = buildWithdrawalStatusReply({
+      chatId: 4242,
+      status: "paid",
+      coinAmount: 200_000,
+      amountIdr: 20_000,
+      publicAppUrl: APP_URL,
+    });
+    const rejected = buildWithdrawalStatusReply({
+      chatId: 4242,
+      status: "rejected",
+      coinAmount: 200_000,
+      amountIdr: 20_000,
+      publicAppUrl: APP_URL,
+    });
+
+    expect(paid.text).toContain("200.000 koin (Rp20.000) sudah dibayar");
+    expect(rejected.text).toContain("200.000 koin (Rp20.000) ditolak");
+    expect(rejected.text).toContain("otomatis kembali ke saldomu");
+    expect(webAppUrl(paid)).toBe(APP_URL);
+    expect(webAppUrl(rejected)).toBe(APP_URL);
+  });
+
+  it("notifies only players whose private bot chat is registered", async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    const notification = {
+      userId: "4242",
+      status: "paid" as const,
+      coins: 200_000,
+      amountIdr: 20_000,
+    };
+
+    expect(
+      await notifyWithdrawalStatus(notification, {
+        findChatId: async () => null,
+        send,
+        appUrl: APP_URL,
+      }),
+    ).toBe(false);
+    expect(send).not.toHaveBeenCalled();
+
+    expect(
+      await notifyWithdrawalStatus(notification, {
+        findChatId: async () => 4242,
+        send,
+        appUrl: APP_URL,
+      }),
+    ).toBe(true);
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({ chat_id: 4242 }),
+    );
+  });
+
+  it("does not fail the committed status change when Telegram rejects", async () => {
+    expect(
+      await notifyWithdrawalStatus(
+        {
+          userId: "4242",
+          status: "rejected",
+          coins: 200_000,
+          amountIdr: 20_000,
+        },
+        {
+          findChatId: async () => 4242,
+          send: async () => {
+            throw new Error("Telegram unavailable");
+          },
+          appUrl: APP_URL,
+        },
+      ),
+    ).toBe(false);
   });
 
   it("nudges unknown text toward /play but still offers the button", () => {
