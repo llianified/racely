@@ -72,13 +72,13 @@ function OptionRow({
         <div className="upgrade-name">
           <h3>{name}</h3>
           <p className="setup-metric">
-            <b>{seconds(preview)}</b>/putaran
+            <span><b>{seconds(preview)}</b>/putaran</span>
             {delta !== 0 && (
-              <>
-                <span aria-hidden="true"> · </span>
+              <span>
+                <span aria-hidden="true">· </span>
                 {delta > 0 ? "+" : "−"}
                 {seconds(Math.abs(delta))}
-              </>
+              </span>
             )}
           </p>
         </div>
@@ -102,7 +102,7 @@ function OptionRow({
       {risky && (
         <p className="setup-risk">
           <TriangleAlert aria-hidden="true" />
-          Keluar lintasan {times(courseOuts)} per putaran
+          <span>Keluar lintasan {times(courseOuts)} per putaran</span>
         </p>
       )}
     </li>
@@ -134,7 +134,7 @@ export function SetupPanel({
         title="Setup"
         aside={
           <>
-            <Badge variant="secondary">{seconds(current)}/putaran</Badge>
+            <Badge variant="secondary" className="tabular-nums">{seconds(current)}/putaran</Badge>
             <InfoHint title="Setup mobil">
               Gratis diubah, tidak pernah memberi koin. Gear panjang menang di
               trek lurus tapi masuk tikungan lebih kencang; roller berat menahan
