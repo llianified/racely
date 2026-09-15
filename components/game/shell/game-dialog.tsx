@@ -266,7 +266,7 @@ export function GameDialog({
             <ul className="circuit-list">
               {CIRCUIT_NAMES.map((name, circuit) => {
                 const needed = circuitUnlockLaps(game.economy, circuit);
-                const locked = game.laps < needed;
+                const locked = circuit > game.circuit && game.laps < needed;
                 return (
                   <CircuitRow
                     key={name}

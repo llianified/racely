@@ -7,7 +7,7 @@ import { CAR_CATALOG } from "@/lib/car-catalog";
 import { leaderboardCar, type LeaderboardEntry } from "@/lib/leaderboard";
 import { COLORS, MiniCar } from "./mini-car";
 import { CarLighting } from "./car-lighting";
-import { ContextMonitor, SceneBoundary } from "./scene-recovery";
+import { ContextMonitor, createSafePointerEvents, SceneBoundary } from "./scene-recovery";
 
 function PodiumCar({ entry }: { entry: LeaderboardEntry }) {
   // Tampilan terpasang pemain kalau server mengirimnya; respons server lama
@@ -61,6 +61,7 @@ export default function LeaderboardPodiumScene({ entries, fallback }: { entries:
         orthographic
         frameloop="demand"
         dpr={[1, 1.25]}
+        events={createSafePointerEvents}
         gl={{ alpha: true, antialias: true, powerPreference: "default" }}
         fallback={fallback}
         aria-label="Mobil tiga besar di atas podium; detail pembalap ada di bawah"

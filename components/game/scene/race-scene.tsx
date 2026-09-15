@@ -18,7 +18,7 @@ import { setupPerformance, type CarSetup } from '@/lib/car-setup'
 import { createSetupFeedback, stepSetupFeedback } from './setup-feedback'
 import { RacingEffects } from './racing-effects'
 import { TamiyaLanes } from './tamiya-lanes'
-import { ContextMonitor, SceneBoundary } from './scene-recovery'
+import { ContextMonitor, createSafePointerEvents, SceneBoundary } from './scene-recovery'
 
 export type SceneProps = { setup?: CarSetup; equipped?: NonNullable<GameState['bodyParts']>['equipped']; driving?: RefObject<DrivingState>; onTelemetry?: (state: DrivingState) => void; cinematic?: boolean; levels?: GameState['levels']; model?: CarModelId; progress: number; seconds: number; baseSeconds: number; opponents: readonly RaceOpponent[]; opponentProgress: readonly number[]; color: string; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean; onSceneStatus?: (live: boolean) => void }
 
@@ -282,8 +282,8 @@ function RacingLine({ playerRef, driving }: { playerRef: RefObject<THREE.Group |
 
 function CameraRig({ mode, follow, resetKey, playerRef, active, reducedMotion, cinematic, driving }: { mode: number; follow: boolean; resetKey: number; playerRef: RefObject<THREE.Group | null>; active: boolean; reducedMotion: boolean } & Pick<SceneProps, 'cinematic' | 'driving'>) {
   const track = useContext(TrackContext)
-  const { camera, size } = useThree()
-  const [overviewCamera] = useState(() => camera)
+  const { size } = useThree()
+  const [overviewCamera, setOverviewCamera] = useState<THREE.OrthographicCamera | null>(null)
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null)
   const chaseCamera = useRef<THREE.PerspectiveCamera>(null)
   const initialize = useRef(true)
@@ -310,7 +310,7 @@ function CameraRig({ mode, follow, resetKey, playerRef, active, reducedMotion, c
   }, [follow, resetKey, active, size.width, size.height])
 
   useLayoutEffect(() => {
-    if (follow) return
+    if (follow || !overviewCamera) return
     const [x, y, z] = mode === 1 ? [0, 20, .01] : mode === 2 ? [12, 6.5, 10] : [9, 12.5, 12]
     overviewTarget.set(x + track.center.x, y, z + track.center.z)
     overviewZoom.current = Math.min(size.width / (track.bounds.maxX - track.bounds.minX + 1.3), size.height / (track.bounds.maxZ - track.bounds.minZ + 1))
@@ -337,7 +337,7 @@ function CameraRig({ mode, follow, resetKey, playerRef, active, reducedMotion, c
     if (controls.current) {
       controls.current.autoRotate = !!dramatic && mode !== 1 && !transitioning.current && performance.now() > manualUntil.current
     }
-    if (!follow && transitioning.current) {
+    if (!follow && transitioning.current && overviewCamera) {
       overviewCamera.position.lerp(overviewTarget, damping)
       overviewCamera.lookAt(track.center.x, 0, track.center.z)
       if (overviewCamera instanceof THREE.OrthographicCamera) {
@@ -388,7 +388,10 @@ function CameraRig({ mode, follow, resetKey, playerRef, active, reducedMotion, c
 
   return <>
     {follow && <PerspectiveCamera ref={chaseCamera} makeDefault fov={42} near={.05} far={100} />}
-    {!follow && <OrbitControls ref={controls} camera={overviewCamera} autoRotateSpeed={.45} onStart={() => { transitioning.current = false; manualUntil.current = Infinity }} onEnd={() => { manualUntil.current = performance.now() + 8000 }} enablePan={false} minZoom={12} maxZoom={95} minPolarAngle={.001} maxPolarAngle={Math.PI / 2.35} enableDamping={!reducedMotion} dampingFactor={.08} />}
+    {!follow && <>
+      <OrthographicCamera ref={setOverviewCamera} makeDefault position={[9, 12.5, 12]} zoom={30} near={.1} far={100} />
+      {overviewCamera && <OrbitControls ref={controls} camera={overviewCamera} autoRotateSpeed={.45} onStart={() => { transitioning.current = false; manualUntil.current = Infinity }} onEnd={() => { manualUntil.current = performance.now() + 8000 }} enablePan={false} minZoom={12} maxZoom={95} minPolarAngle={.001} maxPolarAngle={Math.PI / 2.35} enableDamping={!reducedMotion} dampingFactor={.08} />}
+    </>}
   </>
 }
 
@@ -498,7 +501,7 @@ export default function RaceScene(props: SceneProps) {
   const running = visible
   return <SceneBoundary key={attempt} fallback={<SceneError onRetry={retry} onShow={reportDown} />}>
     {!ready && <div className="scene-loading absolute inset-0" role="status"><Flag /><strong>Menyalakan lampu sirkuit.</strong><span>Menyiapkan lintasan 3D…</span></div>}
-    <Canvas orthographic dpr={[1, 1.25]} frameloop={running ? 'always' : 'never'} shadows="percentage" camera={{ position: [9, 12.5, 12], zoom: 30, near: .1, far: 100 }} gl={{ antialias: true, alpha: false, powerPreference: 'default' }} fallback={<SceneError onRetry={retry} onShow={reportDown} />} onCreated={() => setReady(true)} aria-label={props.inspect ? 'Inspeksi sasis dan dua sel baterai mobil. Geser untuk memutar, cubit untuk zoom. Balapan tetap berlangsung.' : follow ? 'Arena mini 4WD 3D. Kamera mengikuti mobilmu. Pilih Overview untuk melihat seluruh lintasan.' : 'Arena mini 4WD 3D. Kamera overview. Geser untuk memutar, cubit untuk zoom.'}>
+    <Canvas orthographic dpr={[1, 1.25]} events={createSafePointerEvents} frameloop={running ? 'always' : 'never'} shadows="percentage" camera={{ position: [9, 12.5, 12], zoom: 30, near: .1, far: 100 }} gl={{ antialias: true, alpha: false, powerPreference: 'default' }} fallback={<SceneError onRetry={retry} onShow={reportDown} />} onCreated={() => setReady(true)} aria-label={props.inspect ? 'Inspeksi sasis dan dua sel baterai mobil. Geser untuk memutar, cubit untuk zoom. Balapan tetap berlangsung.' : follow ? 'Arena mini 4WD 3D. Kamera mengikuti mobilmu. Pilih Overview untuk melihat seluruh lintasan.' : 'Arena mini 4WD 3D. Kamera overview. Geser untuk memutar, cubit untuk zoom.'}>
       <Arena opponents={props.opponents} setup={props.setup} equipped={props.equipped} driving={props.driving} onTelemetry={props.onTelemetry} cinematic={props.cinematic} levels={props.levels} model={props.model} color={props.color} cameraMode={props.cameraMode} resetKey={props.resetKey} circuit={props.circuit} reducedMotion={props.reducedMotion} inspect={props.inspect} charge={props.inspect ? props.charge : undefined} bodyVisible={props.bodyVisible} timing={timing} playerRef={playerRef} follow={follow} running={running} onLost={onLost} />
     </Canvas>
   </SceneBoundary>
