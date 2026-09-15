@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_ECONOMY } from "../lib/economy-config";
 import {
+  buildReferralRewardReply,
   buildTelegramReply,
   isValidWebhookSecret,
   MAX_TELEGRAM_UPDATE_BYTES,
@@ -163,6 +164,25 @@ describe("Bot command replies", () => {
 
   it("builds a bot referral link that reaches contextual /start first", () => {
     expect(referralLink("777")).toContain("?start=ref_777");
+  });
+
+  it("confirms an inviter payout and offers the same referral to share again", () => {
+    const reply = buildReferralRewardReply({
+      chatId: 777,
+      inviterId: "777",
+      inviteeName: "Nadia",
+      reward: 30,
+    });
+
+    expect(reply.chat_id).toBe(777);
+    expect(reply.text).toContain("Nadia sudah memenuhi syarat ajakan");
+    expect(reply.text).toContain("Bonus 30 koin sudah masuk");
+    const button = reply.reply_markup.inline_keyboard[0][0];
+    expect(button.text).toBe("Ajak teman lagi");
+    expect("url" in button ? button.url : null).toContain("t.me/share/url");
+    expect("url" in button ? decodeURIComponent(button.url) : null).toContain(
+      "start=ref_777",
+    );
   });
 
   it("nudges unknown text toward /play but still offers the button", () => {

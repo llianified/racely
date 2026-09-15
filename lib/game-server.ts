@@ -8,6 +8,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import {
   actionReceipts,
+  botChats,
   players,
   rewardClaims,
   withdrawals,
@@ -65,7 +66,11 @@ import {
 import { LAST_CIRCUIT } from "@/lib/track-layout";
 import { readEconomyConfig } from "@/lib/economy-store";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
-import { referralLink } from "@/lib/telegram-bot";
+import {
+  buildReferralRewardReply,
+  referralLink,
+  sendTelegramReply,
+} from "@/lib/telegram-bot";
 import { proxiedAvatarPath } from "@/lib/telegram-avatar";
 
 const carColorSchema = z.string().regex(/^#[0-9a-f]{6}$/i);
@@ -422,6 +427,24 @@ async function payInviteeMilestone(
  * `referral_paid_at` tetap jadi jaring pengamannya: gagal berarti dicoba lagi
  * pada sync berikutnya, berhasil berarti berhenti.
  */
+type InviterRewardNotification = {
+  chatId: number;
+  inviterId: string;
+  inviteeName: string;
+  reward: number;
+};
+
+async function sendInviterRewardNotification(
+  notification: InviterRewardNotification,
+) {
+  try {
+    await sendTelegramReply(buildReferralRewardReply(notification));
+  } catch {
+    // Best effort seperti pengingat idle: kegagalan Bot API tidak boleh
+    // membatalkan atau memperlambat pembayaran yang sudah commit.
+  }
+}
+
 async function payInviter(row: PlayerRow, economy: EconomyConfig) {
   if (!row.referredBy) return;
   if (row.referralPaidAt) return;
@@ -441,7 +464,7 @@ async function payInviter(row: PlayerRow, economy: EconomyConfig) {
   if (!milestone) return;
 
   const inviterId = row.referredBy;
-  await getDatabase()
+  const notification = await getDatabase()
     .transaction(async (tx) => {
       for (const userId of [inviterId, row.userId].sort()) {
         const [locked] = await tx
@@ -449,14 +472,22 @@ async function payInviter(row: PlayerRow, economy: EconomyConfig) {
           .from(players)
           .where(eq(players.userId, userId))
           .for("update");
-        if (userId === row.userId && (!locked || locked.referralPaidAt)) return;
+        if (userId === row.userId && (!locked || locked.referralPaidAt)) {
+          return null;
+        }
       }
 
       const [inviter] = await tx
-        .select({ userId: players.userId })
+        .select({
+          userId: players.userId,
+          chatUserId: botChats.userId,
+        })
         .from(players)
+        .leftJoin(botChats, eq(botChats.userId, players.userId))
         .where(eq(players.userId, inviterId))
         .limit(1);
+
+      let rewardNotification: InviterRewardNotification | null = null;
 
       // Pengajak yang barisnya sudah hilang tidak berutang apa pun; tandai
       // lunas supaya tidak dicoba ulang tiap sync selamanya.
@@ -477,6 +508,16 @@ async function payInviter(row: PlayerRow, economy: EconomyConfig) {
               balance: sql`${players.balance} + ${economy.referralRewardInviter}`,
             })
             .where(eq(players.userId, inviterId));
+
+          const chatId = Number(inviter.chatUserId);
+          if (Number.isSafeInteger(chatId) && chatId > 0) {
+            rewardNotification = {
+              chatId,
+              inviterId,
+              inviteeName: row.displayName,
+              reward: economy.referralRewardInviter,
+            };
+          }
         }
       }
 
@@ -484,8 +525,15 @@ async function payInviter(row: PlayerRow, economy: EconomyConfig) {
         .update(players)
         .set({ referralPaidAt: new Date() })
         .where(eq(players.userId, row.userId));
+
+      return rewardNotification;
     })
-    .catch(() => undefined);
+    .catch(() => null);
+
+  // Claim unik memastikan hanya transaksi yang benar-benar membayar yang
+  // menghasilkan pesan. Kirim setelah commit dan jangan tahan respons game
+  // selama Telegram menjawab; produksi berjalan pada proses PM2 persisten.
+  if (notification) void sendInviterRewardNotification(notification);
 }
 
 /**

@@ -220,6 +220,33 @@ export function buildTelegramReply(
   };
 }
 
+export function buildReferralRewardReply({
+  chatId,
+  inviterId,
+  inviteeName,
+  reward,
+}: {
+  chatId: number;
+  inviterId: string;
+  inviteeName: string;
+  reward: number;
+}): TelegramReply {
+  const name = inviteeName.trim().slice(0, 128) || "Temanmu";
+  const shareUrl = new URL("https://t.me/share/url");
+  shareUrl.searchParams.set("url", referralLink(inviterId));
+  shareUrl.searchParams.set("text", "Ayo balapan bareng aku di Racely!");
+
+  return {
+    chat_id: chatId,
+    text: `${name} sudah memenuhi syarat ajakan. Bonus ${coins(reward)} sudah masuk ke saldomu. Ajak teman lagi untuk mengejar hadiah berikutnya.`,
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "Ajak teman lagi", url: shareUrl.toString() }],
+      ],
+    },
+  };
+}
+
 export async function sendTelegramReply(reply: TelegramReply) {
   const token = botTokenSchema.safeParse(process.env.TELEGRAM_BOT_TOKEN);
   if (!token.success) throw new Error("TELEGRAM_BOT_TOKEN is not configured.");
