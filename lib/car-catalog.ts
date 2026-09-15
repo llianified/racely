@@ -1,4 +1,4 @@
-import { isReferralReward, referralRequirement } from "./referral-rewards";
+import { isReferralReward, referralRequirement, referralRewardUnlocked } from "./referral-rewards";
 
 export const CAR_MODEL_IDS = ["neo-falcon", "luna-gt", "phantom-x"] as const;
 export type CarModelId = (typeof CAR_MODEL_IDS)[number];
@@ -12,6 +12,21 @@ export const isReferralCar = (id: CarModelId) => isReferralReward("car", id);
 export const carReferralRequirement = (id: CarModelId) => referralRequirement("car", id);
 /** Mobil yang boleh dipilih saat onboarding -- tanpa hadiah ajakan. */
 export const STARTER_CAR_IDS = CAR_MODEL_IDS.filter((id) => !isReferralCar(id));
+
+/**
+ * Mobil yang boleh dipakai pemain: mobil starter pilihannya sendiri plus setiap
+ * hadiah ajakan yang ambangnya sudah tercapai. `starter` `null` berarti belum
+ * pernah memilih, jadi semua starter masih terbuka. Murni supaya server, mode
+ * preview, dan garasi membaca aturan yang sama.
+ */
+export function switchableCars(starter: CarModelId | null, friendsCompleted: number): CarModelId[] {
+  const unlocked = CAR_MODEL_IDS.filter((id) => referralRewardUnlocked("car", id, friendsCompleted));
+  return starter === null ? [...STARTER_CAR_IDS, ...unlocked] : [starter, ...unlocked];
+}
+
+/** True kalau `to` sah dipakai pemain dengan starter dan jumlah ajakan itu. */
+export const canSwitchCar = (to: CarModelId, starter: CarModelId | null, friendsCompleted: number) =>
+  switchableCars(starter, friendsCompleted).includes(to);
 
 export const CAR_CATALOG = {
   "neo-falcon": {

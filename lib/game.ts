@@ -156,7 +156,7 @@ export type GameState = {
   ownedPaints?: PaintId[];
   bodyParts?: BodyParts;
   // Optional only so legacy preview cookies can be upgraded without losing progress.
-  carSelection?: { model: CarModelId | null; returningPlayer: boolean };
+  carSelection?: { model: CarModelId | null; returningPlayer: boolean; starterModel?: CarModelId | null };
   developmentPreview: boolean;
   /**
    * Config ekonomi yang dipakai respons ini. Ikut di setiap payload supaya
