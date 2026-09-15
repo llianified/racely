@@ -406,8 +406,7 @@
 .starter-next p { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; font-size: var(--fs-small); line-height: var(--lh-normal); text-wrap: pretty; }
 .starter-next strong { font-weight: var(--fw-semibold); }
 .starter-next p > span { color: var(--muted-foreground); }
-.game-sheet.starter-bonus [data-slot='sheet-footer'] { flex-direction: column; gap: var(--space-xs); padding: var(--space-md) var(--space-lg); }
-.game-sheet.starter-bonus [data-slot='sheet-footer'] > * { flex: auto; }
+.game-sheet.starter-bonus [data-slot='sheet-footer'] { flex-direction: row; flex-wrap: nowrap; align-items: stretch; gap: var(--space-sm); padding: var(--space-md) var(--space-lg); }
 .starter-feedback { padding: 0 var(--space-lg) var(--space-md); color: var(--gold-highlight); font-size: var(--fs-small); }
 .starter-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; border-radius: inherit; }
 .starter-confetti i { position: absolute; top: calc(-1 * var(--space-lg)); left: var(--confetti-x); width: var(--space-4); height: var(--space-8); background: var(--accent); opacity: 0; animation: starter-confetti-fall var(--anim-starter-confetti) ease-out var(--confetti-delay) both; }
@@ -850,7 +849,15 @@
 .upgrade-buy { flex-shrink: 0; font-variant-numeric: tabular-nums; }
 /* Bengkel: metrik = part saat ini + dampak level berikutnya. Emas saat saldo
    cukup (sama artinya dengan Koleksi cat), tile emas saat level maksimal. */
+.mod-row, .setup-row { padding: 0; gap: 0; }
+:is(.mod-row, .setup-row) > .upgrade-head { min-height: calc(var(--space-32) + var(--space-md) * 2); padding: var(--space-md); }
+.mod-row > .upgrade-level, .setup-foot { min-height: var(--space-32); padding: var(--space-sm) var(--space-md); border-top: var(--stroke) solid var(--border); background: var(--surface-inset); }
+.mod-row .upgrade-buy { min-width: var(--setup-action-w); height: var(--space-32); justify-content: center; }
 .mod-row .upgrade-name p.setup-metric { font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
+.mod-benefit { flex-shrink: 0; min-width: var(--setup-action-w); text-align: right; white-space: nowrap; color: var(--muted-foreground); font-size: var(--fs-small); line-height: var(--lh-normal); font-variant-numeric: tabular-nums; }
+.mod-row .level-segments { min-width: 0; }
+.mod-row .level-segments > span { min-width: 0; background: var(--background); }
+.mod-row .level-segments > span.filled { background: var(--primary); }
 .mod-row.is-ready .setup-metric b { color: var(--accent); }
 .mod-row.is-active .upgrade-icon { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); }
 .upgrade-level { display: flex; align-items: center; gap: var(--space-sm); }
@@ -864,11 +871,11 @@
 .setup-group + .setup-group { border-top: var(--stroke) solid var(--border); }
 .setup-group > .race-settings-title { padding: var(--space-md) var(--space-md) var(--space-xs); }
 .setup-group .upgrade-list { margin: 0; padding: 0; list-style: none; }
-.setup-row .upgrade-head { align-items: flex-start; }
+.setup-row .upgrade-head { align-items: center; }
 .setup-row .upgrade-name { line-height: var(--lh-title); }
 .setup-row .upgrade-name p.setup-metric { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--space-xs); row-gap: var(--space-2); overflow: visible; white-space: normal; font-size: var(--fs-small); line-height: var(--lh-base); font-variant-numeric: tabular-nums; }
 .setup-row .setup-metric > span { white-space: nowrap; }
-.setup-row > :is(.setup-desc, .setup-risk) { margin-inline-start: calc(var(--space-32) + var(--space-sm)); }
+.setup-foot { display: flex; flex-direction: column; gap: var(--space-xs); }
 .setup-metric b { color: var(--foreground); font-weight: var(--fw-bold); }
 .setup-row.is-active .upgrade-icon { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); background: color-mix(in srgb, var(--accent) 12%, var(--surface-inset)); }
 /* "Pasang" dan "Terpasang" memakai tombol yang sama dengan lebar terkunci:

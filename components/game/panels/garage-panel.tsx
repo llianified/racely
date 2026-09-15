@@ -174,10 +174,8 @@ function ModificationSlot({ game, onUpgrade, onPreviewSheet, disabled, part }: U
           <span className="upgrade-icon" aria-hidden="true"><Icon /></span>
           <div className="upgrade-name">
             <h3>{title}</h3>
-            <p className="setup-metric">
+            <p className="setup-metric" title={preview.currentPart}>
               {preview.currentPart}
-              <span aria-hidden="true"> · </span>
-              {maxed ? "Level maksimal" : <><b>{benefit}</b>/putaran</>}
             </p>
           </div>
           {maxed
@@ -197,6 +195,9 @@ function ModificationSlot({ game, onUpgrade, onPreviewSheet, disabled, part }: U
           <div className="level-segments" aria-label={`Level ${level} dari ${Math.max(ceiling, level)}`}>
             {Array.from({ length: Math.max(ceiling, level) }, (_, i) => <span key={i} className={i < level ? "filled" : undefined} />)}
           </div>
+          <p className="mod-benefit setup-metric">
+            {maxed ? "Level maksimal" : <><b>{benefit}</b>/putaran</>}
+          </p>
         </div>
       </div>
       <SheetContent side="bottom" className="game-sheet" showCloseButton={!installing}>

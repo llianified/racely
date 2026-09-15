@@ -82,7 +82,7 @@ export function StarterBonusDialog({
             {busy ? "Mengklaim bonus…" : claimed ? "Upgrade mobilku" : "Klaim bonus gratis"}
             {!busy && <ArrowRight data-icon="inline-end" aria-hidden="true" />}
           </Button>
-          <Button variant="ghost" disabled={busy} onClick={onClose}>
+          <Button variant="secondary" disabled={busy} onClick={onClose}>
             {claimed ? "Lanjut balapan" : "Nanti saja"}
           </Button>
         </SheetFooter>
