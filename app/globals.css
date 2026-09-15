@@ -887,6 +887,9 @@
    diklaim) dan bar progres misi di bawah kepala baris. Hitungan bar dikunci
    lebarnya supaya semua bar dalam satu daftar berhenti di garis yang sama. */
 .reward-row .upgrade-name p.setup-metric { font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
+/* Keterangan boleh melipat sampai dua baris, tidak dipotong satu baris seperti
+   metrik garasi. */
+.reward-row .upgrade-name p.reward-note { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; line-height: var(--lh-normal); }
 .reward-row.is-ready .setup-metric b { color: var(--accent); }
 .reward-row.is-ready .upgrade-icon { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); }
 .reward-row.is-claimed .upgrade-icon { color: var(--muted-foreground); }
