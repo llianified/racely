@@ -174,66 +174,96 @@ function lunaBody(add: AddCarPart) {
   }
 }
 
-// Phantom X: hadiah 25 ajakan. Lebih rendah dan lebih lebar dari keduanya,
-// kanopi sempit memanjang, dan sirip ekor kembar berlapis emas supaya terbaca
-// sebagai mobil "lain" dari kejauhan di lintasan.
+// Aero emas menyatu dengan bodi agar identitas Fable tetap terbaca saat pemain
+// mengganti cat atau menukar sayap bawaan dengan part koleksinya.
 function phantomBody(add: AddCarPart) {
   add('body', facetedHull([
-    [-.36, .112, .126, .152, .164], [-.24, .168, .123, .176, .192],
-    [-.1, .172, .121, .172, .196], [.08, .16, .12, .162, .188],
-    [.25, .138, .119, .148, .166], [.39, .07, .118, .131, .139],
+    [-.36, .084, .127, .16, .181], [-.23, .112, .13, .201, .228],
+    [-.09, .097, .128, .203, .235], [.10, .07, .124, .175, .203],
+    [.27, .044, .116, .14, .164], [.392, .014, .11, .119, .125],
   ]))
   add('glass', facetedHull([
-    [-.25, .052, .182, .19, .204], [-.15, .066, .196, .238, .262],
-    [-.03, .06, .194, .242, .27], [.12, .046, .174, .19, .206],
-    [.2, .02, .16, .166, .172],
-  ]))
-  add('panel', facetedHull([
-    [.15, .1, .166, .178, .184], [.28, .08, .156, .166, .172],
-    [.385, .048, .138, .144, .148],
+    [-.235, .025, .223, .231, .242], [-.145, .055, .234, .268, .293],
+    [-.045, .047, .23, .271, .302], [.105, .028, .195, .218, .239],
+    [.19, .006, .174, .181, .19],
   ]))
   add('gold', facetedHull([
-    [.24, .01, .18, .184, .186], [.34, .008, .162, .165, .167], [.388, .004, .146, .148, .149],
+    [-.24, .009, .243, .246, .25], [-.145, .01, .294, .298, .303],
+    [-.045, .008, .303, .307, .311], [.105, .005, .24, .245, .249],
+    [.19, .002, .191, .194, .197],
+  ]))
+  add('panel', facetedHull([
+    [.19, .042, .171, .177, .182], [.29, .033, .145, .157, .164],
+    [.389, .012, .123, .126, .13],
+  ]))
+  add('livery', graphic([
+    [-.007, .184, .19], [.007, .184, .19], [.003, .133, .385], [-.003, .133, .385],
   ]))
   for (const side of SIDES) {
-    add('panel', facetedHull([
-      [-.34, .012, .128, .158, .17, side * .152],
-      [-.26, .036, .13, .18, .198, side * .176],
-      [-.16, .036, .124, .17, .188, side * .178],
-      [-.08, .012, .118, .136, .15, side * .168],
+    add('body', facetedHull([
+      [-.376, .014, .13, .171, .191, side * .19],
+      [-.285, .041, .152, .248, .269, side * .199],
+      [-.19, .04, .132, .211, .238, side * .19],
+      [-.035, .022, .112, .145, .17, side * .173],
+      [.10, .006, .108, .12, .131, side * .146],
     ]))
     add('body', facetedHull([
-      [.1, .012, .118, .14, .154, side * .166],
-      [.2, .034, .121, .164, .184, side * .176],
-      [.29, .03, .122, .158, .176, side * .17],
-      [.36, .01, .119, .14, .15, side * .132],
+      [.025, .008, .112, .139, .152, side * .164],
+      [.15, .036, .13, .202, .221, side * .193],
+      [.263, .043, .152, .229, .249, side * .199],
+      [.36, .028, .116, .151, .167, side * .181],
+      [.39, .013, .108, .122, .13, side * .147],
     ]))
-    add('chassis', facetedHull([
-      [-.18, .02, .094, .108, .114, side * .196],
-      [.16, .02, .094, .107, .113, side * .192],
-      [.24, .008, .1, .106, .109, side * .16],
+    add('panel', facetedHull([
+      [-.23, .018, .139, .187, .198, side * .146],
+      [-.075, .029, .116, .162, .178, side * .133],
+      [.055, .019, .111, .133, .145, side * .128],
+    ]))
+    add('gold', facetedHull([
+      [-.22, .007, .108, .12, .129, side * .219],
+      [-.04, .011, .102, .114, .125, side * .2],
+      [.155, .006, .105, .116, .124, side * .223],
     ]))
     add('gold', graphic([
-      [side * .17, .17, -.2], [side * .18, .168, -.17],
-      [side * .182, .146, .16], [side * .174, .148, .12],
+      [side * .202, .274, -.29], [side * .218, .263, -.275],
+      [side * .196, .23, -.168], [side * .183, .238, -.177],
     ]))
-    add('livery', graphic([
-      [side * .05, .19, .18], [side * .06, .188, .19],
-      [side * .03, .152, .37], [side * .022, .153, .36],
+    add('gold', graphic([
+      [side * .193, .252, .249], [side * .212, .25, .254],
+      [side * .185, .17, .363], [side * .173, .171, .36],
     ]))
-    for (let vent = 0; vent < 5; vent++) {
-      add('chassis', new THREE.BoxGeometry(.03, .004, .008), [side * .12, .19, -.24 + vent * .016], [0, side * .18, side * -.18])
-    }
+    add('livery', facetedHull([
+      [.302, .023, .209, .213, .217, side * .197],
+      [.325, .023, .186, .192, .196, side * .191],
+    ]))
+    add('chassis', facetedHull([
+      [.30, .025, .09, .102, .108, side * .187],
+      [.373, .043, .09, .099, .106, side * .189],
+      [.392, .015, .091, .097, .1, side * .15],
+    ]))
     add('gold', facetedHull([
-      [-.36, .004, .16, .21, .218, side * .1],
-      [-.3, .005, .164, .232, .24, side * .1],
-      [-.2, .004, .168, .196, .2, side * .1],
+      [.338, .023, .157, .161, .166, side * .216],
+      [.375, .02, .129, .136, .141, side * .21],
     ]))
+    add('gold', facetedHull([
+      [-.362, .005, .187, .3, .313, side * .121],
+      [-.295, .007, .214, .313, .326, side * .106],
+      [-.18, .004, .227, .269, .278, side * .079],
+    ]))
+    for (let vent = 0; vent < 4; vent++) {
+      add('chassis', new THREE.BoxGeometry(.045, .004, .009),
+        [side * .192, .244 - vent * .012, -.224 + vent * .022], [-.5, 0, side * -.15])
+      add('alloy', new THREE.BoxGeometry(.032, .003, .004),
+        [side * .146, .188 - vent * .008, -.138 + vent * .02], [-.35, 0, side * -.25])
+    }
+    add('livery', new THREE.BoxGeometry(.052, .006, .004), [side * .167, .174, -.376])
   }
-  add('chassis', new THREE.BoxGeometry(.18, .014, .01), [0, .126, .385])
-  add('gold', new THREE.BoxGeometry(.2, .004, .006), [0, .134, .388])
   for (let fin = -3; fin <= 3; fin++) {
-    add('panel', new THREE.BoxGeometry(.005, .022, .06), [fin * .03, .102, -.336])
+    add('panel', facetedHull([
+      [-.391, .003, .089, .125, .137, fin * .035],
+      [-.31, .003, .09, .115, .121, fin * .032],
+      [-.252, .003, .095, .105, .11, fin * .03],
+    ]))
   }
 }
 
@@ -244,10 +274,38 @@ export function addBodywork(model: CarModelId, add: AddCarPart) {
 }
 
 export function addStockWing(model: CarModelId, add: AddCarPart) {
+  if (model === 'phantom-x') {
+    for (const side of SIDES) {
+      add('gold', facetedHull([
+        [-.352, .006, .2, .365, .373, side * .126],
+        [-.302, .006, .225, .362, .37, side * .114],
+      ]))
+      add('body', facetedHull([
+        [-.393, .008, .316, .389, .404, side * .283],
+        [-.345, .008, .316, .396, .412, side * .274],
+        [-.267, .005, .323, .354, .365, side * .236],
+      ]))
+      add('gold', facetedHull([
+        [-.39, .007, .403, .406, .408, side * .283],
+        [-.345, .007, .411, .414, .416, side * .274],
+        [-.27, .004, .364, .367, .369, side * .237],
+      ]))
+    }
+    add('panel', facetedHull([
+      [-.387, .281, .351, .355, .36],
+      [-.341, .272, .36, .367, .379],
+      [-.291, .248, .352, .36, .369],
+    ]))
+    add('gold', facetedHull([
+      [-.392, .283, .325, .331, .334],
+      [-.36, .274, .328, .335, .341],
+    ]))
+    add('livery', new THREE.BoxGeometry(.45, .003, .006), [0, .362, -.384])
+    return
+  }
   const falcon = model === 'neo-falcon'
-  const phantom = model === 'phantom-x'
-  const span = falcon ? .233 : phantom ? .24 : .211
-  const height = falcon ? .303 : phantom ? .27 : .284
+  const span = falcon ? .233 : .211
+  const height = falcon ? .303 : .284
   for (const side of SIDES) {
     add('panel', facetedHull([
       [-.333, .008, .179, height - .02, height, side * .11],
@@ -261,7 +319,7 @@ export function addStockWing(model: CarModelId, add: AddCarPart) {
     add('livery', new THREE.BoxGeometry(.021, .002, .068), [side * (span - .025), height + .012, -.34], [-.05, 0, 0])
     add('alloy', new THREE.CylinderGeometry(.005, .005, .005, 12), [side * .11, height + .014, -.32])
   }
-  add(falcon ? 'panel' : phantom ? 'gold' : 'body', facetedHull([
+  add(falcon ? 'panel' : 'body', facetedHull([
     [-.385, span, height - .004, height, height + .004],
     [-.35, span, height - .006, height + .004, height + .013],
     [-.288, span * .92, height - .005, height, height + .009],
