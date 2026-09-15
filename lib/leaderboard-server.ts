@@ -12,7 +12,7 @@ import {
 // requesting player's rank and nearest higher score use the same SQL snapshot.
 const leaderboardQuery = `
   WITH eligible AS NOT MATERIALIZED (
-    SELECT user_id, display_name, laps AS score, created_at
+    SELECT user_id, display_name, car_model, laps AS score, created_at
     FROM racely_players
     WHERE laps > 0 AND user_id ~ '^[0-9]+$'
   ), leaders AS MATERIALIZED (
@@ -35,13 +35,13 @@ const leaderboardQuery = `
     COALESCE((
       SELECT jsonb_agg(jsonb_build_object(
         'rank', place, 'name', display_name, 'score', score, 'laps', score,
-        'isCurrentPlayer', user_id = $1
+        'carModel', car_model, 'isCurrentPlayer', user_id = $1
       ) ORDER BY score DESC, created_at ASC, user_id ASC)
       FROM ranked_leaders
     ), '[]'::jsonb) AS entries,
     (SELECT jsonb_build_object(
       'rank', place, 'name', display_name, 'score', score, 'laps', score,
-      'isCurrentPlayer', true
+      'carModel', car_model, 'isCurrentPlayer', true
     ) FROM mine) AS current_player,
     (SELECT jsonb_build_object(
       'name', display_name, 'score', score, 'laps', score
@@ -55,6 +55,7 @@ const referralLeaderboardQuery = `
     SELECT
       inviter.user_id,
       inviter.display_name,
+      inviter.car_model,
       inviter.created_at,
       COUNT(invitee.user_id)::integer AS score
     FROM racely_players inviter
@@ -62,7 +63,7 @@ const referralLeaderboardQuery = `
       ON invitee.referred_by = inviter.user_id
      AND invitee.referral_paid_at IS NOT NULL
     WHERE inviter.user_id ~ '^[0-9]+$'
-    GROUP BY inviter.user_id, inviter.display_name, inviter.created_at
+    GROUP BY inviter.user_id, inviter.display_name, inviter.car_model, inviter.created_at
   ), leaders AS MATERIALIZED (
     SELECT * FROM eligible
     ORDER BY score DESC, created_at ASC, user_id ASC
@@ -83,12 +84,13 @@ const referralLeaderboardQuery = `
     COALESCE((
       SELECT jsonb_agg(jsonb_build_object(
         'rank', place, 'name', display_name, 'score', score,
-        'isCurrentPlayer', user_id = $1
+        'carModel', car_model, 'isCurrentPlayer', user_id = $1
       ) ORDER BY score DESC, created_at ASC, user_id ASC)
       FROM ranked_leaders
     ), '[]'::jsonb) AS entries,
     (SELECT jsonb_build_object(
-      'rank', place, 'name', display_name, 'score', score, 'isCurrentPlayer', true
+      'rank', place, 'name', display_name, 'score', score,
+      'carModel', car_model, 'isCurrentPlayer', true
     ) FROM mine) AS current_player,
     (SELECT jsonb_build_object('name', display_name, 'score', score) FROM rival) AS next_rival,
     (SELECT COUNT(*)::integer FROM eligible) AS total_players,

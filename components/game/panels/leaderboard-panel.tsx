@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { CAR_CATALOG, isReferralCar } from "@/lib/car-catalog";
 import {
   LEADERBOARD_LIMIT,
   LEADERBOARD_REFRESH_MS,
@@ -26,6 +27,16 @@ import {
 import { GameRequestError, isSessionExpired, requestHeaders, type GameKey } from "../game-client";
 
 const number = (value: number) => value.toLocaleString("id-ID");
+
+/**
+ * Mobil hadiah ajakan adalah iklan berjalan: satu-satunya cara memilikinya
+ * adalah membawa teman, jadi namanya ditampilkan di klasemen sebagai status.
+ * Mobil biasa tidak ditandai -- semua orang punya salah satunya.
+ */
+function ExclusiveCarBadge({ entry }: { entry: Leaderboard["entries"][number] }) {
+  if (!entry.carModel || !isReferralCar(entry.carModel)) return null;
+  return <Badge><Crown data-icon="inline-start" aria-hidden="true" />{CAR_CATALOG[entry.carModel].name}</Badge>;
+}
 
 const metricCopy = {
   laps: {
@@ -169,7 +180,7 @@ export function LeaderboardShortcut({
                     <RacerInitial name={entry.name} />
                     <div className="leaderboard-teaser-racer">
                       <strong className="truncate" title={entry.name}><bdi>{entry.name}</bdi></strong>
-                      <span>{entry.isCurrentPlayer ? "Kamu" : entry.rank === 1 ? "Pemimpin klasemen" : "Penantang podium"}</span>
+                      <span>{entry.carModel && isReferralCar(entry.carModel) ? CAR_CATALOG[entry.carModel].name : entry.isCurrentPlayer ? "Kamu" : entry.rank === 1 ? "Pemimpin klasemen" : "Penantang podium"}</span>
                     </div>
                     <div className="leaderboard-teaser-score">
                       {entry.rank === 1 && <Crown aria-hidden="true" />}
@@ -226,6 +237,7 @@ function Podium({ data }: { data: Leaderboard }) {
             <RacerInitial name={entry.name} />
             <strong className="leaderboard-podium-name" title={entry.name}><bdi>{entry.name}</bdi></strong>
             {entry.isCurrentPlayer && <Badge variant="secondary">Kamu</Badge>}
+            <ExclusiveCarBadge entry={entry} />
             <p><strong>{number(entry.score)}</strong><span>{copy.unit}</span></p>
           </li>
         ))}
@@ -328,6 +340,7 @@ function Rankings({ data }: { data: Leaderboard }) {
                   <div>
                     <span className="leaderboard-racer-name" title={entry.name}><bdi>{entry.name}</bdi></span>
                     {entry.isCurrentPlayer && <Badge variant="secondary">Kamu</Badge>}
+                    <ExclusiveCarBadge entry={entry} />
                   </div>
                 </div>
               </th>

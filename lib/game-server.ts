@@ -251,6 +251,7 @@ function stateFromRow(
   referral: ReferralSummary = {
     link: referralLink(row.userId),
     invited: 0,
+    completed: 0,
     earned: 0,
   },
   adReward: AdReward = adRewardStatus(0, economy),
@@ -830,16 +831,7 @@ const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
         `Ajak ${carReferralRequirement(action.model)} teman untuk membuka mobil ini.`,
       );
     }
-    if (row.carModel !== null) {
-      if (row.carModel === action.model) {
-        // Mengulang model yang sama bukan pelanggaran, cuma tidak ada yang
-        // berubah: jaringan yang putus setelah server menyimpan membuat klien
-        // mencoba lagi dengan requestId baru, dan tanda terima tidak mengenali
-        // percobaan itu. Sengaja tidak menyentuh warna -- warna garasi yang
-        // dipilih belakangan tidak boleh tersetel ulang ke warna pendaftaran.
-        // Mode preview sudah berperilaku begini sejak awal.
-        return { row };
-      }
+    if (row.carModel !== null && row.carModel !== action.model) {
       // Model pendaftaran dikunci. Satu-satunya pergantian yang sah melibatkan
       // mobil hadiah ajakan: naik ke mobil eksklusif yang sudah terbuka, atau
       // turun darinya kembali ke mobil biasa. Progres, koin, dan koleksi ikut.
@@ -848,6 +840,14 @@ const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
           "Model sudah dikonfirmasi dan tidak dapat diganti.",
         );
       }
+    } else if (row.carModel !== null) {
+      // Mengulang model yang sama bukan pelanggaran, cuma tidak ada yang
+      // berubah: jaringan yang putus setelah server menyimpan membuat klien
+      // mencoba lagi dengan requestId baru, dan tanda terima tidak mengenali
+      // percobaan itu. Sengaja tidak menyentuh warna -- warna garasi yang
+      // dipilih belakangan tidak boleh tersetel ulang ke warna pendaftaran.
+      // Mode preview sudah berperilaku begini sejak awal.
+      return { row };
     }
     if (!isCarColor(action.model, action.color)) {
       throw new GameRuleError("Model atau warna mobil tidak valid.", 400);

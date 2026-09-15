@@ -1,3 +1,4 @@
+import type { CarModelId } from "./car-catalog";
 import type { GameState } from "./game";
 
 export const LEADERBOARD_LIMIT = 50;
@@ -12,6 +13,12 @@ export type LeaderboardEntry = {
   score: number;
   /** Kept on lap responses for existing leaderboard consumers. */
   laps?: number;
+  /**
+   * Mobil yang dipakai; hanya dipakai klasemen untuk menandai mobil hadiah
+   * ajakan (`isReferralCar`). Bisa `null` untuk pemain yang belum memilih dan
+   * hilang pada respons dari server yang lebih lama.
+   */
+  carModel?: CarModelId | null;
   isCurrentPlayer: boolean;
 };
 
@@ -32,7 +39,7 @@ export function scoreToOvertake(score: number, rivalScore: number) {
 export const lapsToOvertake = scoreToOvertake;
 
 export function previewLeaderboard(
-  game: Pick<GameState, "laps" | "player" | "referral" | "economy">,
+  game: Pick<GameState, "laps" | "player" | "referral" | "economy"> & Partial<Pick<GameState, "carSelection">>,
   metric: LeaderboardMetric = "laps",
   now = new Date(),
 ): Leaderboard {
@@ -47,6 +54,7 @@ export function previewLeaderboard(
         name: game.player.name,
         score,
         ...(metric === "laps" ? { laps: score } : {}),
+        carModel: game.carSelection?.model ?? null,
         isCurrentPlayer: true,
       }
     : null;
