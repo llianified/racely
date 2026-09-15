@@ -27,8 +27,9 @@ import {
   racingDayKey,
 } from "./game-economy";
 import { LAST_CIRCUIT } from "./track-layout";
-import { CAR_MODEL_IDS, isCarColor } from "./car-catalog";
+import { CAR_MODEL_IDS, isCarColor, isReferralCar } from "./car-catalog";
 import { applyPartCommand, bodyPartsSchema, PartRuleError } from "./car-parts";
+import { REFERRAL_MAX_FRIENDS } from "./referral-rewards";
 import { referralLink } from "./telegram-bot";
 import { proxiedAvatarPath } from "./telegram-avatar";
 import type { PlayerIdentity } from "@/lib/telegram-auth";
@@ -283,8 +284,11 @@ function previewResult(
     adReward: adRewardStatus(adWatchesToday(game, now), economy),
     // Mode preview hanya punya satu pemain di dalam cookie, jadi tidak ada yang
     // bisa diajak dan tidak ada yang bisa dibayar. Linknya tetap dibangun
-    // supaya tata letak kartu ajakan bisa dicek saat `pnpm dev`.
-    referral: { link: referralLink(game.userId), invited: 0, earned: 0 },
+    // supaya tata letak kartu ajakan bisa dicek saat `pnpm dev`. `completed`
+    // dipatok ke milestone tertinggi dengan alasan yang sama seperti
+    // `unlockAllCircuits`: hadiah eksklusif harus bisa dilihat dan dipasang
+    // saat dev tanpa 25 akun Telegram; ambang aslinya hidup di produksi.
+    referral: { link: referralLink(game.userId), invited: 0, completed: REFERRAL_MAX_FRIENDS, earned: 0 },
   };
   return {
     state: {
@@ -371,11 +375,12 @@ export function performPreviewGameAction(
       throw new PreviewGameRuleError("Model atau warna mobil tidak valid.", 400);
     }
     if (selection?.model) {
-      if (selection.model !== action.model) {
+      // A retry must not reset a later garage color or grant any progress.
+      if (selection.model === action.model) return previewResult(game, offline, now, economy);
+      // Pergantian hanya sah lewat mobil hadiah ajakan, sama seperti server.
+      if (!isReferralCar(selection.model) && !isReferralCar(action.model)) {
         throw new PreviewGameRuleError("Model sudah dikonfirmasi dan tidak dapat diganti.");
       }
-      // A retry must not reset a later garage color or grant any progress.
-      return previewResult(game, offline, now, economy);
     }
   } else if (selection?.model === null && action.type !== "sync") {
     throw new PreviewGameRuleError("Pilih mobilmu sebelum mulai bermain.");
@@ -399,14 +404,14 @@ export function performPreviewGameAction(
     };
   } else if (action.type === "buy-part" || action.type === "equip-part" || action.type === "unequip-part") {
     try {
-      state = { ...state, ...applyPartCommand(state, action) };
+      state = { ...state, ...applyPartCommand(state, action, REFERRAL_MAX_FRIENDS) };
     } catch (error) {
       if (error instanceof PartRuleError) throw new PreviewGameRuleError(error.message);
       throw error;
     }
   } else if (action.type === "buy-paint" || action.type === "equip-paint") {
     try {
-      state = { ...state, ...applyPaintCommand(state, action, economy) };
+      state = { ...state, ...applyPaintCommand(state, action, economy, REFERRAL_MAX_FRIENDS) };
     } catch (error) {
       throw new PreviewGameRuleError(error instanceof Error ? error.message : "Cat gagal diproses.");
     }

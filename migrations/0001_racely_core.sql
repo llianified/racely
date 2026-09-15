@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS racely_players (
   cooldown_ends_at timestamptz,
   reward_claimed boolean NOT NULL DEFAULT false,
   missions_claimed jsonb NOT NULL DEFAULT '[]'::jsonb,
-  car_model text CHECK (car_model IS NULL OR car_model IN ('neo-falcon', 'luna-gt')),
+  car_model text CHECK (car_model IS NULL OR car_model IN ('neo-falcon', 'luna-gt', 'phantom-x')),
   color text NOT NULL DEFAULT '#4275ff' CHECK (color ~ '^#[0-9A-Fa-f]{6}$'),
   circuit integer NOT NULL DEFAULT 0 CHECK (circuit IN (0, 1)),
   last_settled_at timestamptz NOT NULL DEFAULT now(),
@@ -33,7 +33,7 @@ BEGIN
   ) THEN
     ALTER TABLE racely_players
       ADD CONSTRAINT racely_players_car_model_check
-      CHECK (car_model IS NULL OR car_model IN ('neo-falcon', 'luna-gt'));
+      CHECK (car_model IS NULL OR car_model IN ('neo-falcon', 'luna-gt', 'phantom-x'));
   END IF;
 END $$;
 --> statement-breakpoint
