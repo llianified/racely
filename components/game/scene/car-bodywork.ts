@@ -246,7 +246,7 @@ export function addBodywork(model: CarModelId, add: AddCarPart) {
 export function addStockWing(model: CarModelId, add: AddCarPart) {
   const falcon = model === 'neo-falcon'
   const phantom = model === 'phantom-x'
-  const span = falcon ? .233 : phantom ? .245 : .211
+  const span = falcon ? .233 : phantom ? .24 : .211
   const height = falcon ? .303 : phantom ? .27 : .284
   for (const side of SIDES) {
     add('panel', facetedHull([
