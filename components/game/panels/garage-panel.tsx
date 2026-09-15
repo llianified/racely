@@ -14,6 +14,7 @@ import { PaintCollection } from "./paint-collection";
 import { PAINT_CATALOG, PAINT_IDS, type PaintCommand } from "@/lib/car-paints";
 import type { PartCommand } from "@/lib/car-parts";
 import { gripTuning, powertrainTuning } from "@/lib/race-dynamics";
+import { cn } from "@/lib/utils";
 import { coins, displaySpeedKmh, formatCoins, formatSpeedKmh, lapReward, lapSeconds, modificationPreview, totalLevel, type GameState, type Upgrade } from "@/lib/game";
 
 const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
@@ -146,16 +147,13 @@ function ModificationSlot({ game, onUpgrade, onPreviewSheet, disabled, part }: U
   const currentPowertrain = powertrainTuning(game.levels.engine, game.levels.battery);
   const nextPowertrain = powertrainTuning(key === "engine" ? nextLevel : game.levels.engine, key === "battery" ? nextLevel : game.levels.battery);
   const blocked = disabled || installing;
-  // Dua sel spek per part: dampak per putaran (server) dan efek arena (simulasi).
-  // Penjelasan panjangnya tetap ada di lembar modifikasi.
+  // Satu baris metrik seperti Setup dan Koleksi cat: nama part saat ini dan
+  // dampak level berikutnya per putaran (angka server). Efek arena dan
+  // penjelasan panjangnya tetap ada di lembar modifikasi.
   const benefit = key === "battery"
     ? `+${formatCoins(preview.afterReward - preview.beforeReward)} koin`
     : `−${seconds(preview.beforeSeconds - preview.afterSeconds)}s`;
-  const arena = key === "engine"
-    ? { label: "Akselerasi", now: `${seconds(Math.log(10) / currentPowertrain.accelerationRate)}s`, next: `${seconds(Math.log(10) / nextPowertrain.accelerationRate)}s` }
-    : key === "tires"
-      ? { label: "Grip", now: `−${currentGrip.drainReductionPercent}%`, next: `−${nextGrip.drainReductionPercent}%` }
-      : { label: "Hasil / lap", now: `${formatCoins(preview.beforeReward)}`, next: `${formatCoins(preview.afterReward)}` };
+  const ready = !maxed && shortfall === 0;
 
   const install = async () => {
     if (installLock.current || blocked || maxed || shortfall > 0) return;
@@ -171,28 +169,23 @@ function ModificationSlot({ game, onUpgrade, onPreviewSheet, disabled, part }: U
 
   return (
     <Sheet open={open} onOpenChange={(value) => { if (!installLock.current) setOpen(value); }}>
-      <div className="upgrade-row">
+      <div className={cn("upgrade-row mod-row", maxed && "is-active", ready && "is-ready")}>
         <div className="upgrade-head">
           <span className="upgrade-icon" aria-hidden="true"><Icon /></span>
           <div className="upgrade-name">
             <h3>{title}</h3>
-            <p>{preview.currentPart}</p>
+            <p className="setup-metric">
+              {preview.currentPart}
+              <span aria-hidden="true"> · </span>
+              {maxed ? "Level maksimal" : <><b>{benefit}</b>/putaran</>}
+            </p>
           </div>
-          <SheetTrigger render={<Button variant="goldSoft" size="sm" className="upgrade-buy" disabled={blocked || maxed} />} aria-label={maxed ? `${title} level maksimal` : `Modifikasi ${title}`}>
-            {maxed ? <Check data-icon="inline-start" /> : <Wrench data-icon="inline-start" />}
-            {maxed ? "MAX" : "Modif"}
-          </SheetTrigger>
+          {maxed
+            ? <Badge variant="secondary" className="upgrade-buy"><Check data-icon="inline-start" aria-hidden="true" />MAX</Badge>
+            : <SheetTrigger render={<Button variant="goldSoft" size="sm" className="upgrade-buy" disabled={blocked} />} aria-label={`Modifikasi ${title}`}>
+              <Wrench data-icon="inline-start" />Modif
+            </SheetTrigger>}
         </div>
-        <dl className="upgrade-specs">
-          <div>
-            <dt>Per putaran</dt>
-            <dd>{maxed ? "Maksimal" : <b>{benefit}</b>}</dd>
-          </div>
-          <div>
-            <dt>{arena.label} <small>{key === "battery" ? "koin" : "arena"}</small></dt>
-            <dd>{arena.now}{!maxed && <><span aria-hidden="true"> → </span><b>{arena.next}</b></>}</dd>
-          </div>
-        </dl>
         <div className="upgrade-level">
           <span className="level-label">Lv. {level}</span>
           {/* Jumlah segmen mengikuti config: ceiling yang disetel jadi 5 tidak
@@ -309,7 +302,11 @@ function ModificationSlot({ game, onUpgrade, onPreviewSheet, disabled, part }: U
 export function UpgradePanel({ game, onUpgrade, onPreviewSheet, disabled = false }: UpgradePanelProps) {
   return (
     <section id="upgrades" tabIndex={-1} className="panel upgrade-panel" aria-label="Bengkel modifikasi">
-      <SectionCardHeading icon={Wrench} title="Bengkel" />
+      <SectionCardHeading
+        icon={Wrench}
+        title="Bengkel"
+        aside={<Badge variant="secondary">{totalLevel(game)}/{game.economy.maxUpgradeLevel * PARTS.length} level</Badge>}
+      />
       <div className="upgrade-list">
         {PARTS.map((part) => <ModificationSlot key={part.key} part={part} game={game} onUpgrade={onUpgrade} onPreviewSheet={onPreviewSheet} disabled={disabled} />)}
       </div>
