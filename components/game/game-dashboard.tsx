@@ -312,6 +312,9 @@ export function GameDashboard() {
         game.economy.referralRewardInvitee,
       );
       if (result === "cancelled") return;
+      void sendAction({ type: "track-referral-share" }, initData).catch(
+        () => undefined,
+      );
       telegramHaptic();
       toast.success(
         result === "copied" ? "Ajakan disalin" : "Ajakan siap dibagikan",
