@@ -231,6 +231,12 @@ export const formatCoins = (value: number) => {
       });
 };
 export const coins = (value: number) => `${formatCoins(value)} koin`;
+
+export function referralShareText(inviterName: string, inviteeReward: number) {
+  const name = inviterName.trim().replace(/\s+/g, " ").slice(0, 64) || "Temanmu";
+  return `${name} mengajakmu balapan di Racely! Main lewat link ini dan penuhi syarat ajakan untuk mendapatkan ${coins(Math.max(0, inviteeReward))}.`;
+}
+
 /** Rough, human duration for offline summaries: "4 jam", "12 menit", "45 detik". */
 export const formatDuration = (seconds: number) => {
   const total = Math.max(0, Math.round(seconds));

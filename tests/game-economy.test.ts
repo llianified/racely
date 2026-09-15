@@ -6,7 +6,7 @@ import {
   racingDayKey,
   referralActivityQualified,
 } from "../lib/game-economy";
-import { INITIAL_GAME, batteryTelemetry, formatDuration, gameReducer, lapReward, lapSeconds, modificationPartName, modificationPreview, racePosition } from "../lib/game";
+import { INITIAL_GAME, batteryTelemetry, formatDuration, gameReducer, lapReward, lapSeconds, modificationPartName, modificationPreview, racePosition, referralShareText } from "../lib/game";
 import { DEFAULT_ECONOMY, upgradeCostAt } from "../lib/economy-config";
 
 /**
@@ -31,6 +31,15 @@ function settlementInput(
     ...overrides,
   };
 }
+
+describe("Referral share copy", () => {
+  it("names the inviter and current invitee reward", () => {
+    expect(referralShareText("  Raka   Putra  ", 5_000)).toBe(
+      "Raka Putra mengajakmu balapan di Racely! Main lewat link ini dan penuhi syarat ajakan untuk mendapatkan 5.000 koin.",
+    );
+    expect(referralShareText("   ", 30)).toContain("Temanmu mengajakmu");
+  });
+});
 
 describe("Referral activity qualification", () => {
   const days = ["2026-09-10", "2026-09-12", "2026-09-15"];

@@ -3,7 +3,7 @@
 **Scope:** read-only inspection of `racely-main` (Next.js 16 Telegram Mini App, Neon Postgres, EC2 + PM2).
 **Question answered:** which capabilities must exist before V1 launch, which should follow soon after real users arrive, and which are later/experimental.
 **Not in scope:** code quality, UI redesign, visual hierarchy. The current UX hierarchy and design tokens are treated as the source of truth.
-**Implementation update:** 16 September 2026 — visibilitas ajakan yang masih menunggu syarat dan notifikasi payout ke inviter sudah dirilis.
+**Implementation update:** 16 September 2026 — visibilitas ajakan yang masih menunggu syarat, notifikasi payout ke inviter, dan salinan ajakan personal sudah dirilis.
 
 Legend: `[DONE]` clearly exists and is usable · `[PARTIAL]` exists but incomplete · `[MISSING]` not meaningfully available · `[UNCERTAIN]` cannot verify from code alone.
 Blocker classes: **A** = true launch blocker · **B** = growth feature, post-launch · **C** = nice-to-have polish.
@@ -38,7 +38,7 @@ Blocker classes: **A** = true launch blocker · **B** = growth feature, post-lau
 ### 2.1 Referral / invite — `[DONE]`
 - **What it does:** Player shares a bot deep link via Telegram's native share sheet (or copies it). Friend taps → bot replies with inviter's name, the exact reward terms, and a Mini App button carrying `startapp=ref_<id>`. On first sync the friend is bound to the inviter (only if they have zero laps and no existing referrer; self-referral rejected; inviter must exist). When the friend check-ins on 3 distinct WIB days and completes 3 upgrades, the friend gets 5,000 coins and the inviter 10,000 coins, both credited directly to balance with idempotent claim rows.
 - **Why it can drive growth:** Two-sided cash incentive in a game whose whole premise is cash-out; the share happens inside Telegram (zero-friction distribution); the qualification rule filters fake accounts so the rupiah liability stays tied to real engaged users.
-- **What is missing:** Share text is a single generic sentence; it doesn't mention the invitee's own reward. Pending invites are visible in the panel, and a successful inviter payout now triggers one personal Telegram message with the friend's name, reward amount, and an “Ajak teman lagi” share action.
+- **What is missing:** Nothing structural. Share text now names the inviter and includes the invitee's live reward amount in both the Mini App share flow and the inviter-payout re-share action. Pending invites are visible in the panel, and a successful inviter payout triggers one personal Telegram message with the friend's name, reward amount, and an “Ajak teman lagi” action.
 
 ### 2.2 Exclusive referral cosmetics (scarcity) — `[DONE]`
 - **What it does:** Five milestone rewards that are **not sold anywhere**: Ember Rush paint (1 friend), Neon Fin Splitter (3), Aurora Prism paint (5), Crown Wing (10), Phantom X car (25). Server enforces the threshold on paint/part/car actions; UI shows a locked 3D preview of Phantom X and "N teman lagi" progress.
@@ -92,7 +92,7 @@ Everything else in the growth roadmap builds on a loop that is already whole.
 
 ### Can wait
 - [ ] Share-your-rank / share-your-unlock outward cards (leaderboard, Phantom X, first payout).
-- [ ] Personalised share text (mention invitee's 5,000 coin reward and inviter's name).
+- [x] Personalised share text — shipped 16 September 2026; names the inviter and reads the invitee reward from live economy config in both share surfaces.
 - [ ] Deeper mission variety (weekly missions, circuit-specific missions, setup-experiment missions).
 - [ ] Referral milestone between 10 and 25 friends (the jump is large; add only if data shows a plateau at 10).
 - [ ] Second re-engagement message type for lapsed players (e.g. day-3 inactive) with a small comeback bonus.
@@ -149,7 +149,7 @@ Everything else in the growth roadmap builds on a loop that is already whole.
 
 **Based on the current app, Racely IS launch-ready.**
 
-Every item on the pre-launch "wajib" list — core loop, economy, onboarding, garage/setup, reward/claim, referral, persistence, deployment, security — is present and server-enforced. The pending-invite copy/data gap identified by this audit is now closed; the four unchecked items above remain operational confirmations, not features.
+Every item on the pre-launch "wajib" list — core loop, economy, onboarding, garage/setup, reward/claim, referral, persistence, deployment, security — is present and server-enforced. The pending-invite and generic-share-copy gaps identified by this audit are now closed; the four unchecked items above remain operational confirmations, not features.
 
 **Freeze now:**
 - Game rules, economy formulas, and qualification rule shape (tune numbers only via `/admin`).

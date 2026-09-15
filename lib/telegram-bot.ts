@@ -6,7 +6,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { players } from "@/lib/db/schema";
 import { readEconomyConfig } from "@/lib/economy-store";
-import { coins, REFERRAL_PARAM_PREFIX } from "./game";
+import { coins, referralShareText, REFERRAL_PARAM_PREFIX } from "./game";
 
 export const MAX_TELEGRAM_UPDATE_BYTES = 64 * 1024;
 
@@ -223,18 +223,22 @@ export function buildTelegramReply(
 export function buildReferralRewardReply({
   chatId,
   inviterId,
+  inviterName,
   inviteeName,
   reward,
+  inviteeReward,
 }: {
   chatId: number;
   inviterId: string;
+  inviterName: string;
   inviteeName: string;
   reward: number;
+  inviteeReward: number;
 }): TelegramReply {
   const name = inviteeName.trim().slice(0, 128) || "Temanmu";
   const shareUrl = new URL("https://t.me/share/url");
   shareUrl.searchParams.set("url", referralLink(inviterId));
-  shareUrl.searchParams.set("text", "Ayo balapan bareng aku di Racely!");
+  shareUrl.searchParams.set("text", referralShareText(inviterName, inviteeReward));
 
   return {
     chat_id: chatId,

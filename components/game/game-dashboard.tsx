@@ -306,11 +306,15 @@ export function GameDashboard() {
     const link = game.referral.link;
     if (!link) return;
     try {
-      const result = await shareReferralLink(link);
+      const result = await shareReferralLink(
+        link,
+        game.player.name,
+        game.economy.referralRewardInvitee,
+      );
       if (result === "cancelled") return;
       telegramHaptic();
       toast.success(
-        result === "copied" ? "Link disalin" : "Ajakan siap dibagikan",
+        result === "copied" ? "Ajakan disalin" : "Ajakan siap dibagikan",
       );
     } catch {
       toast.error("Ajakan gagal dibagikan");
