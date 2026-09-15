@@ -797,18 +797,17 @@
 .press-button[data-size='sm']:not(:disabled), .press-button[data-size='xs']:not(:disabled), .press-button[data-size='icon-sm']:not(:disabled), .press-button[data-size='icon-xs']:not(:disabled) { --press-depth: var(--space-2); }
 
 /* ── hasil balapan ───────────────────────────────────── */
-.race-reward { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-md); padding: var(--space-md); border: var(--stroke) solid var(--border); border-left: var(--space-3) solid var(--secondary); border-radius: var(--corner-box); background: var(--surface-inset); transition: border-color var(--dur-base); }
-.reward-ready { border-color: color-mix(in srgb, var(--accent) 30%, var(--border)); border-left-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--card)); }
-.reward-copy { min-width: 0; }
-.reward-heading { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-6); min-width: 0; }
-.reward-heading h2 { flex-shrink: 0; font-size: var(--fs-nano); font-weight: var(--fw-bold); line-height: var(--lh-snug); letter-spacing: var(--track-caps-lg); text-transform: uppercase; color: var(--muted-foreground); }
-.reward-status { min-width: 0; padding: var(--space-2) var(--space-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: var(--stroke) solid var(--border); border-radius: var(--corner-pill); background: color-mix(in srgb, var(--secondary) 60%, transparent); font-size: var(--fs-nano); font-weight: var(--fw-medium); line-height: var(--lh-snug); color: var(--muted-foreground); }
-.reward-ready .reward-status { border-color: color-mix(in srgb, var(--accent) 30%, var(--border)); background: color-mix(in srgb, var(--accent) 8%, transparent); color: var(--accent); }
-.reward-progress { flex: 1 1 auto; min-width: 0; }
-.reward-progress [data-slot='progress-track'] { height: var(--space-xs); background: var(--background); }
-.reward-progress [data-slot='progress-indicator'] { background: var(--accent); }
-.reward-copy > strong { display: block; margin-top: var(--space-xs); font-size: var(--fs-4xl); font-weight: var(--fw-heavier); line-height: var(--lh-tight); letter-spacing: var(--track-tight-xs); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.race-reward > [data-slot='button'] { flex-shrink: 0; }
+.race-earnings { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); overflow: hidden; border: var(--stroke) solid var(--border); border-radius: var(--corner-box); background: var(--card); }
+.race-reward { display: flex; flex-direction: column; min-width: 0; gap: var(--space-sm); padding: var(--space-md); }
+.race-reward + .race-reward { border-inline-start: var(--stroke) solid var(--border); }
+.race-reward:first-child { background: color-mix(in srgb, var(--accent) 5%, var(--card)); }
+.reward-copy { display: flex; flex-direction: column; gap: var(--space-xs); min-width: 0; flex: 1; }
+.reward-heading { font-size: var(--fs-nano); font-weight: var(--fw-bold); line-height: var(--lh-snug); letter-spacing: var(--track-caps); text-transform: uppercase; color: var(--muted-foreground); }
+.reward-status { display: block; font-size: var(--fs-nano); line-height: var(--lh-snug); color: var(--muted-foreground); }
+.reward-ready .reward-status { color: var(--accent); }
+.reward-copy > strong { display: block; font-size: var(--fs-3xl); font-weight: var(--fw-heavier); line-height: var(--lh-tight); letter-spacing: var(--track-tight-xs); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.reward-copy > strong > span { font-size: var(--fs-read); font-weight: var(--fw-medium); letter-spacing: normal; color: var(--muted-foreground); }
+.race-reward > [data-slot='button'] { width: 100%; margin-top: auto; }
 
 /* ── garasi ───────────────────────────────────────────── */
 .car-stage { position: relative; height: var(--stage-garage-h); margin: var(--space-md) var(--space-md) 0; overflow: hidden; border: var(--stroke) solid var(--border); border-radius: var(--corner-box); background:
