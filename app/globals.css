@@ -939,10 +939,12 @@
 .reward-row { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; }
 .reward-row .upgrade-head { grid-column: 1 / -1; }
 .reward-row .upgrade-name p.setup-metric { font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
-/* Bar progres diindentasi selebar tile ikon supaya rata dengan judul; kolom
-   aksi kanan (tombol/badge) dikunci tinggi dan lebar minimumnya supaya tepi
-   kanan semua baris jatuh di garis yang sama. */
-.reward-row .mission-progress { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; padding-inline-start: calc(var(--space-32) + var(--space-sm)); }
+/* Footer progres memakai inset yang sama dengan kepala baris; kolom aksi
+   kanan (tombol/badge) dikunci tinggi dan lebar minimumnya supaya tepi kanan
+   semua baris jatuh di garis yang sama. */
+.reward-row.has-progress { padding: 0; row-gap: 0; }
+.reward-row.has-progress .upgrade-head { padding: var(--space-md); }
+.reward-row .mission-progress { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; min-height: var(--space-32); padding: var(--space-sm) var(--space-md); border-top: var(--stroke) solid var(--border); background: var(--surface-inset); }
 .reward-row .mission-progress > [data-slot='progress'] { min-width: 0; }
 .reward-row .upgrade-buy { min-width: var(--reward-action-w); justify-content: center; }
 .reward-row .reward-badge { height: var(--space-32); border-radius: var(--corner-box); }

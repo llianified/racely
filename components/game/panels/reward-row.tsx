@@ -46,7 +46,7 @@ export function RewardRow({
     <li
       id={id}
       tabIndex={id ? -1 : undefined}
-      className={cn("upgrade-row reward-row", state === "ready" && "is-ready", state === "claimed" && "is-claimed")}
+      className={cn("upgrade-row reward-row", progress && "has-progress", state === "ready" && "is-ready", state === "claimed" && "is-claimed")}
     >
       <div className="upgrade-head">
         <span className="upgrade-icon" aria-hidden="true"><Icon /></span>
