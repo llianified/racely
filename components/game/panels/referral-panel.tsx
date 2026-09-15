@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Gift, Link2, ListChecks, Lock, Send, UserPlus } from "lucide-react";
+import { Check, Gift, Link2, ListChecks, Lock, LockKeyhole, Send, UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -83,7 +83,7 @@ export function ReferralPanel({
         ]}
       />
 
-      <section className="panel upgrade-panel referral-card" aria-label="Hadiah ajak teman">
+      <section className="panel upgrade-panel" aria-label="Hadiah ajak teman">
         <SectionCardHeading
           icon={Gift}
           title="Hadiah eksklusif"
@@ -108,7 +108,7 @@ export function ReferralPanel({
             const isCar = m.kind === "car";
             const label = isCar ? (active ? "Dipakai" : owned ? "Pakai" : "Pakai") : active ? "Terpasang" : owned ? "Pasang" : "Pasang";
             return (
-              <li key={`${m.kind}-${m.id}`} className={cn("upgrade-row referral-milestone", active && "is-active", unlocked && !owned && "is-ready")}>
+              <li key={`${m.kind}-${m.id}`} className={cn("upgrade-row referral-milestone", !unlocked && "is-locked", active && "is-active", unlocked && !owned && "is-ready")}>
                 <div className="upgrade-head">
                   {swatch
                     ? <span className="upgrade-icon paint-swatch" style={{ backgroundColor: swatch }} aria-hidden="true" />
@@ -121,18 +121,28 @@ export function ReferralPanel({
                       {unlocked ? (active ? "Sedang dipakai" : owned ? "Milikmu" : "Terbuka, belum dipasang") : `kurang ${m.friends - completed}`}
                     </p>
                   </div>
-                  {active
-                    ? <Badge variant="secondary" className="upgrade-buy"><Check data-icon="inline-start" aria-hidden="true" />{label}</Badge>
-                    : <Button
-                      variant={unlocked ? "goldSoft" : "outline"}
+                  {active ? (
+                    <Button variant="secondary" size="sm" className="upgrade-buy" disabled>
+                      <Check data-icon="inline-start" aria-hidden="true" />
+                      {label}
+                    </Button>
+                  ) : unlocked ? (
+                    <Button
+                      variant="goldSoft"
                       size="sm"
                       className="upgrade-buy"
-                      disabled={disabled || !unlocked}
+                      disabled={disabled}
                       onClick={() => void onReward(milestoneCommand(game, m))}
-                      aria-label={unlocked ? `${label} ${m.title}` : `${m.title} terkunci, butuh ${m.friends} teman`}
+                      aria-label={`${label} ${m.title}`}
                     >
-                      {unlocked ? label : <><Lock data-icon="inline-start" aria-hidden="true" />Terkunci</>}
-                    </Button>}
+                      {label}
+                    </Button>
+                  ) : (
+                    <Button variant="secondary" size="sm" className="upgrade-buy" disabled aria-label={`${m.title} terkunci, butuh ${m.friends} teman`}>
+                      <LockKeyhole data-icon="inline-start" aria-hidden="true" />
+                      Terkunci
+                    </Button>
+                  )}
                 </div>
                 <p className="referral-milestone-note">{m.note}</p>
               </li>
