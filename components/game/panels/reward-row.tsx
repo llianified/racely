@@ -1,7 +1,6 @@
 "use client";
 
 import { Check, LoaderCircle, LockKeyhole, type LucideIcon } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { formatCoins } from "@/lib/game";
@@ -57,7 +56,10 @@ export function RewardRow({
           </p>
         </div>
         {state === "claimed" ? (
-          <Badge variant="secondary" className="upgrade-buy reward-badge"><Check data-icon="inline-start" aria-hidden="true" />{doneLabel}</Badge>
+          <Button variant="secondary" size="sm" className="upgrade-buy" disabled>
+            <Check data-icon="inline-start" aria-hidden="true" />
+            {doneLabel}
+          </Button>
         ) : state === "ready" ? (
           <Button variant="goldSoft" size="sm" className="upgrade-buy" disabled={disabled} onClick={onClaim} aria-busy={busy} aria-label={`${actionLabel} ${label}`}>
             {busy && <LoaderCircle data-icon="inline-start" className="animate-spin" aria-hidden="true" />}
