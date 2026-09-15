@@ -817,7 +817,7 @@
    tombol emas dan tombol biasa selalu persis sama tinggi dan sejajar. ── */
 .press-button { --press-depth: var(--space-3); --press-shadow-color: var(--press-shadow); border-radius: var(--press-radius); box-shadow: var(--press-inset-shadow, 0 0 transparent); }
 
-/* ── tombol outline: satu-satunya varian tanpa isian kontras, jadi tepinya
+/* ─��� tombol outline: satu-satunya varian tanpa isian kontras, jadi tepinya
    harus digambar sendiri. Hairline-nya inset seperti milik tombol emas —
    bukan border — supaya tinggi dan kotaknya tetap identik dengan varian lain.
    Tetap ada saat disabled: tombol ikon tanpa tepi hilang dari layar. ── */
@@ -1217,7 +1217,7 @@
 .nav-item svg { width: var(--icon-lg); height: var(--icon-lg); stroke-width: var(--icon-stroke); }
 .notification-dot { width: var(--space-5); height: var(--space-5); border-radius: var(--corner-round); background: var(--accent); position: absolute; right: calc(var(--space-4) * -1); top: calc(var(--space-2) * -1); }
 
-/* ── scene states ──────────────────────────────────── */
+/* ── scene states ───────────��──────────────────────── */
   .scene-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100%; gap: var(--space-sm); padding: var(--space-md); text-align: center; background: var(--card); color: var(--foreground); }
   .car-preview-root { position: relative; width: 100%; height: 100%; overflow: hidden; }
   .car-preview-loading { position: absolute; inset: 0; z-index: var(--z-overlay); }

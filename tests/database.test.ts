@@ -142,7 +142,7 @@ describeDatabase("Neon Postgres persistence", () => {
 
   it("ranks settled laps with ties, a private self rank beyond Top 50, and no preview racers", async () => {
     const { pool } = await import("@/lib/db");
-    const { getLeaderboard } = await import("@/lib/leaderboard-server");
+    const { getLeaderboard, getReferralLeaderboard } = await import("@/lib/leaderboard-server");
     const client = await pool!.connect();
     try {
       await client.query("BEGIN");
@@ -151,7 +151,11 @@ describeDatabase("Neon Postgres persistence", () => {
       await client.query(`CREATE TEMPORARY TABLE racely_players (
         user_id text PRIMARY KEY, display_name text NOT NULL,
         laps integer NOT NULL, created_at timestamptz NOT NULL,
-        car_model text
+        car_model text, color text DEFAULT '#4275ff',
+        engine_level integer DEFAULT 1, tires_level integer DEFAULT 1, battery_level integer DEFAULT 1,
+        setup jsonb DEFAULT '{"gear":"4:1","roller":"standard"}',
+        body_parts jsonb DEFAULT '{"owned":[],"equipped":{}}',
+        referred_by text, referral_paid_at timestamptz
       ) ON COMMIT DROP`);
       expect(await getLeaderboard("999", client)).toMatchObject({ entries: [], currentPlayer: null, totalPlayers: 0, nextRival: null });
       await client.query(`INSERT INTO racely_players
@@ -162,7 +166,18 @@ describeDatabase("Neon Postgres persistence", () => {
         ('40', 'No laps', 0, '2026-01-01', 'luna-gt'),
         ('preview:fake', 'Preview', 9999, '2026-01-01', 'luna-gt'),
         ('test:fake', 'Test', 9999, '2026-01-01', 'luna-gt')`);
+      await client.query(`UPDATE racely_players SET color = '#ff3366',
+        engine_level = 8, tires_level = 5, battery_level = 3,
+        setup = '{"gear":"5:1","roller":"heavy"}',
+        body_parts = '{"owned":["gt-wing","ram-hood"],"equipped":{"spoiler":"gt-wing"}}'
+        WHERE user_id = '20'`);
+      const appearance = { color: "#ff3366", levels: { engine: 8, tires: 5, battery: 3 }, roller: "heavy", equipped: { spoiler: "gt-wing" } };
       const tied = await getLeaderboard("20", client);
+      expect(tied.entries[1]).toMatchObject({ carModel: "phantom-x", carAppearance: appearance });
+      expect(tied.currentPlayer?.carAppearance).toEqual(appearance);
+      expect(tied.entries[0].carAppearance?.color).toBe("#4275ff");
+      // Inventaris dan part yang tidak terpasang tidak boleh ikut keluar.
+      expect(JSON.stringify(tied)).not.toMatch(/owned|ram-hood/);
       // `carModel` ikut dipetakan apa adanya -- klasemen memakainya untuk
       // menandai mobil hadiah ajakan, dan pemain tanpa mobil tetap `null`.
       expect(tied.entries.map(({ rank, name, carModel, isCurrentPlayer }) => ({ rank, name, carModel, isCurrentPlayer }))).toEqual([
@@ -186,11 +201,16 @@ describeDatabase("Neon Postgres persistence", () => {
       const outside = await getLeaderboard("160", client);
       expect(outside.entries).toHaveLength(50);
       expect(outside.entries.some((entry) => entry.isCurrentPlayer)).toBe(false);
-      expect(outside.currentPlayer).toEqual({ rank: 63, name: "Racer 60", score: 740, laps: 740, carModel: "luna-gt", isCurrentPlayer: true });
+      expect(outside.currentPlayer).toMatchObject({ rank: 63, name: "Racer 60", score: 740, laps: 740, carModel: "luna-gt", isCurrentPlayer: true });
       expect(outside.nextRival).toEqual({ name: "Racer 59", score: 741, laps: 741 });
       expect(outside.totalPlayers).toBe(63);
       expect(JSON.stringify(outside)).not.toMatch(/user_id|userId|created_at|balance|username|photo/);
       expect((await getLeaderboard("'; DROP TABLE racely_players; --", client)).currentPlayer).toBeNull();
+      await client.query(`UPDATE racely_players SET referred_by = '20', referral_paid_at = NOW() WHERE user_id IN ('30', '40')`);
+      const referrals = await getReferralLeaderboard("20", client);
+      expect(referrals.entries[0]).toMatchObject({ rank: 1, score: 2, carModel: "phantom-x", carAppearance: appearance });
+      expect(referrals.currentPlayer?.carAppearance).toEqual(appearance);
+      expect(JSON.stringify(referrals)).not.toMatch(/owned|ram-hood|user_id|balance/);
     } finally {
       await client.query("ROLLBACK");
       client.release();
