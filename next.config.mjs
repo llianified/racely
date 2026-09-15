@@ -40,7 +40,13 @@ const contentSecurityPolicy = [
   "media-src 'self' data: blob: https:",
   "frame-src 'self' https:",
   "font-src 'self' data:",
-  `connect-src 'self' https://telegram.org ${monetagSdkHost} ${monetagTelemetryHost}`,
+  /**
+   * Loader Monetag memanggil endpoint iklan yang host-nya dinamis. Membatasi
+   * daftar ini ke libtl.com membuat loader berhasil tetapi XHR kreatif gagal
+   * dengan Network error. Hanya koneksi pemain yang dibuka ke HTTPS; script-src
+   * tetap memakai allowlist eksplisit di atas.
+   */
+  "connect-src 'self' https:",
   "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",
@@ -50,7 +56,9 @@ const contentSecurityPolicy = [
 /**
  * Racely dibuka di dalam iframe Telegram, jadi app pemain TIDAK boleh memasang
  * frame-ancestors — itu akan memutus Telegram Web. Panel admin justru sebaliknya:
- * ia tidak pernah di-iframe siapa pun, jadi ia menolak dijadikan frame.
+ * ia tidak pernah di-iframe siapa pun, tidak memakai Monetag, dan tidak perlu
+ * akses jaringan pihak ketiga. Policy admin sengaja dibangun terpisah agar
+ * kelonggaran connect-src/frame-src milik pemain tidak ikut terbawa.
  *
  * Direktifnya DIGABUNG ke dalam satu header, bukan dikirim sebagai header CSP
  * kedua. Next menerapkan header custom dengan `resHeaders[key] = value` — kunci
@@ -60,7 +68,21 @@ const contentSecurityPolicy = [
  * /admin: default-src, object-src, base-uri, form-action, semuanya hilang —
  * persis di satu-satunya halaman yang menyetujui pembayaran rupiah.
  */
-const adminContentSecurityPolicy = `${contentSecurityPolicy}; frame-ancestors 'none'`
+const adminContentSecurityPolicy = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${isProduction ? '' : " 'unsafe-eval'"} https://telegram.org`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "media-src 'self' data: blob:",
+  "frame-src 'none'",
+  "font-src 'self' data:",
+  "connect-src 'self'",
+  "worker-src 'self' blob:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join('; ')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
