@@ -3,6 +3,7 @@ import type { Pool } from "pg";
 import { INITIAL_GAME } from "@/lib/game";
 import {
   previewLeaderboard,
+  leaderboardCar,
   scoreToOvertake,
 } from "@/lib/leaderboard";
 import {
@@ -31,7 +32,7 @@ describe("Leaderboard", () => {
       "laps",
       new Date("2026-09-13T00:00:00Z"),
     );
-    expect(result.entries).toEqual([{ rank: 1, name: INITIAL_GAME.player.name, score: 42, laps: 42, carModel: null, isCurrentPlayer: true }]);
+    expect(result.entries).toEqual([{ rank: 1, name: INITIAL_GAME.player.name, score: 42, laps: 42, carModel: null, carAppearance: null, isCurrentPlayer: true }]);
     expect(result.currentPlayer).toEqual(result.entries[0]);
     expect(result.totalPlayers).toBe(1);
     expect(result.updatedAt).toBe("2026-09-13T00:00:00.000Z");
@@ -49,6 +50,41 @@ describe("Leaderboard", () => {
       currentPlayer: { score: 2, isCurrentPlayer: true },
       totalPlayers: 1,
     });
+  });
+
+  it.each(["laps", "referrals"] as const)("preserves the player's equipped setup for %s podiums", metric => {
+    const game = {
+      ...INITIAL_GAME,
+      laps: 42,
+      carSelection: { model: "luna-gt" as const, returningPlayer: false },
+      color: "#ff3366",
+      levels: { engine: 8, tires: 5, battery: 3 },
+      setup: { gear: "5:1" as const, roller: "heavy" as const },
+      bodyParts: { owned: ["gt-wing" as const, "ram-hood" as const], equipped: { spoiler: "gt-wing" as const } },
+      referral: { ...INITIAL_GAME.referral, earned: INITIAL_GAME.economy.referralRewardInviter },
+    };
+    const result = previewLeaderboard(game, metric);
+    expect(leaderboardCar(result.entries[0])).toEqual({
+      model: "luna-gt", color: game.color, levels: game.levels,
+      roller: "heavy", equipped: { spoiler: "gt-wing" },
+    });
+    expect(result.currentPlayer).toEqual(result.entries[0]);
+    expect(JSON.stringify(result)).not.toMatch(/owned|ram-hood|balance|userId|username/);
+    const changed = previewLeaderboard({ ...game, color: "#4275ff", bodyParts: { owned: [], equipped: {} } }, metric);
+    expect(leaderboardCar(changed.entries[0])).toMatchObject({ color: "#4275ff", equipped: {} });
+  });
+
+  it("falls back safely for older responses, unknown models and invalid setups", () => {
+    const entry = { rank: 1, name: "Racer", score: 1, isCurrentPlayer: false };
+    expect(leaderboardCar(entry)).toBeNull();
+    const valid = {
+      ...entry, carModel: "neo-falcon" as const,
+      carAppearance: { color: "#4275ff", levels: { engine: 1, tires: 1, battery: 1 }, roller: "standard" as const, equipped: {} },
+    };
+    expect(leaderboardCar(valid)).not.toBeNull();
+    expect(leaderboardCar({ ...valid, carModel: "unknown" as typeof valid.carModel })).toBeNull();
+    expect(leaderboardCar({ ...valid, carAppearance: { ...valid.carAppearance, color: "bad" } })).toBeNull();
+    expect(leaderboardCar({ ...valid, carAppearance: { ...valid.carAppearance, equipped: { hood: "gt-wing" } } })).toBeNull();
   });
 
   it("does not replace a missing production database with preview data", async () => {
