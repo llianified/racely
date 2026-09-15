@@ -827,6 +827,7 @@
 .car-stage::after { content: ''; position: absolute; left: 50%; bottom: var(--space-xl); width: var(--car-shadow-w); height: var(--space-20); transform: translateX(-50%); border-radius: var(--corner-round); background: radial-gradient(closest-side, rgb(0 0 0 / .5), transparent); pointer-events: none; }
 .car-stage > div { position: absolute; inset: 0; z-index: var(--z-base); }
 .car-stage canvas { display: block; touch-action: none; }
+.car-stage > .garage-car-trigger { position: absolute; top: var(--space-sm); right: var(--space-sm); z-index: var(--z-overlay); }
 .garage-layout { gap: var(--space-lg); }
 .car-identity { padding: var(--space-md) var(--space-md) 0; }
 .car-identity-head { min-width: 0; }
@@ -846,15 +847,6 @@
 .garage-stats dt { color: var(--muted-foreground); font-size: var(--fs-small); }
 .garage-stats dd { margin-top: var(--space-xs); font-size: var(--fs-micro); color: var(--muted-foreground); }
 .garage-stats strong { color: var(--foreground); font-size: var(--fs-2xl); font-variant-numeric: tabular-nums; }
-/* Kaki "ganti mobil" di kartu Mobil kamu: strip inset yang sama dengan
-   .garage-parts-foot, ditumpuk vertikal karena pilihannya bisa tiga. Tombol
-   dibagi rata selebar kartu. */
-.garage-car-switch { display: flex; flex-direction: column; gap: var(--space-sm); padding: var(--space-sm) var(--space-md); border-top: var(--stroke) solid var(--border); background: var(--surface-inset); }
-.garage-car-switch > p.setup-metric { display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--space-xs); font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
-.garage-car-switch > p.setup-metric > svg { flex-shrink: 0; width: var(--icon-xs); height: var(--icon-xs); color: var(--muted-foreground); }
-.garage-car-options { display: flex; gap: var(--space-sm); margin: 0; padding: 0; list-style: none; }
-.garage-car-options > li { flex: 1; min-width: 0; }
-.garage-car-options [data-slot='button']:disabled[aria-pressed='true'] { opacity: 1; }
 
 .upgrade-list { padding-inline: 0; }
 /* Satu anatomi baris untuk semua box garasi (Bengkel, Setup, Koleksi cat, Aero
