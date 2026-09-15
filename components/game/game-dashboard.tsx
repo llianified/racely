@@ -9,6 +9,7 @@ import { BootScreen } from "./shell/boot-screen";
 import { GameGate } from "./shell/game-gate";
 import { GameDialog, type DialogKind } from "./shell/game-dialog";
 import { MenuPanel } from "./shell/menu-panel";
+import { StarterBonusDialog } from "./shell/starter-bonus-dialog";
 import { GaragePanel, UpgradePanel } from "./panels/garage-panel";
 import { SetupPanel } from "./panels/setup-panel";
 import { RewardsPanel, claimableTotal } from "./panels/rewards-panel";
@@ -64,6 +65,10 @@ export function GameDashboard() {
   const [tab, setTab] = useState<GameTab>("race");
   const [dialog, setDialog] = useState<DialogKind | null>(null);
   const [welcomeBack, setWelcomeBack] = useState<OfflineEarnings | null>(null);
+  const [starterDismissed, setStarterDismissed] = useState(false);
+  const [starterClaimActive, setStarterClaimActive] = useState(false);
+  const [starterClaimFailed, setStarterClaimFailed] = useState(false);
+  const starterOpen = !starterDismissed && (!game.rewardClaimed || starterClaimActive);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   // Terpisah dari busyAction: selama iklan diputar belum ada permintaan ke
   // server, tapi tombol iklan lain harus ikut terkunci.
@@ -553,8 +558,30 @@ export function GameDashboard() {
           )}
         </main>
       </div>
+      <StarterBonusDialog
+        open={starterOpen}
+        amount={game.economy.starterGift}
+        claimed={game.rewardClaimed}
+        busy={Boolean(busyAction)}
+        failed={starterClaimFailed}
+        onClaim={async () => {
+          if (game.rewardClaimed || busyAction) return;
+          setStarterClaimActive(true);
+          setStarterClaimFailed(false);
+          const next = await runAction({ type: "gift" });
+          if (!next) {
+            setStarterClaimActive(false);
+            setStarterClaimFailed(true);
+          }
+        }}
+        onClose={() => setStarterDismissed(true)}
+        onGarage={() => {
+          setStarterDismissed(true);
+          navigate("garage");
+        }}
+      />
       <GameDialog
-        kind={welcomeBack ? "welcome" : dialog}
+        kind={starterOpen ? null : welcomeBack ? "welcome" : dialog}
         onClose={() => {
           setWelcomeBack(null);
           setDialog(null);
