@@ -282,8 +282,8 @@ function RacingLine({ playerRef, driving }: { playerRef: RefObject<THREE.Group |
 
 function CameraRig({ mode, follow, resetKey, playerRef, active, reducedMotion, cinematic, driving }: { mode: number; follow: boolean; resetKey: number; playerRef: RefObject<THREE.Group | null>; active: boolean; reducedMotion: boolean } & Pick<SceneProps, 'cinematic' | 'driving'>) {
   const track = useContext(TrackContext)
-  const { camera, size } = useThree()
-  const [overviewCamera] = useState(() => camera)
+  const { size } = useThree()
+  const [overviewCamera, setOverviewCamera] = useState<THREE.OrthographicCamera | null>(null)
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null)
   const chaseCamera = useRef<THREE.PerspectiveCamera>(null)
   const initialize = useRef(true)
@@ -310,7 +310,7 @@ function CameraRig({ mode, follow, resetKey, playerRef, active, reducedMotion, c
   }, [follow, resetKey, active, size.width, size.height])
 
   useLayoutEffect(() => {
-    if (follow) return
+    if (follow || !overviewCamera) return
     const [x, y, z] = mode === 1 ? [0, 20, .01] : mode === 2 ? [12, 6.5, 10] : [9, 12.5, 12]
     overviewTarget.set(x + track.center.x, y, z + track.center.z)
     overviewZoom.current = Math.min(size.width / (track.bounds.maxX - track.bounds.minX + 1.3), size.height / (track.bounds.maxZ - track.bounds.minZ + 1))
@@ -337,7 +337,7 @@ function CameraRig({ mode, follow, resetKey, playerRef, active, reducedMotion, c
     if (controls.current) {
       controls.current.autoRotate = !!dramatic && mode !== 1 && !transitioning.current && performance.now() > manualUntil.current
     }
-    if (!follow && transitioning.current) {
+    if (!follow && transitioning.current && overviewCamera) {
       overviewCamera.position.lerp(overviewTarget, damping)
       overviewCamera.lookAt(track.center.x, 0, track.center.z)
       if (overviewCamera instanceof THREE.OrthographicCamera) {
@@ -388,7 +388,10 @@ function CameraRig({ mode, follow, resetKey, playerRef, active, reducedMotion, c
 
   return <>
     {follow && <PerspectiveCamera ref={chaseCamera} makeDefault fov={42} near={.05} far={100} />}
-    {!follow && <OrbitControls ref={controls} camera={overviewCamera} autoRotateSpeed={.45} onStart={() => { transitioning.current = false; manualUntil.current = Infinity }} onEnd={() => { manualUntil.current = performance.now() + 8000 }} enablePan={false} minZoom={12} maxZoom={95} minPolarAngle={.001} maxPolarAngle={Math.PI / 2.35} enableDamping={!reducedMotion} dampingFactor={.08} />}
+    {!follow && <>
+      <OrthographicCamera ref={setOverviewCamera} makeDefault position={[9, 12.5, 12]} zoom={30} near={.1} far={100} />
+      {overviewCamera && <OrbitControls ref={controls} camera={overviewCamera} autoRotateSpeed={.45} onStart={() => { transitioning.current = false; manualUntil.current = Infinity }} onEnd={() => { manualUntil.current = performance.now() + 8000 }} enablePan={false} minZoom={12} maxZoom={95} minPolarAngle={.001} maxPolarAngle={Math.PI / 2.35} enableDamping={!reducedMotion} dampingFactor={.08} />}
+    </>}
   </>
 }
 
