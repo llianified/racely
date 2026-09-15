@@ -54,8 +54,8 @@ export const CAR_CATALOG = {
   },
   "phantom-x": {
     name: "Phantom X",
-    description: "Prototipe Fable dengan kanopi ungu, aero bertingkat, dan aksen emas. Bukan untuk dibeli. Untuk diraih.",
-    chassis: "Fable · X-Spec · Mini 4WD",
+    description: "Prototipe eksklusif dengan kanopi ungu, aero bertingkat, dan aksen emas. Bukan untuk dibeli. Untuk diraih.",
+    chassis: "X-Spec · Mini 4WD",
     defaultColor: "#14161f",
     colors: [
       { color: "#14161f", name: "Phantom Black" },
