@@ -174,15 +174,80 @@ function lunaBody(add: AddCarPart) {
   }
 }
 
+// Phantom X: hadiah 25 ajakan. Lebih rendah dan lebih lebar dari keduanya,
+// kanopi sempit memanjang, dan sirip ekor kembar berlapis emas supaya terbaca
+// sebagai mobil "lain" dari kejauhan di lintasan.
+function phantomBody(add: AddCarPart) {
+  add('body', facetedHull([
+    [-.36, .112, .126, .152, .164], [-.24, .168, .123, .176, .192],
+    [-.1, .172, .121, .172, .196], [.08, .16, .12, .162, .188],
+    [.25, .138, .119, .148, .166], [.39, .07, .118, .131, .139],
+  ]))
+  add('glass', facetedHull([
+    [-.25, .052, .182, .19, .204], [-.15, .066, .196, .238, .262],
+    [-.03, .06, .194, .242, .27], [.12, .046, .174, .19, .206],
+    [.2, .02, .16, .166, .172],
+  ]))
+  add('panel', facetedHull([
+    [.15, .1, .166, .178, .184], [.28, .08, .156, .166, .172],
+    [.385, .048, .138, .144, .148],
+  ]))
+  add('gold', facetedHull([
+    [.24, .01, .18, .184, .186], [.34, .008, .162, .165, .167], [.388, .004, .146, .148, .149],
+  ]))
+  for (const side of SIDES) {
+    add('panel', facetedHull([
+      [-.34, .012, .128, .158, .17, side * .152],
+      [-.26, .036, .13, .18, .198, side * .176],
+      [-.16, .036, .124, .17, .188, side * .178],
+      [-.08, .012, .118, .136, .15, side * .168],
+    ]))
+    add('body', facetedHull([
+      [.1, .012, .118, .14, .154, side * .166],
+      [.2, .034, .121, .164, .184, side * .176],
+      [.29, .03, .122, .158, .176, side * .17],
+      [.36, .01, .119, .14, .15, side * .132],
+    ]))
+    add('chassis', facetedHull([
+      [-.18, .02, .094, .108, .114, side * .196],
+      [.16, .02, .094, .107, .113, side * .192],
+      [.24, .008, .1, .106, .109, side * .16],
+    ]))
+    add('gold', graphic([
+      [side * .17, .17, -.2], [side * .18, .168, -.17],
+      [side * .182, .146, .16], [side * .174, .148, .12],
+    ]))
+    add('livery', graphic([
+      [side * .05, .19, .18], [side * .06, .188, .19],
+      [side * .03, .152, .37], [side * .022, .153, .36],
+    ]))
+    for (let vent = 0; vent < 5; vent++) {
+      add('chassis', new THREE.BoxGeometry(.03, .004, .008), [side * .12, .19, -.24 + vent * .016], [0, side * .18, side * -.18])
+    }
+    add('gold', facetedHull([
+      [-.36, .004, .16, .21, .218, side * .1],
+      [-.3, .005, .164, .232, .24, side * .1],
+      [-.2, .004, .168, .196, .2, side * .1],
+    ]))
+  }
+  add('chassis', new THREE.BoxGeometry(.18, .014, .01), [0, .126, .385])
+  add('gold', new THREE.BoxGeometry(.2, .004, .006), [0, .134, .388])
+  for (let fin = -3; fin <= 3; fin++) {
+    add('panel', new THREE.BoxGeometry(.005, .022, .06), [fin * .03, .102, -.336])
+  }
+}
+
 export function addBodywork(model: CarModelId, add: AddCarPart) {
   if (model === 'neo-falcon') falconBody(add)
+  else if (model === 'phantom-x') phantomBody(add)
   else lunaBody(add)
 }
 
 export function addStockWing(model: CarModelId, add: AddCarPart) {
   const falcon = model === 'neo-falcon'
-  const span = falcon ? .233 : .211
-  const height = falcon ? .303 : .284
+  const phantom = model === 'phantom-x'
+  const span = falcon ? .233 : phantom ? .245 : .211
+  const height = falcon ? .303 : phantom ? .27 : .284
   for (const side of SIDES) {
     add('panel', facetedHull([
       [-.333, .008, .179, height - .02, height, side * .11],
@@ -196,7 +261,7 @@ export function addStockWing(model: CarModelId, add: AddCarPart) {
     add('livery', new THREE.BoxGeometry(.021, .002, .068), [side * (span - .025), height + .012, -.34], [-.05, 0, 0])
     add('alloy', new THREE.CylinderGeometry(.005, .005, .005, 12), [side * .11, height + .014, -.32])
   }
-  add(falcon ? 'panel' : 'body', facetedHull([
+  add(falcon ? 'panel' : phantom ? 'gold' : 'body', facetedHull([
     [-.385, span, height - .004, height, height + .004],
     [-.35, span, height - .006, height + .004, height + .013],
     [-.288, span * .92, height - .005, height, height + .009],
