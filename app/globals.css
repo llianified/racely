@@ -128,12 +128,6 @@
 
   /* Lebar popover info; di luar tangga ukuran karena tidak berulang. */
   --popover-w: 288px;
-  --withdraw-action-w: 80px;
-  /* Tombol klaim di baris hadiah lebih pendek dari tombol biasa (--space-40):
-     barisnya sudah punya nominal koin di sebelahnya, jadi tombolnya tidak perlu
-     setinggi tombol utama. Hanya tingginya yang lepas dari ukuran bawaan --
-     huruf, padding samping, dan lebar minimumnya tetap ikut tombol. */
-  --claim-action-h: var(--space-32);
   /* Muat "24,95/25" (65,7px) tanpa memendekkan bar misi mana pun. */
   --mission-count-w: 68px;
   --edition-max-w: 100px;
@@ -866,8 +860,6 @@
 .mission-progress { display: flex; align-items: center; gap: var(--space-sm); }
 .circuit-progress { margin-top: var(--space-6); }
 .mission-progress > span { color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-bold); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.mission-status { display: inline-flex; align-items: center; gap: var(--space-xs); font-size: var(--fs-micro); color: var(--muted-foreground); }
-.mission-status svg { width: var(--icon-xs); height: var(--icon-xs); }
 
 /* ── stat hero (Hadiah & Dompet) ────────────────────────
    Garis emas di tepi atas + bilah emas di depan eyebrow adalah tanda pengenal
@@ -890,32 +882,17 @@
 .stat-hero-stats dd { font-size: var(--fs-read); font-weight: var(--fw-bold); line-height: var(--lh-tight); font-variant-numeric: tabular-nums; color: var(--foreground); }
 
 /* ── hadiah ──────────��─────────────────────────────── */
-.rewards-list-panel { padding: var(--space-md) var(--gutter); }
-.reward-list { display: flex; flex-direction: column; margin: 0 calc(var(--gutter) * -1) calc(var(--space-md) * -1); }
-.reward-row { display: grid; grid-template-columns: var(--space-32) minmax(0, 1fr); column-gap: var(--space-md); padding-inline: var(--gutter); border-bottom: var(--stroke) solid var(--border); }
-.reward-row > .reward-row-icon, .reward-row > .reward-row-copy { margin-top: var(--space-md); }
-.reward-row:last-child { border-bottom: none; }
-.reward-row.is-claimed h3 { color: var(--muted-foreground); }
-.reward-row-icon { display: grid; place-items: center; width: var(--space-32); height: var(--space-32); border-radius: var(--corner-box); background: var(--secondary); color: var(--muted-foreground); }
-.reward-row.is-ready .reward-row-icon { background: color-mix(in srgb, var(--accent) 12%, var(--secondary)); color: var(--accent); }
-.reward-row-icon svg { width: var(--icon-base); height: var(--icon-base); }
-.reward-row-copy { min-width: 0; }
-.reward-row-copy h3, .reward-row-copy p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.reward-row-copy h3 { font-size: var(--fs-body); font-weight: var(--fw-heavy); line-height: var(--lh-normal); }
-.reward-row-copy p { margin-top: var(--space-xs); font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); }
-/* Strip aksi memakai lebar penuh baris supaya tidak ada ruang kosong di bawah ikon. */
-.reward-row-action { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); min-width: 0; margin: var(--space-md) 0; padding: var(--space-9) var(--space-10); border-radius: var(--corner-box); background: var(--secondary); }
-.reward-row-action > strong { font-size: var(--fs-lead); font-weight: var(--fw-heavy); color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.reward-row-action > strong > span { font-size: var(--fs-micro); font-weight: var(--fw-medium); color: var(--muted-foreground); }
-.reward-row-action > button { min-width: var(--withdraw-action-w); min-height: var(--claim-action-h); height: var(--claim-action-h); }
-.reward-row.is-claimed .reward-row-action > strong { color: var(--muted-foreground); }
-
-/* Misi memakai .reward-row yang sama; hanya bar progres yang ditambahkan di
-   bawah keterangan. Hitungannya dikunci lebarnya supaya semua bar dalam satu
-   daftar berhenti di garis yang sama, bukan rata-rata kanan. */
-.reward-row-copy .mission-progress { margin-top: var(--space-md); }
-.reward-row-copy .mission-progress > span { min-width: var(--mission-count-w); text-align: right; }
-.reward-row-copy [data-slot='progress-track'] { background: var(--background); height: var(--space-5); }
+/* Hadiah, Misi harian, dan Misi awal memakai .upgrade-row yang sama dengan
+   garasi; yang ditambah hanya metrik nominal (emas saat siap, redup saat sudah
+   diklaim) dan bar progres misi di bawah kepala baris. Hitungan bar dikunci
+   lebarnya supaya semua bar dalam satu daftar berhenti di garis yang sama. */
+.reward-row .upgrade-name p.setup-metric { font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
+.reward-row.is-ready .setup-metric b { color: var(--accent); }
+.reward-row.is-ready .upgrade-icon { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); }
+.reward-row.is-claimed .upgrade-icon { color: var(--muted-foreground); }
+.reward-row.is-claimed .upgrade-name h3, .reward-row.is-claimed .setup-metric b { color: var(--muted-foreground); }
+.reward-row .mission-progress > span { min-width: var(--mission-count-w); text-align: right; }
+.reward-row [data-slot='progress-track'] { background: var(--background); height: var(--space-5); }
 .reward-row.is-ready [data-slot='progress-indicator'] { background: var(--accent); }
 
 /* ── dompet ────────────────────────────────────────── */

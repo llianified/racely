@@ -18,7 +18,7 @@ import {
 
 type RowState = RewardRowState;
 
-type RewardRow = {
+type RewardItem = {
   id: string;
   icon: typeof Gift;
   label: string;
@@ -96,7 +96,7 @@ export function RewardsPanel({
   disabled?: boolean;
 }) {
   const total = claimableTotal(game);
-  const rewards: RewardRow[] = [
+  const rewards: RewardItem[] = [
     {
       id: "race",
       icon: Flag,
