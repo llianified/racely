@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { withRaceOpponents } from '@/lib/race-opponents-server';
 import {
+  ChannelMembershipError,
+  requireRacelyChannelMembership,
+} from "@/lib/channel-membership";
+import {
   GameRuleError,
   gameActionSchema,
   performGameAction,
@@ -56,6 +60,8 @@ export async function POST(request: Request) {
         { status: 400 },
       );
 
+    if (!preview) await requireRacelyChannelMembership(identity.userId);
+
     const previewGame = isCookiePreview
       ? performPreviewGameAction(
           request,
@@ -95,6 +101,14 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof TelegramAuthError)
       return NextResponse.json({ error: error.message }, { status: 401 });
+    if (error instanceof ChannelMembershipError)
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        {
+          status: error.status,
+          headers: { "Cache-Control": "no-store" },
+        },
+      );
     if (
       error instanceof GameRuleError ||
       error instanceof PreviewGameRuleError

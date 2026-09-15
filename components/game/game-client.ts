@@ -1,4 +1,5 @@
 import type { GameCommand, GameState } from "@/lib/game";
+import type { RacelyChannelErrorCode } from "@/lib/racely-channel";
 
 export type GameKey = readonly [url: string, initData: string];
 
@@ -10,6 +11,7 @@ export class GameRequestError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    readonly code?: RacelyChannelErrorCode,
   ) {
     super(message);
     this.name = "GameRequestError";
@@ -17,13 +19,16 @@ export class GameRequestError extends Error {
 }
 
 export async function readGameResponse(response: Response): Promise<GameState> {
-  const result = (await response.json()) as GameState | { error?: string };
+  const result = (await response.json()) as
+    | GameState
+    | { error?: string; code?: RacelyChannelErrorCode };
   if (!response.ok) {
     throw new GameRequestError(
       "error" in result && result.error
         ? result.error
         : "Progres Racely belum bisa dimuat.",
       response.status,
+      "code" in result ? result.code : undefined,
     );
   }
   return result as GameState;
@@ -75,4 +80,18 @@ export function createGameActionSender() {
  */
 export function isSessionExpired(error: unknown) {
   return error instanceof GameRequestError && error.status === 401;
+}
+
+export function isChannelMembershipRequired(error: unknown) {
+  return (
+    error instanceof GameRequestError &&
+    error.code === "CHANNEL_MEMBERSHIP_REQUIRED"
+  );
+}
+
+export function isChannelMembershipUnavailable(error: unknown) {
+  return (
+    error instanceof GameRequestError &&
+    error.code === "CHANNEL_MEMBERSHIP_UNAVAILABLE"
+  );
 }

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { GameNavigation, Topbar, type GameTab } from "./shell/game-navigation";
 import { BootScreen } from "./shell/boot-screen";
+import { ChannelGate } from "./shell/channel-gate";
 import { GameGate } from "./shell/game-gate";
 import { GameDialog, type DialogKind } from "./shell/game-dialog";
 import { MenuPanel } from "./shell/menu-panel";
@@ -23,6 +24,8 @@ import { MONETAG_ZONE_ID, showRewardedAd } from "./monetag";
 import {
   GameRequestError,
   createGameActionSender,
+  isChannelMembershipRequired,
+  isChannelMembershipUnavailable,
   isSessionExpired,
   readGameResponse,
   requestHeaders,
@@ -95,6 +98,7 @@ export function GameDashboard() {
   const mutationLocked = useRef(false);
   const navigationTarget = useRef<string | null>(null);
   const expired = useRef(false);
+  const membershipBlocked = useRef(false);
   const welcomeShown = useRef<OfflineEarnings | null>(null);
 
   useEffect(() => {
@@ -158,11 +162,15 @@ export function GameDashboard() {
       refreshInterval: (latest) => latest?.carSelection?.model === null || mutationLocked.current ? 0 : 5000,
       refreshWhenHidden: false,
       revalidateOnFocus: game.carSelection?.model !== null,
-      isPaused: () => mutationLocked.current || expired.current,
+      isPaused: () =>
+        mutationLocked.current || expired.current || membershipBlocked.current,
       dedupingInterval: 1000,
-      // A rejected initData will be rejected again: retrying only burns the
-      // player's rate-limit bucket until they reopen the app from Telegram.
-      shouldRetryOnError: (retryError) => !isSessionExpired(retryError),
+      // initData kedaluwarsa dan keanggotaan yang belum terpenuhi tidak akan
+      // berubah tanpa tindakan pemain, jadi retry otomatis hanya membakar
+      // rate-limit dan panggilan Telegram Bot API.
+      shouldRetryOnError: (retryError) =>
+        !isSessionExpired(retryError) &&
+        !isChannelMembershipRequired(retryError),
     },
   );
 
@@ -190,14 +198,22 @@ export function GameDashboard() {
   }, [data]);
 
   const sessionExpired = isSessionExpired(error);
+  const channelMembershipRequired = isChannelMembershipRequired(error);
+  const channelMembershipUnavailable = isChannelMembershipUnavailable(error);
 
-  // isPaused() reads a ref because SWR calls it outside the render pass.
+  // isPaused() reads refs because SWR calls it outside the render pass.
   useEffect(() => {
     expired.current = sessionExpired;
-  }, [sessionExpired]);
+    membershipBlocked.current = channelMembershipRequired;
+  }, [channelMembershipRequired, sessionExpired]);
 
   useEffect(() => {
-    if (sessionExpired) return;
+    if (
+      sessionExpired ||
+      channelMembershipRequired ||
+      channelMembershipUnavailable
+    )
+      return;
     let last = performance.now();
     const id = window.setInterval(() => {
       const now = performance.now();
@@ -206,7 +222,11 @@ export function GameDashboard() {
       last = now;
     }, 100);
     return () => clearInterval(id);
-  }, [sessionExpired]);
+  }, [
+    channelMembershipRequired,
+    channelMembershipUnavailable,
+    sessionExpired,
+  ]);
 
   const navigate = (next: GameTab, target?: string) => {
     const targetId = target ?? "page-content";
@@ -412,7 +432,23 @@ export function GameDashboard() {
   };
 
   if (!clientReady || (isLoading && !data && !error)) return <BootScreen />;
-  if (sessionExpired || (error && !data)) {
+  if (channelMembershipRequired) {
+    return (
+      <ChannelGate
+        checking={isValidating}
+        onCheck={async () => {
+          membershipBlocked.current = false;
+          try {
+            const next = await mutate();
+            membershipBlocked.current = !next;
+          } catch {
+            membershipBlocked.current = true;
+          }
+        }}
+      />
+    );
+  }
+  if (sessionExpired || channelMembershipUnavailable || (error && !data)) {
     return (
       <GameGate
         error={error}

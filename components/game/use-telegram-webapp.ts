@@ -111,6 +111,17 @@ export function useTelegramWebApp() {
   return { initData, clientReady };
 }
 
+export function openTelegramLink(url: string) {
+  const app = window.Telegram?.WebApp;
+  if (app?.platform === "unknown" || !app?.openTelegramLink) return false;
+  try {
+    app.openTelegramLink(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export type ReferralShareResult = "telegram" | "shared" | "copied" | "cancelled";
 
 export async function shareReferralLink(
