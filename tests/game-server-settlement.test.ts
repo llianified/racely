@@ -29,6 +29,7 @@ const player = (overrides: Partial<PlayerRow> = {}): PlayerRow => ({
   bodyParts: { owned: [], equipped: {} },
   setup: NEUTRAL_SETUP,
   carModel: "luna-gt",
+  starterCarModel: "luna-gt",
   color: "#b9a1ed",
   circuit: 0,
   lastSettledAt: start,

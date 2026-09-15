@@ -225,7 +225,7 @@ describe("Preview car selection", () => {
     const fresh = getPreviewGameState(request(), identity, E);
     vi.advanceTimersByTime(120000);
     const selected = action(fresh.cookieValue, selectLuna);
-    expect(selected.state).toEqual({ ...fresh.state, color: selectLuna.color, carSelection: { model: "luna-gt", returningPlayer: false } });
+    expect(selected.state).toEqual({ ...fresh.state, color: selectLuna.color, carSelection: { model: "luna-gt", returningPlayer: false, starterModel: "luna-gt" } });
     expect(getPreviewGameState(request(selected.cookieValue), identity, E).state).toEqual(selected.state);
     vi.advanceTimersByTime(8000);
     expect(action(selected.cookieValue, { type: "sync" }).state.laps).toBe(1);
@@ -250,6 +250,15 @@ describe("Preview car selection", () => {
     expect(() => action(selected.cookieValue, { type: "color", color: "#000000" })).toThrow("tidak tersedia");
   });
 
+  it("lets an exclusive car return only to the starter picked at onboarding", () => {
+    const fresh = getPreviewGameState(request(), identity, E);
+    const starter = action(fresh.cookieValue, selectLuna);
+    const phantom = action(starter.cookieValue, { type: "select-car", model: "phantom-x", color: CAR_CATALOG["phantom-x"].defaultColor });
+    expect(phantom.state.carSelection).toEqual({ model: "phantom-x", returningPlayer: false, starterModel: "luna-gt" });
+    expect(() => action(phantom.cookieValue, { type: "select-car", model: "neo-falcon", color: CAR_CATALOG["neo-falcon"].defaultColor })).toThrow("tidak dapat diganti");
+    expect(action(phantom.cookieValue, selectLuna).state.carSelection?.model).toBe("luna-gt");
+  });
+
   it("offers a legacy cookie one choice without discarding any progress", () => {
     const state: GameState = { ...INITIAL_GAME, balance: 250, pending: 3.25, earned: 29.25, laps: 80, progress: .4, levels: { engine: 3, tires: 2, battery: 4 }, rewardClaimed: true, missionsClaimed: ["laps"], color: "#f4b65b", withdrawals: [{ id: randomUUID(), coins: 100, method: "dana", account: "081234567890", accountName: "Preview Racer", status: "pending", createdAt: now.toISOString() }] };
     const cookie = Buffer.from(JSON.stringify({ version: 1, userId: identity.userId, updatedAt: now.getTime(), receipts: [], state })).toString("base64url");
@@ -270,7 +279,7 @@ describe("Preview car selection", () => {
       ...state,
       economy: previewEconomy,
       color: selectLuna.color,
-      carSelection: { model: "luna-gt", returningPlayer: true },
+      carSelection: { model: "luna-gt", returningPlayer: true, starterModel: "luna-gt" },
       referral: selected.state.referral,
       dailyMissions: offered.state.dailyMissions,
     });

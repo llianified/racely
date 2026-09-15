@@ -5,13 +5,11 @@
 -- Additive dan idempoten.
 ALTER TABLE racely_players ADD COLUMN IF NOT EXISTS starter_car_model text;
 --> statement-breakpoint
--- Backfill pemain lama: yang masih memakai mobil starter jelas starter-nya,
--- yang sudah di mobil hadiah ajakan tidak punya catatan lagi dan default ke
--- Neo Falcon. Sengaja tanpa CHECK daftar id supaya menambah mobil baru tidak
--- perlu menyentuh kolom ini; validasinya ada di knownCarModel().
+-- Backfill pemain lama yang masih memakai mobil starter: itulah starter-nya.
+-- Yang sudah pindah ke mobil hadiah ajakan tidak punya catatan lagi, jadi
+-- dibiarkan NULL -- select-car akan mencatat starter pertama yang mereka pakai
+-- setelah ini, satu kali. Sengaja tanpa CHECK daftar id supaya menambah mobil
+-- baru tidak perlu menyentuh kolom ini; validasinya ada di knownCarModel().
 UPDATE racely_players
-SET starter_car_model = CASE
-    WHEN car_model IN ('neo-falcon', 'luna-gt') THEN car_model
-    ELSE 'neo-falcon'
-  END
-WHERE car_model IS NOT NULL AND starter_car_model IS NULL;
+SET starter_car_model = car_model
+WHERE starter_car_model IS NULL AND car_model <> 'phantom-x' AND car_model IS NOT NULL;
