@@ -437,7 +437,10 @@
 .parts-shop-preview-state small { font-size: var(--fs-nano); font-weight: var(--fw-heavy); letter-spacing: var(--track-caps-lg); }
 .parts-shop-preview-state strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--foreground); }
 .parts-shop-content { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-md); }
-.parts-shop-catalog { display: flex; gap: var(--space-sm); overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--space-xs); padding: var(--space-xs); }
+  /* Kartu yang terpotong di tepi kanan sudah menandakan daftarnya bisa digeser,
+     jadi batang gulir horizontalnya hanya memakan tinggi kartu. */
+  .parts-shop-catalog { display: flex; gap: var(--space-sm); overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--space-xs); padding: var(--space-xs); scrollbar-width: none; }
+  .parts-shop-catalog::-webkit-scrollbar { display: none; }
 .parts-shop-choice { flex: 0 0 var(--parts-choice-w); min-height: var(--space-96); scroll-snap-align: start; display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-6); padding: var(--space-10); text-align: left; border: var(--stroke) solid var(--border); border-radius: var(--corner-box); background: var(--card); color: var(--card-foreground); }
 .parts-shop-choice-slot { color: var(--muted-foreground); }
 .parts-shop-choice > strong { line-height: var(--lh-tight); text-wrap: balance; }
