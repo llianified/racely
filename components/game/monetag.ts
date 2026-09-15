@@ -9,7 +9,7 @@
  * server lewat aksi `watch-ad`, termasuk plafon harian dan idempotensinya.
  */
 
-type MonetagRewardResult = {
+export type MonetagRewardResult = {
   reward_event_type?: "valued" | "non_valued";
   estimated_price?: number;
   zone_id?: number;
@@ -31,7 +31,14 @@ const SDK_URL = "https://libtl.com/sdk.js";
 const SDK_FUNCTION_NAME = "show_11811175";
 
 export const MONETAG_ZONE_ID = "11811175";
-export type RewardedAdResult = "rewarded" | "error" | "unavailable";
+export type RewardedAdResult = "rewarded" | "ineligible" | "error" | "unavailable";
+
+export function isMonetagRewardEligible(
+  result: MonetagRewardResult | undefined,
+  pageWasInterrupted: boolean,
+): boolean {
+  return !pageWasInterrupted && result?.reward_event_type === "valued";
+}
 
 let sdkLoading: Promise<MonetagShow | null> | null = null;
 
@@ -74,14 +81,28 @@ export async function showRewardedAd(): Promise<RewardedAdResult> {
   const show = await loadSdk();
   if (!show) return "unavailable";
 
+  let pageWasInterrupted = document.visibilityState !== "visible";
+  const trackVisibility = () => {
+    if (document.visibilityState !== "visible") pageWasInterrupted = true;
+  };
+  const trackPageHide = () => {
+    pageWasInterrupted = true;
+  };
+
+  document.addEventListener("visibilitychange", trackVisibility);
+  window.addEventListener("pagehide", trackPageHide);
+
   try {
-    await show({
+    const result = await show({
       type: "end",
       requestVar: "racely_reward",
       catchIfNoFeed: true,
     });
-    return "rewarded";
+    return isMonetagRewardEligible(result, pageWasInterrupted) ? "rewarded" : "ineligible";
   } catch {
     return "error";
+  } finally {
+    document.removeEventListener("visibilitychange", trackVisibility);
+    window.removeEventListener("pagehide", trackPageHide);
   }
 }
