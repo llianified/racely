@@ -846,6 +846,15 @@
 .garage-stats dt { color: var(--muted-foreground); font-size: var(--fs-small); }
 .garage-stats dd { margin-top: var(--space-xs); font-size: var(--fs-micro); color: var(--muted-foreground); }
 .garage-stats strong { color: var(--foreground); font-size: var(--fs-2xl); font-variant-numeric: tabular-nums; }
+/* Kaki "ganti mobil" di kartu Mobil kamu: strip inset yang sama dengan
+   .garage-parts-foot, ditumpuk vertikal karena pilihannya bisa tiga. Tombol
+   dibagi rata selebar kartu. */
+.garage-car-switch { display: flex; flex-direction: column; gap: var(--space-sm); padding: var(--space-sm) var(--space-md); border-top: var(--stroke) solid var(--border); background: var(--surface-inset); }
+.garage-car-switch > p.setup-metric { display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--space-xs); font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.garage-car-switch > p.setup-metric > svg { flex-shrink: 0; width: var(--icon-xs); height: var(--icon-xs); color: var(--muted-foreground); }
+.garage-car-options { display: flex; gap: var(--space-sm); margin: 0; padding: 0; list-style: none; }
+.garage-car-options > li { flex: 1; min-width: 0; }
+.garage-car-options [data-slot='button']:disabled[aria-pressed='true'] { opacity: 1; }
 
 .upgrade-list { padding-inline: 0; }
 /* Satu anatomi baris untuk semua box garasi (Bengkel, Setup, Koleksi cat, Aero
@@ -1148,8 +1157,6 @@
 .referral-milestone.is-active .upgrade-icon { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); }
 .referral-milestone.is-active .upgrade-buy:disabled { opacity: 1; }
 .referral-milestone-note { font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); text-wrap: pretty; }
-.referral-switch-back { flex-wrap: wrap; }
-.referral-switch-back > p { flex-basis: 100%; }
 .referral-steps { display: flex; flex-direction: column; gap: var(--space-md); }
 .referral-steps > li { display: grid; grid-template-columns: var(--space-28) minmax(0, 1fr); column-gap: var(--space-md); align-items: start; }
 .referral-steps > li > span { display: grid; place-items: center; width: var(--space-28); height: var(--space-28); border: var(--stroke) solid color-mix(in srgb, var(--accent) 60%, var(--border)); border-radius: var(--corner-round); color: var(--accent); font-size: var(--fs-small); font-weight: var(--fw-heavy); font-variant-numeric: tabular-nums; }
