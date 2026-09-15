@@ -58,6 +58,7 @@ export function ReferralPanel({
 }) {
   const { referral, economy } = game;
   const completed = referral.completed;
+  const pending = Math.max(0, referral.invited - completed);
   const next = nextReferralMilestone(completed);
   const steps = [
     { title: "Bagikan link", note: "Kirim ajakanmu langsung ke teman lewat Telegram." },
@@ -80,7 +81,7 @@ export function ReferralPanel({
         }
         stats={[
           { label: "Ajakan tuntas", value: `${completed} teman` },
-          { label: "Per teman", value: coins(economy.referralRewardInviter) },
+          { label: "Menunggu syarat", value: `${pending} teman` },
         ]}
       />
 
