@@ -134,6 +134,11 @@ export type AdReward = {
 export type ReferralSummary = {
   link: string;
   invited: number;
+  /**
+   * Ajakan yang tuntas (`referral_paid_at` terisi). Ini yang membuka hadiah
+   * milestone di `lib/referral-rewards.ts`; `invited` hanya untuk tampilan.
+   */
+  completed: number;
   /** Koin yang sudah benar-benar dibayarkan dari ajakan yang tuntas. */
   earned: number;
 };
@@ -211,7 +216,7 @@ export const INITIAL_GAME: GameState = {
     reward: DEFAULT_ECONOMY.adRewardCoins,
     available: DEFAULT_ECONOMY.adRewardDailyCap > 0,
   },
-  referral: { link: "", invited: 0, earned: 0 },
+  referral: { link: "", invited: 0, completed: 0, earned: 0 },
 };
 
 /** Coin amounts are kept to two decimals so partial laps still count. */
