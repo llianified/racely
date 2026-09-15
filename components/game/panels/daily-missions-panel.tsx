@@ -3,7 +3,6 @@
 import { CalendarCheck, Flag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DAILY_MISSION_COPY, type DailyMissionKind, type DailyMissions } from "@/lib/daily-missions";
-import { formatCoins } from "@/lib/game";
 import { SectionCardHeading } from "../shell/section-card-heading";
 import { RewardRow } from "./reward-row";
 
@@ -28,7 +27,6 @@ export function DailyMissionsPanel({ daily, disabled, onClaim }: {
           key={item.kind}
           icon={Flag}
           label={copy.title}
-          note={`Selesaikan ${formatCoins(item.target)} ${copy.unit} hari ini.`}
           amount={item.reward}
           state={item.claimed ? "claimed" : value >= item.target ? "ready" : "waiting"}
           progress={{ value, target: item.target }}
