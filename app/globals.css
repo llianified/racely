@@ -905,7 +905,7 @@
 .section-card-heading :is(h2, h3) svg { width: var(--icon-base); height: var(--icon-base); color: var(--accent); flex-shrink: 0; }
 .heading-aside { display: flex; align-items: center; gap: var(--space-xs); min-width: 0; }
 .heading-aside [data-slot='button'] { flex-shrink: 0; margin-right: calc(var(--space-6) * -1); }
-.heading-aside > span { font-size: var(--fs-read); font-weight: var(--fw-medium); letter-spacing: var(--track-flat); color: var(--muted-foreground); }
+.heading-aside > span:not([data-slot='badge']) { font-size: var(--fs-read); font-weight: var(--fw-medium); letter-spacing: var(--track-flat); color: var(--muted-foreground); }
 .mission-progress { display: flex; align-items: center; gap: var(--space-sm); }
 .circuit-progress { margin-top: var(--space-6); }
 .mission-progress > span { color: var(--muted-foreground); font-size: var(--fs-nano); font-weight: var(--fw-bold); white-space: nowrap; font-variant-numeric: tabular-nums; }
