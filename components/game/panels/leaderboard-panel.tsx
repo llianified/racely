@@ -1,13 +1,11 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-import dynamic from "next/dynamic";
+import { useRef, useState } from "react";
 import useSWR from "swr";
 import {
   ArrowRight,
   Crown,
   Flag,
-  Medal,
   RefreshCw,
   ShieldCheck,
   Trophy,
@@ -22,13 +20,11 @@ import {
   LEADERBOARD_LIMIT,
   LEADERBOARD_REFRESH_MS,
   scoreToOvertake,
-  leaderboardCar,
   type Leaderboard,
   type LeaderboardMetric,
 } from "@/lib/leaderboard";
 import { GameRequestError, isSessionExpired, requestHeaders, type GameKey } from "../game-client";
-
-const PodiumScene = dynamic(() => import("../scene/leaderboard-podium-scene"), { ssr: false });
+import { LeaderboardPodium } from "./leaderboard-podium";
 
 const number = (value: number) => value.toLocaleString("id-ID");
 
@@ -220,53 +216,6 @@ function RacerInitial({ name }: { name: string }) {
   return <span className="leaderboard-avatar" aria-hidden="true">{Array.from(name.trim())[0]?.toUpperCase() || "R"}</span>;
 }
 
-function Podium({ data }: { data: Leaderboard }) {
-  const first = useRef<HTMLDivElement>(null);
-  const second = useRef<HTMLDivElement>(null);
-  const third = useRef<HTMLDivElement>(null);
-  const tracks = [first, second, third];
-  const cars = data.entries.slice(0, 3).map(leaderboardCar);
-  const [ready, setReady] = useState(false);
-  const [unavailable, setUnavailable] = useState(false);
-  const onReady = useCallback(() => setReady(true), []);
-  const onUnavailable = useCallback(() => { setReady(false); setUnavailable(true); }, []);
-  const copy = metricCopy[data.metric];
-  return (
-    <section className="leaderboard-podium-section" aria-labelledby="podium-title">
-      <div className="leaderboard-podium-heading">
-        <div>
-          <p className="eyebrow">Barisan terdepan</p>
-          <h2 id="podium-title">Podium</h2>
-        </div>
-        <Badge variant="outline">Top 3</Badge>
-      </div>
-      <ol className="leaderboard-podium" aria-label="Tiga pemain teratas">
-        {data.entries.slice(0, 3).map((entry, index) => (
-          <li key={`${entry.rank}-${entry.name}-${index}`} data-place={entry.rank}>
-            <div className="leaderboard-podium-mark" aria-hidden="true">
-              <span>#{number(entry.rank)}</span>
-              {index === 0 ? <Crown /> : <Medal />}
-            </div>
-            <div
-              ref={tracks[index]}
-              className="leaderboard-podium-car"
-              role="img"
-              aria-label={cars[index] ? `${CAR_CATALOG[cars[index].model].name} milik ${entry.name}, warna ${cars[index].color}, sesuai setup terpasang${unavailable ? ". Preview 3D tidak tersedia" : ""}` : `Pembalap ${entry.name}`}
-            >
-              {(!ready || !cars[index] || unavailable) && <RacerInitial name={entry.name} />}
-            </div>
-            <strong className="leaderboard-podium-name" title={entry.name}><bdi>{entry.name}</bdi></strong>
-            {entry.isCurrentPlayer && <Badge variant="secondary">Kamu</Badge>}
-            <ExclusiveCarBadge entry={entry} />
-            <p><strong>{number(entry.score)}</strong><span>{copy.unit}</span></p>
-          </li>
-        ))}
-      </ol>
-      {!unavailable && cars.some(Boolean) && <PodiumScene cars={cars} tracks={tracks} onReady={onReady} onUnavailable={onUnavailable} />}
-    </section>
-  );
-}
-
 function PersonalRank({
   data,
   onAction,
@@ -455,7 +404,7 @@ export function LeaderboardPanel({
       {data && !expired && (
         <>
           <PersonalRank data={data} onAction={metric === "laps" ? onRace : onInvite} />
-          {data.entries.length >= 3 && <Podium data={data} />}
+          <LeaderboardPodium entries={data.entries} unit={copy.unit} />
           {data.entries.length > 0 ? <Rankings data={data} /> : (
             <section className="panel leaderboard-empty" aria-labelledby="leaderboard-empty-title">
               <Trophy aria-hidden="true" /><h2 id="leaderboard-empty-title">{copy.emptyTitle}</h2>

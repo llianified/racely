@@ -103,7 +103,6 @@
      Angka yang memang berdiri sendiri: tinggi panggung 3D, lebar logo, lebar
      kolom aksi. Bukan bagian tangga ukuran karena tidak berulang dan tidak
      ikut naik-turun bersama spacing -- tapi tetap satu tempat untuk disetel. */
-  --stage-podium-h: 96px;
   --stage-garage-h: 150px;
   --stage-parts-fluid-h: 24svh;
   --parts-choice-w: 144px;
@@ -271,20 +270,27 @@
 .leaderboard-challenge > p strong { color: var(--foreground); }
 .leaderboard-podium-section { display: flex; flex-direction: column; gap: var(--space-sm); }
 .leaderboard-podium-heading { padding-inline: var(--space-xs); }
-.leaderboard-podium-car { display: flex; align-items: center; justify-content: center; width: 100%; height: var(--stage-podium-h); flex-shrink: 0; }
-.leaderboard-podium-canvas { position: fixed; inset: 0; pointer-events: none; z-index: var(--z-base); }
-.leaderboard-podium { display: flex; align-items: stretch; gap: var(--space-sm); margin: 0; padding: 0; list-style: none; }
-.leaderboard-podium > li { display: flex; flex: 1 1 0; flex-direction: column; align-items: center; gap: var(--space-6); min-width: 0; padding: var(--space-sm); border: var(--stroke) solid var(--border); border-radius: var(--corner-box); background: var(--card); text-align: center; overflow: hidden; }
-.leaderboard-podium > li:first-child { order: 1; border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); background: color-mix(in srgb, var(--accent) 8%, var(--card)); box-shadow: inset 0 var(--space-3) 0 var(--accent); }
-.leaderboard-podium > li:nth-child(2) { order: 0; margin-top: var(--space-lg); }
-.leaderboard-podium > li:nth-child(3) { order: 2; margin-top: var(--space-lg); }
-.leaderboard-podium-mark { display: flex; align-items: center; justify-content: space-between; width: 100%; color: var(--muted-foreground); }
-.leaderboard-podium-mark > span { font-size: var(--fs-micro); font-weight: var(--fw-heavy); font-variant-numeric: tabular-nums; }
-.leaderboard-podium-mark svg { width: var(--icon-sm); height: var(--icon-sm); }
-.leaderboard-podium > li:first-child .leaderboard-podium-mark { color: var(--accent); }
+.leaderboard-podium-showcase { overflow: hidden; border: var(--stroke) solid var(--border); border-radius: var(--corner-box); background: radial-gradient(ellipse at top, color-mix(in srgb, var(--primary) 18%, var(--card)), var(--surface-inset) 75%); }
+.leaderboard-podium-stage { width: 100%; aspect-ratio: 2.2; }
+.leaderboard-podium-loading { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--muted-foreground); font-size: var(--fs-small); }
+.leaderboard-podium-fallback { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-content: center; height: 100%; gap: var(--space-md); color: var(--muted-foreground); text-align: center; }
+.leaderboard-podium-fallback > span { grid-row: 1; display: flex; justify-content: center; }
+.leaderboard-podium-fallback svg { width: var(--space-40); height: var(--space-40); }
+.leaderboard-podium-fallback p { grid-column: 1 / -1; font-size: var(--fs-small); }
+.leaderboard-podium { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; margin: 0; padding: 0; list-style: none; }
+.leaderboard-podium > li { grid-row: 1; display: flex; flex-direction: column; align-items: center; gap: var(--space-6); min-width: 0; padding: var(--space-sm) var(--space-xs); text-align: center; }
+.leaderboard-podium [data-slot='0'], .leaderboard-podium-fallback [data-slot='0'] { grid-column: 2; }
+.leaderboard-podium [data-slot='1'], .leaderboard-podium-fallback [data-slot='1'] { grid-column: 1; }
+.leaderboard-podium [data-slot='2'], .leaderboard-podium-fallback [data-slot='2'] { grid-column: 3; }
+.leaderboard-podium > li[data-slot='0'] { border-inline: var(--stroke) solid var(--border); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.leaderboard-podium-mark { display: flex; align-items: center; justify-content: center; gap: var(--space-xs); color: var(--muted-foreground); }
+.leaderboard-podium-mark > span { font-size: var(--fs-lead); font-weight: var(--fw-black); font-variant-numeric: tabular-nums; }
+.leaderboard-podium-mark svg { width: var(--icon-base); height: var(--icon-base); }
+.leaderboard-podium > li[data-place='1'] .leaderboard-podium-mark { color: var(--accent); }
+.leaderboard-podium-car { color: var(--muted-foreground); font-size: var(--fs-micro); overflow-wrap: anywhere; }
+.leaderboard-podium-car[data-exclusive='true'] { color: var(--accent); }
+.leaderboard-podium-caption { padding: var(--space-md) var(--space-sm); color: var(--muted-foreground); font-size: var(--fs-nano); text-align: center; }
 .leaderboard-avatar { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: var(--space-32); height: var(--space-32); border: var(--stroke) solid var(--border); border-radius: var(--corner-round); background: var(--secondary); color: var(--secondary-foreground); font-weight: var(--fw-bold); font-size: var(--fs-read); }
-.leaderboard-podium .leaderboard-avatar { width: var(--space-40); height: var(--space-40); font-size: var(--fs-display); }
-.leaderboard-podium > li:first-child .leaderboard-avatar { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); background: color-mix(in srgb, var(--accent) 12%, var(--secondary)); color: var(--accent); }
 .leaderboard-podium-name { display: block; width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--foreground); font-size: var(--fs-small); }
 .leaderboard-podium p { display: flex; flex-direction: column; margin-top: auto; color: var(--foreground); overflow-wrap: anywhere; }
 .leaderboard-podium p strong { font-size: var(--fs-title); font-weight: var(--fw-heavy); font-variant-numeric: tabular-nums; }
@@ -811,7 +817,7 @@
    tombol emas dan tombol biasa selalu persis sama tinggi dan sejajar. ── */
 .press-button { --press-depth: var(--space-3); --press-shadow-color: var(--press-shadow); border-radius: var(--press-radius); box-shadow: var(--press-inset-shadow, 0 0 transparent); }
 
-/* ── tombol outline: satu-satunya varian tanpa isian kontras, jadi tepinya
+/* ─��� tombol outline: satu-satunya varian tanpa isian kontras, jadi tepinya
    harus digambar sendiri. Hairline-nya inset seperti milik tombol emas —
    bukan border — supaya tinggi dan kotaknya tetap identik dengan varian lain.
    Tetap ada saat disabled: tombol ikon tanpa tepi hilang dari layar. ── */
@@ -1211,7 +1217,7 @@
 .nav-item svg { width: var(--icon-lg); height: var(--icon-lg); stroke-width: var(--icon-stroke); }
 .notification-dot { width: var(--space-5); height: var(--space-5); border-radius: var(--corner-round); background: var(--accent); position: absolute; right: calc(var(--space-4) * -1); top: calc(var(--space-2) * -1); }
 
-/* ── scene states ──────────────────────────────────── */
+/* ── scene states ───────────��──────────────────────── */
   .scene-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100%; gap: var(--space-sm); padding: var(--space-md); text-align: center; background: var(--card); color: var(--foreground); }
   .car-preview-root { position: relative; width: 100%; height: 100%; overflow: hidden; }
   .car-preview-loading { position: absolute; inset: 0; z-index: var(--z-overlay); }

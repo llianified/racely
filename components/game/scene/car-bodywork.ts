@@ -174,7 +174,7 @@ function lunaBody(add: AddCarPart) {
   }
 }
 
-// Aero emas menyatu dengan bodi agar identitas Fable tetap terbaca saat pemain
+// Aero emas menyatu dengan bodi agar identitas Phantom X tetap terbaca saat pemain
 // mengganti cat atau menukar sayap bawaan dengan part koleksinya.
 function phantomBody(add: AddCarPart) {
   add('body', facetedHull([

@@ -26,7 +26,7 @@ export function ExclusiveCarPreview({ model, locked, active = true, compact = fa
     <div className="exclusive-car-preview" data-compact={compact || undefined}>
       <div className="exclusive-car-topline">
         <Badge variant="exclusive"><Gem data-icon="inline-start" aria-hidden="true" />Eksklusif</Badge>
-        <span>Fable · X-Spec</span>
+        <span>X-Spec</span>
       </div>
       <div className="exclusive-car-stage" role="group" aria-label={`Preview eksklusif ${car.name}${locked ? ", terkunci" : ""}. Geser untuk memutar mobil 3D.`}>
         {active && <CarPreviewScene model={model} color={color ?? car.defaultColor} levels={levels} equipped={equipped} roller={roller} />}
