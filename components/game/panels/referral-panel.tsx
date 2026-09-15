@@ -1,7 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { ArrowRight, CarFront, Check, Gift, Link2, ListChecks, Lock, LockKeyhole, Send, UserPlus } from "lucide-react";
+import { ArrowRight, Check, Gift, Link2, ListChecks, Lock, LockKeyhole, Send, UserPlus } from "lucide-react";
+import { ExclusiveCarPreview } from "../car/exclusive-car-preview";
 import { CAR_CATALOG, CAR_MODEL_IDS } from "@/lib/car-catalog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,11 +13,6 @@ import { PART_CATALOG, type PartId } from "@/lib/car-parts";
 import { coins, type GameState } from "@/lib/game";
 import { REFERRAL_MAX_FRIENDS, REFERRAL_MILESTONES, nextReferralMilestone, type ReferralMilestone } from "@/lib/referral-rewards";
 import { cn } from "@/lib/utils";
-
-const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
-  ssr: false,
-  loading: () => <div className="scene-loading" role="status"><CarFront aria-hidden="true" /><strong>Menyiapkan mobil 3D…</strong></div>,
-});
 
 /**
  * Milestone dibaca dari `referral.completed` (ajakan tuntas), bukan `invited`:
@@ -115,6 +110,39 @@ export function ReferralPanel({
             const rewardModel = isCar ? CAR_MODEL_IDS.find(id => id === m.id) : undefined;
             const label = isCar ? (active ? "Dipakai" : "Pakai") : active ? "Terpasang" : "Pasang";
             const target = GARAGE_TARGET[m.kind];
+            if (rewardModel) return (
+              <li key={`${m.kind}-${m.id}`} className="referral-exclusive-reward">
+                <header className="referral-exclusive-heading">
+                  <div><p>Puncak koleksi</p><h3>{CAR_CATALOG[rewardModel].name}</h3></div>
+                  <Badge variant="exclusive">{m.friends} teman</Badge>
+                </header>
+                <ExclusiveCarPreview model={rewardModel} locked={!unlocked} color={active ? game.color : undefined} />
+                <div className="referral-exclusive-details">
+                  <div className="referral-exclusive-specs" aria-label="Detail desain Phantom X">
+                    <Badge variant="secondary">Kanopi ungu</Badge>
+                    <Badge variant="secondary">Aero bertingkat</Badge>
+                    <Badge variant="secondary">Aksen emas</Badge>
+                  </div>
+                  <p><strong>Bukan untuk dibeli. Untuk diraih.</strong> {m.note}</p>
+                  <div className="car-unlock-progress">
+                    <div><span>Ajakan tuntas</span><strong>{Math.min(completed, m.friends)}/{m.friends} teman</strong></div>
+                    <Progress value={Math.min(100, (completed / m.friends) * 100)} aria-label={`Progres membuka ${m.title}`} />
+                    <p className="text-muted-foreground">{unlocked ? "Hasil ajakanmu. Phantom X sudah terbuka." : `${m.friends - completed} teman lagi untuk membawa pulang Phantom X.`}</p>
+                  </div>
+                  {active ? (
+                    <Button variant="secondary" disabled><Check data-icon="inline-start" aria-hidden="true" />Sedang dipakai</Button>
+                  ) : unlocked ? (
+                    <Button variant="gold" disabled={disabled} onClick={() => onOpenGarage(target)}>
+                      Pilih Phantom X di garasi<ArrowRight data-icon="inline-end" aria-hidden="true" />
+                    </Button>
+                  ) : (
+                    <Button variant="gold" disabled={disabled || !referral.link} onClick={onInvite}>
+                      <UserPlus data-icon="inline-start" aria-hidden="true" />Ajak teman, buka Phantom X
+                    </Button>
+                  )}
+                </div>
+              </li>
+            );
             return (
               <li key={`${m.kind}-${m.id}`} className={cn("upgrade-row referral-milestone", !unlocked && "is-locked", active && "is-active", unlocked && !owned && "is-ready")}>
                 <div className="upgrade-head">
@@ -153,11 +181,6 @@ export function ReferralPanel({
                     </Button>
                   )}
                 </div>
-                {rewardModel && (
-                  <div className="h-(--stage-inspect-h) overflow-hidden rounded-(--corner-box) border border-border bg-background" role="img" aria-label={`Preview hadiah ${CAR_CATALOG[rewardModel].name}. Geser untuk memutar mobil 3D.`}>
-                    <CarPreviewScene model={rewardModel} color={active ? game.color : CAR_CATALOG[rewardModel].defaultColor} />
-                  </div>
-                )}
                 <p className="referral-milestone-note">{m.note}</p>
               </li>
             );

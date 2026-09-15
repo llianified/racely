@@ -4,7 +4,7 @@ import { memo } from 'react'
 import * as THREE from 'three'
 import type { CarModelId } from '@/lib/car-catalog'
 
-type Marking = 'brand' | '01' | '02' | '03'
+type Marking = 'brand' | 'fable' | '01' | '02' | '03'
 
 /**
  * Cache level-modul, DISENGAJA tidak pernah di-dispose.
@@ -25,7 +25,7 @@ function markingTexture(marking: Marking) {
   const cached = TEXTURES.get(marking)
   if (cached) return cached
   const canvas = document.createElement('canvas')
-  const number = marking !== 'brand'
+  const number = marking !== 'brand' && marking !== 'fable'
   canvas.width = number ? 128 : 512
   canvas.height = 128
   const ctx = canvas.getContext('2d')!
@@ -38,10 +38,10 @@ function markingTexture(marking: Marking) {
     ctx.fillText(marking, 58, 100)
     ctx.fillRect(12, 12, 104, 6)
   } else {
-    ctx.fillStyle = '#f5f4ef'
+    ctx.fillStyle = marking === 'fable' ? '#e6be67' : '#f5f4ef'
     ctx.font = '900 92px Arial'
     ctx.textAlign = 'center'
-    ctx.fillText('RACELY', 250, 96)
+    ctx.fillText(marking === 'fable' ? 'FABLE' : 'RACELY', 250, 96)
   }
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
@@ -67,9 +67,9 @@ export const CarMarkings = memo(function CarMarkings({ model, stockWing }: { mod
   const phantom = model === 'phantom-x'
   return <group name="race-markings">
     {[-1, 1].map(side => <Marking key={side} text={falcon ? '01' : phantom ? '03' : '02'}
-      position={[side * (falcon ? .209 : phantom ? .174 : .15), .162, falcon ? -.092 : -.076]}
+      position={[side * (falcon ? .209 : phantom ? .229 : .15), phantom ? .203 : .162, falcon ? -.092 : phantom ? -.23 : -.076]}
       rotation={[0, side * Math.PI / 2, 0]} size={[.042, .039]} />)}
-    {stockWing && <Marking text="brand" position={[0, falcon ? .318 : phantom ? .285 : .299, -.335]}
+    {stockWing && <Marking text={phantom ? "fable" : "brand"} position={[0, falcon ? .318 : phantom ? .384 : .299, -.335]}
       rotation={[-Math.PI / 2, 0, 0]} size={[.18, .042]} />}
   </group>
 })

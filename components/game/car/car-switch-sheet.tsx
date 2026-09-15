@@ -4,9 +4,11 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
-import { CarFront, Check, LoaderCircle, Lock, Repeat2 } from "lucide-react";
+import { ArrowRight, CarFront, Check, Gem, LoaderCircle, Lock, Repeat2, UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { ExclusiveCarPreview } from "./exclusive-car-preview";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { CAR_CATALOG, CAR_MODEL_IDS, carReferralRequirement, isCarColor, isReferralCar, switchableCars, type CarModelId } from "@/lib/car-catalog";
 import type { GameState } from "@/lib/game";
@@ -16,12 +18,13 @@ const CarPreviewScene = dynamic(() => import("../scene/car-preview-scene"), {
   loading: () => <div className="scene-loading" role="status"><CarFront aria-hidden="true" /><strong>Menyiapkan mobil 3D…</strong></div>,
 });
 
-export function CarSwitchSheet({ game, active, disabled, onSelectCar, onPreviewSheet }: {
+export function CarSwitchSheet({ game, active, disabled, onSelectCar, onPreviewSheet, onOpenReferral }: {
   game: GameState;
   active: boolean;
   disabled: boolean;
   onSelectCar: (model: CarModelId) => Promise<boolean>;
   onPreviewSheet: (open: boolean) => void;
+  onOpenReferral: () => void;
 }) {
   const currentModel = game.carSelection?.model ?? "neo-falcon";
   const [open, setOpen] = useState(false);
@@ -29,11 +32,13 @@ export function CarSwitchSheet({ game, active, disabled, onSelectCar, onPreviewS
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
   const saveLock = useRef(false);
+  const referralRequested = useRef(false);
   const available = switchableCars(game.carSelection?.starterModel ?? null, game.referral.completed);
   const choices = CAR_MODEL_IDS.filter(id => id === currentModel || available.includes(id) || isReferralCar(id));
   const car = CAR_CATALOG[model];
   const current = model === currentModel;
-  const locked = !available.includes(model);
+  const locked = !current && !available.includes(model);
+  const exclusive = isReferralCar(model);
   const requiredFriends = carReferralRequirement(model);
   const busy = disabled || saving;
   const color = current || isCarColor(model, game.color) ? game.color : car.defaultColor;
@@ -71,7 +76,12 @@ export function CarSwitchSheet({ game, active, disabled, onSelectCar, onPreviewS
   };
 
   return (
-    <Sheet open={open && active} onOpenChange={changeOpen}>
+    <Sheet open={open && active} onOpenChange={changeOpen} onOpenChangeComplete={(isOpen) => {
+      if (!isOpen && referralRequested.current) {
+        referralRequested.current = false;
+        onOpenReferral();
+      }
+    }}>
       <SheetTrigger render={<Button variant="secondary" size="sm" className="garage-car-trigger" disabled={disabled} />}>
         <Repeat2 data-icon="inline-start" aria-hidden="true" />Ganti mobil
       </SheetTrigger>
@@ -81,16 +91,26 @@ export function CarSwitchSheet({ game, active, disabled, onSelectCar, onPreviewS
           <SheetDescription>Lihat dulu mobil pilihanmu. Progres, koin, dan koleksi tetap aman.</SheetDescription>
         </SheetHeader>
         <div className="sheet-body" data-flush>
-          <div className="h-(--stage-inspect-h) bg-background" role="img" aria-label={`Preview ${car.name}. Geser untuk memutar mobil 3D.`}>
-            {open && active && <CarPreviewScene model={model} color={color} levels={game.levels} equipped={game.bodyParts?.equipped} roller={game.setup?.roller} />}
-          </div>
+          {exclusive ? (
+            <ExclusiveCarPreview model={model} color={color} locked={locked} compact active={open && active} levels={locked ? undefined : game.levels} equipped={locked ? undefined : game.bodyParts?.equipped} roller={locked ? undefined : game.setup?.roller} />
+          ) : (
+            <div className="h-(--stage-inspect-h) bg-background" role="img" aria-label={`Preview ${car.name}. Geser untuk memutar mobil 3D.`}>
+              {open && active && <CarPreviewScene model={model} color={color} levels={game.levels} equipped={game.bodyParts?.equipped} roller={game.setup?.roller} />}
+            </div>
+          )}
           <div className="flex flex-col gap-sm border-y border-border p-md" aria-live="polite" aria-atomic="true">
             <div className="flex flex-wrap items-center justify-between gap-sm">
               <h3 className="text-lead font-bold">{car.name}</h3>
               <Badge variant="secondary">{current ? "Sedang dipakai" : locked ? "Terkunci" : "Terbuka"}</Badge>
             </div>
             <p className="text-small text-muted-foreground">{car.chassis} · {car.description}</p>
-            {locked && requiredFriends !== null && <p className="flex items-center gap-sm text-small text-muted-foreground"><Lock className="size-(--icon-sm) shrink-0" aria-hidden="true" />Ajak {Math.max(0, requiredFriends - game.referral.completed)} teman lagi untuk membuka mobil ini.</p>}
+            {locked && requiredFriends !== null && (
+              <div className="car-unlock-progress">
+                <div><span>Ajakan tuntas</span><strong>{Math.min(game.referral.completed, requiredFriends)}/{requiredFriends} teman</strong></div>
+                <Progress value={Math.min(100, (game.referral.completed / requiredFriends) * 100)} aria-label={`Progres membuka ${car.name}`} />
+                <p className="text-muted-foreground">{Math.max(0, requiredFriends - game.referral.completed)} teman lagi. Buka lewat Ajak teman, bukan dengan koin.</p>
+              </div>
+            )}
           </div>
           <ToggleGroup
             className="car-model-options flex-wrap p-md"
@@ -105,22 +125,36 @@ export function CarSwitchSheet({ game, active, disabled, onSelectCar, onPreviewS
             }}
           >
             {choices.map(id => (
-              <Toggle key={id} value={id} className="car-model-option basis-(--parts-choice-w)" aria-label={`Pratinjau ${CAR_CATALOG[id].name}`}>
+              <Toggle key={id} value={id} className="car-model-option basis-(--parts-choice-w)" data-exclusive={isReferralCar(id) || undefined} aria-label={`Pratinjau ${CAR_CATALOG[id].name}${isReferralCar(id) ? ", eksklusif" : ""}${!available.includes(id) && id !== currentModel ? ", terkunci" : ""}`}>
                 <span className="flex min-w-0 flex-col items-start gap-xs py-sm">
+                  {isReferralCar(id) && <Badge variant="exclusive"><Gem data-icon="inline-start" aria-hidden="true" />Eksklusif</Badge>}
                   <span>{CAR_CATALOG[id].name}</span>
-                  <span className="text-small font-normal text-muted-foreground">{id === currentModel ? "Sedang dipakai" : available.includes(id) ? "Siap dipakai" : `Terbuka setelah ${carReferralRequirement(id)} teman`}</span>
+                  <span className="text-small font-normal text-muted-foreground">{id === currentModel ? "Sedang dipakai" : available.includes(id) ? "Siap dipakai" : `${carReferralRequirement(id)} ajakan tuntas`}</span>
                 </span>
-                <Check className="selection-check size-(--icon-base)" aria-hidden="true" />
+                {!available.includes(id) && id !== currentModel
+                  ? <Lock className="car-option-status" aria-hidden="true" />
+                  : <Check className="selection-check size-(--icon-base)" aria-hidden="true" />}
               </Toggle>
             ))}
           </ToggleGroup>
         </div>
         <SheetFooter>
           {failed && <p role="alert">Belum tersimpan. Pilihanmu tetap di sini; coba lagi.</p>}
-          <Button variant="gold" className="w-full" disabled={busy || current || locked} onClick={() => void selectCar()}>
-            {saving ? <LoaderCircle data-icon="inline-start" className="animate-spin" aria-hidden="true" /> : locked ? <Lock data-icon="inline-start" aria-hidden="true" /> : <Check data-icon="inline-start" aria-hidden="true" />}
-            {saving ? "Menyimpan pilihan…" : current ? "Sedang dipakai" : locked ? "Mobil masih terkunci" : `Pakai ${car.name}`}
-          </Button>
+          {locked && exclusive ? (
+            <Button variant="gold" className="w-full" disabled={busy} onClick={() => {
+              referralRequested.current = true;
+              setOpen(false);
+            }}>
+              <UserPlus data-icon="inline-start" aria-hidden="true" />
+              Buka lewat Ajak teman
+              <ArrowRight data-icon="inline-end" aria-hidden="true" />
+            </Button>
+          ) : (
+            <Button variant="gold" className="w-full" disabled={busy || current || locked} onClick={() => void selectCar()} aria-busy={saving}>
+              {saving ? <LoaderCircle data-icon="inline-start" className="animate-spin" aria-hidden="true" /> : <Check data-icon="inline-start" aria-hidden="true" />}
+              {saving ? "Menyimpan pilihan…" : current ? "Sedang dipakai" : locked ? "Mobil masih terkunci" : `Pakai ${car.name}`}
+            </Button>
+          )}
         </SheetFooter>
       </SheetContent>
     </Sheet>
