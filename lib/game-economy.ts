@@ -134,6 +134,17 @@ function previousDay(key: string) {
   return day.toISOString().slice(0, 10);
 }
 
+/** Check-in lintas hari dan upgrade terverifikasi; putaran idle tidak meluluskan ajakan. */
+export function referralActivityQualified(
+  claimedDays: readonly string[],
+  levels: GameState["levels"],
+  economy: EconomyConfig,
+) {
+  const upgrades = levels.engine + levels.tires + levels.battery - 3;
+  return new Set(claimedDays).size >= economy.referralActiveDays &&
+    upgrades >= economy.referralUpgradeTarget;
+}
+
 /** Hadiah untuk hari ke-`day` dalam sebuah streak (1-based), mentok di rung terakhir. */
 export function dailyRewardFor(day: number, e: EconomyConfig) {
   const rungs = e.dailyRewards;

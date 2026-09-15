@@ -86,7 +86,10 @@ export type EconomyConfig = {
   /** Berapa iklan berhadiah per hari balapan per pemain; 0 mematikan fiturnya. */
   adRewardDailyCap: number;
 
+  /** Pensiun; dipertahankan agar config jsonb lama tetap lolos skema strict. */
   referralMilestoneLaps: number;
+  referralActiveDays: number;
+  referralUpgradeTarget: number;
   referralRewardInviter: number;
   referralRewardInvitee: number;
 
@@ -172,6 +175,8 @@ export const DEFAULT_ECONOMY: EconomyConfig = {
   adRewardDailyCap: 5,
 
   referralMilestoneLaps: 100,
+  referralActiveDays: 3,
+  referralUpgradeTarget: 3,
   referralRewardInviter: 10_000,
   referralRewardInvitee: 5_000,
 
@@ -277,6 +282,9 @@ export const economyConfigSchema = z
     adRewardDailyCap: z.number().int().min(0).max(100),
 
     referralMilestoneLaps: lapCount,
+    // Riwayat check-in dibaca hingga 30 klaim; tiga komponen mulai di level 1.
+    referralActiveDays: z.number().int().min(2).max(30),
+    referralUpgradeTarget: z.number().int().min(1).max(3 * (UPGRADE_LEVEL_CEILING - 1)),
     referralRewardInviter: rewardCoin,
     referralRewardInvitee: rewardCoin,
 

@@ -61,7 +61,7 @@ export function ReferralPanel({
   const next = nextReferralMilestone(completed);
   const steps = [
     { title: "Bagikan link", note: "Kirim ajakanmu langsung ke teman lewat Telegram." },
-    { title: "Teman mulai balapan", note: `Dia membuka Racely dari link itu dan menyelesaikan ${economy.referralMilestoneLaps} putaran.` },
+    { title: "Teman aktif bermain", note: `Dia membuka Racely dari link itu, check-in pada ${economy.referralActiveDays} hari berbeda (WIB), dan melakukan total ${economy.referralUpgradeTarget} kali upgrade mesin, ban, atau baterai. Hari tidak harus berurutan; putaran idle saja tidak cukup.` },
     { title: "Koin masuk", note: `Kamu ${coins(economy.referralRewardInviter)}, temanmu ${coins(economy.referralRewardInvitee)}. Langsung ke saldo, tanpa klaim.` },
     { title: "Hadiah eksklusif terbuka", note: "Cat, part, dan mobil yang tidak dijual di toko mana pun -- hanya lewat ajakan tuntas." },
   ];

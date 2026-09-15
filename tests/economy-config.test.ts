@@ -22,6 +22,25 @@ describe("Config ekonomi", () => {
     expect(economyConfigSchema.safeParse(E).success).toBe(true);
   });
 
+  it("mengisi syarat aktivitas baru tanpa mengubah hadiah atau config lama", () => {
+    const { referralActiveDays: _days, referralUpgradeTarget: _upgrades, ...legacy } = E;
+    const resolved = resolveEconomyConfig({ ...legacy, referralMilestoneLaps: 120, referralRewardInviter: 1234 });
+    expect(resolved.referralActiveDays).toBe(3);
+    expect(resolved.referralUpgradeTarget).toBe(3);
+    expect(resolved.referralRewardInviter).toBe(1234);
+    expect(resolved.referralMilestoneLaps).toBe(120);
+  });
+
+  it("membatasi aktivitas referral pada riwayat dan level yang tersedia", () => {
+    for (const value of [0, 1, 2.5, 31]) {
+      expect(economyConfigSchema.safeParse({ ...E, referralActiveDays: value }).success).toBe(false);
+    }
+    for (const value of [0, 1.5, 28]) {
+      expect(economyConfigSchema.safeParse({ ...E, referralUpgradeTarget: value }).success).toBe(false);
+    }
+    expect(economyConfigSchema.safeParse({ ...E, referralActiveDays: 30, referralUpgradeTarget: 27 }).success).toBe(true);
+  });
+
   it("menolak field asing, supaya salah tulis tidak lolos diam-diam", () => {
     const parsed = economyConfigSchema.safeParse({ ...E, coinToIdrr: 100 });
     expect(parsed.success).toBe(false);
@@ -359,7 +378,7 @@ describe("Panel admin mencakup seluruh knob ekonomi", () => {
   /** Bukan angka tunggal, jadi ia punya field teksnya sendiri di luar GROUPS. */
   const OUTSIDE_GROUPS = new Set(["dailyRewards"]);
 
-  const retired = new Set(['dailyMissionBoostTarget', 'dailyMissionCleanTarget', 'racePositionRewardStep', 'boostDurationSeconds', 'batteryRechargeSeconds', 'boostMultiplier', 'boostCornerPenalty', 'boostLaunchGraceLap']);
+  const retired = new Set(['referralMilestoneLaps', 'dailyMissionBoostTarget', 'dailyMissionCleanTarget', 'racePositionRewardStep', 'boostDurationSeconds', 'batteryRechargeSeconds', 'boostMultiplier', 'boostCornerPenalty', 'boostLaunchGraceLap']);
 
   it("mendaftarkan hanya field aktif dan tetap menyerialisasikan legacy config", () => {
     expect(panelSource).toContain('Object.keys(DEFAULT_ECONOMY)');
