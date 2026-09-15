@@ -81,6 +81,11 @@ export type EconomyConfig = {
   /** Hadiah check-in per hari streak (1-based), mentok di rung terakhir. */
   dailyRewards: number[];
 
+  /** Koin per iklan rewarded (Adsgram) yang ditonton sampai habis. */
+  adRewardCoins: number;
+  /** Berapa iklan berhadiah per hari balapan per pemain; 0 mematikan fiturnya. */
+  adRewardDailyCap: number;
+
   referralMilestoneLaps: number;
   referralRewardInviter: number;
   referralRewardInvitee: number;
@@ -162,6 +167,9 @@ export const DEFAULT_ECONOMY: EconomyConfig = {
   offlineRate: 0.5,
 
   dailyRewards: [500, 750, 1_000, 1_500, 2_000, 3_000, 5_000],
+
+  adRewardCoins: 250,
+  adRewardDailyCap: 5,
 
   referralMilestoneLaps: 100,
   referralRewardInviter: 10_000,
@@ -264,6 +272,9 @@ export const economyConfigSchema = z
     offlineRate: rate,
 
     dailyRewards: z.array(rewardCoin).min(1).max(31),
+
+    adRewardCoins: rewardCoin,
+    adRewardDailyCap: z.number().int().min(0).max(100),
 
     referralMilestoneLaps: lapCount,
     referralRewardInviter: rewardCoin,
