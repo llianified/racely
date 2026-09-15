@@ -77,7 +77,7 @@ export function StarterBonusDialog({
           {failed && !claimed && <p className="starter-feedback" role="alert">Bonus belum terkonfirmasi. Coba klaim lagi.</p>}
         </div>
         <SheetFooter>
-          <Button variant="ghost" size="lg" disabled={busy} onClick={claimed ? onGarage : onClaim}>
+          <Button variant="goldSoft" size="lg" disabled={busy} onClick={claimed ? onGarage : onClaim}>
             {busy ? <LoaderCircle className="animate-spin" data-icon="inline-start" aria-hidden="true" /> : claimed ? <Wrench data-icon="inline-start" aria-hidden="true" /> : <Coins data-icon="inline-start" aria-hidden="true" />}
             {busy ? "Mengklaim bonus…" : claimed ? "Upgrade mobilku" : "Klaim bonus gratis"}
             {!busy && <ArrowRight data-icon="inline-end" aria-hidden="true" />}
