@@ -3,7 +3,7 @@
 **Scope:** read-only inspection of `racely-main` (Next.js 16 Telegram Mini App, Neon Postgres, EC2 + PM2).
 **Question answered:** which capabilities must exist before V1 launch, which should follow soon after real users arrive, and which are later/experimental.
 **Not in scope:** code quality, UI redesign, visual hierarchy. The current UX hierarchy and design tokens are treated as the source of truth.
-**Implementation update:** 16 September 2026 — visibilitas ajakan yang masih menunggu syarat, notifikasi payout ke inviter, salinan ajakan personal, dan event tracking pertumbuhan sudah dirilis.
+**Implementation update:** 16 September 2026 — visibilitas ajakan yang masih menunggu syarat, notifikasi payout ke inviter, salinan ajakan personal, event tracking pertumbuhan, dan notifikasi status penarikan sudah dirilis.
 
 Legend: `[DONE]` clearly exists and is usable · `[PARTIAL]` exists but incomplete · `[MISSING]` not meaningfully available · `[UNCERTAIN]` cannot verify from code alone.
 Blocker classes: **A** = true launch blocker · **B** = growth feature, post-launch · **C** = nice-to-have polish.
@@ -25,7 +25,7 @@ Blocker classes: **A** = true launch blocker · **B** = growth feature, post-lau
 | Critical bug / security | `[DONE]` | A — satisfied | Production requires Telegram `initData` HMAC + expiry; preview bypass only when `NODE_ENV !== production`. Per-player token-bucket rate limits on state + action routes, stricter per-IP bucket on admin login. Body size limits (`readJsonBody`). CSP, HSTS, nosniff, Referrer-Policy, Permissions-Policy in `next.config.mjs`; admin adds `frame-ancestors 'none'`. Admin password ≥16 chars, all admin routes `guardAdmin()`, every money decision audited. 41 Vitest suites, CI gates typecheck → lint → migrate → test → build. Withdrawal is a manual queue by design (cannot auto-pay). |
 | UI ambiguity that could confuse users | `[DONE]` | C — satisfied | A consolidated help/FAQ dialog explains how racing, rivals, offline, circuits and referrals work; server error messages are surfaced verbatim in toasts; the setup panel shows lap-time deltas; and the referral panel spells out the four steps plus the exact qualification rule. The panel now also shows both *completed* friends and friends who are still *menunggu syarat*, using the existing `referral.invited` payload. |
 | Wallet / withdrawal (implied by "reward flow" for a cash-out game) | `[DONE]` | A — satisfied | Wallet tab: balance, min/max, quick amounts derived from config, 8 payout methods with per-method account validation, history with status labels. Admin queue `pending → processing → paid | rejected` with copy-account button, liabilities view, audit trail. |
-| Return / re-engagement mechanic | `[PARTIAL]` | B | Exists: idle notifier sweep every 5 min sends **one** Telegram message 30 min before the 4h offline cap fills, only to players who opened the bot chat (`lib/idle-notifier.ts`); inviter payout also triggers one personal Telegram message with a re-share action. Missing: no notification for streak-at-risk, daily missions unclaimed, or withdrawal status change. |
+| Return / re-engagement mechanic | `[PARTIAL]` | B | Exists: idle notifier sweep every 5 min sends **one** Telegram message 30 min before the 4h offline cap fills; inviter payout triggers a personal message with a re-share action; and terminal withdrawal changes (`paid` / `rejected`) trigger an exact-amount status message. All only target players who opened the bot chat. Missing: no notification for streak-at-risk or daily missions unclaimed. |
 | Product analytics / growth measurement | `[DONE]` | B — satisfied | `racely_game_events` records idempotent growth events for app opens, onboarding, first claim, D1/D7 return, referral open/bind/qualify/share/payout, completed ads, and withdrawal requests. `racely_referral_funnel_daily` exposes daily WIB referral counts; an admin analytics UI remains optional. |
 
 ---
@@ -65,8 +65,8 @@ Blocker classes: **A** = true launch blocker · **B** = growth feature, post-lau
 - **Missing:** Any outward share beyond the invite link (rank, Phantom X unlock, big withdrawal paid). Post-launch.
 
 ### 2.7 Return / re-engagement — `[PARTIAL]`
-- **Exists:** One idle push 30 min before the offline cap, once per idle period, plus one personal message when an inviter receives a referral payout. Both only target users who started the bot chat.
-- **Missing:** Streak-at-risk, unclaimed daily mission, and withdrawal-status notifications. These are the cheapest retention levers available because the bot channel and the `racely_bot_chats` table already exist.
+- **Exists:** One idle push 30 min before the offline cap, once per idle period; one personal message when an inviter receives a referral payout; and an exact-amount message when a withdrawal is marked `paid` or `rejected`. All only target users who started the bot chat.
+- **Missing:** Streak-at-risk and unclaimed daily-mission notifications. These are the cheapest remaining retention levers because the bot channel and the `racely_bot_chats` table already exist.
 
 ### 2.8 Scarcity / exclusive content — `[DONE]`
 - Covered by 2.2. Additionally, the third circuit (Apex) gates at 150 laps and paints are tiered by price.
@@ -86,7 +86,7 @@ Everything else in the growth roadmap builds on a loop that is already whole.
 - [x] Basic event tracking — shipped 16 September 2026; one append-only Postgres table records app opens, onboarding complete, first claim, D1/D7 return, referral open/bind/qualify/share/payout, completed ads, and withdrawal requests.
 - [x] Referral panel shows `invited` (pending) alongside `completed` — shipped 16 September 2026; qualification details remain in “Cara kerja”.
 - [x] Bot notification to inviter when a friend qualifies — shipped 16 September 2026.
-- [ ] Bot notification to player when a withdrawal is marked `paid` or `rejected`.
+- [x] Bot notification to player when a withdrawal is marked `paid` or `rejected` — shipped 16 September 2026; exact coin and rupiah amount, with a Racely action, only after the manual operator transition commits and only for a registered bot chat.
 - [ ] Streak-at-risk reminder (evening WIB, only if not claimed today) reusing the idle-notifier sweep pattern.
 - [ ] Admin overview: new players/day, players with ≥1 claim, referral conversion %, D1 retention — the numbers needed to balance the economy from data.
 
@@ -136,7 +136,7 @@ Everything else in the growth roadmap builds on a loop that is already whole.
 
 ### NOT REQUIRED FOR LAUNCH
 - [x] Event tracking / analytics — shipped 16 September 2026
-- [ ] Withdrawal status notification
+- [x] Withdrawal status notification — shipped 16 September 2026
 - [ ] Streak-at-risk / mission reminders
 - [ ] Outward share cards (rank, unlock, payout)
 - [ ] Weekly / seasonal missions and leaderboards
@@ -158,8 +158,8 @@ Every item on the pre-launch "wajib" list — core loop, economy, onboarding, ga
 
 **Move to post-launch (in this order):**
 1. [x] Event tracking so the next decisions are data-driven — shipped 16 September 2026.
-2. Notify the player on withdrawal status changes.
+2. [x] Notify the player on terminal withdrawal status changes — shipped 16 September 2026.
 3. Streak / mission reminders over the existing bot channel.
 4. Everything in "Can wait" and "Experimental", gated on what the data shows.
 
-Do not let anything in section 3 delay the launch. Pending-invite visibility is complete; the remaining growth work is measurement and a few closing messages, both of which are more valuable *after* real users are generating the numbers.
+Do not let anything in section 3 delay the launch. Pending-invite visibility, growth measurement, and withdrawal-status messaging are complete; the next retention work is streak and mission reminders, gated on what real-user data shows.

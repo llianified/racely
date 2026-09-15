@@ -8,6 +8,7 @@ import {
 } from "@/lib/admin-ops";
 import { readJsonBody, RequestBodyTooLargeError } from "@/lib/http-body";
 import type { WithdrawStatus } from "@/lib/game";
+import { notifyWithdrawalStatus } from "@/lib/withdrawal-notifier";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -92,6 +93,16 @@ export async function POST(request: Request) {
       ...body.data,
       actor: ADMIN_ACTOR,
     });
+    if (result.to === "paid" || result.to === "rejected") {
+      // Produksi memakai satu proses PM2 persisten, jadi Bot API bisa berjalan
+      // setelah respons tanpa menahan operator hingga timeout Telegram.
+      void notifyWithdrawalStatus({
+        userId: result.userId,
+        status: result.to,
+        coins: result.coins,
+        amountIdr: result.amountIdr,
+      });
+    }
     return adminJson(result);
   } catch (error) {
     if (error instanceof AdminOpsError) {
