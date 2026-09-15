@@ -98,13 +98,15 @@ function OptionRow({
           {active ? "Terpasang" : "Pasang"}
         </Button>
       </div>
-      <p className="setup-desc">{description}</p>
-      {risky && (
-        <p className="setup-risk">
-          <TriangleAlert aria-hidden="true" />
-          <span>Keluar lintasan {times(courseOuts)} per putaran</span>
-        </p>
-      )}
+      <div className="setup-foot">
+        <p className="setup-desc">{description}</p>
+        {risky && (
+          <p className="setup-risk">
+            <TriangleAlert aria-hidden="true" />
+            <span>Keluar lintasan {times(courseOuts)} per putaran</span>
+          </p>
+        )}
+      </div>
     </li>
   );
 }
