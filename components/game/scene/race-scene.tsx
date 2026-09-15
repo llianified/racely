@@ -18,7 +18,7 @@ import { setupPerformance, type CarSetup } from '@/lib/car-setup'
 import { createSetupFeedback, stepSetupFeedback } from './setup-feedback'
 import { RacingEffects } from './racing-effects'
 import { TamiyaLanes } from './tamiya-lanes'
-import { ContextMonitor, SceneBoundary } from './scene-recovery'
+import { ContextMonitor, createSafePointerEvents, SceneBoundary } from './scene-recovery'
 
 export type SceneProps = { setup?: CarSetup; equipped?: NonNullable<GameState['bodyParts']>['equipped']; driving?: RefObject<DrivingState>; onTelemetry?: (state: DrivingState) => void; cinematic?: boolean; levels?: GameState['levels']; model?: CarModelId; progress: number; seconds: number; baseSeconds: number; opponents: readonly RaceOpponent[]; opponentProgress: readonly number[]; color: string; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean; onSceneStatus?: (live: boolean) => void }
 
@@ -501,7 +501,7 @@ export default function RaceScene(props: SceneProps) {
   const running = visible
   return <SceneBoundary key={attempt} fallback={<SceneError onRetry={retry} onShow={reportDown} />}>
     {!ready && <div className="scene-loading absolute inset-0" role="status"><Flag /><strong>Menyalakan lampu sirkuit.</strong><span>Menyiapkan lintasan 3D…</span></div>}
-    <Canvas orthographic dpr={[1, 1.25]} frameloop={running ? 'always' : 'never'} shadows="percentage" camera={{ position: [9, 12.5, 12], zoom: 30, near: .1, far: 100 }} gl={{ antialias: true, alpha: false, powerPreference: 'default' }} fallback={<SceneError onRetry={retry} onShow={reportDown} />} onCreated={() => setReady(true)} aria-label={props.inspect ? 'Inspeksi sasis dan dua sel baterai mobil. Geser untuk memutar, cubit untuk zoom. Balapan tetap berlangsung.' : follow ? 'Arena mini 4WD 3D. Kamera mengikuti mobilmu. Pilih Overview untuk melihat seluruh lintasan.' : 'Arena mini 4WD 3D. Kamera overview. Geser untuk memutar, cubit untuk zoom.'}>
+    <Canvas orthographic dpr={[1, 1.25]} events={createSafePointerEvents} frameloop={running ? 'always' : 'never'} shadows="percentage" camera={{ position: [9, 12.5, 12], zoom: 30, near: .1, far: 100 }} gl={{ antialias: true, alpha: false, powerPreference: 'default' }} fallback={<SceneError onRetry={retry} onShow={reportDown} />} onCreated={() => setReady(true)} aria-label={props.inspect ? 'Inspeksi sasis dan dua sel baterai mobil. Geser untuk memutar, cubit untuk zoom. Balapan tetap berlangsung.' : follow ? 'Arena mini 4WD 3D. Kamera mengikuti mobilmu. Pilih Overview untuk melihat seluruh lintasan.' : 'Arena mini 4WD 3D. Kamera overview. Geser untuk memutar, cubit untuk zoom.'}>
       <Arena opponents={props.opponents} setup={props.setup} equipped={props.equipped} driving={props.driving} onTelemetry={props.onTelemetry} cinematic={props.cinematic} levels={props.levels} model={props.model} color={props.color} cameraMode={props.cameraMode} resetKey={props.resetKey} circuit={props.circuit} reducedMotion={props.reducedMotion} inspect={props.inspect} charge={props.inspect ? props.charge : undefined} bodyVisible={props.bodyVisible} timing={timing} playerRef={playerRef} follow={follow} running={running} onLost={onLost} />
     </Canvas>
   </SceneBoundary>

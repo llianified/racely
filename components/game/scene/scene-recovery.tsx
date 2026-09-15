@@ -1,7 +1,7 @@
 'use client'
 
 import { Component, useEffect, type ReactNode } from 'react'
-import { useThree } from '@react-three/fiber'
+import { events, useThree, type EventManager, type RootStore } from '@react-three/fiber'
 
 /**
  * Dua penjaga yang dipakai BERSAMA oleh `race-scene.tsx` dan
@@ -10,6 +10,21 @@ import { useThree } from '@react-three/fiber'
  * halaman putih tanpa jalan kembali. Menyalinnya berarti dua versi yang bisa
  * berbeda diam-diam, jadi satu-satunya salinan tinggal di sini.
  */
+
+export function guardPointerEventManager(manager: EventManager<HTMLElement>): EventManager<HTMLElement> {
+  const connect = manager.connect
+  if (!connect) return manager
+  manager.connect = target => {
+    // R3F configures Canvas asynchronously; teardown can clear its wrapper ref first.
+    if (!target) return
+    connect(target)
+  }
+  return manager
+}
+
+export function createSafePointerEvents(store: RootStore): EventManager<HTMLElement> {
+  return guardPointerEventManager(events(store))
+}
 
 /**
  * Membangun Canvas bisa MELEMPAR saat render -- driver menolak memberi context

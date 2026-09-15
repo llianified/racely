@@ -7,7 +7,7 @@ import { Box3, Sphere, type Group } from 'three'
 import { CarFront, RotateCcw } from 'lucide-react'
 import { COLORS, MiniCar } from './mini-car'
 import { CarLighting } from './car-lighting'
-import { ContextMonitor, SceneBoundary } from './scene-recovery'
+import { ContextMonitor, createSafePointerEvents, SceneBoundary } from './scene-recovery'
 import type { CarModelId } from '@/lib/car-catalog'
 import type { GameState } from '@/lib/game'
 
@@ -159,6 +159,7 @@ export default function CarPreviewScene({ color, model, levels, inspect, equippe
         <Canvas
           orthographic
           dpr={[1, 1.25]}
+          events={createSafePointerEvents}
           camera={{ position: [1.6, 1.1, 1.9], zoom: 112, near: .1, far: 40 }}
           gl={{ antialias: true, alpha: true, powerPreference: 'default' }}
           frameloop="demand"
