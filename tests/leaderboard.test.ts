@@ -31,7 +31,7 @@ describe("Leaderboard", () => {
       "laps",
       new Date("2026-09-13T00:00:00Z"),
     );
-    expect(result.entries).toEqual([{ rank: 1, name: INITIAL_GAME.player.name, score: 42, laps: 42, isCurrentPlayer: true }]);
+    expect(result.entries).toEqual([{ rank: 1, name: INITIAL_GAME.player.name, score: 42, laps: 42, carModel: null, isCurrentPlayer: true }]);
     expect(result.currentPlayer).toEqual(result.entries[0]);
     expect(result.totalPlayers).toBe(1);
     expect(result.updatedAt).toBe("2026-09-13T00:00:00.000Z");
