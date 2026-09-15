@@ -55,7 +55,7 @@ export function LeaderboardPodium({ entries, unit }: { entries: LeaderboardEntry
             </li>
           ))}
         </ol>
-        <p className="leaderboard-podium-caption">Model mobil pemain ditampilkan dalam warna standar.</p>
+        <p className="leaderboard-podium-caption">Mobil podium tampil sesuai warna dan modifikasi terpasang pemain.</p>
       </div>
     </section>
   );

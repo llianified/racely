@@ -4,10 +4,19 @@ import { useCallback, useState, type ReactNode } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { OrthographicCamera } from "@react-three/drei";
 import { CAR_CATALOG } from "@/lib/car-catalog";
-import type { LeaderboardEntry } from "@/lib/leaderboard";
+import { leaderboardCar, type LeaderboardEntry } from "@/lib/leaderboard";
 import { COLORS, MiniCar } from "./mini-car";
 import { CarLighting } from "./car-lighting";
 import { ContextMonitor, SceneBoundary } from "./scene-recovery";
+
+function PodiumCar({ entry }: { entry: LeaderboardEntry }) {
+  // Tampilan terpasang pemain kalau server mengirimnya; respons server lama
+  // hanya membawa model, jadi mobilnya jatuh ke warna standar katalog.
+  const car = leaderboardCar(entry);
+  if (car) return <MiniCar model={car.model} color={car.color} levels={car.levels} equipped={car.equipped} roller={car.roller} />;
+  if (entry.carModel) return <MiniCar model={entry.carModel} color={CAR_CATALOG[entry.carModel].defaultColor} />;
+  return null;
+}
 
 function PodiumCars({ entries }: { entries: LeaderboardEntry[] }) {
   const size = useThree((state) => state.size);
@@ -31,11 +40,9 @@ function PodiumCars({ entries }: { entries: LeaderboardEntry[] }) {
               <boxGeometry args={[1.17, .028, .87]} />
               <meshStandardMaterial color={color} metalness={.6} roughness={.3} />
             </mesh>
-            {entry.carModel && (
-              <group position={[0, height + .045, 0]} rotation={[0, -.25, 0]}>
-                <MiniCar model={entry.carModel} color={CAR_CATALOG[entry.carModel].defaultColor} />
-              </group>
-            )}
+            <group position={[0, height + .045, 0]} rotation={[0, -.25, 0]}>
+              <PodiumCar entry={entry} />
+            </group>
           </group>
         </group>
       );
