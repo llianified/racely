@@ -20,7 +20,7 @@ const buttonVariants = cva(
         goldSoft:
           'press-button bg-accent/12 text-accent hover:bg-accent/22 focus-visible:ring-accent/25',
         outline:
-          'press-button bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:bg-input/30 dark:hover:bg-input/50',
+          'press-button outline-button bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:bg-input/30 dark:hover:bg-input/50',
         secondary:
           'press-button bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground',
         ghost:
