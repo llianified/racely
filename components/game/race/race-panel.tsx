@@ -212,15 +212,11 @@ export function RaceReward({ pending, onClaim, disabled = false, claiming = fals
   return (
     <section className={cn("race-reward", readyToClaim && "reward-ready")} aria-label="Hasil balapan">
       <div className="reward-copy">
-        <header className="reward-heading">
-          <h2>Hasil balapan</h2>
-          {readyToClaim ? (
-            <span className="reward-status">{rewardStatus}</span>
-          ) : (
-            <Progress className="reward-progress" value={Math.min(pending * 100, 100)} aria-label={rewardStatus} />
-          )}
-        </header>
-        <strong>{coins(pending)}</strong>
+        <h2 className="reward-heading">Hasil balapan</h2>
+        <strong>{formatCoins(pending)} <span>koin</span></strong>
+        <span className="reward-status" title={rewardStatus}>
+          {readyToClaim ? "Siap diklaim" : "Mengumpulkan…"}
+        </span>
       </div>
       <Button size="sm" variant={readyToClaim ? "goldSoft" : "secondary"} disabled={disabled || !readyToClaim} onClick={onClaim} aria-busy={claiming} aria-label={readyToClaim ? "Klaim koin hasil balapan" : `Belum bisa diklaim. ${rewardStatus}`}>
         {claiming ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <Coins data-icon="inline-start" />}
@@ -242,11 +238,9 @@ export function AdRewardShortcut({ ad, onWatch, disabled = false, playing = fals
   return (
     <section className={cn("race-reward", ad.available && "reward-ready")} aria-label="Bonus iklan">
       <div className="reward-copy">
-        <header className="reward-heading">
-          <h2>Bonus iklan</h2>
-          <span className="reward-status">{status}</span>
-        </header>
-        <strong>{ad.available ? `+${coins(ad.reward)}` : "Besok lagi"}</strong>
+        <h2 className="reward-heading">Bonus iklan</h2>
+        <strong>+{formatCoins(ad.reward)} <span>koin</span></strong>
+        <span className="reward-status" title={status}>{ad.available ? quota : "Kuota habis"}</span>
       </div>
       <Button size="sm" variant={ad.available ? "goldSoft" : "secondary"} disabled={disabled || !ad.available} onClick={onWatch} aria-busy={playing} aria-label={ad.available ? `Tonton iklan untuk ${coins(ad.reward)}` : `Jatah iklan habis. ${quota}`}>
         {playing ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <Clapperboard data-icon="inline-start" />}

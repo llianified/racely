@@ -460,20 +460,22 @@ export function GameDashboard() {
                   active={tab === "race"}
                   onCircuits={() => setDialog("circuits")}
                 />
-                <RaceReward
-                  pending={game.pending}
-                  claiming={busyAction === "claim"}
-                  onClaim={claim}
-                  disabled={Boolean(busyAction)}
-                />
-                {ADSGRAM_BLOCK_ID && game.adReward.dailyCap > 0 && (
-                  <AdRewardShortcut
-                    ad={game.adReward}
-                    playing={adPlaying}
-                    onWatch={watchAd}
-                    disabled={Boolean(busyAction) || adPlaying}
+                <div className="race-earnings" role="group" aria-label="Pendapatan balapan dan bonus">
+                  <RaceReward
+                    pending={game.pending}
+                    claiming={busyAction === "claim"}
+                    onClaim={claim}
+                    disabled={Boolean(busyAction)}
                   />
-                )}
+                  {ADSGRAM_BLOCK_ID && game.adReward.dailyCap > 0 && (
+                    <AdRewardShortcut
+                      ad={game.adReward}
+                      playing={adPlaying}
+                      onWatch={watchAd}
+                      disabled={Boolean(busyAction) || adPlaying}
+                    />
+                  )}
+                </div>
                 <LeaderboardShortcut
                   initData={initData}
                   active={tab === "race"}
