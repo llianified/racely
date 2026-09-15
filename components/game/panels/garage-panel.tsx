@@ -58,8 +58,6 @@ export const PARTS = [
   },
 ];
 
-export const BODY_COLORS = CAR_CATALOG["neo-falcon"].colors;
-
 export const GaragePanel = memo(function GaragePanel({
   game,
   active = true,

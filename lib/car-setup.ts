@@ -196,10 +196,6 @@ export const COURSE_OUT_PER_OVERLOAD = 1.4;
  */
 export const CORNER_EXIT_SHARE = 0.3;
 
-/** Ketatan tikungan efektif satu sirkuit, dibobot panjang. Dipakai panel & test. */
-export const cornerSeverityAt = (circuit: number) =>
-  cornerWeights(circuit).reduce((sum, corner) => sum + corner.severity * corner.weight, 0);
-
 const gearOf = (setup: CarSetup) => GEAR_CATALOG[setup.gear] ?? GEAR_CATALOG["4:1"];
 const rollerOf = (setup: CarSetup) =>
   ROLLER_CATALOG[setup.roller] ?? ROLLER_CATALOG.standard;

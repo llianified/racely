@@ -17,7 +17,7 @@ export function LeaderboardPodium({ entries, unit }: { entries: LeaderboardEntry
 
   const fallback = (
     <div className="leaderboard-podium-fallback">
-      {leaders.map((entry, index) => (
+      {leaders.map((_, index) => (
         <span key={index} data-slot={index}>
           <CarFront aria-hidden="true" />
         </span>

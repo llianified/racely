@@ -64,8 +64,6 @@ export function scoreToOvertake(score: number, rivalScore: number) {
   return Math.max(1, rivalScore - score + 1);
 }
 
-export const lapsToOvertake = scoreToOvertake;
-
 export function previewLeaderboard(
   game: Pick<GameState, "laps" | "player" | "referral" | "economy" | "color" | "levels" | "carSelection" | "setup" | "bodyParts">,
   metric: LeaderboardMetric = "laps",
