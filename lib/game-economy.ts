@@ -3,6 +3,7 @@ import {
   lapReward,
   lapSeconds,
   roundCoins,
+  type AdReward,
   type DailyCheckIn,
   type GameState,
   type OfflineEarnings,
@@ -167,5 +168,33 @@ export function dailyCheckIn(
     claimedToday,
     reward: claimedToday ? 0 : dailyRewardFor(streak + 1, e),
     nextReward: dailyRewardFor(streak + (claimedToday ? 1 : 2), e),
+  };
+}
+
+/**
+ * Kunci klaim bonus iklan: `ad:<hari>:<urutan>`. Satu baris `reward_claims`
+ * per tontonan, dan indeks unik (user_id, reward_key) yang menahan permintaan
+ * ganda -- jadi tidak perlu kolom hitungan baru di baris pemain.
+ */
+export const AD_CLAIM_PREFIX = "ad:";
+
+export function adClaimKey(day: string, ordinal: number) {
+  return `${AD_CLAIM_PREFIX}${day}:${ordinal}`;
+}
+
+/** Rentang [start, end) untuk memindai semua klaim iklan pada satu hari balapan. */
+export function adClaimRange(day: string) {
+  return { start: `${AD_CLAIM_PREFIX}${day}:`, end: `${AD_CLAIM_PREFIX}${day};` };
+}
+
+export function adRewardStatus(watchedToday: number, e: EconomyConfig): AdReward {
+  const dailyCap = e.adRewardDailyCap;
+  const watched = Math.min(Math.max(0, Math.floor(watchedToday)), dailyCap);
+  const available = dailyCap > 0 && watched < dailyCap;
+  return {
+    watchedToday: watched,
+    dailyCap,
+    reward: available ? e.adRewardCoins : 0,
+    available,
   };
 }

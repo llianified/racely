@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarCheck, Coins, Flag, Gift, Trophy, Wrench } from "lucide-react";
+import { CalendarCheck, Clapperboard, Coins, Flag, Gift, Trophy, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DailyMissionsPanel } from "./daily-missions-panel";
@@ -67,6 +67,9 @@ export function RewardsPanel({
   onClaimMission,
   onClaimDailyMission,
   onClaimAll,
+  onWatchAd,
+  adAvailable = false,
+  adBusy = false,
   disabled = false,
 }: {
   game: GameState;
@@ -76,9 +79,18 @@ export function RewardsPanel({
   onClaimMission: (id: MissionId) => void;
   onClaimDailyMission: (day: string, kind: DailyMissionKind) => void;
   onClaimAll: () => void;
+  onWatchAd: () => void;
+  /** Block Adsgram terkonfigurasi di build ini; tanpa itu barisnya disembunyikan. */
+  adAvailable?: boolean;
+  /** Iklan sedang diputar; tombolnya menampilkan spinner. */
+  adBusy?: boolean;
   disabled?: boolean;
 }) {
   const total = claimableTotal(game);
+  // Bonus iklan tidak masuk `claimableTotal`: koinnya baru ada setelah iklan
+  // ditonton, jadi "Klaim semua" tidak boleh menjanjikannya.
+  const ad = game.adReward;
+  const showAdRow = adAvailable && ad.dailyCap > 0;
   const rewards: RewardItem[] = [
     {
       id: "race",
@@ -170,6 +182,21 @@ export function RewardsPanel({
               onClaim={row.onClaim}
             />
           ))}
+          {showAdRow && (
+            <RewardRow
+              id="reward-ad"
+              icon={Clapperboard}
+              label="Bonus iklan"
+              amount={ad.available ? ad.reward : game.economy.adRewardCoins}
+              state={ad.available ? "ready" : "claimed"}
+              progress={{ value: ad.watchedToday, target: ad.dailyCap }}
+              disabled={disabled || adBusy}
+              busy={adBusy}
+              actionLabel={adBusy ? "Memutar…" : "Tonton"}
+              doneLabel="Habis"
+              onClaim={onWatchAd}
+            />
+          )}
         </ul>
       </section>
 

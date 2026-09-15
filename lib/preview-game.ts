@@ -20,6 +20,7 @@ import {
 } from "./game";
 import { circuitUnlockLaps, upgradeCostAt, type EconomyConfig } from "./economy-config";
 import {
+  adRewardStatus,
   calculateRaceSettlement,
   DAILY_HISTORY_DAYS,
   dailyCheckIn,
@@ -55,6 +56,17 @@ const previewGameSchema = z.object({
     .array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
     .max(DAILY_HISTORY_DAYS)
     .default([]),
+  /**
+   * Tontonan iklan berhadiah hari ini; hari lain cukup di-reset ke nol.
+   * `day` kosong berarti belum pernah menonton dan harus lolos parse juga --
+   * kalau tidak seluruh cookie dianggap rusak dan progres pemain hilang.
+   */
+  adWatches: z
+    .object({
+      day: z.string().regex(/^(\d{4}-\d{2}-\d{2})?$/),
+      count: z.number().int().nonnegative(),
+    })
+    .default({ day: "", count: 0 }),
   state: z.object({
     developmentPreview: z.boolean().default(true),
     bodyParts: bodyPartsSchema.optional(),
@@ -134,6 +146,7 @@ function initialPreviewGame(identity: PlayerIdentity, now: number): PreviewGame 
     updatedAt: now,
     receipts: [],
     dailyClaims: [],
+    adWatches: { day: "", count: 0 },
     state: {
       ...INITIAL_PREVIEW_STATE,
       developmentPreview: true,
@@ -267,6 +280,7 @@ function previewResult(
     ...game.state,
     economy,
     daily: dailyCheckIn(game.dailyClaims, new Date(now), economy),
+    adReward: adRewardStatus(adWatchesToday(game, now), economy),
     // Mode preview hanya punya satu pemain di dalam cookie, jadi tidak ada yang
     // bisa diajak dan tidak ada yang bisa dibayar. Linknya tetap dibangun
     // supaya tata letak kartu ajakan bisa dicek saat `pnpm dev`.
@@ -280,6 +294,10 @@ function previewResult(
     },
     cookieValue: serializePreviewGame(game),
   };
+}
+
+function adWatchesToday(game: PreviewGame, now: number) {
+  return game.adWatches.day === racingDayKey(new Date(now)) ? game.adWatches.count : 0;
 }
 
 function serializePreviewGame(game: PreviewGame) {
@@ -372,6 +390,7 @@ export function performPreviewGameAction(
 
   let state = game.state;
   let dailyClaims = game.dailyClaims;
+  let adWatches = game.adWatches;
   if (action.type === "select-car") {
     state = {
       ...state,
@@ -462,6 +481,19 @@ export function performPreviewGameAction(
         DAILY_HISTORY_DAYS,
       );
     }
+  } else if (action.type === "watch-ad") {
+    // Pesan dan plafonnya sama dengan server; yang berbeda hanya tempat
+    // hitungannya disimpan (cookie, bukan reward_claims).
+    const watched = adWatchesToday(game, now);
+    const status = adRewardStatus(watched, economy);
+    if (economy.adRewardDailyCap <= 0) {
+      throw new PreviewGameRuleError("Bonus iklan sedang tidak aktif.");
+    }
+    if (!status.available) {
+      throw new PreviewGameRuleError("Jatah iklan berhadiah hari ini sudah habis.");
+    }
+    state = { ...state, balance: state.balance + status.reward };
+    adWatches = { day: racingDayKey(new Date(now)), count: watched + 1 };
   } else if (action.type === "mission") {
     // Misi yang sudah diklaim bukan kesalahan, hanya tidak ada yang berubah --
     // sama seperti server. Sebelumnya cabang ini melempar "Target misi belum
@@ -502,6 +534,7 @@ export function performPreviewGameAction(
     ...game,
     state,
     dailyClaims,
+    adWatches,
     updatedAt: now,
     receipts:
       action.type === "sync"

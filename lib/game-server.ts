@@ -15,6 +15,9 @@ import {
   type WithdrawalRow,
 } from "@/lib/db/schema";
 import {
+  adClaimKey,
+  adClaimRange,
+  adRewardStatus,
   calculateRaceSettlement,
   DAILY_CLAIM_END,
   DAILY_CLAIM_PREFIX,
@@ -40,6 +43,7 @@ import {
   REFERRAL_PARAM_PREFIX,
   roundCoins,
   WITHDRAW_METHODS,
+  type AdReward,
   type DailyCheckIn,
   type GameState,
   type ReferralSummary,
@@ -104,6 +108,7 @@ const commandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("boost") }).strict(),
   z.object({ type: z.literal("gift") }).strict(),
   z.object({ type: z.literal("daily") }).strict(),
+  z.object({ type: z.literal("watch-ad") }).strict(),
   z
     .object({
       type: z.literal("mission"),
@@ -247,11 +252,13 @@ function stateFromRow(
     invited: 0,
     earned: 0,
   },
+  adReward: AdReward = adRewardStatus(0, economy),
 ): GameState {
   const carModel = knownCarModel(row.carModel);
   return {
     developmentPreview: false,
     economy,
+    adReward,
     bodyParts: knownBodyParts(row.bodyParts),
     setup: knownCarSetup(row.setup),
     dailyMissions: dailyMissionsFor(row.dailyMissions, now, economy),
@@ -316,6 +323,22 @@ async function readDailyClaims(tx: Transaction, userId: string) {
     .orderBy(desc(rewardClaims.rewardKey))
     .limit(DAILY_HISTORY_DAYS);
   return rows.map((row) => row.rewardKey.slice(DAILY_CLAIM_PREFIX.length));
+}
+
+/** Berapa iklan berhadiah yang sudah dibayar hari balapan ini. */
+async function readAdWatchesToday(tx: Transaction, userId: string, now: Date) {
+  const range = adClaimRange(racingDayKey(now));
+  const [row] = await tx
+    .select({ count: sql<number>`count(*)::int` })
+    .from(rewardClaims)
+    .where(
+      and(
+        eq(rewardClaims.userId, userId),
+        gte(rewardClaims.rewardKey, range.start),
+        lt(rewardClaims.rewardKey, range.end),
+      ),
+    );
+  return row?.count ?? 0;
 }
 
 
@@ -671,6 +694,10 @@ export async function getGameState(
       economy,
     );
     const referral = await readReferralSummary(tx, identity.userId);
+    const adReward = adRewardStatus(
+      await readAdWatchesToday(tx, identity.userId, now),
+      economy,
+    );
 
     return {
       state: stateFromRow(
@@ -681,6 +708,7 @@ export async function getGameState(
         settled.offline,
         daily,
         referral,
+        adReward,
       ),
       saved,
     };
@@ -714,16 +742,18 @@ type ActionContext = {
   economy: EconomyConfig;
   now: Date;
   dailyClaims: string[];
+  adWatchesToday: number;
 };
 
 /**
  * Baris pemain sesudah aksi, plus daftar check-in kalau aksinya menambah satu.
- * Hanya `daily` yang pernah mengisi `dailyClaims`; sisanya membiarkan milik
- * pemanggil apa adanya.
+ * Hanya `daily` yang pernah mengisi `dailyClaims` dan hanya `watch-ad` yang
+ * mengisi `adWatchesToday`; sisanya membiarkan milik pemanggil apa adanya.
  */
 type ActionOutcome = {
   row: PlayerRow;
   dailyClaims?: string[];
+  adWatchesToday?: number;
 };
 
 type ActionHandler<T extends GameCommand["type"]> = (
@@ -915,6 +945,36 @@ const ACTION_HANDLERS: { [T in GameCommand["type"]]: ActionHandler<T> } = {
     };
   },
 
+  /**
+   * Klien memanggil ini setelah promise `show()` Adsgram resolve. Server tidak
+   * bisa membuktikan iklannya benar-benar diputar, jadi yang ditegakkan di sini
+   * adalah plafonnya: paling banyak `adRewardDailyCap` tontonan per hari
+   * balapan, tiap tontonan satu baris `reward_claims` yang unik.
+   */
+  "watch-ad": async (row, _action, { tx, identity, economy, now, adWatchesToday }) => {
+    const status = adRewardStatus(adWatchesToday, economy);
+    if (economy.adRewardDailyCap <= 0) {
+      throw new GameRuleError("Bonus iklan sedang tidak aktif.");
+    }
+    if (!status.available) {
+      throw new GameRuleError("Jatah iklan berhadiah hari ini sudah habis.");
+    }
+    const inserted = await tx
+      .insert(rewardClaims)
+      .values({
+        userId: identity.userId,
+        rewardKey: adClaimKey(racingDayKey(now), adWatchesToday + 1),
+        amount: status.reward,
+      })
+      .onConflictDoNothing()
+      .returning({ id: rewardClaims.id });
+    if (inserted.length === 0) return { row };
+    return {
+      row: { ...row, balance: row.balance + status.reward },
+      adWatchesToday: adWatchesToday + 1,
+    };
+  },
+
   mission: async (row, action, { tx, identity, economy, now }) => {
     if (row.missionsClaimed.includes(action.id)) return { row };
 
@@ -1023,6 +1083,7 @@ export async function performGameAction(
       now,
     );
     let dailyClaims = await readDailyClaims(tx, identity.userId);
+    let adWatchesToday = await readAdWatchesToday(tx, identity.userId, now);
 
     if (action.type !== "sync") {
       const [receipt] = await tx
@@ -1066,6 +1127,7 @@ export async function performGameAction(
             settled.offline,
             dailyCheckIn(dailyClaims, now, economy),
             await readReferralSummary(tx, identity.userId),
+            adRewardStatus(adWatchesToday, economy),
           ),
           saved,
         };
@@ -1093,9 +1155,11 @@ export async function performGameAction(
       economy,
       now,
       dailyClaims,
+      adWatchesToday,
     });
     next = outcome.row;
     dailyClaims = outcome.dailyClaims ?? dailyClaims;
+    adWatchesToday = outcome.adWatchesToday ?? adWatchesToday;
 
     const [saved] = await tx
       .update(players)
@@ -1140,6 +1204,7 @@ export async function performGameAction(
       settled.offline,
       dailyCheckIn(dailyClaims, now, economy),
       await readReferralSummary(tx, identity.userId),
+      adRewardStatus(adWatchesToday, economy),
     );
     if (action.type !== "sync") {
       // Deliberately no response snapshot: (userId, requestId) is the whole
