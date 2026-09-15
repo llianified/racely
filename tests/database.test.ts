@@ -150,21 +150,25 @@ describeDatabase("Neon Postgres persistence", () => {
       // leaderboard, even when this suite runs alongside a development server.
       await client.query(`CREATE TEMPORARY TABLE racely_players (
         user_id text PRIMARY KEY, display_name text NOT NULL,
-        laps integer NOT NULL, created_at timestamptz NOT NULL
+        laps integer NOT NULL, created_at timestamptz NOT NULL,
+        car_model text
       ) ON COMMIT DROP`);
       expect(await getLeaderboard("999", client)).toMatchObject({ entries: [], currentPlayer: null, totalPlayers: 0, nextRival: null });
-      await client.query(`INSERT INTO racely_players VALUES
-        ('10', 'First', 1000, '2026-01-01'),
-        ('20', 'Tied', 1000, '2026-01-02'),
-        ('30', 'Chaser', 900, '2026-01-03'),
-        ('40', 'No laps', 0, '2026-01-01'),
-        ('preview:fake', 'Preview', 9999, '2026-01-01'),
-        ('test:fake', 'Test', 9999, '2026-01-01')`);
+      await client.query(`INSERT INTO racely_players
+        (user_id, display_name, laps, created_at, car_model) VALUES
+        ('10', 'First', 1000, '2026-01-01', 'luna-gt'),
+        ('20', 'Tied', 1000, '2026-01-02', 'phantom-x'),
+        ('30', 'Chaser', 900, '2026-01-03', NULL),
+        ('40', 'No laps', 0, '2026-01-01', 'luna-gt'),
+        ('preview:fake', 'Preview', 9999, '2026-01-01', 'luna-gt'),
+        ('test:fake', 'Test', 9999, '2026-01-01', 'luna-gt')`);
       const tied = await getLeaderboard("20", client);
-      expect(tied.entries.map(({ rank, name, isCurrentPlayer }) => ({ rank, name, isCurrentPlayer }))).toEqual([
-        { rank: 1, name: "First", isCurrentPlayer: false },
-        { rank: 1, name: "Tied", isCurrentPlayer: true },
-        { rank: 3, name: "Chaser", isCurrentPlayer: false },
+      // `carModel` ikut dipetakan apa adanya -- klasemen memakainya untuk
+      // menandai mobil hadiah ajakan, dan pemain tanpa mobil tetap `null`.
+      expect(tied.entries.map(({ rank, name, carModel, isCurrentPlayer }) => ({ rank, name, carModel, isCurrentPlayer }))).toEqual([
+        { rank: 1, name: "First", carModel: "luna-gt", isCurrentPlayer: false },
+        { rank: 1, name: "Tied", carModel: "phantom-x", isCurrentPlayer: true },
+        { rank: 3, name: "Chaser", carModel: null, isCurrentPlayer: false },
       ]);
       expect(tied.currentPlayer?.rank).toBe(1);
       expect(tied.nextRival).toBeNull();
@@ -176,12 +180,13 @@ describeDatabase("Neon Postgres persistence", () => {
       expect((await getLeaderboard("30", client)).nextRival).toEqual({ name: "First", score: 1000, laps: 1000 });
 
       await client.query(`INSERT INTO racely_players
-        SELECT (100 + n)::text, 'Racer ' || n, 800 - n, '2026-02-01'::timestamptz
+        (user_id, display_name, laps, created_at, car_model)
+        SELECT (100 + n)::text, 'Racer ' || n, 800 - n, '2026-02-01'::timestamptz, 'luna-gt'
         FROM generate_series(1, 60) n`);
       const outside = await getLeaderboard("160", client);
       expect(outside.entries).toHaveLength(50);
       expect(outside.entries.some((entry) => entry.isCurrentPlayer)).toBe(false);
-      expect(outside.currentPlayer).toEqual({ rank: 63, name: "Racer 60", score: 740, laps: 740, isCurrentPlayer: true });
+      expect(outside.currentPlayer).toEqual({ rank: 63, name: "Racer 60", score: 740, laps: 740, carModel: "luna-gt", isCurrentPlayer: true });
       expect(outside.nextRival).toEqual({ name: "Racer 59", score: 741, laps: 741 });
       expect(outside.totalPlayers).toBe(63);
       expect(JSON.stringify(outside)).not.toMatch(/user_id|userId|created_at|balance|username|photo/);
@@ -922,6 +927,7 @@ describeDatabase("Neon Postgres persistence", () => {
       const before = await gameServer.getGameState(identityFor(fresh));
       expect(before.carSelection).toEqual({
         model: null,
+        starterModel: null,
         returningPlayer: false,
       });
 
@@ -933,6 +939,7 @@ describeDatabase("Neon Postgres persistence", () => {
       expect(after.balance).toBe(DEFAULT_ECONOMY.startingBalance);
       expect(after.carSelection).toEqual({
         model: null,
+        starterModel: null,
         returningPlayer: false,
       });
 
@@ -946,6 +953,7 @@ describeDatabase("Neon Postgres persistence", () => {
       const returning = await gameServer.getGameState(identityFor(legacy));
       expect(returning.carSelection).toEqual({
         model: null,
+        starterModel: null,
         returningPlayer: true,
       });
     } finally {
