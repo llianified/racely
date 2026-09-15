@@ -128,6 +128,10 @@
 
   /* Lebar popover info; di luar tangga ukuran karena tidak berulang. */
   --popover-w: 288px;
+  /* Lebar minimum kolom aksi baris hadiah: muat "Belum siap" + ikon gembok,
+     sehingga "Klaim" dan badge "Diklaim" ikut selebar itu dan tepi kanannya
+     sejajar antar-baris. */
+  --reward-action-w: 96px;
   /* Muat "24,95/25" (65,7px) tanpa memendekkan bar misi mana pun. */
   --mission-count-w: 68px;
   --edition-max-w: 100px;
@@ -887,9 +891,13 @@
    diklaim) dan bar progres misi di bawah kepala baris. Hitungan bar dikunci
    lebarnya supaya semua bar dalam satu daftar berhenti di garis yang sama. */
 .reward-row .upgrade-name p.setup-metric { font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
-/* Keterangan boleh melipat sampai dua baris, tidak dipotong satu baris seperti
-   metrik garasi. */
-.reward-row .upgrade-name p.reward-note { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; line-height: var(--lh-normal); }
+/* Keterangan ditumpuk di bawah kepala baris dan diindentasi selebar tile ikon
+   supaya rata dengan judul; kolom aksi kanan (tombol/badge) dikunci tinggi dan
+   lebar minimumnya supaya tepi kanan semua baris jatuh di garis yang sama. */
+.reward-row .reward-note { margin: 0; padding-left: calc(var(--space-32) + var(--space-sm)); font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); text-wrap: pretty; }
+.reward-row .mission-progress { padding-left: calc(var(--space-32) + var(--space-sm)); }
+.reward-row .upgrade-buy { min-width: var(--reward-action-w); justify-content: center; }
+.reward-row .reward-badge { height: var(--space-32); }
 .reward-row.is-ready .setup-metric b { color: var(--accent); }
 .reward-row.is-ready .upgrade-icon { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); }
 .reward-row.is-claimed .upgrade-icon { color: var(--muted-foreground); }

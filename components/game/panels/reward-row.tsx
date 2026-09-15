@@ -48,10 +48,9 @@ export function RewardRow({
           <p className="setup-metric">
             <b>{formatCoins(amount)} koin</b>
           </p>
-          <p className="reward-note">{note}</p>
         </div>
         {state === "claimed" ? (
-          <Badge variant="secondary" className="upgrade-buy"><Check data-icon="inline-start" aria-hidden="true" />Diklaim</Badge>
+          <Badge variant="secondary" className="upgrade-buy reward-badge"><Check data-icon="inline-start" aria-hidden="true" />Diklaim</Badge>
         ) : state === "ready" ? (
           <Button variant="goldSoft" size="sm" className="upgrade-buy" disabled={disabled} onClick={onClaim} aria-label={`Klaim ${label}`}>
             Klaim
@@ -62,6 +61,7 @@ export function RewardRow({
           </Button>
         )}
       </div>
+      <p className="reward-note">{note}</p>
       {progress && (
         <div className="mission-progress">
           <Progress
