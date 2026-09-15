@@ -48,7 +48,7 @@ import {
   type Upgrade,
 } from "@/lib/game";
 import { cn } from "@/lib/utils";
-import type { CarColor } from "@/lib/car-catalog";
+import { CAR_CATALOG, type CarColor } from "@/lib/car-catalog";
 import { GEAR_CATALOG, ROLLER_CATALOG, type GearId, type RollerId } from "@/lib/car-setup";
 import { PAINT_CATALOG, type PaintCommand } from "@/lib/car-paints";
 import type { DailyMissionKind } from "@/lib/daily-missions";
