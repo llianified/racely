@@ -941,7 +941,7 @@
    kanan semua baris jatuh di garis yang sama. */
 .reward-row .mission-progress { padding-left: calc(var(--space-32) + var(--space-sm)); }
 .reward-row .upgrade-buy { min-width: var(--reward-action-w); justify-content: center; }
-.reward-row .reward-badge { height: var(--space-32); }
+.reward-row .reward-badge { height: var(--space-32); border-radius: var(--corner-box); }
 .reward-row.is-ready .setup-metric b { color: var(--accent); }
 .reward-row.is-ready .upgrade-icon { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); }
 .reward-row.is-claimed .upgrade-icon { color: var(--muted-foreground); }
