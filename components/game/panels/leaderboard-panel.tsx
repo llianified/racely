@@ -397,7 +397,7 @@ export function LeaderboardPanel({
           </Button>
         </div>
       </header>
-      <div className="grid grid-cols-2 gap-xs" role="tablist" aria-label="Kategori leaderboard">
+      <div className="grid grid-cols-2 gap-sm" role="tablist" aria-label="Kategori leaderboard">
         <Button role="tab" aria-selected={metric === "laps"} variant={metric === "laps" ? "goldSoft" : "outline"} onClick={() => setMetric("laps")}>
           <Flag data-icon="inline-start" aria-hidden="true" />
           Putaran
