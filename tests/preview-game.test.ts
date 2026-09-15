@@ -271,7 +271,7 @@ describe("Preview car selection", () => {
       dailyMissions: offered.state.dailyMissions,
     });
     // Mode preview cuma punya satu pemain, jadi tidak ada ajakan yang terhitung.
-    expect(offered.state.referral).toMatchObject({ invited: 0, earned: 0 });
+    expect(offered.state.referral).toMatchObject({ invited: 0, completed: 0, earned: 0 });
     expect(offered.state.referral.link).toContain("start=ref_");
     vi.advanceTimersByTime(3600000);
     const selected = action(offered.cookieValue, selectLuna);

@@ -12,7 +12,7 @@ export function RacePositionHud({ position, total, lane, switching, followCamera
 }) {
   return (
     <div className="race-hud-top font-sans">
-      <div className="race-hud-position" aria-label={`Posisi ${position} dari ${total} berdasarkan progres lap`}>
+      <div className="race-hud-position" aria-label={`Posisi ${position} dari ${total} berdasarkan progres putaran`}>
         <span>Pos arena</span><strong>{position}</strong><span>/ {total}</span>
       </div>
       <div className="race-hud-mode">
@@ -54,16 +54,16 @@ export function RaceOverviewHud({ seconds, baseSeconds, reward, progress, teleme
           </dd>
         </div>
         <div className="race-hud-cell">
-          <dt>Total lap</dt>
+          <dt>Total putaran</dt>
           <dd>{laps.toLocaleString('id-ID')}</dd>
         </div>
         <div className="race-hud-cell race-hud-lap">
-          <dt>Lap</dt>
+          <dt>Putaran</dt>
           <dd>{lapPercent}<small>%</small></dd>
           <dd
             className="race-hud-ring"
             role="meter"
-            aria-label="Progres lap"
+            aria-label="Progres putaran"
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={lapPercent}
@@ -72,11 +72,11 @@ export function RaceOverviewHud({ seconds, baseSeconds, reward, progress, teleme
         </div>
         <div className="race-hud-cell">
           <dt>Waktu</dt>
-          <dd>{lapSeconds}<small>dtk/lap</small></dd>
+          <dd>{lapSeconds}<small>dtk/putaran</small></dd>
         </div>
         <div className="race-hud-cell race-hud-reward">
           <dt>Hadiah</dt>
-          <dd>+{formatCoins(reward)}<small>koin/lap</small></dd>
+          <dd>+{formatCoins(reward)}<small>koin/putaran</small></dd>
         </div>
       </dl>
     </section>
