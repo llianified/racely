@@ -59,7 +59,6 @@ type TelegramReplyButton =
 export type TelegramReply = {
   chat_id: number;
   text: string;
-  animation?: string;
   reply_markup: {
     inline_keyboard: TelegramReplyButton[][];
   };
@@ -196,9 +195,6 @@ export function buildTelegramReply(
 
   return {
     chat_id: message.chat.id,
-    ...(command === "/start" && !isReferralStart
-      ? { animation: new URL("/telegram/start.gif", publicAppUrl).toString() }
-      : {}),
     text: isReferralStart
       ? `${referral.inviterName} mengajakmu balapan di Racely. Selesaikan ${referral.milestoneLaps.toLocaleString("id-ID")} putaran untuk mendapat ${coins(referral.inviteeReward)}; pengajakmu mendapat ${coins(referral.inviterReward)}.`
       : isLaunchCommand
@@ -226,33 +222,15 @@ export async function sendTelegramReply(reply: TelegramReply) {
   const token = botTokenSchema.safeParse(process.env.TELEGRAM_BOT_TOKEN);
   if (!token.success) throw new Error("TELEGRAM_BOT_TOKEN is not configured.");
 
-  const { animation, ...message } = reply;
-  const post = (method: "sendMessage" | "sendAnimation", payload: object) =>
-    fetch(`https://api.telegram.org/bot${token.data}/${method}`, {
+  const response = await fetch(
+    `https://api.telegram.org/bot${token.data}/sendMessage`,
+    {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(reply),
       signal: AbortSignal.timeout(10_000),
-    });
+    },
+  );
 
-  let response = animation
-    ? await post("sendAnimation", {
-        chat_id: reply.chat_id,
-        animation,
-        caption: reply.text,
-        reply_markup: reply.reply_markup,
-      })
-    : await post("sendMessage", message);
-
-  // A rejected media URL must not block /start. Do not retry ambiguous network
-  // failures here: Telegram may already have delivered the animation.
-  if (animation && response.status === 400) {
-    await response.body?.cancel();
-    response = await post("sendMessage", message);
-  }
-
-  const result = await response.json().catch(() => null);
-  if (!response.ok || result?.ok !== true) {
-    throw new Error("Telegram rejected the bot response.");
-  }
+  if (!response.ok) throw new Error("Telegram rejected the bot response.");
 }
