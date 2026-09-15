@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BoxGeometry, Group, Mesh } from 'three'
+import { Box3, BoxGeometry, Group, Mesh, Sphere } from 'three'
 import { measurePreview, previewFitZoom } from '../components/game/scene/car-preview-framing'
 import { clampPreviewZoom, MIN_PREVIEW_ZOOM, MAX_PREVIEW_ZOOM } from '../components/game/car/preview-zoom-controls'
 
@@ -13,19 +13,23 @@ function car() {
 }
 
 describe('car preview framing and zoom', () => {
-  it('reserves enough room for the car footprint at every orbit angle', () => {
-    const bounds = measurePreview(car())
-    expect(bounds.safeWidth).toBeGreaterThanOrEqual(bounds.width)
-    expect(bounds.safeHeight).toBeGreaterThanOrEqual(bounds.height)
-    expect(bounds.safeHeight).toBeGreaterThan(bounds.height)
+  it('fills the default view more closely than the old spherical framing', () => {
+    const group = car()
+    const bounds = measurePreview(group)
+    const sphere = new Box3().setFromObject(group).getBoundingSphere(new Sphere())
+    const oldZoom = 140 / (sphere.radius * 2 * 1.08)
+    const newZoom = previewFitZoom(360, 140 - 44, bounds)
+    expect(newZoom).toBeGreaterThan(oldZoom * 1.2)
+    expect(bounds.width * newZoom).toBeLessThan(360)
+    expect(bounds.height * newZoom).toBeLessThan(96)
   })
 
-  it('fits orbit-safe bounds in narrow and wide viewports', () => {
+  it('fits both narrow and wide viewports without clipping the default view', () => {
     const bounds = measurePreview(car())
-    for (const [width, height] of [[280, 156], [360, 176], [480, 256], [196, 240]]) {
+    for (const [width, height] of [[280, 96], [360, 148], [480, 196], [96, 240]]) {
       const zoom = previewFitZoom(width, height, bounds)
-      expect(bounds.safeWidth * zoom).toBeLessThan(width)
-      expect(bounds.safeHeight * zoom).toBeLessThan(height)
+      expect(bounds.width * zoom).toBeLessThan(width)
+      expect(bounds.height * zoom).toBeLessThan(height)
     }
   })
 
