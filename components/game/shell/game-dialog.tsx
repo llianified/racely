@@ -104,7 +104,7 @@ function faqItems(game: GameState): { icon: typeof Flag; question: string; answe
     {
       icon: UserPlus,
       question: "Bagaimana bonus ajak teman dihitung?",
-      answer: `Koin dihitung saat temanmu benar-benar main sampai ${economy.referralMilestoneLaps} putaran, bukan saat daftar. Tidak ada batas jumlah teman.`,
+      answer: `Ajakan tuntas setelah temanmu check-in pada ${economy.referralActiveDays} hari berbeda (WIB), tidak harus berurutan, dan melakukan total ${economy.referralUpgradeTarget} kali upgrade mesin, ban, atau baterai. Kedua syarat wajib terpenuhi; daftar atau putaran idle saja tidak cukup. Bonus masuk sekali ke saldo masing-masing dan ajakan dihitung untuk hadiah eksklusif. Tidak ada batas jumlah teman.`,
     },
     {
       icon: Camera,

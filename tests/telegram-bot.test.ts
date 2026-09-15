@@ -104,7 +104,8 @@ describe("Bot command replies", () => {
       lookup,
       async () => ({
         ...DEFAULT_ECONOMY,
-        referralMilestoneLaps: 120,
+        referralActiveDays: 5,
+        referralUpgradeTarget: 4,
         referralRewardInviter: 30,
         referralRewardInvitee: 12,
       }),
@@ -114,7 +115,9 @@ describe("Bot command replies", () => {
     expect(context).toMatchObject({ inviterId: "777", inviterName: "Nadia" });
     const reply = buildTelegramReply(update, APP_URL, context);
     expect(reply?.text).toContain("Nadia mengajakmu");
-    expect(reply?.text).toContain("120 putaran");
+    expect(reply?.text).toContain("5 hari berbeda (WIB)");
+    expect(reply?.text).toContain("4 kali upgrade");
+    expect(reply?.text).toContain("Kedua syarat wajib terpenuhi");
     expect(reply?.text).toContain("12 koin");
     expect(reply?.text).toContain("30 koin");
     const button = reply!.reply_markup.inline_keyboard[0][0];
