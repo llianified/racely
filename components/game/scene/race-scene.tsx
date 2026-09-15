@@ -20,7 +20,7 @@ import { RacingEffects } from './racing-effects'
 import { TamiyaLanes } from './tamiya-lanes'
 import { ContextMonitor, SceneBoundary } from './scene-recovery'
 
-export type SceneProps = { setup?: CarSetup; equipped?: NonNullable<GameState['bodyParts']>['equipped']; driving?: RefObject<DrivingState>; onTelemetry?: (state: DrivingState) => void; cinematic?: boolean; levels?: GameState['levels']; model?: CarModelId; progress: number; seconds: number; baseSeconds: number; opponents: readonly RaceOpponent[]; opponentProgress: readonly number[]; color: string; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean }
+export type SceneProps = { setup?: CarSetup; equipped?: NonNullable<GameState['bodyParts']>['equipped']; driving?: RefObject<DrivingState>; onTelemetry?: (state: DrivingState) => void; cinematic?: boolean; levels?: GameState['levels']; model?: CarModelId; progress: number; seconds: number; baseSeconds: number; opponents: readonly RaceOpponent[]; opponentProgress: readonly number[]; color: string; cameraMode: number; followCamera?: boolean; resetKey: number; circuit: number; active?: boolean; reducedMotion?: boolean; inspect?: boolean; charge?: number; bodyVisible?: boolean; onSceneStatus?: (live: boolean) => void }
 
 // The 10Hz game tick changes these every 100ms. They are consumed inside useFrame,
 // so they travel through a ref instead of props: a tick must not reconcile the 3D tree.
@@ -409,7 +409,10 @@ function SceneStandby() {
   return <div className="scene-loading absolute inset-0" role="status"><Flag /><strong>Arena dijeda.</strong><span>Buka tab Balapan untuk menyalakannya lagi.</span></div>
 }
 
-function SceneError({ onRetry }: { onRetry: () => void }) {
+function SceneError({ onRetry, onShow }: { onRetry: () => void; onShow?: () => void }) {
+  // Boundary fallback ikut lewat sini, jadi laporannya dipasang di komponennya
+  // sendiri: RaceScene tidak tahu kapan anaknya jatuh ke fallback.
+  useEffect(() => { onShow?.() }, [onShow])
   return <div className="scene-loading absolute inset-0" role="alert"><Flag /><strong>Arena 3D perlu dinyalakan ulang.</strong><span>Progres sesi tetap aman. Coba lagi atau buka di browser yang mendukung WebGL.</span><button onClick={onRetry} className="flex items-center gap-sm"><RotateCcw className="size-(--icon-sm)" />Muat ulang arena</button></div>
 }
 
@@ -465,6 +468,8 @@ export default function RaceScene(props: SceneProps) {
   }, [])
   const onLost = useCallback(() => setLost(true), [])
   const retry = () => { setReady(false); setLost(false); setAttempt(v => v + 1) }
+  const status = props.onSceneStatus
+  const reportDown = useCallback(() => status?.(false), [status])
   /**
    * Arena DILEPAS saat tab lain yang aktif, bukan sekadar dijeda.
    * `frameloop: 'never'` menghentikan rendering tapi tidak melepaskan WebGL
@@ -485,12 +490,15 @@ export default function RaceScene(props: SceneProps) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setReady(false)
   }, [standby])
-  if (lost) return <SceneError onRetry={retry} />
+  // Overlay HUD di atas arena hanya masuk akal kalau lintasannya benar-benar
+  // tampil; saat placeholder (memuat, dijeda, gagal) chip-nya menutupi pesan.
+  useEffect(() => { status?.(!lost && !standby && ready) }, [status, lost, standby, ready])
+  if (lost) return <SceneError onRetry={retry} onShow={reportDown} />
   if (standby) return <SceneStandby />
   const running = visible
-  return <SceneBoundary key={attempt} fallback={<SceneError onRetry={retry} />}>
+  return <SceneBoundary key={attempt} fallback={<SceneError onRetry={retry} onShow={reportDown} />}>
     {!ready && <div className="scene-loading absolute inset-0" role="status"><Flag /><strong>Menyalakan lampu sirkuit.</strong><span>Menyiapkan lintasan 3D…</span></div>}
-    <Canvas orthographic dpr={[1, 1.25]} frameloop={running ? 'always' : 'never'} shadows="percentage" camera={{ position: [9, 12.5, 12], zoom: 30, near: .1, far: 100 }} gl={{ antialias: true, alpha: false, powerPreference: 'default' }} fallback={<SceneError onRetry={retry} />} onCreated={() => setReady(true)} aria-label={props.inspect ? 'Inspeksi sasis dan dua sel baterai mobil. Geser untuk memutar, cubit untuk zoom. Balapan tetap berlangsung.' : follow ? 'Arena mini 4WD 3D. Kamera mengikuti mobilmu. Pilih Overview untuk melihat seluruh lintasan.' : 'Arena mini 4WD 3D. Kamera overview. Geser untuk memutar, cubit untuk zoom.'}>
+    <Canvas orthographic dpr={[1, 1.25]} frameloop={running ? 'always' : 'never'} shadows="percentage" camera={{ position: [9, 12.5, 12], zoom: 30, near: .1, far: 100 }} gl={{ antialias: true, alpha: false, powerPreference: 'default' }} fallback={<SceneError onRetry={retry} onShow={reportDown} />} onCreated={() => setReady(true)} aria-label={props.inspect ? 'Inspeksi sasis dan dua sel baterai mobil. Geser untuk memutar, cubit untuk zoom. Balapan tetap berlangsung.' : follow ? 'Arena mini 4WD 3D. Kamera mengikuti mobilmu. Pilih Overview untuk melihat seluruh lintasan.' : 'Arena mini 4WD 3D. Kamera overview. Geser untuk memutar, cubit untuk zoom.'}>
       <Arena opponents={props.opponents} setup={props.setup} equipped={props.equipped} driving={props.driving} onTelemetry={props.onTelemetry} cinematic={props.cinematic} levels={props.levels} model={props.model} color={props.color} cameraMode={props.cameraMode} resetKey={props.resetKey} circuit={props.circuit} reducedMotion={props.reducedMotion} inspect={props.inspect} charge={props.inspect ? props.charge : undefined} bodyVisible={props.bodyVisible} timing={timing} playerRef={playerRef} follow={follow} running={running} onLost={onLost} />
     </Canvas>
   </SceneBoundary>
