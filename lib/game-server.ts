@@ -24,6 +24,7 @@ import {
   DAILY_HISTORY_DAYS,
   dailyCheckIn,
   racingDayKey,
+  referralActivityQualified,
 } from "@/lib/game-economy";
 import { CAR_MODEL_IDS, canSwitchCar, carReferralRequirement, isCarColor, isReferralCar, type CarModelId } from "@/lib/car-catalog";
 import { referralRewardUnlocked } from "@/lib/referral-rewards";
@@ -380,8 +381,14 @@ async function payInviteeMilestone(
   tx: Transaction,
   row: PlayerRow,
   economy: EconomyConfig,
+  dailyClaims: readonly string[],
 ): Promise<PlayerRow> {
-  if (!row.referredBy || row.laps < economy.referralMilestoneLaps) return row;
+  if (!row.referredBy || row.referralPaidAt) return row;
+  if (!referralActivityQualified(dailyClaims, {
+    engine: row.engineLevel,
+    tires: row.tiresLevel,
+    battery: row.batteryLevel,
+  }, economy)) return row;
   const inserted = await tx
     .insert(rewardClaims)
     .values({
@@ -417,17 +424,32 @@ async function payInviteeMilestone(
  */
 async function payInviter(row: PlayerRow, economy: EconomyConfig) {
   if (!row.referredBy) return;
-  if (row.laps < economy.referralMilestoneLaps || row.referralPaidAt) return;
+  if (row.referralPaidAt) return;
+
+  // Klaim penerima adalah bukti milestone yang sudah commit. Baca sebelum
+  // mengunci pengajak agar sync teman yang belum layak tidak berebut lock.
+  // Bukti lama tetap berlaku bila syarat berubah setelah penerima dibayar.
+  const [milestone] = await getDatabase()
+    .select({ id: rewardClaims.id })
+    .from(rewardClaims)
+    .where(and(
+      eq(rewardClaims.userId, row.userId),
+      eq(rewardClaims.rewardKey, `${INVITEE_CLAIM_PREFIX}${row.userId}`),
+    ))
+    .limit(1)
+    .catch(() => []);
+  if (!milestone) return;
 
   const inviterId = row.referredBy;
   await getDatabase()
     .transaction(async (tx) => {
       for (const userId of [inviterId, row.userId].sort()) {
-        await tx
-          .select({ userId: players.userId })
+        const [locked] = await tx
+          .select({ referralPaidAt: players.referralPaidAt })
           .from(players)
           .where(eq(players.userId, userId))
           .for("update");
+        if (userId === row.userId && (!locked || locked.referralPaidAt)) return;
       }
 
       const [inviter] = await tx
@@ -668,9 +690,10 @@ export async function getGameState(
     const now = new Date(Math.max(Date.now(), locked.lastSettledAt.getTime()));
     const bound = await bindReferrer(tx, locked, identity.startParam);
     const settled = settlePlayerRow(bound, now, economy);
+    const dailyClaims = await readDailyClaims(tx, identity.userId);
     const rewarded = await refundRejectedWithdrawals(
       tx,
-      await payInviteeMilestone(tx, settled.row, economy),
+      await payInviteeMilestone(tx, settled.row, economy, dailyClaims),
       now,
     );
     const [saved] = await tx
@@ -694,11 +717,7 @@ export async function getGameState(
       .where(eq(withdrawals.userId, identity.userId))
       .orderBy(desc(withdrawals.createdAt))
       .limit(HISTORY_LIMIT);
-    const daily = dailyCheckIn(
-      await readDailyClaims(tx, identity.userId),
-      now,
-      economy,
-    );
+    const daily = dailyCheckIn(dailyClaims, now, economy);
     const referral = await readReferralSummary(tx, identity.userId);
     const adReward = adRewardStatus(
       await readAdWatchesToday(tx, identity.userId, now),
@@ -1106,12 +1125,12 @@ export async function performGameAction(
     const now = new Date(Math.max(Date.now(), locked.lastSettledAt.getTime()));
     const bound = await bindReferrer(tx, locked, identity.startParam);
     const settled = settlePlayerRow(bound, now, economy);
+    let dailyClaims = await readDailyClaims(tx, identity.userId);
     let next = await refundRejectedWithdrawals(
       tx,
-      await payInviteeMilestone(tx, settled.row, economy),
+      await payInviteeMilestone(tx, settled.row, economy, dailyClaims),
       now,
     );
-    let dailyClaims = await readDailyClaims(tx, identity.userId);
     let adWatchesToday = await readAdWatchesToday(tx, identity.userId, now);
     // Dibaca sekali sebelum handler: tidak ada aksi pemain yang mengubah
     // hitungan ajakannya sendiri, jadi ringkasan yang sama dipakai untuk
@@ -1194,6 +1213,9 @@ export async function performGameAction(
     next = outcome.row;
     dailyClaims = outcome.dailyClaims ?? dailyClaims;
     adWatchesToday = outcome.adWatchesToday ?? adWatchesToday;
+    if (action.type === "daily" || action.type === "upgrade") {
+      next = await payInviteeMilestone(tx, next, economy, dailyClaims);
+    }
 
     const [saved] = await tx
       .update(players)

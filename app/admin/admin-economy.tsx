@@ -99,7 +99,8 @@ const GROUPS: Group[] = [
   {
     legend: "Referral",
     fields: [
-      { key: "referralMilestoneLaps", label: "Putaran capaian", step: "1" },
+      { key: "referralActiveDays", label: "Hari check-in", hint: "2–30 hari berbeda (WIB), tidak harus berurutan", step: "1" },
+      { key: "referralUpgradeTarget", label: "Total upgrade", hint: "akumulasi kenaikan level mesin, ban, dan baterai; wajib bersama check-in", step: "1" },
       { key: "referralRewardInviter", label: "Hadiah pengajak", hint: "koin", step: "1" },
       { key: "referralRewardInvitee", label: "Hadiah yang diajak", hint: "koin", step: "1" },
     ],
