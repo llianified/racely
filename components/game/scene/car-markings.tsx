@@ -4,7 +4,7 @@ import { memo } from 'react'
 import * as THREE from 'three'
 import type { CarModelId } from '@/lib/car-catalog'
 
-type Marking = 'brand' | '01' | '02'
+type Marking = 'brand' | '01' | '02' | '03'
 
 /**
  * Cache level-modul, DISENGAJA tidak pernah di-dispose.
@@ -64,11 +64,12 @@ function Marking({ text, position, rotation, size }: {
 
 export const CarMarkings = memo(function CarMarkings({ model, stockWing }: { model: CarModelId; stockWing: boolean }) {
   const falcon = model === 'neo-falcon'
+  const phantom = model === 'phantom-x'
   return <group name="race-markings">
-    {[-1, 1].map(side => <Marking key={side} text={falcon ? '01' : '02'}
-      position={[side * (falcon ? .209 : .15), .162, falcon ? -.092 : -.076]}
+    {[-1, 1].map(side => <Marking key={side} text={falcon ? '01' : phantom ? '03' : '02'}
+      position={[side * (falcon ? .209 : phantom ? .174 : .15), .162, falcon ? -.092 : -.076]}
       rotation={[0, side * Math.PI / 2, 0]} size={[.042, .039]} />)}
-    {stockWing && <Marking text="brand" position={[0, falcon ? .318 : .299, -.335]}
+    {stockWing && <Marking text="brand" position={[0, falcon ? .318 : phantom ? .285 : .299, -.335]}
       rotation={[-Math.PI / 2, 0, 0]} size={[.18, .042]} />}
   </group>
 })
