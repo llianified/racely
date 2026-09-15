@@ -457,8 +457,8 @@
 .parts-shop-note > svg { width: var(--icon-base); height: var(--icon-base); flex-shrink: 0; color: var(--accent); }
 .parts-shop-note p { text-wrap: pretty; }
 @theme inline {
-  --font-sans: 'Google Sans Flex Variable', sans-serif;
-  --font-mono: 'Google Sans Flex Variable', sans-serif;
+  --font-sans: var(--font-google-sans-flex), sans-serif;
+  --font-mono: var(--font-google-sans-flex), sans-serif;
   --text-xs: var(--fs-micro);
   --text-xs--line-height: var(--lh-compact);
   --text-sm: var(--fs-small);
