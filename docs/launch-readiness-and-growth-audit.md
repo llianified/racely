@@ -3,6 +3,7 @@
 **Scope:** read-only inspection of `racely-main` (Next.js 16 Telegram Mini App, Neon Postgres, EC2 + PM2).
 **Question answered:** which capabilities must exist before V1 launch, which should follow soon after real users arrive, and which are later/experimental.
 **Not in scope:** code quality, UI redesign, visual hierarchy. The current UX hierarchy and design tokens are treated as the source of truth.
+**Implementation update:** 16 September 2026 — visibilitas ajakan yang masih menunggu syarat sudah dirilis di panel referral.
 
 Legend: `[DONE]` clearly exists and is usable · `[PARTIAL]` exists but incomplete · `[MISSING]` not meaningfully available · `[UNCERTAIN]` cannot verify from code alone.
 Blocker classes: **A** = true launch blocker · **B** = growth feature, post-launch · **C** = nice-to-have polish.
@@ -22,7 +23,7 @@ Blocker classes: **A** = true launch blocker · **B** = growth feature, post-lau
 | Persistence | `[DONE]` | A — satisfied | Neon Postgres via Drizzle; 18 additive idempotent migrations; per-player row with `version` + `SELECT … FOR UPDATE`; action receipts give per-request idempotency; rejected withdrawals refunded exactly once. DB tests run against real Postgres in CI. |
 | Deployment | `[DONE]` | A — satisfied | README states live at `https://racely.fun`. `.github/workflows/deploy.yml` SSHes into EC2 and runs `scripts/deploy-racely.sh` (install → migrate → verify schema → build with env → PM2 restart). `/api/health` returns 503 when DB is unreachable. `vercel.json` disables Vercel auto-deploys on purpose. |
 | Critical bug / security | `[DONE]` | A — satisfied | Production requires Telegram `initData` HMAC + expiry; preview bypass only when `NODE_ENV !== production`. Per-player token-bucket rate limits on state + action routes, stricter per-IP bucket on admin login. Body size limits (`readJsonBody`). CSP, HSTS, nosniff, Referrer-Policy, Permissions-Policy in `next.config.mjs`; admin adds `frame-ancestors 'none'`. Admin password ≥16 chars, all admin routes `guardAdmin()`, every money decision audited. 41 Vitest suites, CI gates typecheck → lint → migrate → test → build. Withdrawal is a manual queue by design (cannot auto-pay). |
-| UI ambiguity that could confuse users | `[PARTIAL]` | **C — not a blocker** | Exists: a consolidated help/FAQ dialog explaining how racing, rivals, offline, circuits and referrals work; server error messages surfaced verbatim in toasts; setup panel shows lap-time deltas; referral panel spells out the four steps and exact qualification rule. Missing: the referral panel shows only *completed* friends — `referral.invited` exists in the payload but is never rendered, so an inviter whose friend joined-but-not-yet-qualified sees "0 teman" and may believe the link failed. This is a copy/data gap, not a redesign. |
+| UI ambiguity that could confuse users | `[DONE]` | C — satisfied | A consolidated help/FAQ dialog explains how racing, rivals, offline, circuits and referrals work; server error messages are surfaced verbatim in toasts; the setup panel shows lap-time deltas; and the referral panel spells out the four steps plus the exact qualification rule. The panel now also shows both *completed* friends and friends who are still *menunggu syarat*, using the existing `referral.invited` payload. |
 | Wallet / withdrawal (implied by "reward flow" for a cash-out game) | `[DONE]` | A — satisfied | Wallet tab: balance, min/max, quick amounts derived from config, 8 payout methods with per-method account validation, history with status labels. Admin queue `pending → processing → paid | rejected` with copy-account button, liabilities view, audit trail. |
 | Return / re-engagement mechanic | `[PARTIAL]` | B | Exists: idle notifier sweep every 5 min sends **one** Telegram message 30 min before the 4h offline cap fills, only to players who opened the bot chat (`lib/idle-notifier.ts`). Missing: no notification for streak-at-risk, daily missions unclaimed, referral payout received, or withdrawal status change. |
 | Product analytics / growth measurement | `[MISSING]` | B (but first post-launch item) | No event tracking anywhere in the codebase (no analytics SDK, no event table). Admin overview exposes only total players, players with a car, and withdrawal totals. There is no way today to measure onboarding completion, D1/D7 retention, referral funnel (link opened → bound → qualified), or ad-bonus uptake. |
@@ -37,12 +38,12 @@ Blocker classes: **A** = true launch blocker · **B** = growth feature, post-lau
 ### 2.1 Referral / invite — `[DONE]`
 - **What it does:** Player shares a bot deep link via Telegram's native share sheet (or copies it). Friend taps → bot replies with inviter's name, the exact reward terms, and a Mini App button carrying `startapp=ref_<id>`. On first sync the friend is bound to the inviter (only if they have zero laps and no existing referrer; self-referral rejected; inviter must exist). When the friend check-ins on 3 distinct WIB days and completes 3 upgrades, the friend gets 5,000 coins and the inviter 10,000 coins, both credited directly to balance with idempotent claim rows.
 - **Why it can drive growth:** Two-sided cash incentive in a game whose whole premise is cash-out; the share happens inside Telegram (zero-friction distribution); the qualification rule filters fake accounts so the rupiah liability stays tied to real engaged users.
-- **What is missing:** (1) Inviter has no visibility of *pending* invites (`invited` count not rendered) — the loop feels broken during the multi-day qualification window. (2) No Telegram message to the inviter when a friend qualifies ("+10.000 koin dari Budi") — the most natural moment to prompt another share is lost. (3) Share text is a single generic sentence; it doesn't mention the invitee's own reward.
+- **What is missing:** (1) No Telegram message to the inviter when a friend qualifies ("+10.000 koin dari Budi") — the most natural moment to prompt another share is lost. (2) Share text is a single generic sentence; it doesn't mention the invitee's own reward. Pending invites are now visible in the panel.
 
 ### 2.2 Exclusive referral cosmetics (scarcity) — `[DONE]`
 - **What it does:** Five milestone rewards that are **not sold anywhere**: Ember Rush paint (1 friend), Neon Fin Splitter (3), Aurora Prism paint (5), Crown Wing (10), Phantom X car (25). Server enforces the threshold on paint/part/car actions; UI shows a locked 3D preview of Phantom X and "N teman lagi" progress.
 - **Why it can drive growth:** Zero rupiah liability, visible on the podium and in race rivals' cars (leaderboard exposes `carAppearance`), so status is social. Ladder spacing (1→3→5→10→25) gives a next-step target at every stage.
-- **What is missing:** Nothing structural. Only the same visibility gap as 2.1.
+- **What is missing:** Nothing structural. Pending-invite visibility is now covered by the referral summary.
 
 ### 2.3 Rewards (daily check-in, missions, ads) — `[DONE]`
 - **What it does:** 7-rung escalating check-in streak; two daily missions reset at WIB midnight; three lifetime onboarding missions; up to 5 rewarded ads/day.
@@ -70,10 +71,10 @@ Blocker classes: **A** = true launch blocker · **B** = growth feature, post-lau
 ### 2.8 Scarcity / exclusive content — `[DONE]`
 - Covered by 2.2. Additionally, the third circuit (Apex) gates at 150 laps and paints are tiered by price.
 
-### 2.9 Minimum missing pieces to make the existing growth concept actually work
-1. **Show pending invites** in the referral panel (data already in `referral.invited`). Without it the inviter cannot tell the loop is progressing.
-2. **Notify inviter on payout** via the bot (one message, reuses `sendTelegramReply` + `racely_bot_chats`). This closes the loop emotionally and is the natural re-share prompt.
-3. **Measure the funnel** — at minimum count: link opened (`/start ref_` received), bound (`referred_by` set), qualified (`referral_paid_at` set). Two of the three are already columns; the first needs a counter. Without this you cannot tune `referralActiveDays` / `referralUpgradeTarget` from data.
+### 2.9 Minimum pieces to make the existing growth concept actually work
+1. [x] **Show pending invites** in the referral panel using `referral.invited` — shipped 16 September 2026.
+2. [ ] **Notify inviter on payout** via the bot (one message, reuses `sendTelegramReply` + `racely_bot_chats`). This closes the loop emotionally and is the natural re-share prompt.
+3. [ ] **Measure the funnel** — at minimum count: link opened (`/start ref_` received), bound (`referred_by` set), qualified (`referral_paid_at` set). Two of the three are already columns; the first needs a counter. Without this you cannot tune `referralActiveDays` / `referralUpgradeTarget` from data.
 
 Everything else in the growth roadmap builds on a loop that is already whole.
 
@@ -83,7 +84,7 @@ Everything else in the growth roadmap builds on a loop that is already whole.
 
 ### Must add soon
 - [ ] Basic event tracking (onboarding complete, first claim, D1/D7 return, referral open/bind/qualify, ad completed, withdrawal requested) — even a single Postgres events table is enough to start.
-- [ ] Referral panel shows `invited` (pending) alongside `completed`, with copy explaining the qualification window.
+- [x] Referral panel shows `invited` (pending) alongside `completed` — shipped 16 September 2026; qualification details remain in “Cara kerja”.
 - [ ] Bot notification to inviter when a friend qualifies; bot notification to player when a withdrawal is marked `paid` or `rejected`.
 - [ ] Streak-at-risk reminder (evening WIB, only if not claimed today) reusing the idle-notifier sweep pattern.
 - [ ] Admin overview: new players/day, players with ≥1 claim, referral conversion %, D1 retention — the numbers needed to balance the economy from data.
@@ -129,10 +130,10 @@ Everything else in the growth roadmap builds on a loop that is already whole.
 - [x] Telegram initData auth, rate limits, body limits, security headers, admin hardening
 - [x] CI (typecheck/lint/migrate/test/build) and EC2 deploy pipeline, health endpoint
 - [x] Help/FAQ dialog covering every mechanic in plain language
+- [x] Pending-invite visibility in the referral panel
 
 ### NOT REQUIRED FOR LAUNCH
 - [ ] Event tracking / analytics
-- [ ] Pending-invite visibility in referral panel
 - [ ] Inviter payout notification, withdrawal status notification
 - [ ] Streak-at-risk / mission reminders
 - [ ] Outward share cards (rank, unlock, payout)
@@ -146,7 +147,7 @@ Everything else in the growth roadmap builds on a loop that is already whole.
 
 **Based on the current app, Racely IS launch-ready.**
 
-Every item on the pre-launch "wajib" list — core loop, economy, onboarding, garage/setup, reward/claim, referral, persistence, deployment, security — is present, server-enforced, tested, and already deployed to `racely.fun`. The only `[PARTIAL]` on the pre-launch list (pending-invite visibility) is a copy/data-display gap, not a blocker, and the four unchecked items above are operational confirmations, not features.
+Every item on the pre-launch "wajib" list — core loop, economy, onboarding, garage/setup, reward/claim, referral, persistence, deployment, security — is present and server-enforced. The pending-invite copy/data gap identified by this audit is now closed; the four unchecked items above remain operational confirmations, not features.
 
 **Freeze now:**
 - Game rules, economy formulas, and qualification rule shape (tune numbers only via `/admin`).
@@ -155,8 +156,8 @@ Every item on the pre-launch "wajib" list — core loop, economy, onboarding, ga
 
 **Move to post-launch (in this order):**
 1. Event tracking so the next decisions are data-driven.
-2. Show pending invites + notify inviter on payout (closes the visible gap in the loop you already built).
-3. Streak / mission / withdrawal-status notifications over the existing bot channel.
+2. Notify the inviter on payout and the player on withdrawal status changes.
+3. Streak / mission reminders over the existing bot channel.
 4. Everything in "Can wait" and "Experimental", gated on what the data shows.
 
-Do not let anything in section 3 delay the launch. The growth loop is already whole; what it lacks is measurement and a few closing messages, both of which are more valuable *after* real users are generating the numbers.
+Do not let anything in section 3 delay the launch. Pending-invite visibility is complete; the remaining growth work is measurement and a few closing messages, both of which are more valuable *after* real users are generating the numbers.
