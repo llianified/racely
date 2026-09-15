@@ -6,7 +6,7 @@ import { Html, OrbitControls, OrthographicCamera } from '@react-three/drei'
 import * as THREE from 'three'
 import { TECHNICAL_TRACK, TECHNICAL_TRACK_SAMPLES, technicalTrackPoint } from '@/lib/technical-track'
 import { MiniCar } from './mini-car'
-import { ContextMonitor, SceneBoundary } from './scene-recovery'
+import { ContextMonitor, createSafePointerEvents, SceneBoundary } from './scene-recovery'
 
 const HALF_WIDTH = TECHNICAL_TRACK.laneWidth * 1.5
 const JOINT_COUNT = Math.ceil(TECHNICAL_TRACK.totalLength / .65)
@@ -84,7 +84,7 @@ export default function TechnicalTrackScene({ progress, lane, topDown }: { progr
   </div>
   if (lost) return fallback
   return <SceneBoundary key={attempt} fallback={fallback}>
-    <Canvas orthographic dpr={[1, 1.5]} frameloop="demand" gl={{ antialias: true }} fallback={fallback} aria-label="Prototype Mini 4WD tiga jalur dengan S-curve dan hairpin; gunakan slider untuk inspeksi posisi.">
+    <Canvas orthographic dpr={[1, 1.5]} events={createSafePointerEvents} frameloop="demand" gl={{ antialias: true }} fallback={fallback} aria-label="Prototype Mini 4WD tiga jalur dengan S-curve dan hairpin; gunakan slider untuk inspeksi posisi.">
       <ContextMonitor onLost={onLost} />
       <color attach="background" args={['#1a1939']} />
       <ambientLight intensity={1.6} />
