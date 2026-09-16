@@ -154,146 +154,137 @@ export function WalletPanel({
       />
 
       <Sheet open={open} onOpenChange={(next) => { setOpen(next); if (!next) setError(null); }}>
-        <SheetContent side="bottom" className="game-sheet">
+        <SheetContent side="bottom" className="game-sheet withdraw-sheet" initialFocus={false}>
           <SheetHeader>
             <SheetTitle>Tarik koin</SheetTitle>
-            <SheetDescription>
-              {formatCoins(balance)} koin tersedia · {isEligible
-                ? coinRate(economy)
-                : `kurang ${formatCoins(minWithdraw - balance)} koin lagi`}
-            </SheetDescription>
+            <SheetDescription>Koin hasil balapan, jadi rupiah.</SheetDescription>
           </SheetHeader>
           <div className="sheet-body">
-        <form id="withdraw-form" className="wallet-form" onSubmit={submit}>
-          <div className="wallet-field">
-            <label htmlFor="withdraw-amount">Jumlah koin</label>
-            <input
-              id="withdraw-amount"
-              inputMode="numeric"
-              autoComplete="off"
-              value={amount}
-              disabled={formDisabled}
-              onChange={(event) =>
-                setAmount(
-                  event.target.value
-                    .replace(/\D/g, "")
-                    .slice(0, amountDigits(maxWithdraw)),
-                )
-              }
-              className="wallet-input"
-              aria-describedby="withdraw-amount-note"
-            />
-            <p id="withdraw-amount-note">
-              {formatCoins(requested)} koin = {idr(requested, economy)} · minimal {coins(minWithdraw)}
-            </p>
-          </div>
-
-          <div className="wallet-chips" role="group" aria-label="Nominal cepat">
-            {quickAmounts(minWithdraw, maxWithdraw).map((value) => (
-              <button
-                key={value}
-                type="button"
-                className={cn(
-                  "wallet-chip",
-                  requested === value && "is-active",
-                )}
-                aria-pressed={requested === value}
-                aria-label={`${formatCoins(value)} koin`}
-                disabled={formDisabled || value > balance}
-                onClick={() => setAmount(String(value))}
-              >
-                {formatCoins(value)}
-              </button>
-            ))}
-            <button
-              type="button"
-              className="wallet-chip"
-              disabled={formDisabled}
-              onClick={() => setAmount(String(Math.min(balance, maxWithdraw)))}
-            >
-              Semua
-            </button>
-          </div>
-
-          <fieldset className="wallet-method-fieldset">
-            <legend>Metode penarikan</legend>
-            {(["ewallet", "bank"] as const).map((kind) => (
-              <div className="wallet-method-group" key={kind}>
-                <p>{kind === "bank" ? "Transfer bank" : "E-wallet"}</p>
-                <div className="wallet-methods">
-                  {WITHDRAW_METHODS.filter((item) =>
-                    kind === "bank" ? item.kind === "bank" : item.kind !== "bank",
-                  ).map((item) => (
-                    <label key={item.id} className="wallet-method">
-                      <input
-                        type="radio"
-                        name="withdraw-method"
-                        value={item.id}
-                        checked={method === item.id}
-                        disabled={formDisabled}
-                        onChange={() => setMethod(item.id)}
-                        className="sr-only"
-                      />
-                      {item.kind === "bank" ? (
-                        <Banknote aria-hidden="true" />
-                      ) : (
-                        <Wallet aria-hidden="true" />
-                      )}
-                      {item.label}
-                    </label>
+            <form id="withdraw-form" className="wallet-form" onSubmit={submit}>
+              <section className="withdraw-amount-card" aria-label="Nominal penarikan">
+                <div className="withdraw-balance-row">
+                  <span><Wallet aria-hidden="true" /> Saldo tersedia</span>
+                  <strong>{formatCoins(balance)} <span>koin</span></strong>
+                </div>
+                <div className="withdraw-amount-heading">
+                  <label htmlFor="withdraw-amount">Jumlah penarikan</label>
+                  <button
+                    type="button"
+                    className="withdraw-all"
+                    disabled={formDisabled}
+                    onClick={() => setAmount(String(Math.min(balance, maxWithdraw)))}
+                  >
+                    Semua
+                  </button>
+                </div>
+                <div className="withdraw-amount-input">
+                  <input
+                    id="withdraw-amount"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    placeholder="0"
+                    value={amount ? formatCoins(requested) : ""}
+                    disabled={formDisabled}
+                    onChange={(event) =>
+                      setAmount(event.target.value.replace(/\D/g, "").slice(0, amountDigits(maxWithdraw)))
+                    }
+                    aria-describedby="withdraw-amount-note"
+                  />
+                  <span>koin</span>
+                </div>
+                <div className="wallet-chips" role="group" aria-label="Nominal cepat">
+                  {quickAmounts(minWithdraw, maxWithdraw).map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={cn("wallet-chip", requested === value && "is-active")}
+                      aria-pressed={requested === value}
+                      aria-label={`${formatCoins(value)} koin`}
+                      disabled={formDisabled || value > balance}
+                      onClick={() => setAmount(String(value))}
+                    >
+                      {formatCoins(value)}
+                    </button>
                   ))}
                 </div>
+                <p id="withdraw-amount-note" className="withdraw-amount-note">
+                  Min. {coins(minWithdraw)} <span aria-hidden="true">·</span> {coinRate(economy)}
+                </p>
+              </section>
+
+              {!isEligible && (
+                <p className="withdraw-insufficient" role="status">
+                  Kurang {coins(minWithdraw - balance)} lagi untuk mulai menarik.
+                </p>
+              )}
+
+              <fieldset className="wallet-method-fieldset withdraw-destination">
+                <legend>Tujuan penarikan</legend>
+                {(["ewallet", "bank"] as const).map((kind) => (
+                  <div className="wallet-method-group" key={kind}>
+                    <p>
+                      {kind === "bank" ? <Banknote aria-hidden="true" /> : <Wallet aria-hidden="true" />}
+                      {kind === "bank" ? "Transfer bank" : "E-wallet"}
+                    </p>
+                    <div className="wallet-methods">
+                      {WITHDRAW_METHODS.filter((item) => item.kind === kind).map((item) => (
+                        <label key={item.id} className="wallet-method">
+                          <input
+                            type="radio"
+                            name="withdraw-method"
+                            value={item.id}
+                            checked={method === item.id}
+                            disabled={formDisabled}
+                            onChange={() => setMethod(item.id)}
+                            className="sr-only"
+                          />
+                          <span>{item.label.replace("Bank ", "")}</span>
+                          <span className="withdraw-method-dot" aria-hidden="true" />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </fieldset>
+
+              <div className="withdraw-recipient">
+                <div className="wallet-field">
+                  <label htmlFor="withdraw-account">
+                    {isBank ? "Nomor rekening" : "Nomor e-wallet"} <span>· {methodLabel(method)}</span>
+                  </label>
+                  <input
+                    id="withdraw-account"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    placeholder={isBank ? "Masukkan nomor rekening" : "08xxxxxxxxxx"}
+                    value={account}
+                    disabled={formDisabled}
+                    onChange={(event) => setAccount(event.target.value.replace(/\D/g, "").slice(0, 18))}
+                    className="wallet-input"
+                  />
+                </div>
+                <div className="wallet-field">
+                  <label htmlFor="withdraw-name">Nama pemilik</label>
+                  <input
+                    id="withdraw-name"
+                    autoComplete="name"
+                    placeholder={isBank ? "Nama sesuai rekening" : "Nama sesuai akun e-wallet"}
+                    value={accountName}
+                    disabled={formDisabled}
+                    onChange={(event) => setAccountName(event.target.value.slice(0, 60))}
+                    className="wallet-input"
+                  />
+                </div>
               </div>
-            ))}
-          </fieldset>
-
-          <div className="wallet-field">
-            <label htmlFor="withdraw-account">
-              {isBank ? "Nomor rekening" : "Nomor e-wallet"}
-            </label>
-            <input
-              id="withdraw-account"
-              inputMode="numeric"
-              autoComplete="off"
-              placeholder={isBank ? "1234567890" : "08123456789"}
-              value={account}
-              disabled={formDisabled}
-              onChange={(event) =>
-                setAccount(event.target.value.replace(/\D/g, "").slice(0, 18))
-              }
-              className="wallet-input"
-            />
-          </div>
-
-          <div className="wallet-field">
-            <label htmlFor="withdraw-name">Nama pemilik</label>
-            <input
-              id="withdraw-name"
-              autoComplete="name"
-              placeholder={isBank ? "Nama sesuai rekening" : "Nama sesuai akun e-wallet"}
-              value={accountName}
-              disabled={formDisabled}
-              onChange={(event) =>
-                setAccountName(event.target.value.slice(0, 60))
-              }
-              className="wallet-input"
-            />
-          </div>
-
-          {error && (
-            <p className="wallet-error" role="alert">
-              {error}
-            </p>
-          )}
-        </form>
+              {error && <p className="wallet-error" role="alert">{error}</p>}
+            </form>
           </div>
           <SheetFooter>
-            <Button
-              type="submit"
-              form="withdraw-form"
-              variant="gold"
-              disabled={formDisabled}
-            >
+            <div className="withdraw-summary" aria-live="polite" aria-atomic="true">
+              <div><span>Kamu menerima</span><strong>{idr(requested, economy)}</strong></div>
+              <span>Ke {methodLabel(method)}</span>
+            </div>
+            <Button type="submit" form="withdraw-form" variant="gold" disabled={formDisabled}>
               <Send data-icon="inline-start" />
               Kirim permintaan
             </Button>
