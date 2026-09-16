@@ -1064,7 +1064,7 @@
 .withdraw-destination .wallet-method { flex-direction: column; gap: var(--space-6); min-height: var(--space-56); padding: var(--space-sm) var(--space-xs); font-size: var(--fs-small); }
 .withdraw-method-dot { width: var(--space-6); height: var(--space-6); border: var(--stroke) solid var(--muted-foreground); border-radius: var(--corner-round); }
 .withdraw-destination .wallet-method:has(input:checked) .withdraw-method-dot { border-color: var(--accent); background: var(--accent); }
-.withdraw-recipient { display: flex; flex-direction: column; gap: var(--space-md); padding-top: var(--space-lg); border-top: var(--stroke) solid var(--border); }
+.withdraw-recipient { display: flex; flex-direction: column; gap: var(--space-md); margin-inline: calc(var(--space-lg) * -1); padding: var(--space-lg) var(--space-lg) 0; border-top: var(--stroke) solid var(--border); }
 .withdraw-recipient label > span { color: var(--muted-foreground); font-weight: var(--fw-normal); }
 .withdraw-sheet [data-slot='sheet-footer'] { padding-inline: var(--space-lg); gap: var(--space-md); }
 .withdraw-sheet [data-slot='sheet-footer'] > .withdraw-summary { display: flex; flex: 1 1 100%; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-sm); }
