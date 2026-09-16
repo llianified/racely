@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { Banknote, Clock, Send, Wallet } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -92,7 +93,7 @@ export function WalletPanel({
     event.preventDefault();
     if (formDisabled) return;
     if (!Number.isInteger(requested) || requested < minWithdraw) {
-      setError(`Penarikan minimal ${coins(minWithdraw)}.`);
+      toast.error(`Minimal ${coins(minWithdraw)}, senilai ${idr(minWithdraw, economy)}.`);
       return;
     }
     if (requested > economy.maxWithdrawCoins) {
@@ -165,14 +166,6 @@ export function WalletPanel({
                   <span><Wallet aria-hidden="true" /> Saldo tersedia</span>
                   <strong>{formatCoins(balance)} <span>koin</span></strong>
                 </div>
-                <div
-                  id="withdraw-amount-note"
-                  className="withdraw-minimum-badges"
-                  aria-label={`Minimal penarikan ${coins(minWithdraw)}, senilai ${idr(minWithdraw, economy)}`}
-                >
-                  <Badge variant="exclusive">Minimal {coins(minWithdraw)}</Badge>
-                  <Badge variant="secondary">Senilai {idr(minWithdraw, economy)}</Badge>
-                </div>
                 <div className="withdraw-amount-heading">
                   <label htmlFor="withdraw-amount">Jumlah penarikan</label>
                   <button
@@ -195,7 +188,6 @@ export function WalletPanel({
                     onChange={(event) =>
                       setAmount(event.target.value.replace(/\D/g, "").slice(0, amountDigits(maxWithdraw)))
                     }
-                    aria-describedby="withdraw-amount-note"
                   />
                   <span>koin</span>
                 </div>
