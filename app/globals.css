@@ -705,7 +705,7 @@
 .coin-balance strong { display: block; overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-lead); font-weight: var(--fw-heavier); font-variant-numeric: tabular-nums; line-height: var(--lh-snug); white-space: nowrap; }
 .coin-balance small { @apply sr-only; }
 
-/* ── page content ────────────────�����������─────────────────── */
+/* ── page content ────────────────�������������─────────────────── */
 .page-content { position: relative; overflow: clip; overflow-clip-margin: var(--space-8); padding: var(--space-md) var(--gutter) calc(var(--nav-height) + var(--safe-bottom) + var(--space-lg)); }
 /* Keeps mounted 3D views correctly sized while another tab is on screen,
    so returning to Balapan or Garasi never rebuilds their WebGL contexts. */
@@ -1059,8 +1059,9 @@
 .withdraw-destination .wallet-method-group > p { display: flex; align-items: center; gap: var(--space-6); }
 .withdraw-destination .wallet-method-group > p svg { width: var(--icon-sm); height: var(--icon-sm); }
 .withdraw-destination .wallet-methods { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-xs); }
-.withdraw-destination .wallet-method { flex-direction: column; gap: var(--space-6); min-height: var(--space-56); padding: var(--space-sm) var(--space-xs); font-size: var(--fs-small); }
-.withdraw-method-dot { width: var(--space-6); height: var(--space-6); border: var(--stroke) solid var(--muted-foreground); border-radius: var(--corner-round); }
+  .withdraw-destination .wallet-method { flex-direction: column; gap: var(--space-6); min-height: var(--space-56); padding: var(--space-sm) var(--space-xs); font-size: var(--fs-small); }
+  .withdraw-method-logo { width: var(--space-56); height: var(--space-20); object-fit: contain; flex-shrink: 0; }
+  .withdraw-method-dot { width: var(--space-6); height: var(--space-6); border: var(--stroke) solid var(--muted-foreground); border-radius: var(--corner-round); }
 .withdraw-destination .wallet-method:has(input:checked) .withdraw-method-dot { border-color: var(--accent); background: var(--accent); }
 .withdraw-recipient { display: flex; flex-direction: column; gap: var(--space-md); margin-inline: calc(var(--space-lg) * -1); padding: var(--space-lg) var(--space-lg) 0; border-top: var(--stroke) solid var(--border); }
 .withdraw-recipient label > span { color: var(--muted-foreground); font-weight: var(--fw-normal); }

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, type FormEvent } from "react";
 import { Banknote, Clock, Send, Wallet } from "lucide-react";
 import { toast } from "sonner";
@@ -33,6 +34,17 @@ export type WithdrawPayload = {
   account: string;
   accountName: string;
   coins: number;
+};
+
+const WITHDRAW_METHOD_LOGOS: Record<WithdrawMethod, string> = {
+  dana: "/payment-methods/dana.svg",
+  gopay: "/payment-methods/gopay.svg",
+  ovo: "/payment-methods/ovo.svg",
+  shopeepay: "/payment-methods/shopee-pay.svg",
+  bca: "/payment-methods/bca.svg",
+  bri: "/payment-methods/bri.svg",
+  bni: "/payment-methods/bni.svg",
+  mandiri: "/payment-methods/mandiri.svg",
 };
 
 /**
@@ -227,6 +239,14 @@ export function WalletPanel({
                             disabled={formDisabled}
                             onChange={() => setMethod(item.id)}
                             className="sr-only"
+                          />
+                          <Image
+                            src={WITHDRAW_METHOD_LOGOS[item.id]}
+                            alt=""
+                            width={56}
+                            height={20}
+                            sizes="56px"
+                            className="withdraw-method-logo"
                           />
                           <span>{item.label.replace("Bank ", "")}</span>
                           <span className="withdraw-method-dot" aria-hidden="true" />
