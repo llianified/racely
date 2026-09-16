@@ -74,7 +74,7 @@ export function WalletPanel({
   const { economy } = game;
   const minWithdraw = economy.minWithdrawCoins;
   const [method, setMethod] = useState<WithdrawMethod>("dana");
-  const [amount, setAmount] = useState(String(minWithdraw));
+  const [amount, setAmount] = useState("");
   const [account, setAccount] = useState("");
   const [accountName, setAccountName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -123,7 +123,7 @@ export function WalletPanel({
       coins: requested,
     });
     if (ok) {
-      setAmount(String(minWithdraw));
+      setAmount("");
       setAccount("");
       setAccountName("");
       setOpen(false);
