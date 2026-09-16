@@ -83,13 +83,15 @@ export function WalletPanel({
 
   const maxWithdraw = economy.maxWithdrawCoins;
   const balance = Math.floor(game.balance);
+  const isEligible = balance >= minWithdraw;
+  const formDisabled = disabled || !isEligible;
   const requested = Number.parseInt(amount, 10) || 0;
   const isBank =
     WITHDRAW_METHODS.find((item) => item.id === method)?.kind === "bank";
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (disabled) return;
+    if (formDisabled) return;
     if (!Number.isInteger(requested) || requested < minWithdraw) {
       setError(`Penarikan minimal ${coins(minWithdraw)}.`);
       return;
@@ -138,7 +140,7 @@ export function WalletPanel({
         action={
           <Button
             variant="gold"
-            disabled={disabled || balance < minWithdraw}
+            disabled={disabled}
             onClick={() => setOpen(true)}
           >
             <Send data-icon="inline-start" />
@@ -156,7 +158,9 @@ export function WalletPanel({
           <SheetHeader>
             <SheetTitle>Tarik koin</SheetTitle>
             <SheetDescription>
-              {formatCoins(balance)} koin tersedia · {coinRate(economy)}
+              {formatCoins(balance)} koin tersedia · {isEligible
+                ? coinRate(economy)
+                : `kurang ${formatCoins(minWithdraw - balance)} koin lagi`}
             </SheetDescription>
           </SheetHeader>
           <div className="sheet-body">
@@ -173,6 +177,7 @@ export function WalletPanel({
               inputMode="numeric"
               autoComplete="off"
               value={amount}
+              disabled={formDisabled}
               onChange={(event) =>
                 setAmount(
                   event.target.value
@@ -199,7 +204,7 @@ export function WalletPanel({
                 )}
                 aria-pressed={requested === value}
                 aria-label={`${formatCoins(value)} koin`}
-                disabled={value > balance}
+                disabled={formDisabled || value > balance}
                 onClick={() => setAmount(String(value))}
               >
                 {formatCoins(value)}
@@ -208,7 +213,7 @@ export function WalletPanel({
             <button
               type="button"
               className="wallet-chip"
-              disabled={balance < minWithdraw}
+              disabled={formDisabled}
               onClick={() => setAmount(String(Math.min(balance, maxWithdraw)))}
             >
               Semua
@@ -230,6 +235,7 @@ export function WalletPanel({
                         name="withdraw-method"
                         value={item.id}
                         checked={method === item.id}
+                        disabled={formDisabled}
                         onChange={() => setMethod(item.id)}
                         className="sr-only"
                       />
@@ -256,6 +262,7 @@ export function WalletPanel({
               autoComplete="off"
               placeholder={isBank ? "1234567890" : "08123456789"}
               value={account}
+              disabled={formDisabled}
               onChange={(event) =>
                 setAccount(event.target.value.replace(/\D/g, "").slice(0, 18))
               }
@@ -270,6 +277,7 @@ export function WalletPanel({
               autoComplete="name"
               placeholder={isBank ? "Nama sesuai rekening" : "Nama sesuai akun e-wallet"}
               value={accountName}
+              disabled={formDisabled}
               onChange={(event) =>
                 setAccountName(event.target.value.slice(0, 60))
               }
@@ -289,7 +297,7 @@ export function WalletPanel({
               type="submit"
               form="withdraw-form"
               variant="gold"
-              disabled={disabled || balance < minWithdraw}
+              disabled={formDisabled}
             >
               <Send data-icon="inline-start" />
               Kirim permintaan

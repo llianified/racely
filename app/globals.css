@@ -705,7 +705,7 @@
 .coin-balance strong { display: block; overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-lead); font-weight: var(--fw-heavier); font-variant-numeric: tabular-nums; line-height: var(--lh-snug); white-space: nowrap; }
 .coin-balance small { @apply sr-only; }
 
-/* ── page content ────────────────���─────────────────── */
+/* ── page content ────────────────�����─────────────────── */
 .page-content { position: relative; overflow: clip; overflow-clip-margin: var(--space-8); padding: var(--space-md) var(--gutter) calc(var(--nav-height) + var(--safe-bottom) + var(--space-lg)); }
 /* Keeps mounted 3D views correctly sized while another tab is on screen,
    so returning to Balapan or Garasi never rebuilds their WebGL contexts. */
@@ -1049,9 +1049,13 @@
 .wallet-methods { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-sm); }
 .wallet-method { position: relative; display: flex; align-items: center; justify-content: center; gap: var(--space-sm); min-height: var(--space-48); border: var(--stroke) solid var(--border); border-radius: var(--corner-box); background: var(--secondary); color: var(--muted-foreground); font-size: var(--fs-body); font-weight: var(--fw-semibold); cursor: pointer; }
 .wallet-method svg { width: var(--icon-base); height: var(--icon-base); flex-shrink: 0; }
-.wallet-chip.is-active:not(:disabled), .wallet-method:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); background: color-mix(in srgb, var(--accent) 12%, var(--secondary)); color: var(--accent); }
-.wallet-chip:not(:disabled):hover, .wallet-method:hover { border-color: var(--accent); }
-.wallet-error { padding: var(--space-md); border: var(--stroke) solid color-mix(in srgb, var(--destructive) 60%, var(--border)); border-radius: var(--corner-box); background: color-mix(in srgb, var(--destructive) 8%, var(--card)); color: var(--destructive); font-size: var(--fs-small); font-weight: var(--fw-semibold); line-height: var(--lh-normal); }
+	.wallet-chip.is-active:not(:disabled), .wallet-method:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); background: color-mix(in srgb, var(--accent) 12%, var(--secondary)); color: var(--accent); }
+	.wallet-chip:not(:disabled):hover, .wallet-method:hover { border-color: var(--accent); }
+	.wallet-input:disabled, .wallet-method:has(input:disabled) { border-color: var(--border); color: var(--muted-foreground); opacity: 1; cursor: not-allowed; }
+	.wallet-input:disabled { -webkit-text-fill-color: var(--muted-foreground); }
+	.wallet-method:has(input:disabled):hover { border-color: var(--border); }
+	.wallet-error { padding: var(--space-md); border: var(--stroke) solid color-mix(in srgb, var(--destructive) 60%, var(--border)); border-radius: var(--corner-box); background: color-mix(in srgb, var(--destructive) 8%, var(--card)); color: var(--destructive); font-size: var(--fs-small); font-weight: var(--fw-semibold); line-height: var(--lh-normal); }
+
   /* Bentuknya mengikuti .leaderboard-empty (ikon, judul, keterangan) supaya
   empty state antar tab sekeluarga; tinggi ekstra mengisi tab Dompet yang
   isinya pendek saat belum ada riwayat. */
