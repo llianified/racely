@@ -238,6 +238,7 @@ export function WalletPanel({
                             checked={method === item.id}
                             disabled={formDisabled}
                             onChange={() => setMethod(item.id)}
+                            aria-label={item.label}
                             className="sr-only"
                           />
                           <Image
@@ -248,7 +249,6 @@ export function WalletPanel({
                             sizes="56px"
                             className="withdraw-method-logo"
                           />
-                          <span>{item.label.replace("Bank ", "")}</span>
                           <span className="withdraw-method-dot" aria-hidden="true" />
                         </label>
                       ))}
