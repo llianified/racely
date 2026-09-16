@@ -17,7 +17,6 @@ import { StatHero } from "../shell/stat-hero";
 import { cn } from "@/lib/utils";
 import {
   accountPattern,
-  coinRate,
   coins,
   formatCoins,
   idr,
@@ -208,7 +207,8 @@ export function WalletPanel({
                   ))}
                 </div>
                 <p id="withdraw-amount-note" className="withdraw-amount-note">
-                  Min. {coins(minWithdraw)} <span aria-hidden="true">·</span> {coinRate(economy)}
+                  Minimal penarikan {coins(minWithdraw)} <span aria-hidden="true">·</span>{" "}
+                  senilai {idr(minWithdraw, economy)}
                 </p>
               </section>
 
