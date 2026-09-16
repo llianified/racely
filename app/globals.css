@@ -705,7 +705,7 @@
 .coin-balance strong { display: block; overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-lead); font-weight: var(--fw-heavier); font-variant-numeric: tabular-nums; line-height: var(--lh-snug); white-space: nowrap; }
 .coin-balance small { @apply sr-only; }
 
-/* ── page content ────────────────�����─────────────────── */
+/* ── page content ────────────────�������─────────────────── */
 .page-content { position: relative; overflow: clip; overflow-clip-margin: var(--space-8); padding: var(--space-md) var(--gutter) calc(var(--nav-height) + var(--safe-bottom) + var(--space-lg)); }
 /* Keeps mounted 3D views correctly sized while another tab is on screen,
    so returning to Balapan or Garasi never rebuilds their WebGL contexts. */
@@ -1035,6 +1035,42 @@
 .wallet-pending svg { width: var(--icon-base); height: var(--icon-base); flex-shrink: 0; color: var(--accent); }
 .wallet-form-panel, .wallet-history-panel { padding: var(--space-md) var(--gutter); }
 .wallet-form { display: flex; flex-direction: column; gap: var(--space-md); }
+.withdraw-sheet .wallet-form { gap: var(--space-xl); }
+.withdraw-sheet [data-slot='sheet-header'] { padding-left: var(--space-lg); }
+.withdraw-sheet .sheet-body { padding: var(--space-lg); scrollbar-gutter: auto; }
+.withdraw-amount-card { padding: var(--space-md); border: var(--stroke) solid color-mix(in srgb, var(--accent) 30%, var(--border)); border-radius: var(--corner-box); background: var(--surface-inset); }
+.withdraw-balance-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-xs) var(--space-sm); padding-bottom: var(--space-md); border-bottom: var(--stroke) solid var(--border); font-size: var(--fs-small); }
+.withdraw-balance-row > span { display: flex; align-items: center; gap: var(--space-6); color: var(--muted-foreground); }
+.withdraw-balance-row svg { width: var(--icon-sm); height: var(--icon-sm); }
+.withdraw-balance-row strong { font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
+.withdraw-balance-row strong span { color: var(--muted-foreground); font-weight: var(--fw-normal); }
+.withdraw-amount-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); padding-top: var(--space-xs); color: var(--muted-foreground); font-size: var(--fs-small); }
+.withdraw-all { display: inline-flex; align-items: center; justify-content: center; min-height: var(--space-44); padding-inline: var(--space-sm); color: var(--accent); font-size: var(--fs-small); font-weight: var(--fw-bold); }
+.withdraw-all:disabled { color: var(--muted-foreground); cursor: not-allowed; }
+.withdraw-all:focus-visible, .withdraw-amount-input:focus-within { outline: var(--focus-w) solid var(--ring); outline-offset: var(--focus-offset); border-radius: var(--corner-box); }
+.withdraw-amount-input { display: flex; align-items: baseline; gap: var(--space-sm); margin-bottom: var(--space-lg); }
+.withdraw-amount-input input { min-width: 0; width: 100%; padding: 0; border: 0; outline: none; background: transparent; color: var(--accent); font-size: var(--fs-8xl); font-weight: var(--fw-black); line-height: var(--lh-tight); letter-spacing: var(--track-tight); font-variant-numeric: tabular-nums; }
+.withdraw-amount-input input::placeholder { color: var(--muted-foreground); }
+.withdraw-amount-input input:disabled { -webkit-text-fill-color: var(--accent); opacity: 1; cursor: not-allowed; }
+.withdraw-amount-input > span { color: var(--muted-foreground); font-size: var(--fs-read); }
+.withdraw-amount-card .wallet-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-xs); }
+.withdraw-amount-card .wallet-chip { min-width: 0; min-height: var(--space-44); padding: var(--space-xs); border-radius: var(--corner-box); font-size: var(--fs-small); overflow-wrap: anywhere; }
+.withdraw-amount-note { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin-top: var(--space-md); color: var(--muted-foreground); font-size: var(--fs-small); }
+.withdraw-insufficient { padding: var(--space-md); border-radius: var(--corner-box); background: var(--secondary); color: var(--gold-highlight); font-size: var(--fs-small); }
+.withdraw-destination > legend { margin-bottom: var(--space-md); font-size: var(--fs-read); font-weight: var(--fw-bold); }
+.withdraw-destination .wallet-method-group > p { display: flex; align-items: center; gap: var(--space-6); }
+.withdraw-destination .wallet-method-group > p svg { width: var(--icon-sm); height: var(--icon-sm); }
+.withdraw-destination .wallet-methods { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-xs); }
+.withdraw-destination .wallet-method { flex-direction: column; gap: var(--space-6); min-height: var(--space-56); padding: var(--space-sm) var(--space-xs); font-size: var(--fs-small); }
+.withdraw-method-dot { width: var(--space-6); height: var(--space-6); border: var(--stroke) solid var(--muted-foreground); border-radius: var(--corner-round); }
+.withdraw-destination .wallet-method:has(input:checked) .withdraw-method-dot { border-color: var(--accent); background: var(--accent); }
+.withdraw-recipient { display: flex; flex-direction: column; gap: var(--space-md); padding-top: var(--space-lg); border-top: var(--stroke) solid var(--border); }
+.withdraw-recipient label > span { color: var(--muted-foreground); font-weight: var(--fw-normal); }
+.withdraw-sheet [data-slot='sheet-footer'] { padding-inline: var(--space-lg); gap: var(--space-md); }
+.withdraw-sheet [data-slot='sheet-footer'] > .withdraw-summary { display: flex; flex: 1 1 100%; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-sm); }
+.withdraw-summary > div { display: flex; flex-direction: column; gap: var(--space-2); }
+.withdraw-summary span { color: var(--muted-foreground); font-size: var(--fs-small); }
+.withdraw-summary strong { color: var(--accent); font-size: var(--fs-4xl); font-weight: var(--fw-heavy); line-height: var(--lh-tight); letter-spacing: var(--track-snug-sm); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .wallet-field > label, .wallet-method-fieldset > legend { display: block; margin-bottom: var(--space-sm); font-size: var(--fs-small); font-weight: var(--fw-semibold); color: var(--foreground); }
 .wallet-field > p { margin-top: var(--space-sm); font-size: var(--fs-small); line-height: var(--lh-normal); color: var(--muted-foreground); }
 /* 16px wajib: di bawah itu iOS Safari me-zoom halaman saat field difokus. */
