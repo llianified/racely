@@ -8,13 +8,15 @@ import { LogOut, Plus } from "lucide-react";
 import { AdminEconomy } from "./admin-economy";
 import { AdminLogin } from "./admin-login";
 import { AdminOverview } from "./admin-overview";
+import { AdminPlayers } from "./admin-players";
 import { AdminQueue } from "./admin-queue";
 import { AdminRequestError, adminApi } from "./admin-client";
 
-type Tab = "queue" | "economy" | "overview";
+type Tab = "queue" | "players" | "economy" | "overview";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "queue", label: "Antrean" },
+  { id: "players", label: "Saldo user" },
   { id: "economy", label: "Ekonomi" },
   { id: "overview", label: "Kewajiban" },
 ];
@@ -162,6 +164,7 @@ export default function AdminPage() {
       )}
 
       {tab === "queue" && <AdminQueue onChanged={() => void reload()} />}
+      {tab === "players" && <AdminPlayers onChanged={() => void reload()} />}
       {tab === "economy" &&
         (data ? (
           <AdminEconomy snapshot={data.economy} onSaved={() => void reload()} />

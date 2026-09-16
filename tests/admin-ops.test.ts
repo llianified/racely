@@ -1,9 +1,23 @@
 import { describe, expect, it } from "vitest";
 import {
+  MAX_ADMIN_BALANCE,
   WITHDRAWAL_STATUSES,
+  isValidAdminBalance,
   transitionAllowed,
 } from "../lib/admin-ops";
 import { WITHDRAW_STATUS_LABEL, type WithdrawStatus } from "../lib/game";
+
+describe("Validasi saldo admin", () => {
+  it("hanya menerima bilangan bulat non-negatif yang aman", () => {
+    expect(isValidAdminBalance(0)).toBe(true);
+    expect(isValidAdminBalance(200_000)).toBe(true);
+    expect(isValidAdminBalance(MAX_ADMIN_BALANCE)).toBe(true);
+    expect(isValidAdminBalance(-1)).toBe(false);
+    expect(isValidAdminBalance(1.5)).toBe(false);
+    expect(isValidAdminBalance(MAX_ADMIN_BALANCE + 1)).toBe(false);
+    expect(isValidAdminBalance(Number.NaN)).toBe(false);
+  });
+});
 
 /**
  * Tabel perpindahan status penarikan. Ini satu-satunya tempat uang bisa
