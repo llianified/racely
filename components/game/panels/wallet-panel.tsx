@@ -83,7 +83,7 @@ export function WalletPanel({
   const maxWithdraw = economy.maxWithdrawCoins;
   const balance = Math.floor(game.balance);
   const isEligible = balance >= minWithdraw;
-  const formDisabled = disabled || !isEligible;
+  const formDisabled = disabled;
   const requested = Number.parseInt(amount, 10) || 0;
   const isBank =
     WITHDRAW_METHODS.find((item) => item.id === method)?.kind === "bank";
