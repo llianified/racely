@@ -1,6 +1,12 @@
 "use client";
 
-import type { AuditRow, LiabilitySnapshot, QueuePage } from "@/lib/admin-ops";
+import type {
+  AuditRow,
+  LiabilitySnapshot,
+  PlayerBalancePage,
+  PlayerBalanceUpdate,
+  QueuePage,
+} from "@/lib/admin-ops";
 import type { EconomyConfig } from "@/lib/economy-config";
 import type { EconomyProjection } from "@/lib/economy-projection";
 import type { WithdrawStatus } from "@/lib/game";
@@ -79,6 +85,19 @@ export const adminApi = {
   }) =>
     call<{ id: string }>("/api/admin/withdrawals", {
       method: "POST",
+      body: JSON.stringify(body),
+    }),
+  players: (query = "", offset = 0) =>
+    call<PlayerBalancePage>(
+      `/api/admin/players?q=${encodeURIComponent(query)}&offset=${offset}&limit=25`,
+    ),
+  updatePlayerBalance: (body: {
+    userId: string;
+    expectedBalance: number;
+    balance: number;
+  }) =>
+    call<PlayerBalanceUpdate>("/api/admin/players", {
+      method: "PATCH",
       body: JSON.stringify(body),
     }),
   economy: () => call<EconomySnapshot>("/api/admin/economy"),

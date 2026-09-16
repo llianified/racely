@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { adminAudit, players, withdrawals } from "@/lib/db/schema";
 import type { WithdrawStatus } from "@/lib/game";
@@ -150,6 +150,164 @@ export async function readWithdrawalQueue(options: {
       paidBefore: Number(row.paidBefore ?? 0),
     })),
   };
+}
+
+export type PlayerBalanceRow = {
+  userId: string;
+  username: string | null;
+  displayName: string;
+  balance: number;
+  pending: number;
+  earned: number;
+  laps: number;
+  updatedAt: string;
+};
+
+export type PlayerBalancePage = {
+  rows: PlayerBalanceRow[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
+export const MAX_ADMIN_BALANCE = Number.MAX_SAFE_INTEGER;
+
+export function isValidAdminBalance(value: number) {
+  return Number.isSafeInteger(value) && value >= 0;
+}
+
+export async function readPlayerBalances(options: {
+  query?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<PlayerBalancePage> {
+  const database = getDatabase();
+  const whole = (value: number | undefined, fallback: number) =>
+    Number.isFinite(value) ? Math.floor(value as number) : fallback;
+  const limit = Math.min(Math.max(1, whole(options.limit, 25)), MAX_LIMIT);
+  const offset = Math.max(0, whole(options.offset, 0));
+  const query = options.query?.trim().slice(0, 80) ?? "";
+  const filter = query
+    ? or(
+        ilike(players.displayName, `%${query}%`),
+        ilike(players.telegramUsername, `%${query}%`),
+        ilike(players.userId, `%${query}%`),
+      )
+    : undefined;
+
+  const [{ total }] = await database
+    .select({ total: sql<number>`count(*)::int` })
+    .from(players)
+    .where(filter);
+  const rows = await database
+    .select({
+      userId: players.userId,
+      username: players.telegramUsername,
+      displayName: players.displayName,
+      balance: players.balance,
+      pending: players.pending,
+      earned: players.earned,
+      laps: players.laps,
+      updatedAt: players.updatedAt,
+    })
+    .from(players)
+    .where(filter)
+    .orderBy(desc(players.updatedAt))
+    .limit(limit)
+    .offset(offset);
+
+  return {
+    total: Number(total ?? 0),
+    limit,
+    offset,
+    rows: rows.map((row) => ({
+      ...row,
+      updatedAt: row.updatedAt.toISOString(),
+    })),
+  };
+}
+
+export type PlayerBalanceUpdate = {
+  userId: string;
+  previousBalance: number;
+  balance: number;
+};
+
+/**
+ * Menyetel saldo tersedia dengan optimistic guard. `version` ikut naik supaya
+ * aksi game yang sudah membaca snapshot lama tidak bisa menimpa perubahan
+ * operator saat commit. Audit ditulis dalam transaksi yang sama karena ini
+ * perubahan uang, bukan telemetry best-effort.
+ */
+export async function setPlayerBalance(input: {
+  userId: string;
+  expectedBalance: number;
+  balance: number;
+  actor: string;
+  now?: Date;
+}): Promise<PlayerBalanceUpdate> {
+  const database = getDatabase();
+  const userId = input.userId.trim();
+  if (!userId || userId.length > 128) {
+    throw new AdminOpsError("User ID tidak valid.", 400);
+  }
+  if (
+    !isValidAdminBalance(input.expectedBalance) ||
+    !isValidAdminBalance(input.balance)
+  ) {
+    throw new AdminOpsError(
+      `Saldo harus bilangan bulat antara 0 dan ${MAX_ADMIN_BALANCE}.`,
+      400,
+    );
+  }
+
+  return database.transaction(async (transaction) => {
+    const [updated] = await transaction
+      .update(players)
+      .set({
+        balance: input.balance,
+        version: sql`${players.version} + 1`,
+        updatedAt: input.now ?? new Date(),
+      })
+      .where(
+        and(
+          eq(players.userId, userId),
+          eq(players.balance, input.expectedBalance),
+        ),
+      )
+      .returning({ userId: players.userId, balance: players.balance });
+
+    if (!updated) {
+      const [current] = await transaction
+        .select({ balance: players.balance })
+        .from(players)
+        .where(eq(players.userId, userId))
+        .limit(1);
+      if (!current) {
+        throw new AdminOpsError("User tidak ditemukan.", 404);
+      }
+      throw new AdminOpsError(
+        "Saldo user sudah berubah. Muat ulang daftar lalu coba lagi.",
+      );
+    }
+
+    await transaction.insert(adminAudit).values({
+      actor: input.actor,
+      action: "player:balance",
+      target: userId,
+      detail: {
+        previousBalance: input.expectedBalance,
+        balance: updated.balance,
+        delta: updated.balance - input.expectedBalance,
+      },
+    });
+
+    return {
+      userId: updated.userId,
+      previousBalance: input.expectedBalance,
+      balance: updated.balance,
+    };
+  });
 }
 
 export function transitionAllowed(from: WithdrawStatus, to: WithdrawStatus) {

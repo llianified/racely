@@ -885,6 +885,70 @@ describeDatabase("Neon Postgres persistence", () => {
     expect(audit.some((row) => row.action === "withdrawal:paid")).toBe(true);
   });
 
+  it("mencari user dan mengubah saldo tanpa menimpa perubahan bersamaan", async () => {
+    const ops = await import("@/lib/admin-ops");
+    const userId = `test-balance-${randomUUID()}`;
+    extraUserIds.push(userId);
+    const player = {
+      userId,
+      displayName: "Balance Racer",
+      username: "balance_racer",
+      photoUrl: null,
+      startParam: null,
+    };
+
+    await gameServer.performGameAction(player, randomUUID(), {
+      type: "select-car",
+      model: "luna-gt",
+      color: "#b9a1ed",
+    });
+    await db!
+      .update(schema.players)
+      .set({ balance: 123_000 })
+      .where(drizzle.eq(schema.players.userId, userId));
+
+    const page = await ops.readPlayerBalances({ query: "balance_racer" });
+    expect(page.rows).toContainEqual(
+      expect.objectContaining({ userId, balance: 123_000 }),
+    );
+
+    const changed = await ops.setPlayerBalance({
+      userId,
+      expectedBalance: 123_000,
+      balance: 456_000,
+      actor: "test",
+    });
+    expect(changed).toEqual({
+      userId,
+      previousBalance: 123_000,
+      balance: 456_000,
+    });
+    expect((await gameServer.getGameState(player)).balance).toBe(456_000);
+
+    await expect(
+      ops.setPlayerBalance({
+        userId,
+        expectedBalance: 123_000,
+        balance: 999_000,
+        actor: "stale-test",
+      }),
+    ).rejects.toThrow("sudah berubah");
+    expect((await gameServer.getGameState(player)).balance).toBe(456_000);
+
+    const audit = await ops.readAuditTrail(100);
+    expect(audit).toContainEqual(
+      expect.objectContaining({
+        action: "player:balance",
+        target: userId,
+        detail: {
+          previousBalance: 123_000,
+          balance: 456_000,
+          delta: 333_000,
+        },
+      }),
+    );
+  });
+
   it("menolak memindahkan penarikan yang koinnya sudah dikembalikan", async () => {
     const ops = await import("@/lib/admin-ops");
     const userId = `test-refunded-${randomUUID()}`;

@@ -124,6 +124,59 @@
 .admin-row-actions { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
 .admin-row-actions > [data-slot='button'] { flex: 1 0 auto; }
 
+/* Pencarian dan penyuntingan saldo tetap satu kolom supaya nyaman dari HP. */
+.admin-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+.admin-search > .wallet-input { flex: 1 1 auto; min-width: 0; }
+.admin-search > [data-slot='button'] { flex-shrink: 0; }
+.admin-player-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+.admin-player-head > div { min-width: 0; }
+.admin-player-head h3 {
+  font-size: var(--fs-lead);
+  font-weight: var(--fw-bolder);
+  line-height: var(--lh-snug);
+  overflow-wrap: anywhere;
+}
+.admin-player-head p {
+  margin-top: var(--space-2);
+  color: var(--muted-foreground);
+  font-size: var(--fs-read);
+  overflow-wrap: anywhere;
+}
+.admin-player-balance {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border: var(--stroke) solid var(--border);
+  border-radius: var(--corner-box);
+  background: var(--secondary);
+}
+.admin-player-value { display: flex; align-items: baseline; gap: var(--space-xs); }
+.admin-player-value .eyebrow { margin-right: auto; }
+.admin-player-value strong {
+  color: var(--accent);
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-black);
+  font-variant-numeric: tabular-nums;
+}
+.admin-player-value > span:last-child {
+  color: var(--muted-foreground);
+  font-size: var(--fs-read);
+}
+.admin-balance-form { display: flex; align-items: center; gap: var(--space-sm); }
+.admin-balance-form > .wallet-input { min-width: 0; }
+.admin-balance-form > [data-slot='button'] { flex-shrink: 0; }
+
 /* Form ekonomi: satu kolom, mengikuti .wallet-field sepenuhnya. */
 .admin-form { display: flex; flex-direction: column; gap: var(--space-md); padding-top: var(--space-lg); }
 
