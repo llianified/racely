@@ -83,7 +83,6 @@ export function WalletPanel({
 
   const maxWithdraw = economy.maxWithdrawCoins;
   const balance = Math.floor(game.balance);
-  const isEligible = balance >= minWithdraw;
   const formDisabled = disabled;
   const requested = Number.parseInt(amount, 10) || 0;
   const isBank =
@@ -208,11 +207,6 @@ export function WalletPanel({
                 </div>
               </section>
 
-              {!isEligible && (
-                <p className="withdraw-insufficient" role="status">
-                  Kurang {coins(minWithdraw - balance)} lagi untuk mulai menarik.
-                </p>
-              )}
 
               <fieldset className="wallet-method-fieldset withdraw-destination">
                 <legend>Tujuan penarikan</legend>
