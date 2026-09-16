@@ -93,7 +93,7 @@ export function WalletPanel({
     event.preventDefault();
     if (formDisabled) return;
     if (!Number.isInteger(requested) || requested < minWithdraw) {
-      toast.error(`Minimal ${coins(minWithdraw)}, senilai ${idr(minWithdraw, economy)}.`);
+      toast.error(`Minimal ${coins(minWithdraw)}.`);
       return;
     }
     if (requested > economy.maxWithdrawCoins) {
