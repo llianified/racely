@@ -165,6 +165,14 @@ export function WalletPanel({
                   <span><Wallet aria-hidden="true" /> Saldo tersedia</span>
                   <strong>{formatCoins(balance)} <span>koin</span></strong>
                 </div>
+                <div
+                  id="withdraw-amount-note"
+                  className="withdraw-minimum-badges"
+                  aria-label={`Minimal penarikan ${coins(minWithdraw)}, senilai ${idr(minWithdraw, economy)}`}
+                >
+                  <Badge variant="exclusive">Minimal {coins(minWithdraw)}</Badge>
+                  <Badge variant="secondary">Senilai {idr(minWithdraw, economy)}</Badge>
+                </div>
                 <div className="withdraw-amount-heading">
                   <label htmlFor="withdraw-amount">Jumlah penarikan</label>
                   <button
@@ -206,10 +214,6 @@ export function WalletPanel({
                     </button>
                   ))}
                 </div>
-                <p id="withdraw-amount-note" className="withdraw-amount-note">
-                  Minimal penarikan {coins(minWithdraw)} <span aria-hidden="true">·</span>{" "}
-                  senilai {idr(minWithdraw, economy)}
-                </p>
               </section>
 
               {!isEligible && (
