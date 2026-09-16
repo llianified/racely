@@ -705,7 +705,7 @@
 .coin-balance strong { display: block; overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-lead); font-weight: var(--fw-heavier); font-variant-numeric: tabular-nums; line-height: var(--lh-snug); white-space: nowrap; }
 .coin-balance small { @apply sr-only; }
 
-/* ── page content ────────────────�������─────────────────── */
+/* ── page content ────────────────���������─────────────────── */
 .page-content { position: relative; overflow: clip; overflow-clip-margin: var(--space-8); padding: var(--space-md) var(--gutter) calc(var(--nav-height) + var(--safe-bottom) + var(--space-lg)); }
 /* Keeps mounted 3D views correctly sized while another tab is on screen,
    so returning to Balapan or Garasi never rebuilds their WebGL contexts. */
@@ -1044,6 +1044,7 @@
 .withdraw-balance-row svg { width: var(--icon-sm); height: var(--icon-sm); }
 .withdraw-balance-row strong { font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
 .withdraw-balance-row strong span { color: var(--muted-foreground); font-weight: var(--fw-normal); }
+.withdraw-minimum-badges { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-xs); margin-top: var(--space-md); }
 .withdraw-amount-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); padding-top: var(--space-xs); color: var(--muted-foreground); font-size: var(--fs-small); }
 .withdraw-all { display: inline-flex; align-items: center; justify-content: center; min-height: var(--space-44); padding-inline: var(--space-sm); color: var(--accent); font-size: var(--fs-small); font-weight: var(--fw-bold); }
 .withdraw-all:disabled { color: var(--muted-foreground); cursor: not-allowed; }
@@ -1055,7 +1056,6 @@
 .withdraw-amount-input > span { color: var(--muted-foreground); font-size: var(--fs-read); }
 .withdraw-amount-card .wallet-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-xs); }
 .withdraw-amount-card .wallet-chip { min-width: 0; min-height: var(--space-44); padding: var(--space-xs); border-radius: var(--corner-box); font-size: var(--fs-small); overflow-wrap: anywhere; }
-.withdraw-amount-note { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin-top: var(--space-md); color: var(--muted-foreground); font-size: var(--fs-small); }
 .withdraw-insufficient { padding: var(--space-md); border-radius: var(--corner-box); background: var(--secondary); color: var(--gold-highlight); font-size: var(--fs-small); }
 .withdraw-destination > legend { margin-bottom: var(--space-md); font-size: var(--fs-read); font-weight: var(--fw-bold); }
 .withdraw-destination .wallet-method-group > p { display: flex; align-items: center; gap: var(--space-6); }
